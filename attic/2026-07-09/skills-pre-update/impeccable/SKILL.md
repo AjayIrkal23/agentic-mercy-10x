@@ -13,7 +13,7 @@ Before any design work or file edits, pass these gates. Skipping them produces g
 
 | Gate | Required check | If fail |
 |---|---|---|
-| Context | The PRODUCT.md / DESIGN.md loader result is known from `node /home/ajay-irkal/.claude/skills/impeccable/scripts/load-context.mjs`. | Run the loader before continuing. |
+| Context | The PRODUCT.md / DESIGN.md loader result is known from `node ~/.claude/skills/impeccable/scripts/load-context.mjs`. | Run the loader before continuing. |
 | Product | PRODUCT.md exists and is not empty or placeholder (`[TODO]` markers, <200 chars). | Run `/impeccable teach`, refresh context, then resume. Never synthesize PRODUCT.md from the user's original prompt alone. |
 | Command | The matching command reference is loaded when a sub-command is used. | Load the reference before continuing. |
 | Craft | `/impeccable craft` has a user-confirmed shape brief for this task. `teach` / PRODUCT.md never counts as shape. | Run `/impeccable shape` and wait for explicit brief confirmation. |
@@ -40,7 +40,7 @@ Two files, case-insensitive. The loader looks at the project root by default and
 Load both in one call:
 
 ```bash
-node /home/ajay-irkal/.claude/skills/impeccable/scripts/load-context.mjs
+node ~/.claude/skills/impeccable/scripts/load-context.mjs
 ```
 
 Consume the full JSON output. Never pipe through `head`, `tail`, `grep`, or `jq`. The output's `contextDir` field tells you where the files were resolved from.
@@ -172,7 +172,7 @@ If the first word is `craft`, setup still runs first, but [reference/craft.md](r
 **Pin** creates a standalone shortcut so `/<command>` invokes `/impeccable <command>` directly. **Unpin** removes it. The script writes to every harness directory present in the project.
 
 ```bash
-node /home/ajay-irkal/.claude/skills/impeccable/scripts/pin.mjs <pin|unpin> <command>
+node ~/.claude/skills/impeccable/scripts/pin.mjs <pin|unpin> <command>
 ```
 
 Valid `<command>` is any command from the table above. Report the script's result concisely. Confirm the new shortcut on success, relay stderr verbatim on error.

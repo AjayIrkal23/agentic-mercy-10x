@@ -82,7 +82,7 @@ def _project_slug(workspace: Path | None) -> str:
     """Convert workspace path to a URL-safe slug for gstack project directory."""
     if not workspace:
         return "unknown"
-    # e.g. /DATA/CODE_FILES/site-sync-vista → site-sync-vista
+    # e.g. /path/to/site-sync-vista → site-sync-vista
     return re.sub(r"[^a-zA-Z0-9_-]", "-", workspace.name).strip("-") or "unknown"
 
 

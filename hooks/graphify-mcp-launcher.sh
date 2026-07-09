@@ -45,22 +45,19 @@ find_graph() {
     dir="$(dirname "$dir")"
   done
 
-  # Fallback: if PWD is under /DATA/CODE_FILES/, auto-build the graph
-  if [[ "$PWD" == /DATA/CODE_FILES/* ]]; then
-    # Find the project root (first dir under /DATA/CODE_FILES/ with .git)
-    dir="$PWD"
-    while [[ "$dir" != "/DATA/CODE_FILES" && "$dir" != "/" ]]; do
-      if [[ -d "$dir/.git" ]]; then
-        graphify update "$dir" >/dev/null 2>&1 || true
-        if [[ -f "$dir/graphify-out/graph.json" ]]; then
-          echo "$dir/graphify-out/graph.json"
-          return 0
-        fi
-        break
+  # Fallback: walk up from PWD to the nearest .git root and auto-build the graph
+  dir="$PWD"
+  while [[ "$dir" != "/" ]]; do
+    if [[ -d "$dir/.git" ]]; then
+      graphify update "$dir" >/dev/null 2>&1 || true
+      if [[ -f "$dir/graphify-out/graph.json" ]]; then
+        echo "$dir/graphify-out/graph.json"
+        return 0
       fi
-      dir="$(dirname "$dir")"
-    done
-  fi
+      break
+    fi
+    dir="$(dirname "$dir")"
+  done
 
   return 1
 }
