@@ -91,8 +91,8 @@ function validateTextBoxPosition(slideData, bodyDimensions) {
   const minBottomMargin = 0.5; // 0.5 inches from bottom
 
   for (const el of slideData.elements) {
-    // Check text elements (p, h1-h6, list)
-    if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'list'].includes(el.type)) {
+    // Check text elements (p, h1-h6, list, merged-text)
+    if (['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'list', 'merged-text'].includes(el.type)) {
       const fontSize = el.style?.fontSize || 0;
       const bottomEdge = el.position.y + el.position.h;
       const distanceFromBottom = slideHeightInches - bottomEdge;
@@ -185,6 +185,26 @@ function addElements(slideData, targetSlide, pres) {
       };
       if (el.style.margin) listOptions.margin = el.style.margin;
       targetSlide.addText(el.items, listOptions);
+    } else if (el.type === 'merged-text') {
+      // data-pptx-merge container — all paragraphs in one editable text frame.
+      const mergedOptions = {
+        x: el.position.x,
+        y: el.position.y,
+        w: el.position.w,
+        h: el.position.h,
+        fontSize: el.style.fontSize,
+        fontFace: el.style.fontFace,
+        color: el.style.color,
+        align: el.style.align,
+        valign: 'top',
+        lineSpacing: el.style.lineSpacing,
+        paraSpaceBefore: el.style.paraSpaceBefore,
+        paraSpaceAfter: el.style.paraSpaceAfter,
+        margin: el.style.margin,
+        inset: 0
+      };
+      if (el.style.transparency != null) mergedOptions.transparency = el.style.transparency;
+      targetSlide.addText(el.items, mergedOptions);
     } else {
       // Check if text is single-line (height suggests one line)
       const lineHeight = el.style.lineSpacing || el.style.fontSize * 1.2;
@@ -533,6 +553,185 @@ async function extractSlideData(page) {
 
     document.querySelectorAll('*').forEach((el) => {
       if (processed.has(el)) return;
+
+      // [data-pptx-merge="true"] — opt-in: merge all <p>/<h1>-<h6> descendants
+      // into ONE PowerPoint text frame (single editable text box).
+      // Each child paragraph becomes a run with breakLine:true at the end;
+      // per-paragraph fontSize/color/bold/italic/underline are preserved as run options.
+      // The container's bg/border (if any) still becomes its own shape, same as a normal div.
+      if (el.tagName === 'DIV' && el.dataset && el.dataset.pptxMerge === 'true') {
+        const containerRect = el.getBoundingClientRect();
+        if (containerRect.width === 0 || containerRect.height === 0) {
+          processed.add(el);
+          return;
+        }
+
+        // Reject nested merge containers — undefined behavior.
+        if (el.querySelector('[data-pptx-merge="true"]')) {
+          errors.push(
+            `data-pptx-merge container cannot contain another data-pptx-merge container. ` +
+            'Nested merge is not supported.'
+          );
+          processed.add(el);
+          return;
+        }
+
+        const mergeComputed = window.getComputedStyle(el);
+
+        // Container background image — same restriction as regular divs.
+        if (mergeComputed.backgroundImage && mergeComputed.backgroundImage !== 'none') {
+          errors.push(
+            'Background images on data-pptx-merge container are not supported. ' +
+            'Use solid colors or borders, or layer images via slide.addImage().'
+          );
+          return;
+        }
+
+        // Emit a shape for the container's bg/uniform-border (mirrors the regular div branch).
+        const mHasBg = mergeComputed.backgroundColor && mergeComputed.backgroundColor !== 'rgba(0, 0, 0, 0)';
+        const mBorders = [
+          mergeComputed.borderTopWidth,
+          mergeComputed.borderRightWidth,
+          mergeComputed.borderBottomWidth,
+          mergeComputed.borderLeftWidth
+        ].map(b => parseFloat(b) || 0);
+        const mHasBorder = mBorders.some(b => b > 0);
+        const mHasUniformBorder = mHasBorder && mBorders.every(b => b === mBorders[0]);
+
+        if (mHasBg || mHasUniformBorder) {
+          elements.push({
+            type: 'shape',
+            text: '',
+            position: {
+              x: pxToInch(containerRect.left),
+              y: pxToInch(containerRect.top),
+              w: pxToInch(containerRect.width),
+              h: pxToInch(containerRect.height)
+            },
+            shape: {
+              fill: mHasBg ? rgbToHex(mergeComputed.backgroundColor) : null,
+              transparency: mHasBg ? extractAlpha(mergeComputed.backgroundColor) : null,
+              line: mHasUniformBorder ? {
+                color: rgbToHex(mergeComputed.borderColor),
+                width: pxToPoints(mergeComputed.borderWidth)
+              } : null,
+              rectRadius: (() => {
+                const radius = mergeComputed.borderRadius;
+                const radiusValue = parseFloat(radius);
+                if (radiusValue === 0) return 0;
+                if (radius.includes('%')) {
+                  if (radiusValue >= 50) return 1;
+                  const minDim = Math.min(containerRect.width, containerRect.height);
+                  return (radiusValue / 100) * pxToInch(minDim);
+                }
+                if (radius.includes('pt')) return radiusValue / 72;
+                return radiusValue / PX_PER_IN;
+              })(),
+              shadow: parseBoxShadow(mergeComputed.boxShadow)
+            }
+          });
+        }
+
+        // Collect <p>/<h*> descendants in document order.
+        const textDescendants = Array.from(el.querySelectorAll('p, h1, h2, h3, h4, h5, h6'));
+        if (textDescendants.length === 0) {
+          errors.push(
+            `data-pptx-merge container has no <p>/<h*> children to merge. ` +
+            'Remove the data-pptx-merge attribute or add text elements.'
+          );
+          processed.add(el);
+          return;
+        }
+
+        // Use the first text element's computed style as the textbox-level base
+        // (align / lineSpacing / paraSpace are paragraph/textbox-level in pptxgenjs, not per-run).
+        const firstComputed = window.getComputedStyle(textDescendants[0]);
+        const baseStyle = {
+          fontSize: pxToPoints(firstComputed.fontSize),
+          fontFace: firstComputed.fontFamily.split(',')[0].replace(/['"]/g, '').trim(),
+          color: rgbToHex(firstComputed.color),
+          align: firstComputed.textAlign === 'start' ? 'left' : firstComputed.textAlign,
+          lineSpacing: firstComputed.lineHeight && firstComputed.lineHeight !== 'normal'
+            ? pxToPoints(firstComputed.lineHeight)
+            : null,
+          paraSpaceBefore: 0,
+          paraSpaceAfter: 0,
+          // Container padding becomes the textbox internal margin (PptxGenJS: [left, right, bottom, top]).
+          margin: [
+            pxToPoints(mergeComputed.paddingLeft),
+            pxToPoints(mergeComputed.paddingRight),
+            pxToPoints(mergeComputed.paddingBottom),
+            pxToPoints(mergeComputed.paddingTop)
+          ]
+        };
+        const baseTransparency = extractAlpha(firstComputed.color);
+        if (baseTransparency !== null) baseStyle.transparency = baseTransparency;
+
+        // Build the merged runs.
+        const mergedRuns = [];
+        textDescendants.forEach((textEl, idx) => {
+          const isLast = idx === textDescendants.length - 1;
+          const tComputed = window.getComputedStyle(textEl);
+          const transformStr = tComputed.textTransform;
+
+          // Per-paragraph style overrides — only include if they differ from base.
+          const elemFontSize = pxToPoints(tComputed.fontSize);
+          const elemFontFace = tComputed.fontFamily.split(',')[0].replace(/['"]/g, '').trim();
+          const elemColor = rgbToHex(tComputed.color);
+          const elemBold = tComputed.fontWeight === 'bold' || parseInt(tComputed.fontWeight) >= 600;
+          const elemItalic = tComputed.fontStyle === 'italic';
+          const elemUnderline = tComputed.textDecoration.includes('underline');
+
+          const runBaseOptions = {};
+          if (elemFontSize !== baseStyle.fontSize) runBaseOptions.fontSize = elemFontSize;
+          if (elemFontFace !== baseStyle.fontFace) runBaseOptions.fontFace = elemFontFace;
+          if (elemColor !== baseStyle.color) runBaseOptions.color = elemColor;
+          if (elemBold && !shouldSkipBold(tComputed.fontFamily)) runBaseOptions.bold = true;
+          if (elemItalic) runBaseOptions.italic = true;
+          if (elemUnderline) runBaseOptions.underline = true;
+
+          const hasInline = textEl.querySelector('b, i, u, strong, em, span, br');
+          let runs;
+          if (hasInline) {
+            runs = parseInlineFormatting(
+              textEl,
+              runBaseOptions,
+              [],
+              (str) => applyTextTransform(str, transformStr)
+            );
+          } else {
+            const txt = applyTextTransform(textEl.textContent.trim(), transformStr);
+            if (!txt) return;
+            runs = [{ text: txt, options: { ...runBaseOptions } }];
+          }
+
+          if (runs.length > 0 && !isLast) {
+            runs[runs.length - 1].options.breakLine = true;
+          }
+          mergedRuns.push(...runs);
+          processed.add(textEl);
+        });
+
+        if (mergedRuns.length === 0) {
+          processed.add(el);
+          return;
+        }
+
+        elements.push({
+          type: 'merged-text',
+          items: mergedRuns,
+          position: {
+            x: pxToInch(containerRect.left),
+            y: pxToInch(containerRect.top),
+            w: pxToInch(containerRect.width),
+            h: pxToInch(containerRect.height)
+          },
+          style: baseStyle
+        });
+
+        processed.add(el);
+        return;
+      }
 
       // Validate text elements don't have backgrounds, borders, or shadows
       if (textTags.includes(el.tagName)) {

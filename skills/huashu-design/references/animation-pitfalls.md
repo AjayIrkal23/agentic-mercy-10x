@@ -360,6 +360,27 @@ bash convert-formats.sh input.mp4 --minterpolate
 
 这条坑的隐蔽性在于——**没有 bug 报警**。只有人眼或 OCR 能发现。
 
+## 17. 离线/无 CDN 的真·自包含 —— React/Babel 全内联，且引擎也要 transpile
+
+**踩的坑（2026-05 觅游宣传动画）**：动画 HTML 用 `<script src="https://unpkg.com/react...">` + `<script src=".../@babel/standalone">` 走 CDN。本机有全局代理，Playwright 录制时 chromium 连 unpkg / Google Fonts 全部 `net::ERR_CONNECTION_CLOSED`：
+
+1. React/ReactDOM 没加载 → `window.React undefined`
+2. Babel 没加载 → `<script type="text/babel">` 里的 JSX 当普通 JS 跑 → `Unexpected token '<'`
+
+修了 React/Babel 后又踩第二个坑：**把 `animations.jsx` 引擎当普通 `<script>` 内联，依然报 `Unexpected token '<'` → `window.Animations is undefined`**。根因：**`animations.jsx` 引擎本身含 JSX**（`Stage`/`Sprite` 组件 `return (<div>...)`），它原设计是用 `<script type="text/babel">` 由 Babel 转译加载的。只 transpile 了 app 代码、忘了 transpile 引擎 → 引擎那段 JSX 没被编译。
+
+**规则**（要做「双击即开 / 离线 / 能被 Playwright 录」的真自包含单文件时）：
+
+- **React + ReactDOM 本地内联**：`curl` 下载 `react.production.min.js`（~10KB）+ `react-dom.production.min.js`（~131KB）到本地，inline 进 `<script>`，不走 CDN
+- **构建期 Babel 预编译，运行期不带 Babel**：用 `@babel/standalone`（下载一次，仅构建用）在 node 里 `Babel.transform(src,{presets:['react']}).code`，把 JSX → `React.createElement`。**app 和 `animations.jsx` 引擎两段都要过 transform**——引擎含 JSX，漏了它必报 `Unexpected token '<'`
+- **字体改系统字体**：Google Fonts CDN 同样会被代理掐断。中文动画用 `'PingFang SC'`（sans）/ `'Songti SC'`（serif）系统字体，不依赖网络。`document.fonts.ready` 对系统字体立即 resolve，录制不卡
+- **base64 内联图片素材**：`<img src="png/x.png">` 相对路径在 `file://` 能渲染，但要真便携（移动文件不丢图）就 base64 data URL 内联；背景大图先转 JPEG 压一下再 base64
+- **构建模板化**：HTML 模板留 `__REACT__/__REACTDOM__/__ASSETS__/__ENGINE__` token + 一段 `type="text/jsx-source"` 的 app 源码，node 构建脚本读 token 注入（vendor 原样、引擎+app 过 Babel）→ 写出最终单文件。改动画只改模板重跑构建
+
+**验证**：Playwright `page.evaluate(()=>({React:typeof window.React, Animations:typeof window.Animations}))`——两个都该是 `object`。任一 `undefined` → 对应 `<script>` 抛了错（多半是没 transpile 的 JSX）。
+
+**和坑 #15 的关系**：#15 讲「单文件别用 `src=` 外链 `.jsx`（file:// CORS）」；本坑更进一步——连 React/Babel/字体的**远程 CDN 在受限网络下也会断**，要做到真自包含必须全内联 + 构建期 transpile。
+
 ## 快速自查清单（开工前 5 秒）
 
 - [ ] 每个 `position: absolute` 的父元素都有 `position: relative`？
@@ -378,3 +399,4 @@ bash convert-formats.sh input.mp4 --minterpolate
 - [ ] 涉及具体品牌（Stripe/Anthropic/Lovart/...）：走完了「品牌资产协议」（SKILL.md §1.a 五步）？有没有写 `brand-spec.md`？
 - [ ] 单文件交付的 HTML：`animations.jsx` 是内联的，不是 `src="..."`？（file:// 下 external .jsx 会 CORS 黑屏）
 - [ ] 跨 scene 出现的元素（chapter 标签/水印/scene 编号）没有硬编码颜色？在每个 scene 底色下都可见？
+- [ ] 要离线/真自包含：React+ReactDOM 本地内联、**app 和 `animations.jsx` 引擎都过 Babel transpile**、字体用系统字体？（见坑 #17；引擎含 JSX，漏 transpile 必报 `Unexpected token '<'`）

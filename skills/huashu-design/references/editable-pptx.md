@@ -104,6 +104,39 @@ background: #FF6B6B;
 
 ---
 
+## 合并文本框（`data-pptx-merge`）
+
+**默认行为**：HTML 里每个 `<p>`/`<h1>`-`<h6>` 在 PPTX 里都是**独立文本框**。卡片里写 3 个 `<p>` → PPT 里 3 个文本框摞着，编辑时不能整段回车换行加段，得逐个改字号/对齐。
+
+**解决方法**：给外层 div 加 `data-pptx-merge="true"`，容器内的所有 `<p>/<h*>` 会合并为**一个可编辑文本框**，每段之间用段落分隔符隔开，PPT 里就是一段一段连续编辑。
+
+```html
+<!-- ✅ 合并写法：4 段全部在一个文本框里 -->
+<div class="card" data-pptx-merge="true"
+     style="position: absolute; top: 60pt; left: 60pt; width: 420pt;
+            background: #1A4A8A; border-radius: 8pt; padding: 20pt 24pt;">
+  <h2 style="font-size: 24pt; color: #FFFFFF;">标题</h2>
+  <p  style="font-size: 14pt; color: #DDEEFF;">第一段正文。</p>
+  <p  style="font-size: 14pt; color: #FFD166;">第二段：换颜色作为强调。</p>
+  <p  style="font-size: 14pt; color: #DDEEFF;">第三段：同一个文本框里继续写。</p>
+</div>
+```
+
+**保留的样式**（per-paragraph 作为 run options 写入）：`font-size`、`color`、`font-family`、`font-weight`（bold）、`font-style`（italic）、`text-decoration: underline`、`<b>/<i>/<u>/<strong>/<em>/<span>` 内联样式。
+
+**取自第一段、整框统一**：`text-align`、`line-height`。因为 PowerPoint 的对齐和行距是 paragraph/textbox 级别——一框里只能有一种对齐。如果几段对齐不同，请别用 merge，让它们各自独立。
+
+**容器自身的 `background`/`border`/`box-shadow`/`border-radius`** 照常作为 shape 渲染，行为和普通 div 完全一样——也就是说蓝色卡片底 + 文本仍然是「shape + text frame」两层，只是文本层从 3-4 个文本框塌缩成 1 个。
+
+**限制**：
+- 不能嵌套 `data-pptx-merge`（会报错）。
+- 容器不能用 `background-image`（同 4 条硬约束规则 4）。
+- 容器内不要再放有 `background`/`border` 的子 div——它们仍会被当作独立 shape 渲染，但里面的文字已被合并走了，可能产生视觉错位。
+
+**什么时候用**：内容会反复改、要在 PPT 里继续编辑的场景。一次性导出归档的不用加，行为一致。
+
+---
+
 ## Path A HTML 模板骨架
 
 每张 slide 一个独立 HTML 文件，彼此作用域隔离（避开单文件 deck 的 CSS 污染）。

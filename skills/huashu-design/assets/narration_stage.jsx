@@ -100,6 +100,12 @@ const NarrationStageLib = (() => {
     React.useEffect(() => {
       let raf;
       if (recording) {
+        // Seek-render（render-video-seek.js 注入 window.__seekRender）：冻结自驱时钟，
+        // 由外部 window.__seek(t) 逐帧推进。每帧都是确定性 seek，不起 rAF。
+        if (typeof window !== 'undefined' && window.__seekRender) {
+          window.__seek = (t) => setTime(Math.min(t, timeline.totalDuration));
+          return;
+        }
         // 录视频模式：rAF wall-clock 自驱动从 0 开始
         // 兼容 render-video.js（它依赖动画自然推进 + window.__seek 复位）
         let startedAt = null;
