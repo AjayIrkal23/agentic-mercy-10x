@@ -55,6 +55,11 @@ CSV_CONFIG = {
         "search_cols": ["Category", "Icon Name", "Keywords", "Best For"],
         "output_cols": ["Category", "Icon Name", "Keywords", "Library", "Import Code", "Usage", "Best For", "Style"]
     },
+    "gsap": {
+        "file": "motion.csv",
+        "search_cols": ["Category", "Intensity Tier", "Keywords", "Trigger"],
+        "output_cols": ["Category", "Intensity Tier", "Trigger", "Duration", "Easing", "GSAP Snippet", "Framework Notes", "Do", "Don't", "Performance Notes"]
+    },
     "react": {
         "file": "react-performance.csv",
         "search_cols": ["Category", "Issue", "Keywords", "Description"],
@@ -73,22 +78,28 @@ CSV_CONFIG = {
 }
 
 STACK_CONFIG = {
-    "angular": {"file": "stacks/angular.csv"},
-    "astro": {"file": "stacks/astro.csv"},
-    "flutter": {"file": "stacks/flutter.csv"},
-    "html-tailwind": {"file": "stacks/html-tailwind.csv"},
-    "jetpack-compose": {"file": "stacks/jetpack-compose.csv"},
-    "laravel": {"file": "stacks/laravel.csv"},
-    "nextjs": {"file": "stacks/nextjs.csv"},
-    "nuxtjs": {"file": "stacks/nuxtjs.csv"},
-    "nuxt-ui": {"file": "stacks/nuxt-ui.csv"},
-    "react": {"file": "stacks/react.csv"},
-    "react-native": {"file": "stacks/react-native.csv"},
-    "shadcn": {"file": "stacks/shadcn.csv"},
-    "svelte": {"file": "stacks/svelte.csv"},
-    "swiftui": {"file": "stacks/swiftui.csv"},
-    "threejs": {"file": "stacks/threejs.csv"},
-    "vue": {"file": "stacks/vue.csv"},
+    "react":            {"file": "stacks/react.csv"},
+    "nextjs":           {"file": "stacks/nextjs.csv"},
+    "vue":              {"file": "stacks/vue.csv"},
+    "svelte":           {"file": "stacks/svelte.csv"},
+    "astro":            {"file": "stacks/astro.csv"},
+    "swiftui":          {"file": "stacks/swiftui.csv"},
+    "react-native":     {"file": "stacks/react-native.csv"},
+    "flutter":          {"file": "stacks/flutter.csv"},
+    "nuxtjs":           {"file": "stacks/nuxtjs.csv"},
+    "nuxt-ui":          {"file": "stacks/nuxt-ui.csv"},
+    "html-tailwind":    {"file": "stacks/html-tailwind.csv"},
+    "shadcn":           {"file": "stacks/shadcn.csv"},
+    "jetpack-compose":  {"file": "stacks/jetpack-compose.csv"},
+    "threejs":          {"file": "stacks/threejs.csv"},
+    "angular":          {"file": "stacks/angular.csv"},
+    "laravel":          {"file": "stacks/laravel.csv"},
+    "javafx":           {"file": "stacks/javafx.csv"},
+    "wpf":              {"file": "stacks/wpf.csv"},
+    "winui":            {"file": "stacks/winui.csv"},
+    "avalonia":         {"file": "stacks/avalonia.csv"},
+    "uno":              {"file": "stacks/uno.csv"},
+    "uwp":              {"file": "stacks/uwp.csv"},
 }
 
 # Common columns for all stacks
@@ -117,7 +128,7 @@ class BM25:
     def tokenize(self, text):
         """Lowercase, split, remove punctuation, filter short words"""
         text = re.sub(r'[^\w\s]', ' ', str(text).lower())
-        return [w for w in text.split() if len(w) > 2]
+        return [w for w in text.split() if len(w) >= 2]
 
     def fit(self, documents):
         """Build BM25 index from documents"""
@@ -209,6 +220,7 @@ def detect_domain(query):
         "typography": ["font pairing", "typography pairing", "heading font", "body font"],
         "google-fonts": ["google font", "font family", "font weight", "font style", "variable font", "noto", "font for", "find font", "font subset", "font language", "monospace font", "serif font", "sans serif font", "display font", "handwriting font", "font", "typography", "serif", "sans"],
         "icons": ["icon", "icons", "lucide", "heroicons", "symbol", "glyph", "pictogram", "svg icon"],
+        "gsap": ["gsap", "quickto", "scrolltrigger", "stagger", "magnetic cursor", "parallax", "page transition", "scroll reveal", "scroll-triggered", "scrollytelling", "flip plugin", "splittext", "shimmer", "skeleton loader"],
         "react": ["react", "next.js", "nextjs", "suspense", "memo", "usecallback", "useeffect", "rerender", "bundle", "waterfall", "barrel", "dynamic import", "rsc", "server component"],
         "web": ["aria", "focus", "outline", "semantic", "virtualize", "autocomplete", "form", "input type", "preconnect"]
     }
