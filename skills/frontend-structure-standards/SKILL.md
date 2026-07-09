@@ -27,15 +27,17 @@ FRONTEND STRUCTURE STANDARDS
 
 3. PROJECT STRUCTURE
 
-Use domain-based organization.
+Use domain-based organization. Confirmed against 3 reference codebases (site-sync-vista, MARKETING REPORT AUTOMATION, GO_UDP admin/user dashboards) — all React/Vite/Tailwind/Redux Toolkit, all domain-first.
 
 Example:
 
 src/
   api/<domain>/
-    get.ts (s) (single api each file)
+    list.ts (s) (single api each file)
     create.ts (s) (single api each file)
     update.ts (s) (single api each file)
+    remove.ts (s) (single api each file)
+    options.ts / export.ts (s) (as needed)
 
   components/<domain>/<feature>/
     FeatureComponent.tsx
@@ -45,16 +47,20 @@ src/
   pages/<domain>/<route>/
     index.tsx
 
-  hooks/<domain>/useSharedFeature.ts
-  services/<domain>/serviceshere
+  hooks/<domain>/useSharedFeature.ts   (flat `hooks/useX.ts` is equally normal until a domain accumulates several)
+  store/<domain>/ or redux/slices/<Domain>/   (see section 7)
+  schemas/<domain>/<entity>.schema.ts   (optional, Zod — only when the app validates forms/query params client-side)
   utils/
   types/<domain>/
-    feature-ui.ts
+    <entity>.ts        (server-shape/DTO type)
+    <feature>-ui.ts     (UI-only prop/state type)
 
 Rules:
 - One domain per folder
 - Do not mix domains
-- By default, route entry parents live under `src/pages/<domain>/<route>/index.tsx`
+- Domain folder names are kebab-case by default (`credit-report`, `loco-event-packets`, `realtime-locos`) — PascalCase domain folders exist as legacy drift in older code; don't introduce new PascalCase domain folders, but don't rename existing ones as a side effect of unrelated work
+- A dedicated `services/<domain>/` layer is optional and uncommon — most repos fold that logic straight into `api/<domain>/` or into `store/<domain>/api.ts` (RTK Query); only add `services/` when there's real orchestration beyond a single HTTP call
+- By default, route entry parents live under `src/pages/<domain>/<route>/index.tsx` — if the repo uses a file-based router (e.g. TanStack Router), route files instead live flat under `src/routes/` with dot-segmented filenames mirroring the URL (`_app.alerts.config.$id.edit.tsx`) and a generated route tree; don't hand-nest folders to imitate `pages/` under a file-based router
 - Page files should orchestrate route concerns and compose feature UI, not own large UI trees
 - Route-owned UI and related subcomponents should live under `src/components/<domain>/<feature>/*`
 - Feature-owned hooks may live under `src/components/<domain>/<feature>/hooks/*` when the logic is only used by that feature
@@ -68,7 +74,7 @@ Rules:
 - Feature-local styling belongs in `src/components/<domain>/<feature>/*.module.css`
 - CSS Modules must be imported directly by the owning component, not routed through domain CSS or root CSS
 - Tailwind utilities should own layout, spacing, sizing, typography, breakpoints, and common state classes by default
-- CSS Modules are the escape hatch for pseudo-elements, keyframes, layered backgrounds, complex selectors, and feature-local skins
+- CSS Modules are the escape hatch for pseudo-elements, keyframes, layered backgrounds, complex selectors, and feature-local skins — and a genuinely optional one: two of the three reference codebases ship zero `.module.css` files and rely on Tailwind + shadcn/ui primitives alone, so don't add a CSS Module just to have one
 - Once a repo has domain and feature style ownership, monolithic app CSS files are a structural violation
 - Repo-local docs may override this default when a project intentionally uses a different layout
 
@@ -160,19 +166,29 @@ Avoid:
 
 7. STATE MANAGEMENT (IF USED)
 
-Recommended structure:
+Redux Toolkit is the confirmed default across all 3 reference codebases. Plain React Context is only used for genuinely cross-cutting concerns (auth/session, theme) — never for domain/feature state. No Zustand or bare Context-as-store observed.
+
+Recommended structure (either variant is fine — match whatever the repo already uses):
 
 store/<domain>/
-  slice.ts
+  api.ts        (RTK Query injectEndpoints — server data, cache, invalidation)
+  slice.ts      (createSlice — client-only UI state: filters, pagination, dialogs)
   selectors.ts
-  thunks.ts (optional)
+
+-- or --
+
+redux/slices/<Domain>/
+  <Domain>Slice.ts
+  thunks.ts (optional — createAsyncThunk calling into api/<domain>)
+  selectors.ts
 
 Rules:
 - One domain per slice
 - No UI logic in store
 - Access state through selectors
-- Side effects only in thunks or hooks
+- Side effects only in thunks, RTK Query endpoints, or hooks
 - Keep store-facing contracts in `src/types/<domain>/...`, not in `store/<domain>/types.ts`
+- A shared base file (e.g. `store/api/baseApi.ts` + `errorTransform.ts`/`listResponseTransform.ts`) centralizes the RTK Query base query and response shaping once — domain `api.ts` files call `injectEndpoints` against it rather than each configuring their own base query
 
 Use global state only for:
 - Auth/session
