@@ -197,7 +197,11 @@
     "systematic-debugging",
     "receiving-code-review"
    ],
-   "ceremony": "standard"
+   "ceremony": "standard",
+   "agent": "debug-detective",
+   "artifact": "ROOTCAUSE.md",
+   "checkpoint": false,
+   "closers": true
   },
   "REVIEW": {
    "keywords": [
@@ -454,7 +458,11 @@
     "vite-react-best-practices"
    ],
    "superpowers_skills": [],
-   "ceremony": "full"
+   "ceremony": "full",
+   "agent": "frontend-uiux-designer",
+   "artifact": "DESIGN-REPORT.md",
+   "checkpoint": false,
+   "closers": true
   },
   "QA": {
    "keywords": [
@@ -712,7 +720,11 @@
     "cso"
    ],
    "superpowers_skills": [],
-   "ceremony": "standard"
+   "ceremony": "standard",
+   "agent": "security-sentinel",
+   "artifact": "SECURITY-REPORT.md",
+   "checkpoint": false,
+   "closers": false
   },
   "RESUME": {
    "keywords": [
@@ -884,7 +896,11 @@
     "writing-plans",
     "dispatching-parallel-agents"
    ],
-   "ceremony": "full"
+   "ceremony": "full",
+   "agent": "planning-director",
+   "artifact": "plan-{date}-{slug}.md",
+   "checkpoint": true,
+   "closers": false
   },
   "LARGE": {
    "keywords": [
@@ -1187,7 +1203,11 @@
     "receiving-code-review",
     "verification-before-completion"
    ],
-   "ceremony": "full"
+   "ceremony": "full",
+   "agent": "audit-specialist",
+   "artifact": "AUDIT-{date}.md",
+   "checkpoint": false,
+   "closers": false
   },
   "SPEC": {
    "keywords": [
@@ -1247,7 +1267,11 @@
     "brainstorming",
     "writing-plans"
    ],
-   "ceremony": "full"
+   "ceremony": "full",
+   "agent": "spec-architect",
+   "artifact": "SPEC-{slug}.md",
+   "checkpoint": true,
+   "closers": false
   },
   "IMPLEMENT": {
    "keywords": [
@@ -1377,7 +1401,12 @@
     ]
    },
    "model": "opus",
-   "ceremony": "full"
+   "ceremony": "full",
+   "agent": "implementation-engineer",
+   "artifact": "IMPL-REPORT.md",
+   "checkpoint": false,
+   "closers": true,
+   "requires": "plan"
   },
   "CLEANUP": {
    "keywords": [
@@ -1425,7 +1454,11 @@
     "finishing-a-development-branch",
     "verification-before-completion"
    ],
-   "ceremony": "standard"
+   "ceremony": "standard",
+   "agent": "deadcode-reaper",
+   "artifact": "REAP-REPORT.md",
+   "checkpoint": false,
+   "closers": false
   }
  },
  "category_priority": [
@@ -1448,6 +1481,34 @@
  ],
  "min_score": 1,
  "max_stack": 6,
+ "orchestration": {
+  "_comment": "Act B/C orchestration knobs (INVOKE-REDESIGN P3/P4). auto_dispatch_threshold compares against a category's keyword score: single-word keyword hit = 1, multi-word phrase hit = 2. 2 = AGGRESSIVE — fires on any clear intent match (one phrase OR two keywords), per user directive 2026-07-09 ('I want quality, I don't mind tokens').",
+  "auto_dispatch_threshold": 2,
+  "closers_chain": [
+   "deadcode-reaper",
+   "docs-sync-agent",
+   "qa-verifier"
+  ],
+  "security_trigger_globs": [
+   "**/auth/**",
+   "**/middleware/**",
+   "**/security/**",
+   "**/api/**",
+   "**/routes/**",
+   "**/handlers/**",
+   "**/controllers/**",
+   "**/*login*",
+   "**/*session*",
+   "**/*token*",
+   "**/*password*",
+   "**/*oauth*",
+   "**/*jwt*",
+   "**/*secret*",
+   "**/*credential*",
+   "**/*validat*",
+   "**/*sanitiz*"
+  ]
+ },
  "invoke_commands": {
   "AUDIT": {
    "name": "invoke-audit"
@@ -1475,6 +1536,9 @@
    "aliases": [
     "invoke-debugging"
    ]
+  },
+  "SECURITY": {
+   "name": "invoke-security"
   }
  }
 }
