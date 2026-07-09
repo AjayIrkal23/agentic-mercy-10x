@@ -266,6 +266,55 @@ Every skill in this workspace exists to give a developer one of eight superpower
 
 ---
 
+## 🧠 Always-fresh code intelligence
+
+Every superpower above rests on one foundation: the agent **never works blind**. The moment a session starts, a guard checks that the repo's **symbol index** (jcodemunch) and **dependency graph** (graphify) are fresh — and silently re-indexes only what changed. No manual step, no stale map.
+
+<div align="center">
+<img src="assets/auto-index.webp" alt="Source code auto-scanned into a symbol index and a dependency graph, re-indexed automatically at session start" width="100%">
+</div>
+
+<br/>
+
+| Layer | What it builds | What the agent asks it |
+|---|---|---|
+| **Symbol index** (`jcodemunch`) | Every function, class, type, caller, and reference — pre-parsed | *"Where is `X`? Who calls it? What's the blast radius if I change it?"* |
+| **Dependency graph** (`graphify`) | The whole module wiring as a queryable graph | *"Who depends on `X`? How do `A` and `B` connect? What are the god-nodes?"* |
+| **Freshness guards** (hooks) | A SessionStart check that re-indexes only the delta | *nothing — it just stays current, automatically* |
+
+**Why it matters:** a stock agent re-derives structure with grep on *every* task and still misses cross-module edges. Here it's a one-call lookup against an always-current map — which is exactly where the token savings below come from.
+
+---
+
+## 🧭 The agent always knows where to look
+
+Point a stock agent at an unfamiliar repo and it wanders — opening files, guessing, backtracking. This workspace gives it a **GPS**: `codebase-start-point-guide` sets the entry point, and `project-reference-linkage` + `project-structure-map` trace the exact vertical slice a change touches, so it walks straight to the right files and skips the rest.
+
+<div align="center">
+<img src="assets/codebase-navigation.webp" alt="An AI agent following a highlighted route from a start point straight to the exact target files, guided by project linkages" width="100%">
+</div>
+
+<br/>
+
+The linkage map keeps the full slice traceable end to end — touch one node and the agent already knows every other node in the chain:
+
+```mermaid
+flowchart LR
+    C["🧩 component"]:::fe --> H["🪝 hook"]:::fe --> A["🌐 api client"]:::fe
+    A --> RT["🛣️ route"]:::be --> CT["🎛️ controller"]:::be --> SV["⚙️ service"]:::be
+    SV --> SC["📐 schema"]:::be --> MD["🗄️ model"]:::be
+    H -.->|"UI state"| ST["🗃️ store / slice"]:::fe
+
+    classDef fe fill:#0EA5E9,stroke:#0369A1,color:#fff
+    classDef be fill:#6E56CF,stroke:#4B3B9C,color:#fff
+```
+
+- `codebase-start-point-guide` — the deterministic "where do I begin" flow for any repo.
+- `project-structure-map` — instant layer boundaries + likely-impacted files.
+- `project-reference-linkage` — the cross-module wiring above, so nothing downstream is missed.
+
+---
+
 ## 💰 The token economy
 
 Here is the part that pays for itself. A stock agent answers a question by **reading files** — it grep-scans, opens a dozen, and drowns its own context. This workspace answers the same question by **querying a pre-built symbol index and dependency graph**, then compresses everything that flows through. The result is dramatic:
@@ -310,18 +359,20 @@ Left unattended, an AI agent turns any codebase into spaghetti — files whereve
 
 <br/>
 
-The `project-reference-linkage` skill keeps the whole vertical slice traceable — so the agent always knows what a change touches, end to end:
+### The standards, made visual
 
-```mermaid
-flowchart LR
-    C["🧩 component"]:::fe --> H["🪝 hook"]:::fe --> A["🌐 api client"]:::fe
-    A --> RT["🛣️ route"]:::be --> CT["🎛️ controller"]:::be --> SV["⚙️ service"]:::be
-    SV --> SC["📐 schema"]:::be --> MD["🗄️ model"]:::be
-    H -.->|"UI state"| ST["🗃️ store / slice"]:::fe
+Four always-on skill sets decide *where every file goes and what shape it takes* — so the structure above is what you get by default, not what you hope for:
 
-    classDef fe fill:#0EA5E9,stroke:#0369A1,color:#fff
-    classDef be fill:#6E56CF,stroke:#4B3B9C,color:#fff
-```
+<table>
+<tr>
+<td width="50%"><img src="assets/standards-frontend.webp" alt="Frontend standards — domain-first folders, type ownership, 250-line file ceiling"><br/><b>Frontend</b> — <code>frontend-structure-standards</code> · <code>frontend-standards-always-follow</code>: domain-first folders, central type ownership, a hard 250-line file ceiling.</td>
+<td width="50%"><img src="assets/standards-backend.webp" alt="Backend layering — route, controller, service, schema, model"><br/><b>Backend</b> — <code>backend-standards-always-follow</code> · <code>service-layer-standards</code> · <code>backend-api-standards</code>: route → controller → service → schema → model boundaries that never blur.</td>
+</tr>
+<tr>
+<td width="50%"><img src="assets/scaffold-standards.webp" alt="Scaffold standards — a new domain materializes the exact file tree"><br/><b>Scaffold</b> — <code>scaffold-standards</code> · <code>domain-scaffold-patterns</code>: a new domain emits its exact file tree, validated against real Fastify/TS, FastAPI/Python, and Go/chi codebases.</td>
+<td width="50%"><img src="assets/api-contract.webp" alt="API contract bridging frontend and backend with a typed stable envelope"><br/><b>Contract</b> — <code>api-contract-standards</code> · <code>api-and-interface-design</code>: one typed, stable envelope across the FE/BE seam — no parallel shapes.</td>
+</tr>
+</table>
 
 Three enforcement layers keep it that way, permanently:
 
@@ -358,9 +409,17 @@ This is the part that matters. Each layer of the workspace exists to permanently
 
 ---
 
-## 🎯 The 3-act `/invoke` flow
+## 🎼 One command, a whole team
 
-Under the hood, every one of the 139 commands runs the same three acts. That uniformity is why they compose so cleanly:
+Type `/invoke-audit-spec-plan-impl-design` and a **whole cross-functional team wakes up in order** — an auditor, an architect, a planner, an engineer, a designer — each a clean-context specialist, each handing its artifact to the next. And you often don't even type it: a plain-English prompt like *"fix this bug and clean up"* is **auto-classified by keywords** and the matching chain fires on its own.
+
+<div align="center">
+<img src="assets/invoke-team.webp" alt="One /invoke command igniting a chain of specialist agents — audit, spec, plan, implement, design, clean, docs, verify — also auto-triggered by keywords" width="100%">
+</div>
+
+<br/>
+
+Under the hood, every one of the 139 commands runs the same **three acts**. That uniformity is why they compose so cleanly:
 
 ```mermaid
 flowchart LR
@@ -390,6 +449,28 @@ ACT 3  Auto-close → dead-code sweep · doc sync · verification · stop-gates
 ```
 
 Pick the acts you need and the command name writes itself: `/invoke-spec-plan-impl`, `/invoke-audit-debug-clean`, `/invoke-plan-impl-design`, … **139 in total, generated deterministically from one config file.**
+
+---
+
+## 🧭 The dynamic skill router
+
+How does the right skill or specialist show up at the right moment, without you asking? A **dynamic router** sits between your prompt and the work. It classifies intent, ranks skills by the file paths you're touching, injects only what's relevant, and — over time — **tunes its own weights** based on what actually helped.
+
+<div align="center">
+<img src="assets/skill-router.webp" alt="A prompt entering a routing hub that fans out to only the relevant skills and specialist agents, with self-tuning weights" width="100%">
+</div>
+
+<br/>
+
+| Piece | What it does |
+|---|---|
+| **Keyword auto-dispatch** | A prompt's intent maps to an `/invoke` category and fires the matching specialist chain — no command typed |
+| **Path-ranked injection** | Editing a `.tsx`? You get `fe_*` skills. A Go service? `be_*` skills. Only the relevant standards load |
+| **Session skill manifest** | Batches the skills you *haven't* read yet, so nothing mandatory is silently skipped |
+| **Self-tuning weights** | A weight-updater learns which skills actually helped and re-ranks future routing |
+| **One source of truth** | Every route, model, and command composition lives in `autonomous-skill-router.config.json` — edit it, regenerate, done |
+
+**This is the brain of the workspace** — the reason 200+ skills, 9 specialists, and 139 commands feel like *one* system instead of a menu you have to memorize.
 
 ---
 
@@ -442,6 +523,83 @@ flowchart TD
 | **3 · Enforcement** | `hooks/` | 70+ hooks that make the doctrine real — skill injection, index guards, write gates, model guards, stop-gates. |
 | **4 · Specialists** | `agents/` | A specialist agent mesh (the `/invoke` corps + a UI/UX designer + GSD/Figma/Vercel helpers). |
 | **5 · Orchestration** | `commands/` | 139 `/invoke-*` commands composing the specialists into the 3-act flow. |
+
+---
+
+## 🚧 70+ hooks across the lifecycle
+
+Skills are *advice*. **Hooks are the enforcement.** They fire at five points in every session — SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop — and they are the reason the discipline actually holds instead of drifting the moment the agent gets busy.
+
+<div align="center">
+<img src="assets/hooks-lifecycle.webp" alt="70+ hooks firing across five lifecycle phases: session start, prompt, pre-write, post-write, stop" width="100%">
+</div>
+
+<br/>
+
+Some of them don't just advise — they **gate**. A risky change runs a gauntlet before it's allowed through, and a session can't even *end* until the closing gates pass:
+
+<div align="center">
+<img src="assets/hooks-gates.webp" alt="A code change passing through a gauntlet of gates: model, intel, TDD, dox, security, review" width="100%">
+</div>
+
+<br/>
+
+| Phase | What the hooks do | A few of them |
+|---|---|---|
+| **① SessionStart** | Boot knowing the codebase | `jcodemunch-index-guard` · `graphify-index-guard` · `memory-load-on-start` · `dox-tree-guard` · `tdd-guard-init-guard` |
+| **② UserPromptSubmit** | Shape the request before work | `sequential-thinking-mandate` · `codebase-intel-router` · `autonomous-skill-router` · `ui-ux-stack-orchestrator` |
+| **③ PreToolUse** | Gate & route every action | `opus-guard` · `workflow-model-guard` · `jcodemunch-enforce` · `dox-write-gate` · `tdd-guard-gate` · `security-scan-gate` · `skill_router` · `ponytail-caveman-guard` |
+| **④ PostToolUse** | Clean up after every write | `post-write-aggregator` · `desloppify-cleanup` · `doc-update-enforcer` · `dox-child-scaffold` · `security-semgrep-tracker` |
+| **⑤ Stop** | Prove it's done, then learn | `hard-completion-gate` · `invoke-suite-gate` · `santa-method-writer` · `session-learning-extractor` · `session-memory-writer` |
+
+<details>
+<summary><b>Every hook, by phase</b> (click to expand the full roster)</summary>
+
+- **SessionStart** — `session-start-aggregator` · `session-lifecycle` · `jcodemunch-index-guard` · `graphify-index-guard` · `memory-load-on-start` · `memory-bootstrap-guard` · `dox-tree-guard` · `tdd-guard-init-guard` · `session-plan-gate-hint` · `discovery-skills-reminder`
+- **UserPromptSubmit** — `sequential-thinking-mandate` · `codebase-intel-router` · `token-stack-prompt-reminder` · `ui-ux-stack-orchestrator` · `autonomous-skill-router`
+- **PreToolUse** — `opus-guard` · `workflow-model-guard` · `model-router` · `force-sonnet-subagent` · `jcodemunch-enforce` · `graphify-enforce` · `graphify-context-hint` · `dox-write-gate` · `gateguard-write-gate` · `bash-write-gate` · `dangerous-bash-gate` · `tdd-guard-gate` · `security-scan-gate` · `first-write-skill-gate` · `fullstack-skills-reminder` · `skill_router` · `ponytail-caveman-guard` · `tool_compat`
+- **PostToolUse** — `post-write-aggregator` · `desloppify-cleanup` · `doc-update-enforcer` · `blocking-doc-enforcer` · `documentation_lifecycle_hook` · `dox-child-scaffold` · `security-semgrep-tracker` · `skill-invocation-tracker`
+- **Stop** — `hard-completion-gate` · `invoke-suite-gate` · `invoke-suite-manifest` · `suite_push` · `santa-method-writer` · `session-learning-extractor` · `session-memory-writer` · `codex-capture` · `skill-effectiveness-report` · `skill-router-weight-updater` · `weekly-retro-trigger` · `watch-daemon-session-end`
+- **Engines & generators** — `dox_engine` · `gen-invoke-commands` · `_watch_refcount`
+
+</details>
+
+---
+
+## 📖 A self-documenting codebase
+
+One of those hooks deserves its own spotlight. The **dox tree** guarantees every directory in every repo carries a `CLAUDE.md` (+ `AGENTS.md`) — and the moment you create a new folder, a hook **auto-scaffolds** its doc. Before editing, the agent reads root → target, so it always inherits the local rules of the exact place it's working.
+
+<div align="center">
+<img src="assets/dox-tree.webp" alt="A self-documenting codebase — a doc in every folder, auto-scaffolded into new folders, read root to target" width="100%">
+</div>
+
+<br/>
+
+- **A doc in every folder** — local conventions live next to the code they govern.
+- **Auto-scaffold on new folders** — write into an undocumented dir and its `CLAUDE.md` appears, root index re-synced.
+- **Read root → target** — the agent walks the doc chain before it edits, so it never violates a local rule it didn't know existed.
+
+---
+
+## 🎨 UI that never looks AI-generated
+
+Most AI writes **slop UI** — templated cards, the same purple gradient, zero intention. This workspace refuses. A six-skill anti-slop design stack — on top of the **Higgsfield** asset engine that generated *every image in this README* — turns a brief into interfaces that look deliberately crafted.
+
+<div align="center">
+<img src="assets/uiux-antislop.webp" alt="AI slop vs crafted UI — a dramatic before and after" width="100%">
+</div>
+
+<br/>
+
+The design work runs as its own pipeline — real design systems in, screenshot-verified UI out:
+
+<table>
+<tr>
+<td width="50%"><img src="assets/uiux-stack-flow.webp" alt="The anti-slop design stack pipeline feeding a finished UI"><br/><b>The stack</b> — <code>impeccable</code> · <code>taste-skill</code> · <code>ui-ux-pro-max</code> · <code>huashu-design</code> · <code>frontend-ui-engineering</code> · <code>design-extract</code>, fed by Higgsfield-generated assets.</td>
+<td width="50%"><img src="assets/uiux-designer-loop.webp" alt="The UI/UX designer loop — 3 variations, self-critique, screenshot proof"><br/><b>The loop</b> — the <code>frontend-uiux-designer</code> agent explores <b>3 variations</b>, runs a <b>self-critique</b> pass, then captures <b>screenshot proof</b> at real breakpoints before presenting.</td>
+</tr>
+</table>
 
 ---
 
