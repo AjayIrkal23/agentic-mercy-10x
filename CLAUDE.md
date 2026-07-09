@@ -18,7 +18,7 @@ Every `Agent` call's `description` field **MUST** start with `[sonnet] `, `[opus
 
 **Standing carve-out — `/invoke-impl` implements on Opus.** The IMPLEMENT suite (`/invoke-impl`, `/invoke-implementation`, and any combo whose name contains `impl`) runs its implementation on Opus by user directive: implementation subagents get `[opus]` + `model:"opus"`; if the main loop is not on Opus, delegate the implementation to an Opus subagent. Read-only helpers (search/lint/docs) stay Sonnet. Source of truth: `categories.IMPLEMENT.model:"opus"` in `hooks/autonomous-skill-router.config.json`, rendered into each command by `gen-invoke-commands.py`. See [[invoke-impl-opus]] (`rules/invoke-impl-opus.md`).
 
-- `Explore` and `claude-code-guide` → always `[sonnet]`. `frontend-uiux-designer` → always `[opus]`.
+- `Explore` and `claude-code-guide` → always `[sonnet]`. `frontend-uiux-designer` → always `[opus]`. `implementation-engineer` → always `[opus]` (the /invoke-impl carve-out made agent-shaped; opus-guard pins it).
 - Example (heavy): `Agent(subagent_type="general-purpose", description="[opus] Design the multi-service event pipeline end-to-end", prompt="…")`.
 - Example (normal): `Agent(subagent_type="Explore", description="[sonnet] Map loco process data flow", prompt="…")`.
 - Example (user said "use fable"): `Agent(subagent_type="general-purpose", description="[fable] …", model="fable", prompt="…")`.
