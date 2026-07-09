@@ -8,6 +8,13 @@
   "sweepMaxDepth": 12,
   "maxSweepDirs": 500,
 
+  "skipPaths": [
+    "~/.claude/agents",
+    "~/.claude/commands",
+    "~/.claude/skills",
+    "~/.claude/plugins"
+  ],
+
   "significantDirThreshold": 3,
   "rootDoxMarker": "<!-- dox:root v1 -->",
   "codeExtensions": [

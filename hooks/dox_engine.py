@@ -57,6 +57,11 @@ DEFAULTS = {
     "syncRootIndex": True,       # keep the root CLAUDE.md index block in sync
     "sweepMaxDepth": 12,         # how deep to descend (root = depth 0)
     "maxSweepDirs": 500,         # safety cap on how many dirs one sweep documents
+    # Absolute path prefixes (~ ok) that NEVER get dox docs, at any depth.
+    # Used for roster-scanned dirs (~/.claude/{agents,commands,skills,plugins})
+    # where stray CLAUDE.md/AGENTS.md files pollute Claude Code's skill/agent
+    # rosters as phantom entries. Configure in dox-tree-guard.config.json.
+    "skipPaths": [],
     # Legacy fallback (used only when documentAllDirs is false) ------------------
     "significantDirThreshold": 3,
     "rootDoxMarker": ROOT_MARKER,
@@ -106,6 +111,28 @@ def _is_skip_dir(name: str) -> bool:
     return name in SKIP_DIRS or name.startswith(".")
 
 
+def _skip_paths(cfg: dict) -> "list[Path]":
+    """Resolve cfg['skipPaths'] (absolute, ~-expandable) to real Paths."""
+    out: "list[Path]" = []
+    for raw in (cfg.get("skipPaths") or []):
+        try:
+            out.append(Path(os.path.expanduser(str(raw))).resolve())
+        except Exception:
+            continue
+    return out
+
+
+def _under_skip_path(path: Path, skips: "list[Path]") -> bool:
+    """True if `path` IS one of the skip paths or lives anywhere beneath one."""
+    if not skips:
+        return False
+    try:
+        rp = path.resolve()
+    except OSError:
+        return False
+    return any(rp == s or s in rp.parents for s in skips)
+
+
 def _count_code_files(dirpath: str, filenames: "list[str]", exts: "set[str]") -> int:
     return sum(1 for f in filenames if os.path.splitext(f)[1].lower() in exts)
 
@@ -126,6 +153,7 @@ def collect(root: Path, cfg: dict) -> dict:
     threshold = int(cfg.get("significantDirThreshold") or 3)
     max_depth = int(cfg.get("sweepMaxDepth") or 12)
     max_dirs = int(cfg.get("maxSweepDirs") or 500)
+    skips = _skip_paths(cfg)
 
     dirs: "list[str]" = []
     missing: "list[str]" = []
@@ -137,6 +165,9 @@ def collect(root: Path, cfg: dict) -> dict:
         depth = len(rel.parts)
         # prune
         dirnames[:] = sorted(d for d in dirnames if not _is_skip_dir(d))
+        if skips:
+            dirnames[:] = [d for d in dirnames
+                           if not _under_skip_path(Path(dirpath) / d, skips)]
         if depth >= max_depth:
             dirnames[:] = []
 
@@ -414,6 +445,8 @@ def ensure_dir_documented(root: Path, target_dir: Path, cfg: dict) -> "list[str]
     if not rel or rel == ".":
         return []
     if any(_is_skip_dir(part) for part in rel.split("/")):
+        return []
+    if _under_skip_path(target_dir, _skip_paths(cfg)):
         return []
     made = ensure_child(root, rel, cfg)
     if made and cfg.get("syncRootIndex", True):
