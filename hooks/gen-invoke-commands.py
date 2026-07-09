@@ -1,14 +1,25 @@
 #!/usr/bin/env python3
 """
-gen-invoke-commands.py — generate /invoke-* slash commands (singles + all combos).
+gen-invoke-commands.py — generate /invoke-* slash commands (v2: 3-act orchestration).
 
-Single source of truth: autonomous-skill-router.config.json (category rosters).
-This writes, into ~/.claude/commands/:
+Single source of truth: autonomous-skill-router.config.json (category rosters +
+per-category `agent`/`artifact`/`checkpoint`/`closers`/`requires` fields + the
+top-level `orchestration` block). This writes, into ~/.claude/commands/:
+
   - one short single command per category:  invoke-audit, invoke-spec, invoke-plan,
-    invoke-impl, invoke-design, invoke-clean   (+ long aliases invoke-planning,
-    invoke-implementation, invoke-cleanup, invoke-deadcode)
-  - every COMBINATION of 2..6 categories, named in a fixed canonical order, e.g.
+    invoke-impl, invoke-debug, invoke-design, invoke-clean   (+ long aliases
+    invoke-planning, invoke-implementation, invoke-debugging, invoke-cleanup,
+    invoke-deadcode)
+  - every COMBINATION of 2..7 categories, named in a fixed canonical order, e.g.
     invoke-audit-spec, invoke-spec-plan-impl, invoke-audit-spec-plan-impl-design-clean.
+  - the orchestration commands: invoke-session, invoke-fullstack (alias of
+    invoke-spec-plan-impl), invoke-verify, invoke-docs, invoke-security,
+    invoke-update, invoke-status.
+
+Template (INVOKE-REDESIGN P3): a category WITH an `agent` field renders as a
+dispatch step in a 3-act body (ACT A intel → ACT B dispatch → ACT C closers)
+with the old skill list demoted to a legacy-inline FALLBACK block. A command
+whose categories ALL lack `agent` renders the pure legacy (v1) format verbatim.
 
 Combo bodies dedupe skills shared across their categories. Re-run after any config
 edit. Files are OVERWRITTEN and carry an AUTO-GENERATED banner — never hand-edit.
@@ -42,6 +53,7 @@ TOKENS: list[tuple[str, str]] = [
     ("clean", "CLEANUP"),
 ]
 TOKEN_TO_CAT = {t: c for t, c in TOKENS}
+CAT_TO_TOKEN = {c: t for t, c in TOKENS}
 
 # Long-name aliases for the single commands (so old names keep working).
 SINGLE_ALIASES = {
@@ -50,6 +62,15 @@ SINGLE_ALIASES = {
     "DEBUG": ["invoke-debugging"],
     "CLEANUP": ["invoke-cleanup", "invoke-deadcode"],
 }
+
+# Closer agents (Act C). Chain ORDER comes from orchestration.closers_chain in
+# the config; this map supplies the one-line role + report artifact per closer.
+CLOSER_INFO: dict[str, tuple[str, str]] = {
+    "deadcode-reaper": ("change-scoped dead-code sweep (your diff only)", "REAP-REPORT.md"),
+    "docs-sync-agent": ("Phase-7 doc sync — CLAUDE.md tree, server_docs/frontend_docs, CODEX", "DOCS-SYNC-REPORT.md"),
+    "qa-verifier": ("end-to-end functional verification of what shipped", "VERIFY-REPORT.md"),
+}
+SECURITY_CLOSER = ("security-sentinel", "SECURITY-REPORT.md")
 
 
 def _skill_exists(name: str) -> bool:
@@ -91,7 +112,7 @@ def _model_directive(cat: str, cat_cfg: dict) -> str:
 
 
 def _render_category(cat: str, cat_cfg: dict, seen: set[str]) -> tuple[list[str], int]:
-    """Render one category's skill block, deduped against `seen`. Returns (lines, n_new)."""
+    """Render one category's LEGACY skill block, deduped against `seen`. Returns (lines, n_new)."""
     before = len(seen)
     lines: list[str] = []
     directive = _model_directive(cat, cat_cfg)
@@ -129,8 +150,203 @@ def _render_category(cat: str, cat_cfg: dict, seen: set[str]) -> tuple[list[str]
     return lines, len(seen) - before
 
 
-def _build_command(cat_names: list[str], cats: dict) -> tuple[str, int]:
-    """Build the full command markdown body for one or more categories. Returns (content, n_skills)."""
+# ---------------------------------------------------------------------------
+# v2: 3-act rendering helpers
+# ---------------------------------------------------------------------------
+
+def _artifact_glob(template: str) -> str:
+    """'plan-{date}-{slug}.md' -> 'plan-*.md'; fixed names pass through."""
+    if "{" not in template:
+        return template
+    out = template
+    for ph in ("{date}-{slug}", "{date}", "{slug}"):
+        out = out.replace(ph, "*")
+    while "**" in out:
+        out = out.replace("**", "*")
+    while "*-*" in out:
+        out = out.replace("*-*", "*")
+    return out
+
+
+def _agent_label(cat_cfg: dict) -> str:
+    """Model label for the dispatch: category model if set, opus for the UI/UX agent, else sonnet."""
+    model = (cat_cfg.get("model") or "").strip().lower()
+    if model:
+        return model
+    if cat_cfg.get("agent") == "frontend-uiux-designer":
+        return "opus"
+    return "sonnet"
+
+
+def _category_skill_names(cat_cfg: dict) -> list[str]:
+    """All skills of a category (existing only), for the agent's reading list."""
+    names: list[str] = []
+    for n in cat_cfg.get("local_skills", []):
+        if _skill_exists(n) and n not in names:
+            names.append(n)
+    for n in cat_cfg.get("superpowers_skills", []):
+        sp = f"superpowers:{n}"
+        if sp not in names:
+            names.append(sp)
+    return names
+
+
+def _act_a(joined: str) -> list[str]:
+    return [
+        "## ACT A — INTEL (do this yourself, no dispatch)",
+        "",
+        "1. jcodemunch: `plan_turn` (query = the user's request) + `assemble_task_context` on the impacted area.",
+        "2. graphify: `graph_stats` + `query_graph` for the impacted area (freshness check; rebuild only if a guard reported STALE).",
+        "3. Read `CODEX.md` + the repo root `CLAUDE.md` if present (dox tree: root → target dir).",
+        "4. Produce the **BRIEF**: task, surfaces (FE/BE/infra), impacted layers, contracts at risk, relevant paths.",
+        "",
+        "Every agent dispatched below receives this BRIEF — specialists start warm, never blind.",
+    ]
+
+
+def _act_b_block(cat: str, cat_cfg: dict, prior_artifact: str | None, cats: dict) -> list[str]:
+    """One category's Act B step: dispatch (agent set) or inline (no agent)."""
+    agent = (cat_cfg.get("agent") or "").strip()
+    lines: list[str] = []
+    if not agent:
+        # Inline category — old behavior, executed by the main loop inside Act B.
+        lines.append(f"### {cat} → inline (no specialist — legacy behavior)")
+        lines.append("")
+        block, _ = _render_category(cat, cat_cfg, set())
+        lines += ["Load these skills yourself via the Skill tool, then execute this act inline:", ""]
+        lines += block
+        return lines
+
+    label = _agent_label(cat_cfg)
+    artifact = _artifact_glob(cat_cfg.get("artifact") or "")
+    opus_call = "  ⚠️ RUNS ON OPUS (mandatory)" if (cat_cfg.get("model") or "").lower() == "opus" else ""
+    lines.append(f"### {cat} → {agent}{opus_call}")
+    lines.append("")
+    directive = _model_directive(cat, cat_cfg)
+    if directive:
+        lines += [directive, ""]
+
+    requires = (cat_cfg.get("requires") or "").strip().upper()
+    if requires:
+        req_cfg = cats.get(requires, {})
+        req_agent = req_cfg.get("agent") or "planning-director"
+        req_art = _artifact_glob(req_cfg.get("artifact") or "plan-*.md")
+        lines += [
+            f"**REQUIRES a {requires} artifact (`{req_art}`).** Use the one produced above if the "
+            f"{requires} act ran. If none exists on disk, do NOT stop and do NOT ask — auto-run a "
+            f"mini planning act first: dispatch **{req_agent}** (`[sonnet]` prefix) with the BRIEF "
+            f"to produce it, then continue.",
+            "",
+        ]
+
+    with_parts = ["the BRIEF"]
+    if prior_artifact:
+        with_parts.append(f"the prior act's artifact (`{prior_artifact}`)")
+    skills = _category_skill_names(cat_cfg)
+    lines.append(
+        f"Spawn agent **{agent}** (Agent tool, subagent_type \"{agent}\", description prefix "
+        f"`[{label}] `, model:\"{label}\") with: " + " + ".join(with_parts) +
+        " + its reading list (the agent file already carries it; the same skills appear in the FALLBACK block below)."
+    )
+    if artifact:
+        lines.append(f"Wait for artifact `{artifact}`.")
+    if cat_cfg.get("checkpoint"):
+        lines.append(
+            "**CHECKPOINT:** show the user a compact summary of the artifact and get approval "
+            "before continuing to the next act."
+        )
+    _ = skills  # reading list lives in the agent file + FALLBACK block; not duplicated here
+    return lines
+
+
+def _act_c(cat_names: list[str], cats: dict, orch: dict) -> list[str]:
+    """Act C closers — emitted when any Act B category has closers:true."""
+    if not any(cats.get(c, {}).get("closers") for c in cat_names):
+        return []
+    act_b_agents = {cats.get(c, {}).get("agent") for c in cat_names}
+    chain = [a for a in orch.get("closers_chain", list(CLOSER_INFO)) if a not in act_b_agents]
+    lines = [
+        "## ACT C — CLOSE (automatic — do not skip, do not ask)",
+        "",
+        "This suite mutates code, so the closers run unconditionally. Dispatch each "
+        "(`[sonnet]` prefix) with the BRIEF + the diff scope, in order:",
+        "",
+    ]
+    for i, agent in enumerate(chain, 1):
+        role, report = CLOSER_INFO.get(agent, ("closer", "report"))
+        lines.append(f"{i}. **{agent}** — {role} → `{report}`")
+    sec_agent, sec_report = SECURITY_CLOSER
+    if sec_agent not in act_b_agents:
+        lines.append(
+            f"{len(chain) + 1}. **{sec_agent}** (conditional) — dispatch ONLY when the diff touches "
+            f"auth/input/API-ish paths (see `orchestration.security_trigger_globs` in the router "
+            f"config) → `{sec_report}`"
+        )
+    lines += [
+        "",
+        "Each closer writes its report. Then give the user ONE summary: what shipped, "
+        "evidence, artifact paths.",
+    ]
+    return lines
+
+
+def _fallback_block(cat_names: list[str], cats: dict) -> tuple[list[str], int]:
+    """Legacy inline skill lists, explicitly labeled as the degraded path."""
+    seen: set[str] = set()
+    lines = [
+        "## FALLBACK — legacy inline mode",
+        "",
+        "Use ONLY if agent dispatch is unavailable (offline, subagent limits, Agent tool "
+        "missing). Degrade gracefully: invoke the skills below yourself via the Skill tool, "
+        "in order, and execute every act sequentially in this context. Never silently drop "
+        "a category.",
+        "",
+    ]
+    for cat in cat_names:
+        block, _ = _render_category(cat, cats[cat], seen)
+        lines += block + [""]
+    return lines[:-1], len(seen)
+
+
+def _build_orchestrated(cat_names: list[str], cats: dict, orch: dict) -> tuple[str, int]:
+    """3-act body for a command where >=1 category has an agent."""
+    joined = " + ".join(cat_names)
+    agents = [cats[c].get("agent") for c in cat_names if cats[c].get("agent")]
+    intro = (
+        f"This is the orchestrated **{joined}** suite (3-act). Execute the acts IN ORDER, "
+        f"top to bottom, without asking for permission except at marked CHECKPOINTs. "
+        f"Artifacts are files on disk — a broken chain resumes from the last artifact "
+        f"instead of restarting."
+    )
+    body: list[str] = [intro, ""]
+    body += _act_a(joined) + [""]
+
+    body += ["## ACT B — DISPATCH (in this order)", ""]
+    prior_artifact: str | None = None
+    for cat in cat_names:
+        cat_cfg = cats[cat]
+        body += _act_b_block(cat, cat_cfg, prior_artifact, cats) + [""]
+        if cat_cfg.get("agent"):
+            prior_artifact = _artifact_glob(cat_cfg.get("artifact") or "") or prior_artifact
+
+    c_lines = _act_c(cat_names, cats, orch)
+    if c_lines:
+        body += c_lines + [""]
+
+    fb_lines, n_skills = _fallback_block(cat_names, cats)
+    body += fb_lines + [""]
+
+    body += ["Apply the orchestration above to the user's request:", "", "$ARGUMENTS"]
+
+    agent_list = ", ".join(dict.fromkeys(agents))
+    desc = (f"Orchestrate the {joined} flow — intel brief -> dispatch {agent_list} -> "
+            f"auto-close ({n_skills}-skill legacy fallback inline)")
+    content = f"---\ndescription: {desc}\n---\n{BANNER}\n\n" + "\n".join(body) + "\n"
+    return content, n_skills
+
+
+def _build_legacy(cat_names: list[str], cats: dict) -> tuple[str, int]:
+    """v1 body — used verbatim when NO category in the command has an agent."""
     seen: set[str] = set()
     joined = " + ".join(cat_names)
     intro = (
@@ -156,6 +372,110 @@ def _build_command(cat_names: list[str], cats: dict) -> tuple[str, int]:
     return content, n
 
 
+def _build_command(cat_names: list[str], cats: dict, orch: dict) -> tuple[str, int]:
+    """Router: 3-act when any category declares an agent; pure legacy otherwise."""
+    if any(cats.get(c, {}).get("agent") for c in cat_names):
+        return _build_orchestrated(cat_names, cats, orch)
+    return _build_legacy(cat_names, cats)
+
+
+# ---------------------------------------------------------------------------
+# New orchestration commands (deterministic template entries)
+# ---------------------------------------------------------------------------
+
+def _wrap(desc: str, body_lines: list[str]) -> str:
+    return f"---\ndescription: {desc}\n---\n{BANNER}\n\n" + "\n".join(body_lines) + "\n"
+
+
+def _standalone_closer(agent: str, report: str, role: str, scope_line: str) -> str:
+    body = [
+        f"Dispatch the **{agent}** specialist NOW (Agent tool, subagent_type \"{agent}\", "
+        f"description prefix `[sonnet] `, model:\"sonnet\") — standalone run.",
+        "",
+        f"1. Quick intel (yourself, no dispatch): {scope_line}",
+        f"2. Spawn **{agent}** with that scope as its brief. Its job: {role}.",
+        f"3. Wait for `{report}`, then relay a compact summary of it to the user with the artifact path.",
+        "",
+        "FALLBACK — if agent dispatch is unavailable, do the work inline following the "
+        "agent file's workflow (~/.claude/agents/" + agent + ".md). Never skip the report.",
+        "",
+        "Apply to:",
+        "",
+        "$ARGUMENTS",
+    ]
+    return _wrap(f"Dispatch {agent} standalone -> {report}", body)
+
+
+def _cmd_invoke_session() -> str:
+    body = [
+        "Run the session-init sequence NOW, in order. Read-only — no code changes. "
+        "End with ONE compact ready report.",
+        "",
+        "1. **Index freshness** — `mcp__jcodemunch__get_watch_status`; if STALE/MISSING run "
+        "`index_folder` (incremental). graphify: `graph_stats`; if the SessionStart guard "
+        "reported STALE, run `graphify update <root>` via Bash.",
+        "2. **Orientation** — `mcp__jcodemunch__get_repo_map` + `mcp__graphify__god_nodes`.",
+        "3. **Memory** — `mcp__memory__search_nodes(\"project:<repo-name>\")` (top patterns/decisions/fragile areas).",
+        "4. **CODEX + dox** — read `CODEX.md` and the repo root `CLAUDE.md`; note if the dox "
+        "root is missing or stubbed.",
+        "5. **Chain state** — glob for orchestration artifacts (`AUDIT-*.md`, `SPEC-*.md`, "
+        "`plan-*.md`, `IMPL-REPORT.md`, `ROOTCAUSE.md`, `DESIGN-REPORT.md`, `REAP-REPORT.md`, "
+        "`DOCS-SYNC-REPORT.md`, `VERIFY-REPORT.md`, `SECURITY-REPORT.md`) and note the newest.",
+        "",
+        "**READY REPORT (one block):** repo + branch, index/graph freshness, top memory facts, "
+        "dox status, newest artifacts, and the suggested next /invoke command for the user's goal.",
+        "",
+        "$ARGUMENTS",
+    ]
+    return _wrap("Session init — index/graph freshness, memory + CODEX load, repo orientation, dox check -> ready report", body)
+
+
+def _cmd_invoke_update() -> str:
+    body = [
+        "Upstream skill sync. Follow the P1 sync contract "
+        "(HOME-WORKFLOW-DETAILS/UPGRADE-PLAN/PHASES.md, Phase P1).",
+        "",
+        "1. Read `~/.claude/skills/.provenance.json` — the source-of-truth inventory "
+        "(origin, channel, version/commit per skill).",
+        "2. For each non-self channel (plugin, gsd, gstack, raw-copy): check the upstream "
+        "source for updates (plugin manager, git fetch, or the recorded fetch command).",
+        "3. Overlay-merge updates WITHOUT clobbering local overlays; snapshot every replaced "
+        "version to `~/.claude/attic/<today>/skills-pre-update/` first.",
+        "4. Update `.provenance.json` entries for anything refreshed.",
+        "5. Report the diff: updated / skipped (already current) / conflicts (local overlay "
+        "vs upstream change), one line per skill.",
+        "",
+        "$ARGUMENTS",
+    ]
+    return _wrap("Upstream skill sync — check .provenance.json sources, overlay-merge updates, report diff", body)
+
+
+def _cmd_invoke_status() -> str:
+    body = [
+        "Answer \"where am I?\" — read-only, one status block, no code changes.",
+        "",
+        "1. **Artifacts** — glob the project root (and `docs/superpowers/plans/`) for "
+        "`AUDIT-*.md`, `SPEC-*.md`, `plan-*.md`, `IMPL-REPORT.md`, `ROOTCAUSE.md`, "
+        "`DESIGN-REPORT.md`, `REAP-REPORT.md`, `DOCS-SYNC-REPORT.md`, `VERIFY-REPORT.md`, "
+        "`SECURITY-REPORT.md`; list newest-first with mtimes.",
+        "2. **Working tree** — `git status --short` + `git log --oneline -5`.",
+        "3. **Gate state** — read `~/.claude/hooks/.state/<cid>.completion-gate.json` and "
+        "sibling sidecars if present; note any failed gates.",
+        "4. **Chain inference** — e.g. `plan-*.md` newer than `IMPL-REPORT.md` → implementation "
+        "pending; `IMPL-REPORT.md` present but no `VERIFY-REPORT.md` → closers pending.",
+        "",
+        "**Output:** one status block — last artifacts, unfinished chains, gate states, and the "
+        "exact /invoke command to resume (e.g. /invoke-impl, /invoke-verify, /invoke-clean).",
+        "",
+        "$ARGUMENTS",
+    ]
+    return _wrap("Where am I? Last artifacts, unfinished chains, gate states, suggested resume command", body)
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+
 def _write(name: str, content: str, *, alias_of: str | None = None) -> None:
     if alias_of:
         content = content.replace(BANNER, BANNER + f"\n<!-- alias of /{alias_of} -->", 1)
@@ -165,15 +485,16 @@ def _write(name: str, content: str, *, alias_of: str | None = None) -> None:
 def main() -> int:
     cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     cats = cfg.get("categories", {})
+    orch = cfg.get("orchestration", {})
     COMMANDS_DIR.mkdir(parents=True, exist_ok=True)
 
-    singles = combos = 0
+    singles = combos = extras = 0
 
     # --- singles (r=1): short primary name + long aliases ---
     for tok, cat in TOKENS:
         if cat not in cats:
             continue
-        content, _ = _build_command([cat], cats)
+        content, _ = _build_command([cat], cats, orch)
         primary = f"invoke-{tok}"
         _write(primary, content)
         singles += 1
@@ -181,18 +502,47 @@ def main() -> int:
             _write(alias, content, alias_of=primary)
             singles += 1
 
-    # --- combos (r=2..6): canonical-order subsets ---
+    # --- combos (r=2..7): canonical-order subsets ---
     present = [(t, c) for t, c in TOKENS if c in cats]
     for r in range(2, len(present) + 1):
         for combo in itertools.combinations(present, r):
             toks = [t for t, _ in combo]
             cat_names = [c for _, c in combo]
-            content, _ = _build_command(cat_names, cats)
+            content, _ = _build_command(cat_names, cats, orch)
             _write("invoke-" + "-".join(toks), content)
             combos += 1
 
+    # --- orchestration commands (+7, deterministic) ---
+    # invoke-security: SECURITY is a full config category (agent + artifact + skills)
+    if "SECURITY" in cats:
+        content, _ = _build_command(["SECURITY"], cats, orch)
+        _write("invoke-security", content)
+        extras += 1
+    # invoke-fullstack: alias of the spec→plan→impl combo (one command, whole feature)
+    if all(c in cats for c in ("SPEC", "PLAN", "IMPLEMENT")):
+        content, _ = _build_command(["SPEC", "PLAN", "IMPLEMENT"], cats, orch)
+        _write("invoke-fullstack", content, alias_of="invoke-spec-plan-impl")
+        extras += 1
+    # standalone closers
+    _write("invoke-verify", _standalone_closer(
+        "qa-verifier", "VERIFY-REPORT.md",
+        CLOSER_INFO["qa-verifier"][0],
+        "identify the current diff/branch scope (`git status`, `git diff --stat`, recent commits) and what behavior it claims to ship.",
+    ))
+    _write("invoke-docs", _standalone_closer(
+        "docs-sync-agent", "DOCS-SYNC-REPORT.md",
+        CLOSER_INFO["docs-sync-agent"][0],
+        "list the code files changed this session/branch (`git diff --name-only`) and the doc trees the repo carries (CLAUDE.md tree, server_docs/, frontend_docs/, CODEX.md).",
+    ))
+    extras += 2
+    # session / update / status
+    _write("invoke-session", _cmd_invoke_session())
+    _write("invoke-update", _cmd_invoke_update())
+    _write("invoke-status", _cmd_invoke_status())
+    extras += 3
+
     total = len(list(COMMANDS_DIR.glob("invoke-*.md")))
-    print(f"Wrote {singles} single command file(s) + {combos} combo(s).")
+    print(f"Wrote {singles} single command file(s) + {combos} combo(s) + {extras} orchestration command(s).")
     print(f"Total invoke-*.md in {COMMANDS_DIR}: {total}")
     return 0
 
