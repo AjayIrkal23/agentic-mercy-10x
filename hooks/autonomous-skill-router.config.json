@@ -1482,8 +1482,8 @@
  "min_score": 1,
  "max_stack": 6,
  "orchestration": {
-  "_comment": "Act B/C orchestration knobs (INVOKE-REDESIGN P3/P4). auto_dispatch_threshold compares against a category's keyword score: single-word keyword hit = 1, multi-word phrase hit = 2. 2 = AGGRESSIVE — fires on any clear intent match (one phrase OR two keywords), per user directive 2026-07-09 ('I want quality, I don't mind tokens').",
-  "auto_dispatch_threshold": 2,
+  "_comment": "Act B/C orchestration knobs (INVOKE-REDESIGN P3/P4). auto_dispatch_threshold compares against the top category's keyword score: single-word keyword hit = 1, multi-word phrase hit = 2. 1 = AGGRESSIVE — fires on ANY clear intent match (same bar as routing itself), per user directive 2026-07-09 ('I want quality, I don't mind tokens'). Raise to 2-3 for conservative dispatch.",
+  "auto_dispatch_threshold": 1,
   "closers_chain": [
    "deadcode-reaper",
    "docs-sync-agent",

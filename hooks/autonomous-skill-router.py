@@ -220,10 +220,16 @@ def _classify(text: str, cfg: dict) -> str | None:
 
 
 def _classify_multi(text: str, cfg: dict) -> list[str]:
+    """Back-compat wrapper: category names only (see _classify_multi_scored)."""
+    cats, _ = _classify_multi_scored(text, cfg)
+    return cats
+
+
+def _classify_multi_scored(text: str, cfg: dict) -> tuple[list[str], dict[str, int]]:
     """
-    Return ALL qualifying categories (intent stacking), priority-ordered,
-    capped at MAX_STACK. This lets overlapping intents fire together —
-    e.g. "spec and plan the auth system" → ["SPEC", "PLAN"].
+    Return (ALL qualifying categories, their scores). Categories are intent-
+    stacked, priority-ordered, capped at MAX_STACK. This lets overlapping
+    intents fire together — e.g. "spec and plan the auth system" → ["SPEC", "PLAN"].
 
     Rules:
       - A category qualifies at score >= MIN_SCORE (filters single weak hits).
@@ -253,11 +259,11 @@ def _classify_multi(text: str, cfg: dict) -> list[str]:
     trivial_kw_hit = any(_kw_match(text, kw) for kw in trivial_kws)
     max_other_score = max(scores.values()) if scores else 0
     if trivial_kw_hit and file_refs <= 1 and max_other_score == 0:
-        return ["TRIVIAL"]
+        return ["TRIVIAL"], {"TRIVIAL": 1}
 
     qualified = {c: s for c, s in scores.items() if s >= min_score}
     if not qualified:
-        return []
+        return [], {}
 
     specialized = {c: s for c, s in qualified.items() if c not in SIZE_CATS}
     pool = specialized if specialized else qualified
@@ -266,7 +272,8 @@ def _classify_multi(text: str, cfg: dict) -> list[str]:
         pi = priority_order.index(c) if c in priority_order else len(priority_order)
         return (pi, -pool[c])
 
-    return sorted(pool.keys(), key=_sort_key)[:max_stack]
+    ordered = sorted(pool.keys(), key=_sort_key)[:max_stack]
+    return ordered, {c: pool[c] for c in ordered}
 
 
 # ---------------------------------------------------------------------------
@@ -450,6 +457,36 @@ def _build_multi_context(cats: list[str], cfg: dict, sp_dir: Path | None) -> str
 
 
 # ---------------------------------------------------------------------------
+# Auto-dispatch directive (P4 — aggressive specialist routing)
+# ---------------------------------------------------------------------------
+
+def _build_dispatch_directive(cat: str, cat_cfg: dict, cfg: dict, score: int) -> str:
+    """Directive to dispatch the category's specialist agent instead of loading
+    its skill stack inline. Fired when the top category has an `agent` in config
+    and its score clears orchestration.auto_dispatch_threshold (AGGRESSIVE=1:
+    any clear intent match dispatches)."""
+    agent = (cat_cfg.get("agent") or "").strip()
+    model = (cat_cfg.get("model") or "").strip().lower()
+    if not model:
+        model = "opus" if agent == "frontend-uiux-designer" else "sonnet"
+    inv = (cfg.get("invoke_commands", {}).get(cat, {}) or {}).get("name") or f"invoke-{cat.lower()}"
+    artifact = cat_cfg.get("artifact") or ""
+    for ph in ("{date}-{slug}", "{date}", "{slug}"):
+        artifact = artifact.replace(ph, "*")
+    lines = [
+        f"AUTO-DISPATCH (intent=[{cat}], score {score} >= threshold): this prompt is a clear {cat} task.",
+        f"Dispatch the {agent} specialist agent NOW via the Agent tool "
+        f"(subagent_type \"{agent}\", description prefix \"[{model}] \", model:\"{model}\") "
+        f"with a compact brief: the user's request, impacted paths, contracts at risk.",
+        f"The specialist owns the {cat} skill stack — do NOT load those skills into this context.",
+    ]
+    if artifact:
+        lines.append(f"Wait for its artifact ({artifact}), then relay a compact summary to the user.")
+    lines.append(f"Alternative: the user can run /{inv} for the full orchestrated flow.")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -467,9 +504,9 @@ def main() -> int:
     cfg = _load_config()
     text = _flatten_prompt(payload)
 
-    # Multi-intent classification: one or more stacked categories.
-    # _classify_multi already applies the MIN_SCORE gate per category.
-    cats = _classify_multi(text, cfg)
+    # Multi-intent classification: one or more stacked categories (+ scores).
+    # _classify_multi_scored already applies the MIN_SCORE gate per category.
+    cats, cat_scores = _classify_multi_scored(text, cfg)
 
     # TRIVIAL (alone) or no signal → emit nothing
     if not cats or cats == ["TRIVIAL"]:
@@ -504,7 +541,37 @@ def main() -> int:
         return 0
 
     sp_dir = _discover_superpowers_dir(cfg)
-    ctx = _build_multi_context(cats, cfg, sp_dir)
+
+    # P4 auto-dispatch (AGGRESSIVE): when the TOP category has an `agent` in
+    # config, its score clears orchestration.auto_dispatch_threshold, and the
+    # prompt did not come from an /invoke-* command (invoke-suite-manifest owns
+    # that path), inject a dispatch directive instead of that category's inline
+    # skill list. Below-threshold / agent-less categories keep the existing
+    # skill-injection behavior unchanged.
+    dispatched_cat: str | None = None
+    dispatch_txt = ""
+    if "/invoke-" not in text:
+        orch = cfg.get("orchestration", {}) or {}
+        try:
+            threshold = int(orch.get("auto_dispatch_threshold", 0) or 0)
+        except (TypeError, ValueError):
+            threshold = 0
+        if threshold > 0 and cats:
+            top = cats[0]
+            top_cfg = cfg.get("categories", {}).get(top, {})
+            if (top_cfg.get("agent") or "").strip() and cat_scores.get(top, 0) >= threshold:
+                dispatched_cat = top
+                dispatch_txt = _build_dispatch_directive(top, top_cfg, cfg, cat_scores.get(top, 0))
+
+    inline_cats = [c for c in cats if c != dispatched_cat]
+    ctx_parts: list[str] = []
+    if dispatch_txt:
+        ctx_parts.append(dispatch_txt)
+    if inline_cats:
+        mc = _build_multi_context(inline_cats, cfg, sp_dir)
+        if mc.strip():
+            ctx_parts.append(mc)
+    ctx = "\n\n".join(ctx_parts)
     if not ctx.strip():
         print("{}")
         return 0
@@ -517,7 +584,9 @@ def main() -> int:
         import suite_push  # noqa: E402
         cats_cfg = cfg.get("categories", {})
         pushed: list[str] = []
-        for c in cats:
+        # Dispatched category's skills belong to its specialist agent, not this
+        # context — only inline categories get soft skill pushes.
+        for c in inline_cats:
             cc = cats_cfg.get(c, {})
             pushed += [s for s in cc.get("local_skills", []) if _skill_exists(s)]
             if sp_dir:
