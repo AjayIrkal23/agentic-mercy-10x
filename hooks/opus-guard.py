@@ -52,7 +52,7 @@ SONNET_ONLY_FLAG = STATE_DIR / "sonnet-only-mode"
 FABLE_ONLY_FLAG = STATE_DIR / "fable-only-mode"
 
 SONNET_ONLY_AGENTS = {"explore", "claude-code-guide"}
-OPUS_ONLY_AGENTS = {"frontend-uiux-designer"}
+OPUS_ONLY_AGENTS = {"frontend-uiux-designer", "implementation-engineer"}
 
 VALID_MODELS = {"sonnet", "opus", "fable"}
 
