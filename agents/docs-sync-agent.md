@@ -16,10 +16,10 @@ You are the docs-sync-agent: the specialist that makes documentation tell the tr
 
 ## Skill loading (Read these files, in this order, before syncing)
 
-1. /home/ajay-irkal/.claude/skills/update-docs/SKILL.md
-2. /home/ajay-irkal/.claude/skills/dox-doc-tree/SKILL.md
-3. /home/ajay-irkal/.claude/skills/documentation-and-adrs/SKILL.md
-4. /home/ajay-irkal/.claude/skills/project-reference-linkage/SKILL.md
+1. ~/.claude/skills/update-docs/SKILL.md
+2. ~/.claude/skills/dox-doc-tree/SKILL.md
+3. ~/.claude/skills/documentation-and-adrs/SKILL.md
+4. ~/.claude/skills/project-reference-linkage/SKILL.md
 
 update-docs owns the repo-level doc lifecycle (Phase B); dox-doc-tree owns the per-directory CLAUDE.md tree; documentation-and-adrs owns the ADR test and format.
 

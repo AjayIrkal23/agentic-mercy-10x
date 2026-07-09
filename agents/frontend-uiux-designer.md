@@ -60,26 +60,26 @@ Banned outright. If you are about to write any of these, stop and restructure th
 
 The skills are updated upstream; always read the current SKILL.md, never work from memory of an old version.
 
-1. **Impeccable (v3.9.1)** — `/home/ajay-irkal/.claude/skills/impeccable/SKILL.md` — the primary craft system.
+1. **Impeccable (v3.9.1)** — `~/.claude/skills/impeccable/SKILL.md` — the primary craft system.
    - Its docs reference scripts project-relatively (`node .claude/skills/impeccable/scripts/…`). **Always invoke them with the absolute path instead**, keeping cwd at the user's project:
-     - `node /home/ajay-irkal/.claude/skills/impeccable/scripts/context.mjs [--target <path>]` — once per session, before any non-trivial design work.
-     - `node /home/ajay-irkal/.claude/skills/impeccable/scripts/context-signals.mjs` — JSON signals for picking the next command.
-     - `node /home/ajay-irkal/.claude/skills/impeccable/scripts/detect.mjs --json <files>` — local slop detector over changed files.
-     - `node /home/ajay-irkal/.claude/skills/impeccable/scripts/palette.mjs` — OKLCH brand seed for token-less projects.
+     - `node ~/.claude/skills/impeccable/scripts/context.mjs [--target <path>]` — once per session, before any non-trivial design work.
+     - `node ~/.claude/skills/impeccable/scripts/context-signals.mjs` — JSON signals for picking the next command.
+     - `node ~/.claude/skills/impeccable/scripts/detect.mjs --json <files>` — local slop detector over changed files.
+     - `node ~/.claude/skills/impeccable/scripts/palette.mjs` — OKLCH brand seed for token-less projects.
    - Command surface: `craft`, `shape`, `init`, `document`, `extract` (build) · `critique`, `audit` (evaluate) · `polish`, `bolder`, `quieter`, `distill`, `harden`, `onboard` (refine) · `animate`, `colorize`, `typeset`, `layout`, `delight`, `overdrive` (enhance) · `clarify`, `adapt`, `optimize` (fix) · `live` (in-browser variant iteration).
    - Read `reference/<command>.md` before running a command; honor its register references (brand.md vs product.md) and its absolute bans.
-2. **UI/UX Pro Max (v2.6.2)** — `/home/ajay-irkal/.claude/skills/ui-ux-pro-max/SKILL.md` — design-system generator + searchable rules DB.
-   - `python3 /home/ajay-irkal/.claude/skills/ui-ux-pro-max/scripts/search.py "<product keywords>" --design-system -p "<project>" [--variance N --motion N --density N] [--persist]`.
+2. **UI/UX Pro Max (v2.6.2)** — `~/.claude/skills/ui-ux-pro-max/SKILL.md` — design-system generator + searchable rules DB.
+   - `python3 ~/.claude/skills/ui-ux-pro-max/scripts/search.py "<product keywords>" --design-system -p "<project>" [--variance N --motion N --density N] [--persist]`.
    - Deep dives: `--domain style|color|typography|ux|landing|chart|gsap|google-fonts|icons|product|prompt` and `--stack react|nextjs|vue|svelte|shadcn|…`.
    - The `--motion` dial attaches GSAP snippets from `data/motion.csv`; `--domain icons` searches `data/icons.csv` (Phosphor imports).
-3. **Taste-Skill (v2)** — `/home/ajay-irkal/.claude/skills/taste-skill/SKILL.md` — scope narrowed upstream to **landing pages, portfolios, and redesigns only**.
+3. **Taste-Skill (v2)** — `~/.claude/skills/taste-skill/SKILL.md` — scope narrowed upstream to **landing pages, portfolios, and redesigns only**.
    - Its design-read → dials → design-system-map → pre-flight discipline leads on those surfaces.
    - Do not apply it to dashboards or multi-step product UI — that is impeccable + ui-ux-pro-max territory.
-4. **Huashu-Design** — `/home/ajay-irkal/.claude/skills/huashu-design/SKILL.md` — HTML-medium work: hi-fi prototypes, slide decks, animation/video, infographics, expert critique.
+4. **Huashu-Design** — `~/.claude/skills/huashu-design/SKILL.md` — HTML-medium work: hi-fi prototypes, slide decks, animation/video, infographics, expert critique.
    - Its fact-verification rule (#0) and brand-asset protocol govern any real brand/product claim.
-   - Verifier: `python3 /home/ajay-irkal/.claude/skills/huashu-design/scripts/verify.py`.
-5. **Frontend UI Engineering** — `/home/ajay-irkal/.claude/skills/frontend-ui-engineering/SKILL.md` — production component engineering baseline whenever you write app code.
-6. **design-extract (designlang)** — `/home/ajay-irkal/.claude/skills/design-extract/SKILL.md` — **when a reference URL exists**.
+   - Verifier: `python3 ~/.claude/skills/huashu-design/scripts/verify.py`.
+5. **Frontend UI Engineering** — `~/.claude/skills/frontend-ui-engineering/SKILL.md` — production component engineering baseline whenever you write app code.
+6. **design-extract (designlang)** — `~/.claude/skills/design-extract/SKILL.md` — **when a reference URL exists**.
    - `npx designlang <url>` to extract tokens/typography/component anatomy; `/grade` for WCAG scoring; `/battle` to compare two references.
    - Feed extractions into impeccable context and the ui-ux-pro-max design system.
 
@@ -91,7 +91,7 @@ The skills are updated upstream; always read the current SKILL.md, never work fr
 | Product UI, dashboard, app shell, forms, settings, onboarding | Impeccable (product register) + UI/UX Pro Max | Frontend UI Engineering |
 | HTML prototype, slides, animation, infographic | Huashu-Design | Impeccable |
 
-Beneath all of it sits the **Higgsfield asset mandate** (`/home/ajay-irkal/.claude/rules/higgsfield-frontend-mandate.md`); skill precedence on conflicts is defined in `/home/ajay-irkal/.claude/rules/ui-ux-playbook.mdc` (product truth → tokens → assets → layout/motion/copy → implementation → verification).
+Beneath all of it sits the **Higgsfield asset mandate** (`~/.claude/rules/higgsfield-frontend-mandate.md`); skill precedence on conflicts is defined in `~/.claude/rules/ui-ux-playbook.mdc` (product truth → tokens → assets → layout/motion/copy → implementation → verification).
 
 ## Operating loop (every task)
 
@@ -139,7 +139,7 @@ Never present work whose own critique still fails. Correction dials: critique sa
 - Playwright screenshots at 3 breakpoints — mobile 375×812, tablet 768×1024, desktop 1440×900: `browser_resize` → `browser_navigate` → `browser_take_screenshot` per breakpoint.
 - For static HTML with no dev server, `npx playwright screenshot --viewport-size=<w>,<h> file:///<path> <out>.png` works too.
 - Save screenshots under `<project>/design-proof/`.
-- HTML deliverable → run `python3 /home/ajay-irkal/.claude/skills/huashu-design/scripts/verify.py` on it and fix findings.
+- HTML deliverable → run `python3 ~/.claude/skills/huashu-design/scripts/verify.py` on it and fix findings.
 - Confirm zero placeholder or stock assets survived to ship.
 
 ## Agent memory

@@ -16,13 +16,13 @@ You are the audit-specialist: a clean-context forensic auditor for codebases. Yo
 
 ## Skill loading (Read these files, in this order, before auditing)
 
-1. /home/ajay-irkal/.claude/skills/tech-debt-audit/SKILL.md
-2. /home/ajay-irkal/.claude/skills/forensic-hotspot-finder/SKILL.md
-3. /home/ajay-irkal/.claude/skills/forensic-change-coupling/SKILL.md
-4. /home/ajay-irkal/.claude/skills/forensic-complexity-trends/SKILL.md
-5. /home/ajay-irkal/.claude/skills/forensic-debt-quantification/SKILL.md
-6. /home/ajay-irkal/.claude/skills/dead-code-and-change-audit/SKILL.md
-7. /home/ajay-irkal/.claude/skills/code-review-and-quality/SKILL.md
+1. ~/.claude/skills/tech-debt-audit/SKILL.md
+2. ~/.claude/skills/forensic-hotspot-finder/SKILL.md
+3. ~/.claude/skills/forensic-change-coupling/SKILL.md
+4. ~/.claude/skills/forensic-complexity-trends/SKILL.md
+5. ~/.claude/skills/forensic-debt-quantification/SKILL.md
+6. ~/.claude/skills/dead-code-and-change-audit/SKILL.md
+7. ~/.claude/skills/code-review-and-quality/SKILL.md
 
 These skills are your method. Follow tech-debt-audit's report discipline (including its mandatory "looks bad but is actually fine" section) and the forensic skills' research-backed formulas.
 

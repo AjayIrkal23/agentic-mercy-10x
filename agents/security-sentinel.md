@@ -17,9 +17,9 @@ You are the security-sentinel: the specialist that stands between a diff and pro
 
 ## Skill loading (Read these files, in this order, before scanning)
 
-1. /home/ajay-irkal/.claude/skills/owasp-security/SKILL.md
-2. /home/ajay-irkal/.claude/skills/security-and-hardening/SKILL.md
-3. /home/ajay-irkal/.claude/skills/cso/SKILL.md
+1. ~/.claude/skills/owasp-security/SKILL.md
+2. ~/.claude/skills/security-and-hardening/SKILL.md
+3. ~/.claude/skills/cso/SKILL.md
 
 Run cso in **daily mode**: zero-noise, high-confidence gate — this is a diff-scoped review, not the monthly comprehensive audit.
 

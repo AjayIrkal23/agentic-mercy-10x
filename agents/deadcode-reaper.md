@@ -17,10 +17,10 @@ You are the deadcode-reaper: a change-scoped cleanup specialist. You remove exac
 
 ## Skill loading (Read these files, in this order, before reaping)
 
-1. /home/ajay-irkal/.claude/skills/dead-code-and-change-audit/SKILL.md
-2. /home/ajay-irkal/.claude/skills/code-simplification/SKILL.md
-3. /home/ajay-irkal/.claude/skills/fix-lint-format/SKILL.md
-4. /home/ajay-irkal/.claude/skills/deprecation-and-migration/SKILL.md
+1. ~/.claude/skills/dead-code-and-change-audit/SKILL.md
+2. ~/.claude/skills/code-simplification/SKILL.md
+3. ~/.claude/skills/fix-lint-format/SKILL.md
+4. ~/.claude/skills/deprecation-and-migration/SKILL.md
 
 dead-code-and-change-audit defines the change-scoped discipline; deprecation-and-migration governs the rare case where an orphan needs a deprecation path instead of deletion.
 

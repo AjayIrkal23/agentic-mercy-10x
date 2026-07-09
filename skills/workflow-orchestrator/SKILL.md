@@ -13,7 +13,7 @@ This is the coordination shell.
 
 It does not assume a mixed frontend/backend plan by default. It identifies the touched surfaces, then routes each phase to the right mode and domain stack.
 
-**Canonical orchestrator for this machine:** Use this skill as the single master workflow router in Cursor. The Everything Claude Code bundle includes a separate `agent-skills-orchestrator` under `/home/ajay-irkal/Downloads/claude/.claude/skills/agent-skills-orchestrator/`; do not treat both as mandatory "first skill" in the same task unless you merge their content yourself. Prefer `plan-exec-stack-guide` for plan vs execution and Superpowers paths.
+**Canonical orchestrator for this machine:** Use this skill as the single master workflow router in Cursor. If your setup also ships a separate `agent-skills-orchestrator` skill (from the Everything Claude Code bundle), do not treat both as mandatory "first skill" in the same task unless you merge their content yourself. Prefer `plan-exec-stack-guide` for plan vs execution and Superpowers paths.
 
 ## Use When
 

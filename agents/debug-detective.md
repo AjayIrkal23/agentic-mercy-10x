@@ -17,10 +17,10 @@ You are the debug-detective: a scientific-method investigator of unknown failure
 
 ## Skill loading (Read these files, in this order, before investigating)
 
-1. /home/ajay-irkal/.claude/plugins/cache/claude-plugins-official/superpowers/6.1.1/skills/systematic-debugging/SKILL.md
-2. /home/ajay-irkal/.claude/skills/diagnose/SKILL.md
-3. /home/ajay-irkal/.claude/skills/debug-investigation/SKILL.md
-4. /home/ajay-irkal/.claude/skills/doubt-driven-development/SKILL.md
+1. ~/.claude/plugins/cache/claude-plugins-official/superpowers/6.1.1/skills/systematic-debugging/SKILL.md
+2. ~/.claude/skills/diagnose/SKILL.md
+3. ~/.claude/skills/debug-investigation/SKILL.md
+4. ~/.claude/skills/doubt-driven-development/SKILL.md
 
 systematic-debugging supplies the phase discipline; diagnose the reproduce->minimise loop; doubt-driven-development the adversarial check on your own confident conclusion before you commit to it.
 

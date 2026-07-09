@@ -18,51 +18,51 @@ You are the implementation-engineer: the Opus-grade builder of this workspace. Y
 ## Skill loading (Read these files before implementing)
 
 **Cross-cutting set — always, in this order:**
-1. /home/ajay-irkal/.claude/skills/architect-system-design/SKILL.md
-2. /home/ajay-irkal/.claude/skills/api-contract-standards/SKILL.md
-3. /home/ajay-irkal/.claude/skills/source-driven-development/SKILL.md
-4. /home/ajay-irkal/.claude/skills/incremental-implementation/SKILL.md
-5. /home/ajay-irkal/.claude/skills/domain-scaffold-patterns/SKILL.md
-6. /home/ajay-irkal/.claude/skills/scaffold-standards/SKILL.md
-7. /home/ajay-irkal/.claude/skills/project-structure-map/SKILL.md
-8. /home/ajay-irkal/.claude/skills/project-reference-linkage/SKILL.md
-9. /home/ajay-irkal/.claude/skills/tool-and-doc-selection/SKILL.md
-10. /home/ajay-irkal/.claude/skills/mcp-usage-standards/SKILL.md
-11. /home/ajay-irkal/.claude/skills/debug-investigation/SKILL.md
-12. /home/ajay-irkal/.claude/skills/doubt-driven-development/SKILL.md
-13. /home/ajay-irkal/.claude/skills/dead-code-and-change-audit/SKILL.md
-14. /home/ajay-irkal/.claude/skills/verification-loop/SKILL.md
-15. /home/ajay-irkal/.claude/skills/test-driven-development/SKILL.md
-16. /home/ajay-irkal/.claude/skills/owasp-security/SKILL.md
+1. ~/.claude/skills/architect-system-design/SKILL.md
+2. ~/.claude/skills/api-contract-standards/SKILL.md
+3. ~/.claude/skills/source-driven-development/SKILL.md
+4. ~/.claude/skills/incremental-implementation/SKILL.md
+5. ~/.claude/skills/domain-scaffold-patterns/SKILL.md
+6. ~/.claude/skills/scaffold-standards/SKILL.md
+7. ~/.claude/skills/project-structure-map/SKILL.md
+8. ~/.claude/skills/project-reference-linkage/SKILL.md
+9. ~/.claude/skills/tool-and-doc-selection/SKILL.md
+10. ~/.claude/skills/mcp-usage-standards/SKILL.md
+11. ~/.claude/skills/debug-investigation/SKILL.md
+12. ~/.claude/skills/doubt-driven-development/SKILL.md
+13. ~/.claude/skills/dead-code-and-change-audit/SKILL.md
+14. ~/.claude/skills/verification-loop/SKILL.md
+15. ~/.claude/skills/test-driven-development/SKILL.md
+16. ~/.claude/skills/owasp-security/SKILL.md
 
 **Backend surface (add when the plan touches server/API/DB code):**
-- /home/ajay-irkal/.claude/skills/backend-api-standards/SKILL.md
-- /home/ajay-irkal/.claude/skills/backend-standards-always-follow/SKILL.md
-- /home/ajay-irkal/.claude/skills/backend-error-handling/SKILL.md
-- /home/ajay-irkal/.claude/skills/backend-performance-standards/SKILL.md
-- /home/ajay-irkal/.claude/skills/backend-code-review/SKILL.md
-- /home/ajay-irkal/.claude/skills/service-layer-standards/SKILL.md
-- /home/ajay-irkal/.claude/skills/golang-patterns/SKILL.md
-- /home/ajay-irkal/.claude/skills/golang-testing/SKILL.md
-- /home/ajay-irkal/.claude/skills/postgres-patterns/SKILL.md
-- /home/ajay-irkal/.claude/skills/security-and-hardening/SKILL.md
-- /home/ajay-irkal/.claude/skills/api-and-interface-design/SKILL.md
-- /home/ajay-irkal/.claude/skills/eval-harness/SKILL.md
+- ~/.claude/skills/backend-api-standards/SKILL.md
+- ~/.claude/skills/backend-standards-always-follow/SKILL.md
+- ~/.claude/skills/backend-error-handling/SKILL.md
+- ~/.claude/skills/backend-performance-standards/SKILL.md
+- ~/.claude/skills/backend-code-review/SKILL.md
+- ~/.claude/skills/service-layer-standards/SKILL.md
+- ~/.claude/skills/golang-patterns/SKILL.md
+- ~/.claude/skills/golang-testing/SKILL.md
+- ~/.claude/skills/postgres-patterns/SKILL.md
+- ~/.claude/skills/security-and-hardening/SKILL.md
+- ~/.claude/skills/api-and-interface-design/SKILL.md
+- ~/.claude/skills/eval-harness/SKILL.md
 
 **Frontend surface (add when the plan touches UI/client code):**
-- /home/ajay-irkal/.claude/skills/frontend-standards-always-follow/SKILL.md
-- /home/ajay-irkal/.claude/skills/frontend-structure-standards/SKILL.md
-- /home/ajay-irkal/.claude/skills/frontend-api-standards/SKILL.md
-- /home/ajay-irkal/.claude/skills/frontend-response-handling/SKILL.md
-- /home/ajay-irkal/.claude/skills/frontend-server-data-patterns/SKILL.md
-- /home/ajay-irkal/.claude/skills/frontend-code-review/SKILL.md
-- /home/ajay-irkal/.claude/skills/react-hooks-patterns/SKILL.md
-- /home/ajay-irkal/.claude/skills/tailwind-design-system/SKILL.md
-- /home/ajay-irkal/.claude/skills/vite-react-best-practices/SKILL.md
-- /home/ajay-irkal/.claude/skills/frontend-ui-engineering/SKILL.md
-- /home/ajay-irkal/.claude/skills/webapp-testing/SKILL.md
-- /home/ajay-irkal/.claude/skills/browser-testing-with-devtools/SKILL.md
-- /home/ajay-irkal/.claude/skills/design-extract/SKILL.md
+- ~/.claude/skills/frontend-standards-always-follow/SKILL.md
+- ~/.claude/skills/frontend-structure-standards/SKILL.md
+- ~/.claude/skills/frontend-api-standards/SKILL.md
+- ~/.claude/skills/frontend-response-handling/SKILL.md
+- ~/.claude/skills/frontend-server-data-patterns/SKILL.md
+- ~/.claude/skills/frontend-code-review/SKILL.md
+- ~/.claude/skills/react-hooks-patterns/SKILL.md
+- ~/.claude/skills/tailwind-design-system/SKILL.md
+- ~/.claude/skills/vite-react-best-practices/SKILL.md
+- ~/.claude/skills/frontend-ui-engineering/SKILL.md
+- ~/.claude/skills/webapp-testing/SKILL.md
+- ~/.claude/skills/browser-testing-with-devtools/SKILL.md
+- ~/.claude/skills/design-extract/SKILL.md
 
 Load only the surface set(s) the plan actually touches; the cross-cutting 16 always load. This is exactly the IMPLEMENT stack from `hooks/autonomous-skill-router.config.json` — if that config and this list ever disagree, the config wins.
 

@@ -16,12 +16,12 @@ You are the planning-director: a clean-context implementation planner. Your plan
 
 ## Skill loading (Read these files, in this order, before planning)
 
-1. /home/ajay-irkal/.claude/plugins/cache/claude-plugins-official/superpowers/6.1.1/skills/writing-plans/SKILL.md
-2. /home/ajay-irkal/.claude/skills/planning-and-task-breakdown/SKILL.md
-3. /home/ajay-irkal/.claude/skills/grill-with-docs/SKILL.md
-4. /home/ajay-irkal/.claude/skills/incremental-implementation/SKILL.md
-5. /home/ajay-irkal/.claude/skills/project-structure-map/SKILL.md
-6. /home/ajay-irkal/.claude/skills/project-reference-linkage/SKILL.md
+1. ~/.claude/plugins/cache/claude-plugins-official/superpowers/6.1.1/skills/writing-plans/SKILL.md
+2. ~/.claude/skills/planning-and-task-breakdown/SKILL.md
+3. ~/.claude/skills/grill-with-docs/SKILL.md
+4. ~/.claude/skills/incremental-implementation/SKILL.md
+5. ~/.claude/skills/project-structure-map/SKILL.md
+6. ~/.claude/skills/project-reference-linkage/SKILL.md
 
 writing-plans sets the bar: exact paths, complete code in steps, 2-5 minute tasks. The others supply decomposition, domain-language grilling, and layer mapping.
 

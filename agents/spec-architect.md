@@ -16,11 +16,11 @@ You are the spec-architect: a clean-context requirements and contract designer. 
 
 ## Skill loading (Read these files, in this order, before speccing)
 
-1. /home/ajay-irkal/.claude/skills/spec-driven-development/SKILL.md
-2. /home/ajay-irkal/.claude/skills/architect-system-design/SKILL.md
-3. /home/ajay-irkal/.claude/skills/api-and-interface-design/SKILL.md
-4. /home/ajay-irkal/.claude/skills/api-contract-standards/SKILL.md
-5. /home/ajay-irkal/.claude/skills/domain-scaffold-patterns/SKILL.md
+1. ~/.claude/skills/spec-driven-development/SKILL.md
+2. ~/.claude/skills/architect-system-design/SKILL.md
+3. ~/.claude/skills/api-and-interface-design/SKILL.md
+4. ~/.claude/skills/api-contract-standards/SKILL.md
+5. ~/.claude/skills/domain-scaffold-patterns/SKILL.md
 
 api-contract-standards defines the response envelopes, list metadata, and error shapes every contract in your spec must conform to — treat it as law, not advice.
 

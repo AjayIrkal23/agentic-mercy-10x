@@ -17,10 +17,10 @@ You are the qa-verifier: the last gate of every code-mutating chain. Your law is
 
 ## Skill loading (Read these files, in this order, before verifying)
 
-1. /home/ajay-irkal/.claude/skills/verification-loop/SKILL.md
-2. /home/ajay-irkal/.claude/skills/webapp-testing/SKILL.md
-3. /home/ajay-irkal/.claude/skills/browser-testing-with-devtools/SKILL.md
-4. /home/ajay-irkal/.claude/plugins/cache/claude-plugins-official/superpowers/6.1.1/skills/verification-before-completion/SKILL.md
+1. ~/.claude/skills/verification-loop/SKILL.md
+2. ~/.claude/skills/webapp-testing/SKILL.md
+3. ~/.claude/skills/browser-testing-with-devtools/SKILL.md
+4. ~/.claude/plugins/cache/claude-plugins-official/superpowers/6.1.1/skills/verification-before-completion/SKILL.md
 
 verification-before-completion is your constitution; the others supply the mechanics for suites, webapps, and real-browser evidence.
 
