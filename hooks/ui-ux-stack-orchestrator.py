@@ -294,34 +294,39 @@ def _checklist_block_full(extra_search: str | None, impeccable_ctx: str | None, 
     home = str(Path.home())
     dials = _load_taste_dials()
     lines = [
-        "[UI/UX] Design work detected. READ the stack in order:",
-        "**Conflict resolution:** Impeccable bans and shared laws win over Taste-Skill dials.",
+        "[UI/UX] Design work detected → DISPATCH the frontend-uiux-designer agent NOW "
+        "(Agent tool, subagent_type \"frontend-uiux-designer\", description prefix "
+        "\"[opus] \", model:\"opus\"). Do NOT design in this context — the six-skill "
+        "stack (impeccable → huashu-design → ui-ux-pro-max → taste-skill → "
+        "frontend-ui-engineering → frontend-design, + design-extract for reference "
+        "URLs) is the AGENT's business, not the main loop's.",
+        f"Give the agent a compact brief: the user's request, product truth, target "
+        f"files/components, taste dials ({dials} — override in chat), and the "
+        f"auto-loaded context below.",
         "**ASSETS — HIGGSFIELD MANDATORY:** every image/video/3D/audio asset is GENERATED via "
         "Higgsfield (`mcp__claude_ai_higgsfield__generate_image|generate_video|generate_3d|generate_audio`, "
         "skill `higgsfield-generate`) — NO placeholders, stock URLs, CSS-fake gradients, or emoji-icons. "
         f"Boundary + capability map: {home}/.claude/rules/higgsfield-frontend-mandate.md",
-        f"1. {home}/.claude/skills/impeccable/SKILL.md (shape → craft → audit → polish)",
-        f"2. {home}/.claude/skills/huashu-design/SKILL.md (brand assets, direction)",
-        f"3. {home}/.claude/skills/ui-ux-pro-max/SKILL.md (design system search)",
-        f"4. {home}/.claude/skills/taste-skill/SKILL.md (dials: {dials} — override in chat)",
-        f"5. {home}/.claude/skills/frontend-ui-engineering/SKILL.md (production-quality UI)",
-        f"6. {FRONTEND_DESIGN_SKILL} (distinctive interfaces, avoids AI-generic aesthetics)",
-        f"7. {home}/.claude/skills/design-extract/SKILL.md (extract design from URLs)",
-        f"Playbook: {PLAYBOOK_PATH}",
+        f"Alternative the user can type: /invoke-design (full orchestrated flow). "
+        f"FALLBACK — only if agent dispatch is unavailable — read the stack yourself in "
+        f"playbook order: {PLAYBOOK_PATH}",
     ]
     if impeccable_ctx:
-        lines.extend(["", "### Impeccable context (auto-loaded)", impeccable_ctx])
+        lines.extend(["", "### Impeccable context (auto-loaded — include in the agent's brief)", impeccable_ctx])
     if extra_search:
-        lines.extend(["", "### UI/UX Pro Max — design system (auto)", extra_search])
+        lines.extend(["", "### UI/UX Pro Max — design system (auto — include in the agent's brief)", extra_search])
     if detected_urls:
         url_list = ", ".join(f"`{u}`" for u in detected_urls[:2])
-        lines.extend(["", f"[designlang] URL detected: {url_list}. Consider: `npx designlang <url>` to extract design tokens before implementing."])
+        lines.extend(["", f"[designlang] URL detected: {url_list}. Pass to the agent — it can run design-extract / `npx designlang <url>` for tokens before implementing."])
     return "\n".join(lines)
 
 
 def _checklist_block_short() -> str:
     dials = _load_taste_dials()
-    return f"[UI/UX] Stack active: HIGGSFIELD assets (generate_image/video/3d/audio — no placeholders/stock) + impeccable + huashu + ui-ux-pro-max + taste-skill + frontend-ui-engineering + frontend-design + design-extract. Dials: {dials}. Run /impeccable audit before shipping."
+    return (f"[UI/UX] Design work → dispatch frontend-uiux-designer (subagent_type "
+            f"\"frontend-uiux-designer\", \"[opus] \" prefix, model:\"opus\") — it owns the "
+            f"six-skill stack + HIGGSFIELD assets (generated, never placeholders/stock). "
+            f"Dials: {dials}. Alternative: /invoke-design.")
 
 
 def handle_before_submit(payload: dict, cfg: dict) -> dict:
