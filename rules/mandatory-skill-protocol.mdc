@@ -1,0 +1,188 @@
+---
+description: Mandatory skill protocol — lifecycle phases 0–7, skill routing, and post-coding quality gates
+alwaysApply: true
+---
+
+# MANDATORY SKILL PROTOCOL — v2 (Consolidated)
+
+> All rules inlined. Follow phase matching current work.
+> Phases 4-7 SEQUENTIAL after every coding task.
+
+> **Modal conventions:** MUST = always, no override. SHOULD = default, explain if skipped. MAY = optional, no explanation needed.
+
+---
+
+## PHASE 0: SESSION START
+
+1. Read `CLAUDE.md` / `AGENTS.md` if present. Determine task type: BE/FE/fullstack. Read `CODEX.md` if present — it contains prior decisions and known pitfalls (MUST read before any other file if present).
+2. **Codebase orientation (MUST before coding):** Query `graphify` (`graph_stats` → `query_graph` for impacted area) and `jcodemunch` (`get_repo_map` or `get_repo_outline`) to understand architecture and symbol map. Skip ONLY if both indexes are confirmed absent after attempting build.
+2b. **Memory + CODEX load (SHOULD when Memory MCP active):** Call `mcp__memory__search_nodes("project:<workspace-name>")`. Inject top-5 observations into working context. Entity types: `project | preference | pattern | decision`. Never store secrets or session-only state. Flag observations without a date as [UNVERIFIED].
+3. Read domain docs before source: `server_docs/` (BE), `frontend_docs/` (FE).
+3b. **dox tree (MUST before code work):** Verify the `CLAUDE.md` dox tree — root + the local `CLAUDE.md` for the directory you'll touch. Read root→target before editing. The root is auto-stubbed at SessionStart if absent; flesh it out via the `dox-doc-tree` skill. **Code writes are hard-gated until a root `CLAUDE.md` exists** (doc/scaffold writes always allowed; one-time override).
+4. List ALL impacted layers. Check existing controllers/routes/models/services for deps.
+5. Create ordered execution plan: implement → validate → doc update.
+6. Surface assumptions: `ASSUMPTIONS I'M MAKING:`. Stop on inconsistencies/unclear specs.
+
+---
+
+## PHASE 1: PLANNING (no code — output is plan only)
+
+| # | Rule |
+|---|------|
+| 1 | Ask 3-5 sharpening questions. Explore codebase to answer if possible. |
+| 2 | Sharpen vague terms to precise canonical terms. Push back on weak ideas. |
+| 3 | Map full dependency graph → build bottom-up, slice vertically (never horizontally). |
+| 4 | Tasks: description + acceptance criteria + verification + deps + files (max ~5 per task). |
+| 5 | Checkpoints every 2-3 tasks (tests pass, build succeeds). |
+| 6 | Save plan: `plan-YYYY-MM-DD-<feature>.md` at project root + `docs/superpowers/plans/`. |
+| 7 | Include "Not Doing" list. Define quality gates. Get user approval before implementing. |
+| 8 | Multi-phase/cross-surface plans: render Mermaid via `mermaid_preview`; save with `mermaid_save`. |
+| 9 | Classify touched surfaces (BE/FE/cross) before assigning phases. |
+| 10 | Only ADR when: hard to reverse + surprising without context + real trade-off. |
+
+### Engineering triggers (planning)
+
+| Trigger | Skill |
+|---------|-------|
+| Stress-test plan (>3 files or new domain) | `/grill-with-docs` |
+| PRD / product requirements | `/to-prd` |
+| After plan/PRD approval → issues | `/to-issues` |
+| Refactoring priorities / tech debt | `/improve-codebase-architecture` |
+| 2+ valid approaches, code resolves faster | `/prototype` |
+
+---
+
+## PHASE 2: CODING — BACKEND
+
+| Area | Rules |
+|------|-------|
+| **Core** | Inspect existing code FIRST. Controllers thin: validate → service → respond. No file >250 lines. |
+| **Services** | Own logic/DB/filtering/sorting/pagination. Typed input, JSON-safe DTO output. Domain errors. No req/res deps. Transactions in services. |
+| **API** | Success: `{success, data, message, meta}`. Error: `{success:false, error:{code, message, details}}`. Paginate: page=1, limit=20, max=100, sort=createdAt desc. Whitelist sort keys. HTTP status semantic. |
+| **Go** | Accept interfaces, return structs. `fmt.Errorf("...: %w", err)`. No panic for control flow. `context.Context` first param. Preallocate slices. No pkg-level mutable state. |
+| **Testing** | Table-driven + `t.Run`. `httptest`. Coverage: critical 100%, public 90%+, general 80%+. Always `-race`. |
+| **Scaffold** | Contract → schema → service → controller+route → helpers → frontend. One handler per controller. One primary method per service file. |
+| **Discipline** | Max ~100 lines before tests. Implement → test → verify. Commits only when you ask. Vertical slicing. Never refactor while RED. |
+
+### Skill triggers (backend)
+
+| Trigger | Skill |
+|---------|-------|
+| New service methods / test-first / prevent recurrence | `/tdd` |
+| Unknown bug / unexpected test fail | `/diagnose` |
+| External issue intake | `/triage` |
+| Uncertain approach | `/prototype` |
+
+---
+
+## PHASE 3: CODING — FRONTEND
+
+| Area | Rules |
+|------|-------|
+| **Core** | Inspect existing FIRST. No client-side filter for server data. Single `query` drives refetch. Reset page=1 on filter change. No API in components — centralize `src/api/<domain>/`. |
+| **Types** | All in `src/types/<domain>/`. One domain per folder. No Props in .tsx. No catch-all types.ts. No file >250, components >200 split. |
+| **API Layer** | Lock keys+envelopes BEFORE coding. Parse envelope → typed data. `NormalizedApiError`. Layer strict: API parses → store maps → component renders. |
+| **React** | `useState` first. Avoid `useEffect` when handlers suffice. No derived state. Server data in TanStack Query. |
+| **UI** | Keyboard accessible. Skeleton loading. Mobile-first. Semantic tokens (≥4.5:1). No AI aesthetic. |
+| **Tailwind** | Verify version. Check existing tokens. Semantic tokens. Changes in shared layers. |
+
+---
+
+## PHASE 3b: UI/UX DESIGN
+
+1. `load-context.mjs` before design. PRODUCT.md must exist. `/impeccable shape` → confirm → code.
+2. OKLCH colors. No `#000`/`#fff`. Banned: side-stripe, gradient text, hero-metric, identical grids, glassmorphism, modals-first.
+3. Dials: VARIANCE=8, MOTION=6, DENSITY=4. `min-h-[100dvh]`. CSS Grid. Animate transform+opacity only.
+4. Touch 44x44pt. 4/8dp spacing. No emoji icons. 3+ variations. Anti-center when VARIANCE>4.
+
+---
+
+## PHASES 4-7: POST-CODING (SEQUENTIAL, MANDATORY)
+
+### Phase 4: Dead Code Audit
+
+1. Verify ALL refs/imports/exports/routes/store linkages for **your** added/removed/moved/renamed code.
+2. 4 sweeps: file → symbol → flow → domain.
+3. Remove dead imports and orphans **you introduced**; note pre-existing dead code without drive-by deletes.
+4. Clean unused state/reducers/selectors (FE), dead controllers/services/schemas (BE) tied to this change set.
+
+### Phase 4b: De-Sloppify (separate from implementation)
+
+Sweep: dead imports, debug stmts, naming inconsistency, redundant checks, commented-out code. 8+ files → subagent.
+
+### Phase 5: Lint, Format & Security
+
+1. Format → lint → security → tests. Run from package root.
+2. BE: `make lint` + `go test ./...`. FE: `npm run lint` + `npm run build`.
+3. Auth/input/API: `semgrep scan --config auto <changed-files>`.
+
+### Phase 6: Code Review + Santa Method
+
+1. 5 axes: correctness, readability, architecture, security, performance. Tests FIRST.
+2. **Santa (3+ files):** BREAKER (edges, races, validation, dep failures) + SIMPLIFIER (abstractions, dead paths, over-engineering). Parallel subagents for 5+.
+3. Before marking code review complete, apply Karpathy checks:
+   - **Guideline 2 (Simplicity):** Is there a simpler implementation that achieves the same result? If the changed code could be ≤50% shorter, flag it.
+   - **Guideline 3 (Surgical):** Does every changed line trace directly to the user's request? Flag any changes that are "improvements" not asked for.
+   - If either check fails, surface the finding before completing. Invoke `andrej-karpathy-skills:karpathy-guidelines` for the full checklist if deeper review is needed.
+
+### Phase 7: Documentation Update (NON-NEGOTIABLE)
+
+1. Map behavioral changes → `server_docs/`, `frontend_docs/`, `PROJECT_LINKAGES.md`.
+2. ADRs in `docs/decisions/` for significant decisions.
+3. Verify: behavior=docs, links valid, new routes/errors documented.
+4. **dox:** update the local `CLAUDE.md` for every directory you changed; add a child + root-index link for any new significant directory (skill `dox-doc-tree`).
+
+---
+
+## ALWAYS-ON RULES
+
+### Behavior
+
+- `ASSUMPTIONS I'M MAKING:` format. Stop on inconsistencies.
+- Touch ONLY what asked. Skills = workflows — follow in order. Not complete until verified.
+- Before finishing: "fewer lines? abstractions earning complexity?"
+
+### Structure
+
+- No file >250 lines. Check FKs/shared utils/cross-module deps before writing.
+- Never rename existing vars/fields/keys unless asked. Preserve logic/formats.
+- Read deps before framework code. Source: official docs → changelog → standards.
+
+### Tool Usage
+
+| Need | Tool |
+|------|------|
+| Code symbols | jcodemunch (search_symbols, get_symbol_source, get_blast_radius) |
+| Library docs | context7 |
+| Browser | fetch → playwright → browser-tools-mcp |
+| Code search | jcodemunch → ast-grep → grep |
+| Security | semgrep scan --config auto |
+| Architecture | graphify (query_graph, get_neighbors, god_nodes) |
+
+### Quality Gates
+
+- Evals/acceptance criteria BEFORE code. New endpoint → audit taxonomy + docs.
+- Debug: expected vs actual → classify → evidence → narrow → fix + verify.
+
+### Hook Reference (enforced mechanically)
+
+| Hook | Trigger | Action |
+|------|---------|--------|
+| GateGuard | Write/Edit 5+ refs | Verify importers, signatures, downstream |
+| Context Monitor | 35%/25% context remaining | Advisory → delegate → critical |
+| De-Sloppify | 8 code writes | Phase 4b cleanup |
+| Completion Gate | Stop | 5-gate deny (1-retry override) |
+| Doc Enforcer | Bash (intercepts git commit) | Block without docs |
+| Security Scan | 1+ security file | semgrep + OWASP |
+
+---
+
+## LIFECYCLE ROUTING
+
+Phase→skill map and Superpowers aliases: **`~/.claude/rules/agent-lifecycle-routing.md`**.
+
+**Mandatory skill sets (FE/BE/fullstack):** injected by `fullstack-skills-reminder` hook at first qualifying **Write** (smart router: top 3 + cross-cut; full slugs in hook source). Do not duplicate lists here — saves context tokens.
+
+**E2E:** Clarify → grill/spec → decompose → (prototype) → TDD → verify → review → ship.
+
+**Forensics (on-demand):** forensic-complexity-trends, forensic-debt-quantification, forensic-hotspot-finder, forensic-change-coupling.

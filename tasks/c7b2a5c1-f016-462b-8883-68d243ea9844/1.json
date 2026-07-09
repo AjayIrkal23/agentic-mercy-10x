@@ -1,0 +1,9 @@
+{
+  "id": "1",
+  "subject": "Phase 0: Setup (read reference, verify env, create dirs)",
+  "description": "Read .claude/audit/expense-revamp/AUDIT.md + one mockup HTML + 2 feature docs + CLAUDE.md/CODEX.md/AGENTS.md. Verify Workflow tool. Create .claude/audit/quotation-revamp/{,mockups/screenshots,audit-raw}. Commit scaffold.",
+  "activeForm": "Setting up audit + mockup directories",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

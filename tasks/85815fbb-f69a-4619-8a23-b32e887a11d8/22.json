@@ -1,0 +1,9 @@
+{
+  "id": "22",
+  "subject": "Phase 4 — Implement end-to-end (opus workflows)",
+  "description": "After approval: backend config domains + CH forward-log + retention, the off-path forwarder engine lane + worker pool (UDP/HTTP/HTTPS, auth, retries, drop-on-full), dynamic reload, FE 4 pages with premium design (huashu/ui-ux-pro-max/impeccable/taste + frontend skills). Verify green, zero tests, docs/memory.",
+  "activeForm": "Implementing the packet forwarder",
+  "status": "in_progress",
+  "blocks": [],
+  "blockedBy": []
+}

@@ -1,0 +1,75 @@
+---
+description: Token-efficient retrieval routing — jcodemunch, ast-grep, graphify, and semgrep before broad Read/Grep
+alwaysApply: true
+---
+
+# Token optimization stack (global)
+
+Five tools handle token-efficient retrieval. Pick the right one BEFORE reaching for Read/Grep/Bash.
+
+## Routing table
+
+| What you need | Use this | NOT this |
+|---|---|---|
+| Function/type/method body | `mcp__jcodemunch__get_symbol_source` | `Read` whole file |
+| Where symbol is defined | `mcp__jcodemunch__search_symbols` | `Grep` across repo |
+| Trace callers/callees | `mcp__jcodemunch__find_references` + `mcp__jcodemunch__find_importers` | Manual grep chain |
+| File structure/outline | `mcp__jcodemunch__get_file_outline` | `Read` + scan |
+| Impact of changing X | `mcp__jcodemunch__get_blast_radius` | Manual analysis |
+| Find dead code/unused exports | `mcp__jcodemunch__find_dead_code` | Manual search |
+| Structural code patterns | `ast-grep` MCP (`find_code` / `find_code_by_rule`) | Regex grep (misses structure) |
+| "All fns that do X without Y" | `ast-grep` MCP (pattern + anti-pattern) | Manual multi-grep + filter |
+| Security vulnerabilities (SAST) | `semgrep scan --config auto <path>` via Bash | Manual review alone |
+| Codebase dependency graph | `mcp__graphify__query_graph` | Multi-file Read scan |
+| God nodes / hot spots | `mcp__graphify__god_nodes` | Heuristic guessing |
+| Who depends on module X | `mcp__graphify__get_neighbors` | Grep for imports |
+| Shortest path between modules | `mcp__graphify__shortest_path` | Manual tracing |
+| Non-code files (md/json/yaml/env) | `Read` (normal) | jcodemunch (wrong tool) |
+| CLI commands (git, build, test) | `Bash` (lean-ctx compresses automatically) | Nothing to change |
+
+## Decision flowchart
+
+1. Is it a code symbol question? → **jcodemunch** (`search_symbols` → `get_symbol_source`)
+2. Is it a structural pattern question? → **ast-grep** MCP (`find_code` / `find_code_by_rule`)
+3. Is it a security scan? → **semgrep** via Bash (`semgrep scan --config auto <path>`)
+4. Is it architecture / dependency / coupling / impact / exploration? → **graphify FIRST** (see below)
+5. Is it a CLI command? → **Bash** (lean-ctx shell hook auto-compresses output)
+6. Is it a non-code file? → **Read** (normal, no overhead)
+7. Is it a small code file (<50 lines)? → **Read** (jcodemunch overhead not worth it)
+8. None of above? → **Read** (fallback, state reason)
+
+## Graphify: MANDATORY for architecture work
+
+**Before spawning Explore agents or running broad grep, query graphify.** One MCP call replaces dozens of grep/Read operations.
+
+| Question type | Graphify tool | Replaces |
+|---|---|---|
+| "What depends on X?" / "Who imports X?" | `mcp__graphify__get_neighbors` | grep for import statements |
+| "What are the most important files?" | `mcp__graphify__god_nodes` | heuristic guessing |
+| "How does A connect to B?" | `mcp__graphify__shortest_path` | manual file-by-file tracing |
+| "What's the architecture of domain X?" | `mcp__graphify__query_graph` | spawning Explore agent |
+| "Which modules cluster together?" | `mcp__graphify__get_community` | multi-file Read scan |
+| "How big/connected is the codebase?" | `mcp__graphify__graph_stats` | wc + find + grep |
+
+**Use graphify BEFORE:** starting a new task, planning refactors, assessing blast radius, onboarding to a domain, spawning Explore agents for structural questions.
+
+**Skip graphify WHEN:** looking up a specific symbol (use jcodemunch), graph.json is absent, question is about a single file's internals.
+
+## First session in a new repo
+
+1. `mcp__jcodemunch__index_repo` (or `index_folder` for monorepo subdirs)
+2. Build graphify if `graphify-out/graph.json` absent: run graphify skill
+3. lean-ctx shell hook is automatic — no per-repo setup
+
+## Fallback rules
+
+- jcodemunch returns nothing → state reason in one sentence, fall back to Read
+- graphify `graph.json` absent → skip graphify, use jcodemunch + Read
+- lean-ctx off or broken → CLI output flows uncompressed (no breakage, graceful)
+- File under ~50 lines → Read is fine, skip jcodemunch overhead
+
+## What lean-ctx handles (shell hook only)
+
+lean-ctx rewrites Bash commands through 95+ compression patterns. This is transparent — you run `Bash("git log --oneline -20")` and the output arrives pre-compressed. No MCP tools, no special commands. Just smaller CLI output.
+
+Disable temporarily: `lean-ctx-off` in shell. Re-enable: `lean-ctx-on`.

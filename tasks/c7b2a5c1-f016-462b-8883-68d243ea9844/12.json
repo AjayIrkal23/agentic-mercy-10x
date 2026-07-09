@@ -1,0 +1,9 @@
+{
+  "id": "12",
+  "subject": "Agent #9: Audit src/components/projects/quotation/* (legacy helpers)",
+  "description": "Read all 11 files in scope, find usages, check mobile-frozen, write audit-raw/09-legacy-quotation-helpers.md",
+  "activeForm": "Auditing legacy quotation helpers",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

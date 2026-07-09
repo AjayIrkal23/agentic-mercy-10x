@@ -1,0 +1,1 @@
+/home/ajay-irkal/.claude/skills/gstack/plan-eng-review/SKILL.md

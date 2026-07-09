@@ -1,0 +1,9 @@
+{
+  "id": "2",
+  "subject": "Phase 2: Spec — Smart Observer (Opus)",
+  "description": "Using audit docs, produce end-to-end spec for admin config pages (dynamic/robust) + user-dashboard Smart Observer module (4 sub-modules merged) via /invoke-spec on Opus",
+  "activeForm": "Writing Smart Observer spec",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

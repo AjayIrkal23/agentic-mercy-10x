@@ -1,0 +1,1 @@
+/home/ajay-irkal/.claude/skills/gstack/cso/SKILL.md

@@ -1,0 +1,9 @@
+{
+  "id": "21",
+  "subject": "Phase 3 — Implementation plan (very detailed) + approval",
+  "description": "Sequenced build-ready plan (BE config domains, CH model + retention, engine forwarder lane + worker, FE 4 pages + store + design). Present spec+plan + key decisions; get user approval before implementing.",
+  "activeForm": "Writing the implementation plan",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

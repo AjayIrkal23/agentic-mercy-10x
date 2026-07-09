@@ -1,0 +1,23 @@
+{
+  "initial_block_count": 2,
+  "enforce_after_code_write": false,
+  "gate_lean_ctx": true,
+  "block_message_max_words": 30,
+  "advisory_message_max_words": 15,
+  "exempt_paths": [
+    "~/.claude/",
+    "/tmp/",
+    ".env",
+    "package.json",
+    "go.mod",
+    "go.sum"
+  ],
+  "exempt_extensions": [
+    ".md", ".json", ".yaml", ".yml", ".toml",
+    ".env", ".txt", ".lock", ".sum", ".mod",
+    ".sql", ".csv", ".html", ".css", ".scss",
+    ".bak", ".log", ".xml"
+  ],
+  "small_file_threshold_lines": 50,
+  "strict_mode": true
+}

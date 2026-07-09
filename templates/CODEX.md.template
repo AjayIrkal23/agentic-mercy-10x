@@ -1,0 +1,61 @@
+# Project Codex — {PROJECT_NAME}
+_Last updated: {DATE} | Sessions: 0 | Auto-maintained by agent sessions_
+
+> **AGENTS: Read this file before reading any source file.**
+> It overrides default framework conventions with project-specific decisions.
+> Keep it under 300 lines. Rotate old "Session Log" entries monthly.
+
+---
+
+## Architecture Decisions
+<!-- Format: - [YYYY-MM-DD] Decision. Why. What was rejected. -->
+<!-- Example: - [2026-01-15] Use RTK Query not raw react-query. Tag invalidation across features. Rejected: raw hooks (cache fragmentation). -->
+
+-
+
+---
+
+## Patterns We Use (and WHY)
+<!-- Format: - **Pattern name**: How. Why this, not the alternative. -->
+<!-- Example: - **Auth state**: Redux Toolkit `auth` slice. SSR compatibility needed for mobile deep links. Do NOT create context-based auth. -->
+
+-
+
+---
+
+## Things We Tried That Failed
+<!-- Format: - [YYYY-MM-DD] What we tried → Why it failed → What to use instead. -->
+<!-- Example: - [2026-02-10] Zustand for auth state → broke SSR in Expo Router → use Redux Toolkit auth slice instead. See commit a3f9b2c. -->
+
+-
+
+---
+
+## Known Fragile Areas
+<!-- Format: - `path/to/file` — Why fragile — How to handle safely. -->
+<!-- Example: - `server/src/jobs/` — BullMQ workers. Test with Redis running locally. Do not change queue names without migration. -->
+
+-
+
+---
+
+## Naming Conventions
+<!-- Format: - Convention: Example. -->
+<!-- Example: - Components: PascalCase, co-located in `src/components/<FeatureName>/`. -->
+
+-
+
+---
+
+## Memory Bootstrap Refs
+<!-- Links to Memory MCP entity IDs or project memory files that have detail for this project. -->
+<!-- Updated automatically by session-memory-writer.py Stop hook. -->
+
+-
+
+---
+
+## Session Log (last 10 sessions — oldest entries pruned monthly)
+<!-- Format: - [YYYY-MM-DD] Brief: what changed, key decision if any. -->
+
+-

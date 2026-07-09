@@ -1,0 +1,9 @@
+{
+  "id": "15",
+  "subject": "Agent #15: Audit server/src/services/quotations/* — business logic + side effects",
+  "description": "Read and analyze all service files in server/src/services/quotations/, map side effects (email/notifications), tenancy enforcement, and produce audit-raw/15-be-services.md",
+  "activeForm": "Auditing quotation service layer",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

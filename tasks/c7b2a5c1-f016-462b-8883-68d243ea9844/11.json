@@ -1,0 +1,9 @@
+{
+  "id": "11",
+  "subject": "Agent #1: Audit Quotations.tsx page",
+  "description": "Audit the Quotations page shell, tab routing, and URL sync. Write report to .claude/audit/quotation-revamp/audit-raw/01-pages-quotations.md",
+  "activeForm": "Auditing Quotations.tsx page shell",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

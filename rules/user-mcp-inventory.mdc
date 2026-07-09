@@ -1,0 +1,38 @@
+---
+description: MCP inventory — when to call each server (agentic routing and triage)
+alwaysApply: true
+---
+
+# User MCP inventory
+
+Canonical config: **`~/.claude.json`**. Deep routing: **`~/.claude/skills/mcp-usage-standards/SKILL.md`**.
+
+| Server | Use when | Skip when | Notes |
+| --- | --- | --- | --- |
+| **`context7`** | Library/framework/cli docs lookups | Repo-only reasoning | Prefer over unfocused web |
+| **`sequential-thinking`** | Heavy reasoning chains | Tiny edits | |
+| **`fetch`** | Static/simple HTTP/HTML | SPA flows, clicks | Lightweight |
+| **`memory`** | Durable reusables | Secrets, fluff | Sparingly |
+| **`browser-tools-mcp`** | Needed console/network lens | Duplicate playwright run | Pair with judgement |
+| **`playwright`** | Browser automation/UI proof | Fetch-only pages | `@playwright/mcp` via npx |
+| **`markdownify`** | Convert → markdown ingestion | Out of conversion scope | Respect path env if set |
+| **`graphify`** | Graph MCP queries live | **`graph.json` absent** | Use `graphify-runner.sh` CLI |
+| **`jcodemunch`** | Code intelligence queries (symbols, references, outlines, blast radius) | File < 50 lines | Configured in `~/.claude.json` |
+| **`figma`** | Figma design file access and component data | No Figma URLs | Configured in `~/.claude.json` |
+| **`ast-grep`** | Structural code search via AST patterns (find patterns across files, refactor structurally) | Simple string search (use grep) | Status: active (verified 2026-05-28). `uv run --directory ~/.claude/ast-grep-mcp python main.py` starts cleanly. Use after jcodemunch fails to find structural patterns; pass AST patterns via `mcp__ast_grep__*` tools. |
+| **`semgrep`** | Security static analysis, SAST scanning, custom rule enforcement | Non-security code review | Status: active (MCP mode verified 2026-05-28). Binary is at `~/.local/bin/semgrep` (v1.163.0); settings.json updated to use full path. Prefer `semgrep scan --config auto` CLI for Gate 3; MCP mode available for integrated session analysis. |
+| **`lean-ctx`** | Context compression — transparently compresses Bash output before Claude sees it | Rarely needed directly | Status: registered in `~/.claude.json` mcpServers 2026-05-28. `lean-ctx mcp` is a valid subcommand (v3.6.0). Hook wiring via `settings.json` is the primary integration path. |
+| **`github`** | GitHub API access — PR reads, issue context, CI status, repo metadata | Non-GitHub tasks | Command: `npx -y @modelcontextprotocol/server-github`. Env: `GITHUB_TOKEN` (PAT with `repo`, `read:org`, `read:user` scopes). |
+
+Browser triage: **`fetch`** → **`playwright`** → **`browser-tools-mcp`** (pick one purposeful stack).
+
+Code search triage: **`jcodemunch`** (symbols/refs) → **`ast-grep`** (structural patterns) → **`grep`** (literal strings).
+
+Security triage: **`semgrep`** (SAST rules) → manual review (business logic).
+
+## CLI Tools (not MCP servers)
+
+| Tool | Use when | Notes |
+| --- | --- | --- |
+| **`designlang`** | Extract design tokens/Tailwind/typography from reference URLs | `npx designlang <url>`; 8 commands: extract/grade/battle/remix/pack/theme-swap/brand/pair |
+| **`semgrep`** (CLI) | Run `semgrep scan --config auto` for full project security scan | Also available as MCP; CLI for batch scans |

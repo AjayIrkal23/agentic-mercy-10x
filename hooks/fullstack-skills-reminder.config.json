@@ -1,0 +1,19 @@
+{
+  "frontend_path_segments": [
+    "UDP_PLATFORM/client",
+    "client/"
+  ],
+  "backend_path_segments": [
+    "UDP_PLATFORM/server",
+    "server/internal/",
+    "server/cmd/",
+    "server/pkg/"
+  ],
+  "documentation_path_segments": [
+    "server_docs/",
+    "frontend_docs/",
+    "PROJECT_LINKAGES.md",
+    "UDP_PLATFORM/server/server_docs",
+    "UDP_PLATFORM/client/frontend_docs"
+  ]
+}

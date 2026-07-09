@@ -1,0 +1,9 @@
+{
+  "id": "17",
+  "subject": "Agent #17: Design language pattern-mining — read revamped pages",
+  "description": "Read Overview, Project, Storage, Inventory, Expenses revamped pages to extract concrete patterns (KPI strip, table, sidebar, filter bar) to mirror in Quotation revamp",
+  "activeForm": "Pattern-mining revamped pages",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

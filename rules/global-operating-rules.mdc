@@ -1,0 +1,13 @@
+---
+description: Cursor-specific session bootstrap (not applicable to Claude Code sessions)
+alwaysApply: false
+---
+
+# Global operating rules (Cursor only)
+
+This file contains Cursor IDE session rules. It is **not applicable** to Claude Code sessions.
+
+In Claude Code sessions, the authoritative lifecycle is defined in:
+`~/.claude/rules/mandatory-skill-protocol.mdc` — that file is the single source of truth for all phases 0–7.
+
+> If you are reading this as a Claude Code agent: stop here. Refer to `mandatory-skill-protocol.mdc`.

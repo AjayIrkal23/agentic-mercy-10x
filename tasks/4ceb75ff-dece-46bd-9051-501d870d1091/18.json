@@ -1,0 +1,9 @@
+{
+  "id": "18",
+  "subject": "P8: GitHub open-source publication (opus)",
+  "description": "Opus agent: portable paths ($HOME not /home/ajay-irkal) in hooks+settings, one-command install script, README, public repo push with privacy audit (no secrets/transcripts/personal data).",
+  "activeForm": "Publishing to GitHub",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": []
+}

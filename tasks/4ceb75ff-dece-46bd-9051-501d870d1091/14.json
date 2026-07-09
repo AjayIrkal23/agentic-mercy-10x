@@ -1,0 +1,9 @@
+{
+  "id": "14",
+  "subject": "P3+P4: invoke rewire (3-act generator) + autonomy hooks (aggressive)",
+  "description": "Fable agent after P2: config schema, generator v2, regenerate 139 commands, router auto-dispatch (aggressive threshold), self-healing gates, UI auto-fire.",
+  "activeForm": "Rewiring invoke system",
+  "status": "pending",
+  "blocks": [],
+  "blockedBy": []
+}

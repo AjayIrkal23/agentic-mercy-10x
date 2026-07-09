@@ -1,0 +1,1 @@
+/home/ajay-irkal/.claude/skills/gstack/office-hours/SKILL.md

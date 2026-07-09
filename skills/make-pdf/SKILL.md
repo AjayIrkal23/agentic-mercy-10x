@@ -1,0 +1,1 @@
+/home/ajay-irkal/.claude/skills/gstack/make-pdf/SKILL.md

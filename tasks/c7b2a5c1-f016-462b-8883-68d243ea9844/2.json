@@ -1,0 +1,9 @@
+{
+  "id": "2",
+  "subject": "Phase 1: Dispatch 22 parallel audit agents",
+  "description": "Use Workflow tool to fan out 22 [sonnet] Explore agents in parallel. Each writes a raw report to .claude/audit/quotation-revamp/audit-raw/NN-*.md with: Findings, File map (file:line refs), Risks, Recommendations, Mobile-frozen check.",
+  "activeForm": "Running 22 parallel audit agents",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

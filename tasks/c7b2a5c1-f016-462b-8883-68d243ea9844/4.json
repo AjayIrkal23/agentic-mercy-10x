@@ -1,0 +1,9 @@
+{
+  "id": "4",
+  "subject": "Phase 2: Dispatch synthesizer to write AUDIT.md",
+  "description": "Single [sonnet] general-purpose agent reads all 22 raw reports + writes single consolidated .claude/audit/quotation-revamp/AUDIT.md with the 10-section structure (IA, data contracts, endpoint catalog, dep graph, design system, mobile-frozen, tenancy, file map, i18n, risks).",
+  "activeForm": "Synthesizing consolidated audit",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

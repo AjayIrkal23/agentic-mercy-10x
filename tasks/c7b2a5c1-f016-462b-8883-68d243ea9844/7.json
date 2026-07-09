@@ -1,0 +1,9 @@
+{
+  "id": "7",
+  "subject": "Phase 3: Verify 18 mockups + build gallery + commit",
+  "description": "List mockups/ (expect 18 HTML + screenshots/), spot-check 3 (main-list-A, responses-B, public-response-A-dark), build index.html gallery, commit.",
+  "activeForm": "Verifying mockups and building gallery",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

@@ -1,0 +1,6 @@
+{
+  "ui_extensions": [".tsx", ".jsx", ".css", ".scss", ".sass", ".less", ".vue", ".svelte", ".html", ".astro"],
+  "enforcement_mode": "progressive",
+  "block_threshold": 3,
+  "enabled": true
+}

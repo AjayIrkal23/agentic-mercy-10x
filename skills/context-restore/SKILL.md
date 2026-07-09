@@ -1,0 +1,1 @@
+/home/ajay-irkal/.claude/skills/gstack/context-restore/SKILL.md

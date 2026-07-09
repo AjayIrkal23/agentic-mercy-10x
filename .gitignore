@@ -1,0 +1,78 @@
+# ============================================================
+# ~/.claude .gitignore — local safety repo + public open-source
+# Rule: if it's a secret, a session artifact, personal data,
+# or re-installable from elsewhere, it does NOT get committed.
+# ============================================================
+
+# --- secrets & auth (NEVER commit) ---
+.credentials.json
+mcp-needs-auth-cache.json
+*.pem
+*.key
+**/.env
+**/.env.*
+
+# --- personal / session data (private, never public) ---
+history.jsonl
+projects/
+session-env/
+sessions/
+file-history/
+paste-cache/
+ide/
+daemon/
+daemon.log
+jobs/
+cache/
+downloads/
+todos/
+statsig/
+shell-snapshots/
+.audit/
+.backups/
+backups/
+agent-memory/
+double-shot-latte/
+improvements/
+plans/
+gsd-migration-journal/
+
+# --- runtime state (regenerated every session) ---
+state/
+hooks/.state/
+hooks/.telemetry/
+hooks/.agents/
+**/__pycache__/
+.ponytail-active
+.blast-bypass
+.gateguard-last-impact.md
+.gsd-profile
+.last-cleanup
+.last-update-result.json
+
+# --- config backups & editor droppings ---
+*.bak
+*.bak.*
+*.bak-*
+*.bak2.*
+*.bak3.*
+settings.json.bak*
+*.backup-*
+hooks-rules-claudemd.backup-*.tgz
+*.presp.*
+installed_plugins.json.presp.*
+
+# --- re-installable externals (install script fetches these) ---
+plugins/cache/
+plugins/marketplaces/
+plugins/data/
+plugins/plugin-catalog-cache.json
+skills/gstack/
+skills/node_modules/
+skills/package-lock.json
+ast-grep-mcp/
+get-shit-done/
+
+# --- large generated assets inside kept skills ---
+skills/*/dist/
+skills/*/node_modules/

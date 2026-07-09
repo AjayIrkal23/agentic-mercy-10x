@@ -1,0 +1,10 @@
+{
+  "version": "1.1.0",
+  "organization": "ant-gravity",
+  "date": "January 2026",
+  "abstract": "Comprehensive React and Vite SPA performance, architecture, and deployment guidelines. This skill should be used when building, reviewing, or refactoring React applications built with Vite (SPA). Covers Vite-specific build configurations, static hosting requirements, and core React performance patterns.",
+  "references": [
+    "https://react.dev",
+    "https://vitejs.dev"
+  ]
+}

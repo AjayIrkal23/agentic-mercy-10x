@@ -1,0 +1,9 @@
+{
+  "id": "13",
+  "subject": "Agent #5: Audit QuotationsHeader + QuotationsMasterFilters",
+  "description": "Audit src/components/ProjectQuotations/QuotationsHeader.tsx + QuotationsMasterFilters.tsx. Write report to .claude/audit/quotation-revamp/audit-raw/05-components-header-filters.md",
+  "activeForm": "Auditing header and master filters components",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

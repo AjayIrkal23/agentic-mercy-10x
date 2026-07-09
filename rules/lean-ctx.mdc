@@ -1,0 +1,24 @@
+---
+description: lean-ctx shell-hook context compression (optional; no ctx_* MCP tools)
+alwaysApply: false
+---
+
+# lean-ctx — Shell hook compression (optional)
+
+When the **lean-ctx shell hook** is active, Bash output is rewritten through compression patterns before the agent sees it. This is transparent — run normal Shell commands; no special MCP tools.
+
+## What the hook does
+
+- Rewrites `git`, `npm`, `cargo`, test runners, and similar CLI output to smaller summaries
+- Does **not** replace Read, Grep, or Edit — use native Cursor tools for files
+- Toggle: `lean-ctx-off` / `lean-ctx-on` in the shell
+
+## When this rule applies
+
+- `alwaysApply: false` — only relevant when you have enabled the lean-ctx hook in your environment
+- If the hook is off, ignore this rule entirely
+
+## Anti-patterns
+
+- Do not assume `ctx_read`, `ctx_search`, `ctx_shell`, or other `ctx_*` MCP tools exist unless your environment explicitly provides them
+- Do not skip native Read/Grep for file work because of this rule

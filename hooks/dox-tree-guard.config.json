@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "exemptRepos": [],
+
+  "documentAllDirs": true,
+  "autoCreateChildren": true,
+  "syncRootIndex": true,
+  "sweepMaxDepth": 12,
+  "maxSweepDirs": 500,
+
+  "significantDirThreshold": 3,
+  "rootDoxMarker": "<!-- dox:root v1 -->",
+  "codeExtensions": [
+    ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
+    ".py", ".go", ".rs", ".java", ".kt",
+    ".rb", ".php", ".c", ".cpp", ".h", ".hpp", ".swift", ".scala"
+  ]
+}

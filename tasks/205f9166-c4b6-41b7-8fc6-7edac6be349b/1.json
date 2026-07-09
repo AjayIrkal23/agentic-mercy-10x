@@ -1,0 +1,9 @@
+{
+  "id": "1",
+  "subject": "Backend: notifications domain (model/services/routes) + hook points",
+  "description": "New Notification model, notifyApprovalStageEntry + notifyCommentReply dispatchers, list/count/mark-read/mark-all services+controllers+schemas+routes, mailer addition, hook edits in persistAction.ts/createSolidWaste.ts/addComment.ts. Per /home/ajay-irkal/.claude/plans/fluffy-honking-lemon.md.",
+  "activeForm": "Building notifications backend",
+  "status": "in_progress",
+  "blocks": [],
+  "blockedBy": []
+}

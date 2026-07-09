@@ -1,0 +1,9 @@
+{
+  "id": "20",
+  "subject": "Phase 2 — Spec document (very detailed)",
+  "description": "From the audit: data model (forwarder configs raw+processed, param-mapping, CH forward-log), API contracts, the off-path engine forwarder (tap → decoupled worker pool → UDP/HTTP/HTTPS send, drop-on-full, never blocks ingest), dynamic reload, retention, FE 4 sub-pages (raw config/summary, processed config/summary) + param-mapping UI. docs/specs/packet-forwarder/SPEC*.md.",
+  "activeForm": "Writing the spec",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

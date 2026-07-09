@@ -1,0 +1,46 @@
+---
+description: UI/UX six-skill stack precedence and verification phases for design and frontend polish work
+globs: "**/*.{tsx,jsx,vue,css,scss,sass,less,html,htm,mdx}"
+alwaysApply: false
+---
+
+# UI/UX Six-Skill Stack (+ Higgsfield asset engine)
+
+> **Asset layer — Higgsfield is MANDATORY.** Every raster/video/3D/audio asset a
+> frontend needs is *generated* via Higgsfield (`mcp__claude_ai_higgsfield__*` /
+> skill `higgsfield-generate`), never faked with placeholders, stock URLs, CSS-only
+> gradients, or emoji-icons. The six craft skills below *arrange* those assets. Full
+> capability→tool map + boundary: `rules/higgsfield-frontend-mandate.md`.
+
+## Precedence (when rules conflict)
+
+1. **Product truth** — Huashu #0 (WebSearch, PRODUCT.md) + Impeccable context gates
+2. **Design tokens** — UI/UX Pro Max `--design-system` unless strict brand; designlang extracted > generated
+3. **Assets (pixels)** — Higgsfield-generated for all image/video/3D/audio; no placeholder/stock survives to ship
+4. **Layout/motion/copy** — Impeccable shared laws + absolute bans (DOM motion is code; its *media* is Higgsfield)
+5. **Implementation** — Taste-Skill (React/Tailwind repos); advisory for other stacks
+6. **Verification** — Huashu `verify.py` (HTML); Impeccable audit/critique/polish; confirm no faked asset remains
+
+## Phases
+
+| Phase | Actions |
+|-------|---------|
+| 0 — Source | `npx designlang <url>` for reference. `grade` for WCAG. `brand` for editorial guide. |
+| A — Intake | Classify: marketing vs product, brand vs generic, constraints (a11y, dark mode, design system). |
+| B — Context | Impeccable: `load-context.mjs`. UI/UX Pro Max: `search.py --design-system`. Taste-Skill: dials 8/6/4. |
+| **Assets — Higgsfield** | For every image/video/3D/audio the design calls for: `models_explore(recommend)` → `generate_image`/`generate_video`/`generate_3d`/`generate_audio` → `upscale`/`reframe`/`remove_background`. NO placeholders/stock. (`higgsfield-generate`) |
+| C — Build | Impeccable: `shape`→`craft`. Huashu: references router. Taste-Skill: enforce stack rules. Assemble Higgsfield assets; DOM motion references them. |
+| D — Verify | Huashu: `verify.py`. Impeccable: audit/critique/polish. designlang: `grade`. Confirm no faked/placeholder asset shipped. |
+
+## Skill Paths
+
+| Skill | Directory |
+|-------|-----------|
+| **Higgsfield (assets)** | `~/.claude/skills/higgsfield-generate/` (+ `-soul-id`, `-product-photoshoot`, `-marketplace-cards`, `-websites`); MCP `mcp__claude_ai_higgsfield__*` |
+| Impeccable | `~/.claude/skills/impeccable/` |
+| Huashu-Design | `~/.claude/skills/huashu-design/` |
+| UI/UX Pro Max | `~/.claude/skills/ui-ux-pro-max/` |
+| Taste-Skill | `~/.claude/skills/taste-skill/` |
+| Frontend UI Engineering | `~/.claude/skills/frontend-ui-engineering/` |
+| Frontend Design (plugin) | `~/.claude/plugins/marketplaces/claude-plugins-official/plugins/frontend-design/skills/frontend-design/` |
+| designlang | `~/.claude/skills/design-extract/` (CLI: `npx designlang`) |

@@ -1,0 +1,9 @@
+{
+  "id": "1",
+  "subject": "Phase 1: Audit — Smart Observer prep (8 domain agents)",
+  "description": "Dispatch parallel Sonnet agents across alerts engine, scan pipeline, signal catalog, admin config patterns, user-dashboard live patterns, ClickHouse capability, app-user scoping/audit taxonomy, scale/perf patterns. Write findings to UDP_PLATFORM/docs/specs/smart-observer/audit/*.md",
+  "activeForm": "Running Smart Observer audit",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

@@ -1,0 +1,9 @@
+{
+  "id": "19",
+  "subject": "Agent #20: Audit i18n + currency (₹) + date formatting + locale conventions",
+  "description": "Audit every currency, date, number, and locale formatting in FE/BE quotation feature surface. Catalog all `Intl.*`, `toLocale*`, `format*`, date-picker, ₹, and INR-specific patterns with file:line refs. Cross-check FE and BE formatting for consistency. Check mobile-frozen contracts.",
+  "activeForm": "Writing audit report #20 to file",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

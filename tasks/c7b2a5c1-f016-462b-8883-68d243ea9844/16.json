@@ -1,0 +1,9 @@
+{
+  "id": "16",
+  "subject": "Agent #12: Audit src/types/* — Quotation + QuotationResponse type definitions",
+  "description": "Map all Quotation and QuotationResponse type definitions, their importers, normalization, and any mobile-frozen contracts. Write report to .claude/audit/quotation-revamp/audit-raw/12-types.md",
+  "activeForm": "Auditing quotation type definitions",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

@@ -1,0 +1,9 @@
+{
+  "id": "10",
+  "subject": "Agent #2: Audit PublicQuotationResponse.tsx page",
+  "description": "Audit the vendor-facing public quotation response page. Explore src/pages/PublicQuotationResponse.tsx and all its dependencies (sidebar, hook, types, API calls). Write report to .claude/audit/quotation-revamp/audit-raw/02-pages-public-response.md",
+  "activeForm": "Auditing PublicQuotationResponse.tsx page",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}

@@ -1,0 +1,9 @@
+{
+  "id": "11",
+  "subject": "P0: git init ~/.claude + tarball + attic (safety net)",
+  "description": "Write .gitignore (secrets/sessions/caches excluded), verify no nested .git conflicts, baseline commit, tarball backup, attic/ convention.",
+  "activeForm": "Setting up P0 safety net",
+  "status": "in_progress",
+  "blocks": [],
+  "blockedBy": []
+}

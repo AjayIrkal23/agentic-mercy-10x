@@ -1,0 +1,1 @@
+/home/ajay-irkal/.claude/skills/gstack/setup-deploy/SKILL.md

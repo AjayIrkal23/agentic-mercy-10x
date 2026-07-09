@@ -1,0 +1,9 @@
+{
+  "id": "5",
+  "subject": "Phase 2: Verify AUDIT.md + commit",
+  "description": "wc -l AUDIT.md (expect 400-700), check first/last 50 lines for structure, cross-check 10 random file:line refs, commit.",
+  "activeForm": "Verifying consolidated audit",
+  "status": "completed",
+  "blocks": [],
+  "blockedBy": []
+}
