@@ -81,3 +81,15 @@ skills/*/node_modules/
 
 # --- session task state (runtime noise) ---
 tasks/
+
+# --- machine-specific state (per-user; regenerated on the target machine) ---
+# Local settings override (Claude Code convention: never shared)
+settings.local.json
+# Plugin manifests point at this machine's absolute cache paths + list private
+# project roots; the target reinstalls via `claude plugin install` (see install.sh)
+plugins/installed_plugins.json
+plugins/known_marketplaces.json
+# jcodemunch index-guard watches this machine's private project roots
+hooks/jcodemunch-index-guard.config.json
+# dox / tdd-guard auto-init sidecars created for THIS repo (fingerprints + state)
+.claude/
