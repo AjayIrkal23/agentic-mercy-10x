@@ -81,6 +81,7 @@ skills/*/node_modules/
 
 # --- session task state (runtime noise) ---
 tasks/
+image-cache/
 
 # --- machine-specific state (per-user; regenerated on the target machine) ---
 # Local settings override (Claude Code convention: never shared)

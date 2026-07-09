@@ -588,6 +588,8 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
 - [`hooks/`](hooks/CLAUDE.md)
   - [`hooks/lib/`](hooks/lib/CLAUDE.md)
 - [`ide/`](ide/CLAUDE.md)
+- [`image-cache/`](image-cache/CLAUDE.md)
+  - [`image-cache/9403513a-c723-4fa9-91ce-e0ffa6189e88/`](image-cache/9403513a-c723-4fa9-91ce-e0ffa6189e88/CLAUDE.md)
 - [`improvements/`](improvements/CLAUDE.md)
   - [`improvements/2026-05-28-robustness-overhaul/`](improvements/2026-05-28-robustness-overhaul/CLAUDE.md)
     - [`improvements/2026-05-28-robustness-overhaul/audits/`](improvements/2026-05-28-robustness-overhaul/audits/CLAUDE.md)
@@ -611,8 +613,6 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
   - [`jobs/19dfef32/`](jobs/19dfef32/CLAUDE.md)
     - [`jobs/19dfef32/tmp/`](jobs/19dfef32/tmp/CLAUDE.md)
   - [`jobs/357c8434/`](jobs/357c8434/CLAUDE.md)
-  - [`jobs/a46cdd71/`](jobs/a46cdd71/CLAUDE.md)
-    - [`jobs/a46cdd71/tmp/`](jobs/a46cdd71/tmp/CLAUDE.md)
 <!-- dox:index:end -->
 
 ## Coding Guidelines (Karpathy)

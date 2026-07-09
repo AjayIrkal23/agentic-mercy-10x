@@ -633,7 +633,7 @@
       "command": "npx"
     }
   },
-  "model": "claude-fable-5[1m]",
+  "model": "sonnet",
   "permissions": {
     "defaultMode": "bypassPermissions"
   },
