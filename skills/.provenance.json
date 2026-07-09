@@ -1,0 +1,1430 @@
+{
+  "agent-development": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "api-and-interface-design": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "api-contract-standards": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "architect-system-design": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "autoplan": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "backend-api-standards": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "backend-code-review": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "backend-error-handling": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "backend-performance-standards": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "backend-standards-always-follow": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "benchmark": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "benchmark-models": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "browse": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "browser-testing-with-devtools": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "canary": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "canary-playwright": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "careful": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "caveman": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "ci-cd-and-automation": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "code-execution-standard": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "code-review-and-quality": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "code-simplification": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "codebase-intel-first": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "codebase-start-point-guide": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "codex": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "command-development": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "connect-chrome": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "context-engineering": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "context-restore": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "context-save": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "cso": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "dead-code-and-change-audit": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "debug-investigation": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "debugging-and-error-recovery": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "deprecation-and-migration": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "design-consultation": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "design-extract": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "design-html": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "design-review": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "design-review-playwright": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "design-shotgun": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "devex-review": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "diagnose": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "document-generate": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "document-release": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "documentation-and-adrs": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "domain-scaffold-patterns": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "doubt-driven-development": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "dox-doc-tree": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "eval-harness": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "find-skills": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "fix-lint-format": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "forensic-change-coupling": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "forensic-complexity-trends": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "forensic-debt-quantification": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "forensic-hotspot-finder": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "freeze": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "frontend-api-standards": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "frontend-code-review": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "frontend-response-handling": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "frontend-server-data-patterns": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "frontend-standards-always-follow": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "frontend-structure-standards": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "frontend-ui-engineering": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "git-workflow-and-versioning": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "golang-patterns": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "golang-testing": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "graphify": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "grill-with-docs": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "gsd-add-tests": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-ai-integration-phase": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-audit-fix": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-audit-milestone": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-audit-uat": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-autonomous": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-capture": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-cleanup": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-code-review": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-complete-milestone": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-config": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-debug": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-discuss-phase": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-docs-update": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-eval-review": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-execute-phase": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-explore": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-extract-learnings": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-fast": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-forensics": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-graphify": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-health": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-help": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-import": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-inbox": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-ingest-docs": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-manager": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-map-codebase": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-milestone-summary": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-mvp-phase": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-new-milestone": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-new-project": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-ns-context": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-ns-ideate": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-ns-manage": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-ns-project": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-ns-review": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-ns-workflow": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-pause-work": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-phase": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-plan-phase": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-plan-review-convergence": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-pr-branch": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-profile-user": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-progress": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-quick": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-resume-work": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-review": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-review-backlog": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-secure-phase": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-settings": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-ship": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-sketch": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-spec-phase": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-spike": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-stats": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-surface": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-thread": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-ui-phase": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-ui-review": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-ultraplan-phase": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-undo": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-update": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-validate-phase": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-verify-work": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-workspace": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gsd-workstreams": {
+    "channel": "gsd",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "installed by get-shit-done (GSD) installer; update via gsd-update"
+  },
+  "gstack": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "git clone; updated via git reset --hard origin/main + bun run build"
+  },
+  "gstack-upgrade": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "guard": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "health": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "higgsfield-generate": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "symlink to ../../.agents/skills/higgsfield-generate (npx skills add install); origin uncertain"
+  },
+  "higgsfield-marketplace-cards": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "symlink to ../../.agents/skills/higgsfield-marketplace-cards (npx skills add install); origin uncertain"
+  },
+  "higgsfield-product-photoshoot": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "symlink to ../../.agents/skills/higgsfield-product-photoshoot (npx skills add install); origin uncertain"
+  },
+  "higgsfield-soul-id": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "symlink to ../../.agents/skills/higgsfield-soul-id (npx skills add install); origin uncertain"
+  },
+  "higgsfield-websites": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "symlink to ../../.agents/skills/higgsfield-websites (npx skills add install); origin uncertain"
+  },
+  "huashu-design": {
+    "channel": "raw-copy",
+    "source_url": "https://github.com/alchaincyf/huashu-design",
+    "version_or_commit": "0e7ec8aca0058184c1a9e06e57697e84f68a3f0f",
+    "updated": "2026-07-09",
+    "notes": "hard-reset 2026-07-09 from repo root; pre-reset copy in attic/2026-07-09/skills-pre-update"
+  },
+  "idea-refine": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "impeccable": {
+    "channel": "raw-copy",
+    "source_url": "https://github.com/pbakaus/impeccable",
+    "version_or_commit": "3e38e595c7082d5519ba7326d8f232dc3343f10b (skill v3.9.1)",
+    "updated": "2026-07-09",
+    "notes": "hard-reset 2026-07-09 from plugin/skills/impeccable; was v3.0.7; pre-reset copy in attic/2026-07-09/skills-pre-update"
+  },
+  "improve-codebase-architecture": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "incremental-implementation": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "investigate": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "iterative-retrieval": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "jcodemunch-token-saver": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "land-and-deploy": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "landing-report": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "lean-ctx": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "learn": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "make-pdf": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "mcp-usage-standards": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "mmx-cli": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null,
+    "notes": "symlink to ../../.agents/skills/mmx-cli (npx skills add install); origin uncertain"
+  },
+  "office-hours": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "open-gstack-browser": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "owasp-security": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "pair-agent": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "performance-optimization": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "plan-ceo-review": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "plan-design-review": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "plan-devex-review": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "plan-eng-review": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "plan-exec-stack-guide": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "plan-mode-gate": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "plan-tune": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "planning-and-task-breakdown": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "postgres-patterns": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "project-reference-linkage": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "project-structure-map": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "prototype": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "qa": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "qa-only": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "qa-playwright": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "react-hooks-patterns": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "retro": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "review": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "scaffold-standards": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "scrape": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "security-and-hardening": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "service-layer-standards": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "setup-browser-cookies": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "setup-deploy": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "setup-gbrain": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "shadcn": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "ship": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "shipping-and-launch": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "skill-linkage-story": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "skillify": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "source-driven-development": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "spec-driven-development": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "strategic-compact": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "sync-gbrain": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "tailwind-design-system": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "taste-skill": {
+    "channel": "raw-copy",
+    "source_url": "https://github.com/Leonxlnx/taste-skill",
+    "version_or_commit": "b17742737e796305d829b3ad39eda3add0d79060 (v2 experimental)",
+    "updated": "2026-07-09",
+    "notes": "hard-reset 2026-07-09 from skills/taste-skill (install name design-taste-frontend); upgraded v1 to v2 rewrite; pre-reset copy in attic"
+  },
+  "tdd": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "tdd-auto-init": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "tech-debt-audit": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "test-driven-development": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "to-issues": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "to-prd": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "tool-and-doc-selection": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "triage": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "ui-ux-pro-max": {
+    "channel": "raw-copy",
+    "source_url": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill",
+    "version_or_commit": "12b486b22e67f5d887962ef8351c1ac863bfaeb9 (skill.json v2.6.2)",
+    "updated": "2026-07-09",
+    "notes": "hard-reset 2026-07-09 from .claude/skills/ui-ux-pro-max in repo; repo src/ has newer data only shipped via their uipro npm installer; pre-reset copy in attic"
+  },
+  "unfreeze": {
+    "channel": "gstack",
+    "source_url": "https://github.com/garrytan/gstack",
+    "version_or_commit": "11de390be1be6849eb9a15f91ff4922dd16c589a (v1.58.5.0)",
+    "updated": "2026-07-09",
+    "notes": "installed by gstack suite (SKILL.md tagged '(gstack)'); updates ride gstack git pull"
+  },
+  "update-docs": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "using-agent-skills": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "verification-loop": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "vite-react-best-practices": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "webapp-testing": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "workflow-orchestrator": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  },
+  "zoom-out": {
+    "channel": "self",
+    "source_url": null,
+    "version_or_commit": null,
+    "updated": null
+  }
+}
