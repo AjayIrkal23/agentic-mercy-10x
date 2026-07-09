@@ -238,7 +238,8 @@ def gate2_docs(cid: str, workspace_roots: list | None = None) -> tuple[bool, str
     detail = (
         f"{len(code_files)} code file(s) written but docs not updated. "
         f"Missing: {', '.join(missing)}. "
-        f"Update docs then try again."
+        f"Fix: dispatch the docs-sync-agent specialist (Agent tool, subagent_type "
+        f"\"docs-sync-agent\") or run /invoke-docs."
     )
     return False, "Gate 2 (docs)", detail
 
@@ -267,7 +268,9 @@ def gate3_security(cid: str) -> tuple[bool, str, str]:
 
     detail = (
         f"{len(files)} security-sensitive file(s) modified but semgrep not verified. "
-        "Run `semgrep scan --config auto` on changed auth/API files, then retry."
+        "Fix: dispatch the security-sentinel specialist (Agent tool, subagent_type "
+        "\"security-sentinel\") or run /invoke-security — or run `semgrep scan --config auto` "
+        "on the changed auth/API files yourself, then retry."
     )
     return False, "Gate 3 (security)", detail
 
@@ -290,7 +293,8 @@ def gate4_santa(cid: str, code_writes: int) -> tuple[bool, str, str]:
     detail = (
         f"{code_writes} code file(s) written. "
         "Santa Method adversarial review not dispatched. "
-        "Run BREAKER + SIMPLIFIER passes on the diff before completing."
+        "Fix: dispatch a code-reviewer agent (Agent tool, subagent_type \"code-reviewer\") "
+        "to run the BREAKER + SIMPLIFIER passes on the diff before completing."
     )
     return False, "Gate 4 (santa)", detail
 
@@ -314,8 +318,9 @@ def gate5_dead_code(cid: str, code_writes: int) -> tuple[bool, str, str]:
 
     detail = (
         f"{code_writes} code file(s) written but no dead-code audit recorded. "
-        "Run mcp__jcodemunch__find_dead_code / get_dead_code_v2 (or the 4-sweep "
-        "audit: file, symbol, flow, domain) on your changes before completing."
+        "Fix: dispatch the deadcode-reaper specialist (Agent tool, subagent_type "
+        "\"deadcode-reaper\") or run /invoke-clean — or run "
+        "mcp__jcodemunch__find_dead_code / get_dead_code_v2 on your changes yourself."
     )
     return False, "Gate 5 (dead code)", detail
 

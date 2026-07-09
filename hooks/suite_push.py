@@ -23,19 +23,25 @@ def _safe_cid(cid: str) -> str:
     return "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
 
 
-def push(cid: str, skills, source: str, enforce: str = "hard") -> None:
-    """Append a push record. Never raises (fail-open for the calling hook)."""
+def push(cid: str, skills, source: str, enforce: str = "hard", meta: dict | None = None) -> None:
+    """Append a push record. Never raises (fail-open for the calling hook).
+
+    `meta` (optional, additive): extra record fields — e.g. invoke-suite-manifest
+    passes {"categories": [...], "commands": [...]} so invoke-suite-gate v2 can
+    run its artifact-or-agent-dispatch check per category. Core keys always win.
+    """
     try:
         names = [s for s in dict.fromkeys(skills) if s]  # dedupe, keep order
         if not cid or not names:
             return
         _TEL.mkdir(parents=True, exist_ok=True)
-        rec = {
+        rec = dict(meta) if isinstance(meta, dict) else {}
+        rec.update({
             "ts": datetime.now(timezone.utc).isoformat(),
             "skills": names,
             "source": source,
             "enforce": enforce,
-        }
+        })
         with (_TEL / f"{_safe_cid(cid)}.pushed-skills.jsonl").open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
     except Exception:

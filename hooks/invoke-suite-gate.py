@@ -11,6 +11,16 @@ against the skill-invocation telemetry (skill-invocation-tracker.py). Any pushed
 skill never invoked via the Skill tool => BLOCK and name it, up to MAX_NAGS times,
 then FAIL OPEN with a loud warning (a renamed/bad slug can never trap the session).
 
+v2 (P4, INVOKE-REDESIGN): agent-backed suites verify WORK, not reading. When a
+pushed record carries category metadata (invoke-suite-manifest) and the category
+has an `agent` in autonomous-skill-router.config.json, that category is satisfied
+when EITHER its `artifact` file exists newer than the invoke timestamp OR the
+agent was dispatched this session (.telemetry/{cid}.agent-dispatches.jsonl,
+written by santa-method-writer.py on every Agent/Task call). Satisfied categories
+drop their skill roster from the missing set — skill-load checking remains the
+fallback for agent-less categories (and for the legacy inline path, where the
+skills really do get loaded).
+
 NOTE: only covers Skill-TOOL pushes. Hooks that say "read this SKILL.md path"
 (fullstack-skills-reminder, ui-ux-stack-orchestrator) load by reading, not the Skill
 tool, so they never appear in the invocation telemetry and are intentionally NOT gated.
@@ -31,6 +41,7 @@ from pathlib import Path
 
 HOOK_DIR = Path(__file__).resolve().parent
 TELEMETRY_DIR = HOOK_DIR / ".telemetry"
+CONFIG_PATH = HOOK_DIR / "autonomous-skill-router.config.json"
 MAX_NAGS = int(os.environ.get("INVOKE_SUITE_GATE_MAX_NAGS", "5") or "5")
 GRACE = timedelta(seconds=90)  # absorb push-vs-prompt ordering jitter
 
@@ -68,7 +79,7 @@ def _turn_dt(transcript: str):
 
 
 def _pushed(cid: str):
-    """All hard push records as (dt, skills). Newest-relevant filtered by caller."""
+    """All hard push records as (dt, skills, categories). Newest-relevant filtered by caller."""
     p = TELEMETRY_DIR / f"{_safe_cid(cid)}.pushed-skills.jsonl"
     out = []
     if not p.is_file():
@@ -84,7 +95,103 @@ def _pushed(cid: str):
         # auto-router pushes are advisory regardless of any stale enforce=hard flag.
         if r.get("source") != "invoke-cmd":
             continue
-        out.append((_dt(r.get("ts")), r.get("skills") or []))
+        cats = r.get("categories") or []
+        out.append((_dt(r.get("ts")), r.get("skills") or [], cats if isinstance(cats, list) else []))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# v2: agent-backed category satisfaction (artifact-or-dispatch)
+# ---------------------------------------------------------------------------
+
+def _load_categories() -> dict:
+    try:
+        return json.loads(CONFIG_PATH.read_text(encoding="utf-8")).get("categories", {}) or {}
+    except Exception:
+        return {}
+
+
+def _artifact_glob(template: str) -> str:
+    for ph in ("{date}-{slug}", "{date}", "{slug}"):
+        template = template.replace(ph, "*")
+    while "**" in template:
+        template = template.replace("**", "*")
+    while "*-*" in template:
+        template = template.replace("*-*", "*")
+    return template
+
+
+def _artifact_roots(payload: dict) -> list:
+    roots = []
+    for r in (payload.get("workspace_roots") or []):
+        if isinstance(r, str) and r.strip():
+            roots.append(r)
+    cwd = payload.get("cwd")
+    if isinstance(cwd, str) and cwd.strip():
+        roots.append(cwd)
+    try:
+        roots.append(str(Path.cwd()))
+    except Exception:
+        pass
+    seen, out = set(), []
+    for r in roots:
+        if r not in seen:
+            seen.add(r)
+            out.append(r)
+    return out
+
+
+def _artifact_exists_newer(roots: list, pattern: str, since) -> bool:
+    """True when any file matching pattern in a root (or its docs/superpowers/plans/)
+    is newer than the invoke window."""
+    if not pattern:
+        return False
+    for root in roots:
+        try:
+            rp = Path(root)
+            if not rp.is_dir():
+                continue
+            candidates = list(rp.glob(pattern))
+            sub = rp / "docs" / "superpowers" / "plans"
+            if sub.is_dir():
+                candidates += list(sub.glob(pattern))
+            for f in candidates:
+                if not f.is_file():
+                    continue
+                if since is None or f.stat().st_mtime >= since.timestamp():
+                    return True
+        except Exception:
+            continue
+    return False
+
+
+def _agents_dispatched(cid: str) -> set:
+    """Every subagent_type dispatched this session (santa-method-writer telemetry)."""
+    p = TELEMETRY_DIR / f"{_safe_cid(cid)}.agent-dispatches.jsonl"
+    out = set()
+    if not p.is_file():
+        return out
+    for line in p.read_text(encoding="utf-8").splitlines():
+        try:
+            r = json.loads(line)
+        except Exception:
+            continue
+        a = (r.get("agent") or "").strip()
+        if a:
+            out.add(a)
+    return out
+
+
+def _category_skill_canon(cat_cfg: dict) -> set:
+    out = set()
+    for s in (cat_cfg.get("local_skills") or []):
+        out.add(_canon(s))
+    for s in (cat_cfg.get("superpowers_skills") or []):
+        out.add(_canon(s))
+    for group in (cat_cfg.get("stack_groups") or {}).values():
+        if isinstance(group, list):
+            for s in group:
+                out.add(_canon(s))
     return out
 
 
@@ -129,24 +236,52 @@ def main() -> int:
     transcript = payload.get("transcript_path") or payload.get("transcript") or ""
     turn_dt = _turn_dt(transcript) if transcript and Path(transcript).is_file() else None
     if turn_dt is None:
-        anchors = [d for d, _ in pushes if d is not None]
+        anchors = [d for d, _, _ in pushes if d is not None]
         turn_dt = max(anchors) if anchors else None
     window = (turn_dt - GRACE) if turn_dt else None
 
     expected: list[str] = []
     seen = set()
-    for d, skills in pushes:
+    turn_cats: list[str] = []
+    for d, skills, pcats in pushes:
         if window is not None and d is not None and d < window:
             continue
         for s in skills:
             if _canon(s) not in seen:
                 seen.add(_canon(s))
                 expected.append(s)
+        for c in pcats:
+            if c not in turn_cats:
+                turn_cats.append(c)
     if not expected:
         sys.stdout.write("{}\n"); return 0
 
     invoked = _invoked_since(cid, window)
     missing = sorted(e for e in expected if _canon(e) not in invoked)
+
+    # v2: agent-backed categories are satisfied by WORK (artifact newer than the
+    # invoke, or the agent dispatched this session) — drop their skill roster
+    # from the missing set. Agent-less categories keep pure skill-load checking.
+    if missing and turn_cats:
+        cats_cfg = _load_categories()
+        dispatched = None  # lazy
+        roots = None
+        satisfied: set = set()
+        for c in turn_cats:
+            cc = cats_cfg.get(c) or {}
+            agent = (cc.get("agent") or "").strip()
+            if not agent:
+                continue
+            if dispatched is None:
+                dispatched = _agents_dispatched(cid)
+                roots = _artifact_roots(payload)
+            ok = agent in dispatched
+            if not ok:
+                ok = _artifact_exists_newer(roots, _artifact_glob(cc.get("artifact") or ""), window)
+            if ok:
+                satisfied |= _category_skill_canon(cc)
+        if satisfied:
+            missing = [m for m in missing if _canon(m) not in satisfied]
 
     state_p = TELEMETRY_DIR / f"{_safe_cid(cid)}.suite-gate.json"
     turn_key = turn_dt.isoformat() if turn_dt else "?"
@@ -184,6 +319,8 @@ def main() -> int:
         f"pushed skills loaded. You did NOT invoke these via the Skill tool this turn:\n  - "
         + "\n  - ".join(missing)
         + "\nInvoke each missing skill via the Skill tool now, then finish. Do not skip any."
+        + "\n(Agent-backed suites pass automatically instead: dispatch the category's "
+          "specialist agent and/or produce its artifact — see the command's ACT B.)"
     )
     sys.stdout.write(json.dumps({"decision": "block", "reason": reason}) + "\n")
     return 0

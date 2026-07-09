@@ -74,6 +74,19 @@ def main() -> int:
         or ""
     ).strip()
 
+    # P4: record EVERY subagent dispatch to the shared telemetry sidecar so
+    # invoke-suite-gate.py v2 can pass agent-backed suites on "agent was
+    # dispatched this session" instead of nagging about skill loads.
+    if subagent:
+        try:
+            tel = Path(__file__).resolve().parent / ".telemetry"
+            tel.mkdir(parents=True, exist_ok=True)
+            rec = {"ts": datetime.now(timezone.utc).isoformat(), "agent": subagent}
+            with (tel / f"{_safe_cid(cid)}.agent-dispatches.jsonl").open("a", encoding="utf-8") as fh:
+                fh.write(json.dumps(rec) + "\n")
+        except Exception:
+            pass
+
     description = (tool_input.get("description") or "").lower()
     prompt = (tool_input.get("prompt") or "").lower()
 

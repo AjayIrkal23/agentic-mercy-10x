@@ -33,6 +33,26 @@ _CMD = re.compile(r"(?:^|\s)/(invoke-[a-z-]+)\b")
 # backtick skill bullet inside a command body:  - `frontend-api-standards`  /  `superpowers:x`
 _BACKTICK = re.compile(r"`([a-z0-9](?:[a-z0-9_:-]*[a-z0-9])?)`")
 
+# invoke-command name token -> config categories (for the suite gate's
+# artifact-or-agent-dispatch check; see invoke-suite-gate.py v2).
+_TOKEN_TO_CATS = {
+    "audit": ["AUDIT"], "spec": ["SPEC"], "plan": ["PLAN"], "impl": ["IMPLEMENT"],
+    "debug": ["DEBUG"], "design": ["DESIGN"], "clean": ["CLEANUP"],
+    "planning": ["PLAN"], "implementation": ["IMPLEMENT"], "debugging": ["DEBUG"],
+    "cleanup": ["CLEANUP"], "deadcode": ["CLEANUP"], "security": ["SECURITY"],
+    "fullstack": ["SPEC", "PLAN", "IMPLEMENT"],
+}
+
+
+def _cats_from_command(name: str) -> list[str]:
+    out: list[str] = []
+    stem = name[len("invoke-"):] if name.startswith("invoke-") else name
+    for tok in stem.split("-"):
+        for c in _TOKEN_TO_CATS.get(tok, []):
+            if c not in out:
+                out.append(c)
+    return out
+
 
 def _looks_like_skill(tok: str) -> bool:
     if "/" in tok or "." in tok:
@@ -65,11 +85,22 @@ def main() -> int:
         sys.stdout.write("{}\n"); return 0
 
     skills: list[str] = []
+    cats: list[str] = []
+    commands: list[str] = []
     for m in _CMD.finditer(prompt):
-        skills.extend(_skills_from_command(m.group(1)))
+        name = m.group(1)
+        cmd_skills = _skills_from_command(name)
+        if not cmd_skills:
+            continue
+        skills.extend(cmd_skills)
+        commands.append(name)
+        for c in _cats_from_command(name):
+            if c not in cats:
+                cats.append(c)
 
     if skills:
-        suite_push.push(cid, skills, source="invoke-cmd", enforce="hard")
+        suite_push.push(cid, skills, source="invoke-cmd", enforce="hard",
+                        meta={"categories": cats, "commands": commands})
     sys.stdout.write("{}\n")
     return 0
 
