@@ -1,9 +1,0 @@
-{
-  "id": "3",
-  "subject": "Verify + integrate: tsc/vitest/build, contract diff, security scan",
-  "description": "Authoritative tsc/vitest (BE) + tsc/build (FE), diff BE/FE notification types for drift, semgrep on new auth-scoped endpoints, dead-code check, docs refresh.",
-  "activeForm": "Verifying and integrating notifications feature",
-  "status": "pending",
-  "blocks": [],
-  "blockedBy": []
-}

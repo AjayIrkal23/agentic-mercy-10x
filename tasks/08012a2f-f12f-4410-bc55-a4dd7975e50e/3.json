@@ -1,9 +1,0 @@
-{
-  "id": "3",
-  "subject": "Phase 3: Detailed implementation plan (Opus)",
-  "description": "From audit+spec docs, write a very detailed task-by-task implementation plan covering backend, admin FE, user FE, alerting, email, scale",
-  "activeForm": "Writing detailed implementation plan",
-  "status": "completed",
-  "blocks": [],
-  "blockedBy": []
-}

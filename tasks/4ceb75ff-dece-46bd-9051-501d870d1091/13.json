@@ -1,9 +1,0 @@
-{
-  "id": "13",
-  "subject": "P2: author 9 specialist agents + opus-guard wiring",
-  "description": "Fable agent: write the 9 agent .md files per AGENTS-DESIGN.md, add implementation-engineer to opus-guard.py pin set, smoke-test.",
-  "activeForm": "Authoring specialist agent corps",
-  "status": "pending",
-  "blocks": [],
-  "blockedBy": []
-}

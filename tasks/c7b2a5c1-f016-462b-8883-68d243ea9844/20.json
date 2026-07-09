@@ -1,9 +1,0 @@
-{
-  "id": "20",
-  "subject": "Agent #21: Reference revamp diff — what changed in expense/storage/inventory that Quotation should mirror",
-  "description": "Audit the expense/storage/inventory revamp changes that Quotation should mirror. Provide concrete file:line examples. Output to /DATA/CODE_FILES/site-sync-vista/.claude/audit/quotation-revamp/audit-raw/21-reference-revamp-diff.md",
-  "activeForm": "Auditing reference revamp diff",
-  "status": "completed",
-  "blocks": [],
-  "blockedBy": []
-}

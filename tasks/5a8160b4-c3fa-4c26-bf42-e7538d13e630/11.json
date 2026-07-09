@@ -1,9 +1,0 @@
-{
-  "id": "11",
-  "subject": "Redesign login — 3 image-driven variants for user to pick",
-  "description": "Source royalty-free railway photo + build 3 distinct image/content-driven login layouts (immersive glass, editorial split, full-screen centered) as isolated public preview routes reusing useLoginFlow; keep real /login untouched. Screenshot all 3 (dark+light), user picks, then promote winner + remove others.",
-  "activeForm": "Building 3 login redesign variants",
-  "status": "pending",
-  "blocks": [],
-  "blockedBy": []
-}

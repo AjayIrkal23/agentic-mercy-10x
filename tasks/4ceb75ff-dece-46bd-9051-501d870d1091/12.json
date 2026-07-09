@@ -1,9 +1,0 @@
-{
-  "id": "12",
-  "subject": "P1: hard-reset 4 UI skills from upstream + provenance + plugin updates",
-  "description": "Fable agent: research canonical repos (impeccable/huashu-design/ui-ux-pro-max/taste-skill), archive current to attic, fresh install from source, .provenance.json for all skills, plugin+gstack updates.",
-  "activeForm": "Hard-resetting UI skills from upstream",
-  "status": "pending",
-  "blocks": [],
-  "blockedBy": []
-}

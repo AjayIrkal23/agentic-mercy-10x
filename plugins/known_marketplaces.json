@@ -5,7 +5,7 @@
       "repo": "anthropics/claude-plugins-official"
     },
     "installLocation": "/home/ajay-irkal/.claude/plugins/marketplaces/claude-plugins-official",
-    "lastUpdated": "2026-07-09T10:59:05.721Z"
+    "lastUpdated": "2026-07-09T11:57:09.783Z"
   },
   "claude-mermaid": {
     "source": {
@@ -13,7 +13,7 @@
       "repo": "veelenga/claude-mermaid"
     },
     "installLocation": "/home/ajay-irkal/.claude/plugins/marketplaces/claude-mermaid",
-    "lastUpdated": "2026-05-28T11:13:30.880Z"
+    "lastUpdated": "2026-07-09T11:57:36.216Z"
   },
   "superpowers-marketplace": {
     "source": {
@@ -38,6 +38,6 @@
       "repo": "DietrichGebert/ponytail"
     },
     "installLocation": "/home/ajay-irkal/.claude/plugins/marketplaces/ponytail",
-    "lastUpdated": "2026-06-22T07:59:29.837Z"
+    "lastUpdated": "2026-07-09T11:57:19.861Z"
   }
 }

@@ -1,9 +1,0 @@
-{
-  "id": "6",
-  "subject": "Phase 3: Dispatch 9 parallel mockup sub-tasks",
-  "description": "Use Workflow tool to fan out 9 [opus] frontend-uiux-designer sub-tasks in parallel (3 surfaces × 3 variants). Each generates 2 HTML files (light + dark) + 2 screenshots using real data from AUDIT.md, Carbon Mint tokens from spec §3.",
-  "activeForm": "Running 9 parallel mockup sub-tasks",
-  "status": "completed",
-  "blocks": [],
-  "blockedBy": []
-}

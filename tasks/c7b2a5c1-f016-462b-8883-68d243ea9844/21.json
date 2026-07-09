@@ -1,9 +1,0 @@
-{
-  "id": "21",
-  "subject": "Agent #3: Audit QuotationsDashboard.tsx — KPI + filters wiring",
-  "description": "Read context files, read QuotationsDashboard.tsx + related files, write findings to /DATA/CODE_FILES/site-sync-vista/.claude/audit/quotation-revamp/audit-raw/03-components-dashboard.md",
-  "activeForm": "Auditing QuotationsDashboard component",
-  "status": "completed",
-  "blocks": [],
-  "blockedBy": []
-}

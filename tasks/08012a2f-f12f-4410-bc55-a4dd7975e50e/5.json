@@ -1,9 +1,0 @@
-{
-  "id": "5",
-  "subject": "Phase 5: Design consistency pass (/invoke-design)",
-  "description": "Ensure admin + user dashboard UI matches existing theme/UX conventions of sibling pages",
-  "activeForm": "Running design consistency pass",
-  "status": "pending",
-  "blocks": [],
-  "blockedBy": []
-}

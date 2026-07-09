@@ -68,11 +68,11 @@
     "ponytail@ponytail": [
       {
         "scope": "user",
-        "installPath": "/home/ajay-irkal/.claude/plugins/cache/ponytail/ponytail/4.7.0",
-        "version": "4.7.0",
+        "installPath": "/home/ajay-irkal/.claude/plugins/cache/ponytail/ponytail/4.8.4",
+        "version": "4.8.4",
         "installedAt": "2026-06-22T07:59:43.269Z",
-        "lastUpdated": "2026-06-22T07:59:43.269Z",
-        "gitCommitSha": "6da37bfa7d0282522c7785759f4d2f1544015354"
+        "lastUpdated": "2026-07-09T11:57:19.936Z",
+        "gitCommitSha": "8f32ae0f6eb0fe73189aa505e00da170e8d1f2fc"
       }
     ],
     "context7@claude-plugins-official": [

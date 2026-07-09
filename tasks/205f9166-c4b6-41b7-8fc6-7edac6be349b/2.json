@@ -1,9 +1,0 @@
-{
-  "id": "2",
-  "subject": "Frontend: notifications bell + page",
-  "description": "Wire the existing static NotificationsMenu.tsx to real polling data, new /notifications page + route, api/store/types. Per /home/ajay-irkal/.claude/plans/fluffy-honking-lemon.md.",
-  "activeForm": "Building notifications frontend",
-  "status": "in_progress",
-  "blocks": [],
-  "blockedBy": []
-}

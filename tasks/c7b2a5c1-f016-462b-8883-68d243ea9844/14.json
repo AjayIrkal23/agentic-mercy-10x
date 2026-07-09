@@ -1,9 +1,0 @@
-{
-  "id": "14",
-  "subject": "Agent #4: Audit QuotationsContent.tsx + tab variants",
-  "description": "Audit QuotationsContent.tsx, QuotationsDashboard.tsx, QuotationsSkeleton.tsx, useQuotations hooks, useQuotationsMasterQuery. Write to .claude/audit/quotation-revamp/audit-raw/04-components-content-tabs.md",
-  "activeForm": "Auditing QuotationsContent and tabs",
-  "status": "completed",
-  "blocks": [],
-  "blockedBy": []
-}

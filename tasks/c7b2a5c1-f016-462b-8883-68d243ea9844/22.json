@@ -1,9 +1,0 @@
-{
-  "id": "22",
-  "subject": "Agent #16: Audit server/src/models/Quotation*.ts + indexes + tenancy enforcement",
-  "description": "Audit Quotation models, indexes, timestamps, tenancy derivation. Write to /DATA/CODE_FILES/site-sync-vista/.claude/audit/quotation-revamp/audit-raw/16-be-models-tenancy.md",
-  "activeForm": "Auditing Quotation models + tenancy",
-  "status": "completed",
-  "blocks": [],
-  "blockedBy": []
-}

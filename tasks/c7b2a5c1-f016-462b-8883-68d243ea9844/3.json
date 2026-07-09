@@ -1,9 +1,0 @@
-{
-  "id": "3",
-  "subject": "Phase 1: Verify 22 raw reports + commit",
-  "description": "List audit-raw/, spot-check 3 reports (#5, #13, #22) for schema compliance and file:line refs, commit.",
-  "activeForm": "Verifying raw audit reports",
-  "status": "completed",
-  "blocks": [],
-  "blockedBy": []
-}

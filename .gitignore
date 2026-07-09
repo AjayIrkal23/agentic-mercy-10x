@@ -11,6 +11,7 @@ mcp-needs-auth-cache.json
 *.key
 **/.env
 **/.env.*
+!**/.env.example
 
 # --- personal / session data (private, never public) ---
 history.jsonl
@@ -76,3 +77,7 @@ get-shit-done/
 # --- large generated assets inside kept skills ---
 skills/*/dist/
 skills/*/node_modules/
+.gstack/
+
+# --- session task state (runtime noise) ---
+tasks/

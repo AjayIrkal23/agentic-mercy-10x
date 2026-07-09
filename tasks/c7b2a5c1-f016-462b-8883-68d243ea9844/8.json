@@ -1,9 +1,0 @@
-{
-  "id": "8",
-  "subject": "Phase 4: User picks winners + write DECISIONS.md",
-  "description": "Open gallery in browser, use AskUserQuestion to collect 3 picks (A/B/C per surface), write .claude/audit/quotation-revamp/DECISIONS.md, commit.",
-  "activeForm": "Collecting user picks",
-  "status": "in_progress",
-  "blocks": [],
-  "blockedBy": []
-}

@@ -1,9 +1,0 @@
-{
-  "id": "16",
-  "subject": "P6: dedupe stale files to attic",
-  "description": "lean-ctx.mdc, global-operating-rules.mdc, design-quality-gate.py(+config), *.bak files → attic with manifest.",
-  "activeForm": "Archiving stale duplicates",
-  "status": "pending",
-  "blocks": [],
-  "blockedBy": []
-}

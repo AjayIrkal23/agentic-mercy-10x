@@ -1,9 +1,0 @@
-{
-  "id": "18",
-  "subject": "Agent #19: Tenancy + permissions + RBAC matrix for quotation feature",
-  "description": "Audit tenancy enforcement (companyId from req.user), RBAC matrix per quotation action, page-permission checks, public access flow security, and mobile-frozen check. Write report to .claude/audit/quotation-revamp/audit-raw/19-tenancy-permissions-rbac.md",
-  "activeForm": "Auditing tenancy + permissions + RBAC for quotation feature",
-  "status": "completed",
-  "blocks": [],
-  "blockedBy": []
-}

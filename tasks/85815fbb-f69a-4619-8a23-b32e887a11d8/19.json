@@ -1,9 +1,0 @@
-{
-  "id": "19",
-  "subject": "Phase 1 — Audit packet-forwarder seams (detailed)",
-  "description": "8-facet opus workflow auditing: raw tap point + decoupled worker, processed-history object + param keys, udp-config ports/sets, UDP/HTTP/HTTPS transports + auth types, ClickHouse forward-log model + 30-day retention, backend config-domain CRUD + dynamic reload, FE config+summary patterns, dashboard. Write to docs/specs/packet-forwarder/audit/.",
-  "activeForm": "Auditing packet-forwarder seams",
-  "status": "completed",
-  "blocks": [],
-  "blockedBy": []
-}
