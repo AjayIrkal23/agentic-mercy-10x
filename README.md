@@ -1,12 +1,16 @@
 <div align="center">
 
-# ⚡ claude-workflow
+# ⚡ agentic-mercy-10x
 
 ### The agentic-dev environment that refuses to vibe-code.
 
 *One `git clone` turns a stock Claude Code install into a disciplined engineering team that **plans before it codes, routes work to the right specialist, enforces standards at write-time, and proves it's done before it says so.***
 
 <br/>
+
+<img src="assets/hero.webp" alt="agentic-mercy-10x — an orchestrated AI development pipeline turning raw code into verified software" width="100%">
+
+<br/><br/>
 
 ![Skills](https://img.shields.io/badge/skills-200%2B-6E56CF?style=for-the-badge)
 ![Hooks](https://img.shields.io/badge/hooks-70%2B-0EA5E9?style=for-the-badge)
@@ -20,7 +24,7 @@
 
 <br/>
 
-**[The Problem](#-the-problem-nobody-fixed) · [What Happens on Enter](#-what-actually-happens-when-you-hit-enter) · [One Prompt's Journey](#-the-journey-of-a-single-prompt) · [Problems Killed](#-every-step-kills-a-real-problem) · [Install](#-install)**
+**[The Problem](#-the-problem-nobody-fixed) · [On Enter](#-what-actually-happens-when-you-hit-enter) · [One Prompt's Journey](#-the-journey-of-a-single-prompt) · [8 Superpowers](#-eight-superpowers-200-skills) · [Token Economy](#-the-token-economy) · [Structured Forever](#-your-codebase-stays-structured--forever) · [Install](#-install)**
 
 </div>
 
@@ -32,7 +36,7 @@ AI coding agents are brilliant and **undisciplined**. Left alone, the same failu
 
 <div align="center">
 
-| 😖 Stock agent | ⚡ claude-workflow |
+| 😖 Stock agent | ⚡ agentic-mercy-10x |
 |---|---|
 | Forgets your standards halfway through | **Injects the right standard on every write** |
 | Reads whole files, burns tokens, still misses the caller | **Symbol index + dependency graph answer in one call** |
@@ -145,6 +149,185 @@ sequenceDiagram
 ```
 
 Nothing above is something you have to remember. **The hooks remember for you.**
+
+---
+
+## 🦸 Eight superpowers, 200+ skills
+
+Every skill in this workspace exists to give a developer one of eight superpowers. This is the full roster — **not a teaser, the actual inventory** — of what 10x's your day:
+
+<div align="center">
+<img src="assets/superpowers-grid.webp" alt="Eight developer superpowers: Analyze, Organize, Execute, Test, Secure, Learn, Create, Design" width="100%">
+</div>
+
+<br/>
+
+### 🔬 ① ANALYZE — see the whole codebase in one call
+
+> *The agent stops reading files blindly and starts querying a pre-built index. This is where the token savings come from.*
+
+| Skill / tool | What it 10x's |
+|---|---|
+| `codebase-intel-first` | Doctrine: build a structural model **before** reading a single line |
+| `jcodemunch-token-saver` | Symbol index — find a function, its callers, its blast radius in **one call**, not 20 file reads |
+| `graphify` | Dependency graph — "who depends on X?", "how do A and B connect?" answered instantly |
+| `project-structure-map` | Instant layer-boundary + impacted-files map for an unfamiliar repo |
+| `project-reference-linkage` | The cross-module wiring map (component ↔ hook ↔ api ↔ controller ↔ route ↔ schema ↔ slice) |
+| `iterative-retrieval` | Progressively refine context instead of dumping the whole tree |
+| `lean-ctx` | Compressed I/O · 10 read modes · re-reads a file in **~13 tokens** |
+| `caveman` | Output compression — **~75% fewer tokens**, full technical accuracy |
+| `mcp-usage-standards` · `tool-and-doc-selection` | Pick the right source of truth, skip the wasteful search |
+
+### 🗂️ ② ORGANIZE — a codebase that stays clean forever
+
+> *Structure is enforced, not hoped for. New code lands in the right place with the right shape, every time.*
+
+| Skill | What it 10x's |
+|---|---|
+| `frontend-structure-standards` · `frontend-standards-always-follow` | Domain-first folders, type ownership, 250-line file ceiling |
+| `backend-standards-always-follow` · `service-layer-standards` · `backend-api-standards` | Route → controller → service → schema boundaries that never blur |
+| `scaffold-standards` · `domain-scaffold-patterns` | New domain? Get the exact file tree before any logic is written |
+| `api-contract-standards` · `api-and-interface-design` | Stable envelopes + typed contracts across the FE/BE seam |
+| `architect-system-design` | Build-ready decomposition specs for new systems |
+| `golang-patterns` · `react-hooks-patterns` · `postgres-patterns` · `vite-react-best-practices` · `tailwind-design-system` | Idiomatic, per-stack patterns baked in |
+| `dead-code-and-change-audit` | Continuous hygiene — no orphaned imports, stale refs, or half-refactors survive |
+| `code-simplification` · `improve-codebase-architecture` · `ponytail:ponytail-audit` | Actively shrink complexity instead of accreting it |
+
+### 🗺️ ③ EXECUTE — never vibe-code again
+
+> *No mutation without a plan. Reasoning is externalized, scope is questioned, work is sliced.*
+
+| Skill | What it 10x's |
+|---|---|
+| `plan-mode-gate` · `workflow-orchestrator` · `plan-exec-stack-guide` | Hard pre-flight: no code until there's a checked plan |
+| `spec-driven-development` · `planning-and-task-breakdown` · `writing-plans` | Turn a vague idea into ordered, testable tasks |
+| `source-driven-development` | Every decision grounded in official docs, not stale memory |
+| `sequential-thinking` (doctrine) | Externalize **all** reasoning — plan, audit, debug, decide |
+| `ponytail` | The laziest solution that actually works — kills over-engineering at the source |
+| `doubt-driven-development` | Adversarial self-review before a confident answer stands |
+| `incremental-implementation` · `subagent-driven-development` · `dispatching-parallel-agents` · `using-git-worktrees` | Ship in safe slices, fan out independent work |
+
+### 🧪 ④ TEST — prove it works, don't claim it
+
+> *Evidence before assertions. Tests come first; "done" is earned, not announced.*
+
+| Skill | What it 10x's |
+|---|---|
+| `test-driven-development` · `tdd` · `golang-testing` | Red → green → refactor; table-driven Go tests |
+| `webapp-testing` · `browser-testing-with-devtools` | Real-browser DOM, console, network, and visual checks |
+| `verification-loop` · `verification-before-completion` · `eval-harness` | A finish line you have to actually cross |
+| `code-review-and-quality` · `frontend-code-review` · `backend-code-review` | Multi-axis review before merge |
+| `systematic-debugging` · `debug-investigation` · `diagnose` | Reproduce → root cause → minimal fix (no fix before cause) |
+| `fix-lint-format` | Green CI before you commit |
+
+### 🛡️ ⑤ SECURE — ship without holes
+
+> *Auth, input, and API changes get scanned automatically — a BLOCK verdict stops the session.*
+
+| Skill / agent | What it 10x's |
+|---|---|
+| `owasp-security` · `security-and-hardening` | OWASP Top 10 (2025), ASVS, LLM/agentic threats baked into review |
+| `security-sentinel` (agent) | Semgrep + OWASP pass on the diff → **BLOCK / PASS** |
+| `backend-error-handling` | Safe logging, redaction, client-safe error mapping |
+
+### 📖 ⑥ LEARN — never forget, never re-derive
+
+> *Cross-session memory + a documentation tree that can't fall out of date.*
+
+| Skill / system | What it 10x's |
+|---|---|
+| `memory` (MCP) + memory protocol | Patterns, decisions, and fragile-area gotchas persist across sessions |
+| `dox-doc-tree` | A `CLAUDE.md` + `AGENTS.md` in **every** directory — read root→target before editing |
+| `update-docs` · `documentation-and-adrs` | Docs + ADRs synced to the change, Gate-enforced |
+| `CODEX.md` | A living working-decision log the whole team can read |
+| `codebase-start-point-guide` | Deterministic onboarding flow into any repo |
+
+### 🎼 ⑦ CREATE — a whole team of specialists in a box
+
+> *Nine specialist agents + 139 `/invoke` commands + forensic X-ray vision over your git history.*
+
+| Skill / agent | What it 10x's |
+|---|---|
+| 9 `/invoke` specialists + 139 commands | Audit · spec · plan · implement · debug · clean · docs · verify — composed on demand |
+| `forensic-hotspot-finder` · `forensic-change-coupling` | Which files cause the most bugs; what secretly changes together |
+| `forensic-complexity-trends` · `forensic-debt-quantification` | Is quality improving? What does the debt cost in **dollars**? |
+| `tech-debt-audit` | Whole-repo, file-cited debt report with severity + effort |
+| `workflow-orchestrator` | Routes multi-surface work across Architect / Code / Debug modes |
+
+### 🎨 ⑧ DESIGN — UI that doesn't look AI-generated
+
+> *A six-skill anti-slop design stack on top of a real asset-generation engine — the images in this very README were generated by it.*
+
+| Skill / engine | What it 10x's |
+|---|---|
+| `impeccable` · `taste-skill` · `ui-ux-pro-max` · `huashu-design` | Anti-slop craft: tokens, typography, hierarchy, motion |
+| `frontend-ui-engineering` · `design-extract` · `frontend-design` | Production UIs; extract a design system from any live URL |
+| **Higgsfield** asset engine | Bespoke image / video / 3D / audio — real assets, never placeholders |
+
+---
+
+## 💰 The token economy
+
+Here is the part that pays for itself. A stock agent answers a question by **reading files** — it grep-scans, opens a dozen, and drowns its own context. This workspace answers the same question by **querying a pre-built symbol index and dependency graph**, then compresses everything that flows through. The result is dramatic:
+
+<div align="center">
+<img src="assets/token-economics.webp" alt="Reading the entire codebase vs a surgical symbol lookup — 95% less token volume, 75% less processing" width="100%">
+</div>
+
+```mermaid
+xychart-beta
+    title "Tokens spent per task — stock agent vs agentic-mercy-10x (illustrative)"
+    x-axis ["Find callers", "Grok a module", "Re-read a file", "Explain change"]
+    y-axis "Tokens" 0 --> 80000
+    bar [45000, 80000, 3000, 1200]
+    bar [1500, 6000, 13, 300]
+```
+
+<div align="center"><i>Left/back bar = stock agent · front bar = this workspace. Illustrative estimates from each skill's stated savings.</i></div>
+
+<br/>
+
+| Everyday task | 🐌 Stock agent | ⚡ agentic-mercy-10x | Saved |
+|---|---:|---:|---:|
+| "Who calls `processPayment`?" | grep + read ~15 files ≈ **45k tok** | `find_references` ≈ **1.5k tok** | **~97%** |
+| "Understand this module before editing" | read the whole dir ≈ **80k tok** | `assemble_task_context` ≈ **6k tok** | **~92%** |
+| "Re-read a file after an edit" | full re-read ≈ **3k tok** | `lean-ctx` diff ≈ **13 tok** | **~99%** |
+| "Explain the change you made" *(output)* | verbose prose ≈ **1.2k tok** | `caveman` ≈ **300 tok** | **~75%** |
+
+**Fewer tokens is not just cheaper — it's *smarter*.** Every token you *don't* waste on a blind file dump is a token of context left for actual reasoning. This is why the workspace stays sharp on large repos where a naive agent chokes.
+
+> Numbers above are illustrative estimates drawn from each skill's own stated savings (`jcodemunch-token-saver` ≈ 95% on retrieval, `caveman` ≈ 75% on output, `lean-ctx` ≈ 13-token re-reads). Your mileage varies with repo size — the *shape* of the win does not.
+
+---
+
+## 🗂️ Your codebase stays structured — forever
+
+Left unattended, an AI agent turns any codebase into spaghetti — files wherever, types inline, dead code everywhere. This workspace makes structure **non-optional**: every new domain lands in a known shape, every layer boundary is enforced, and the cross-module wiring is mapped before anything is touched.
+
+<div align="center">
+<img src="assets/codebase-structure.webp" alt="Before: tangled spaghetti code. After: clean domain-organized architecture" width="100%">
+</div>
+
+<br/>
+
+The `project-reference-linkage` skill keeps the whole vertical slice traceable — so the agent always knows what a change touches, end to end:
+
+```mermaid
+flowchart LR
+    C["🧩 component"]:::fe --> H["🪝 hook"]:::fe --> A["🌐 api client"]:::fe
+    A --> RT["🛣️ route"]:::be --> CT["🎛️ controller"]:::be --> SV["⚙️ service"]:::be
+    SV --> SC["📐 schema"]:::be --> MD["🗄️ model"]:::be
+    H -.->|"UI state"| ST["🗃️ store / slice"]:::fe
+
+    classDef fe fill:#0EA5E9,stroke:#0369A1,color:#fff
+    classDef be fill:#6E56CF,stroke:#4B3B9C,color:#fff
+```
+
+Three enforcement layers keep it that way, permanently:
+
+- **At scaffold time** — `scaffold-standards` + `domain-scaffold-patterns` emit the exact file tree (validated against real production codebases: Fastify/TS, FastAPI/Python, Go/chi).
+- **At write time** — structure skills are injected on every edit; the 250-line file ceiling and layer boundaries are checked.
+- **At close time** — `dead-code-and-change-audit` sweeps orphans and the `dox` tree drops a `CLAUDE.md` into any directory you touched.
 
 ---
 
@@ -267,7 +450,7 @@ flowchart TD
 **One command** (clone next to your home, then run the installer):
 
 ```bash
-git clone https://github.com/AjayIrkal23/claude-workflow ~/.claude-repo && ~/.claude-repo/install.sh
+git clone https://github.com/AjayIrkal23/agentic-mercy-10x ~/.claude-repo && ~/.claude-repo/install.sh
 ```
 
 The installer is **Ubuntu-focused, idempotent, and non-destructive**:
