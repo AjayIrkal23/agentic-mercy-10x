@@ -303,7 +303,7 @@ def main() -> int:
         if has_index:
             fresh_bits.append("symbol index")
         if fresh_bits:
-            body = body + f"\n(Ready: {' + '.join(fresh_bits)} present for `{root.name}`; watch daemons keep them fresh.)"
+            body = body + f"\n(Ready: {' + '.join(fresh_bits)} present for `{root.name}`; kept fresh event-driven by index-lifecycle.)"
 
         print(json.dumps({"additionalContext": body}))
         return 0

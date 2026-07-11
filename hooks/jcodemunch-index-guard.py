@@ -3,7 +3,11 @@
 
 Detects whether the active workspace has a jcodemunch index and whether it is
 stale (git HEAD mismatch).  Emits MANDATORY directives when the index is
-missing or stale, and checks whether the systemd watch daemon is running.
+missing or stale.
+
+Note: superseded at SessionStart by index-lifecycle.py (P3); retained on disk
+for flip-back parity until P7-T4. The systemd watch-daemon refcount was removed
+here (P3-T2) — freshness is now handled event-driven by index-lifecycle.py.
 
 Called by session-start-aggregator.py.  Receives the hook JSON on stdin.
 Outputs {"additional_context": "..."} on stdout.  Fails open on any error.
@@ -17,9 +21,6 @@ import sqlite3
 import subprocess
 import sys
 from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _watch_refcount import acquire  # noqa: E402
 
 HOME = Path.home()
 INDEX_DIR = HOME / ".code-index"
@@ -142,10 +143,6 @@ def main() -> int:
                     f"jcodemunch index: FRESH — `{source_root.name}` "
                     f"(HEAD `{(current_head or 'unknown')[:8]}`)"
                 )
-
-        cid = payload.get("conversation_id") or payload.get("session_id") or ""
-        svc = acquire("jcodemunch", source_root, cid)
-        parts.append(f"jcodemunch watch: active for this session (`{svc}`)")
 
         if not parts:
             print("{}")
