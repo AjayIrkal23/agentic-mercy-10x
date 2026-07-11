@@ -44,6 +44,11 @@ hooks/.state/
 hooks/.telemetry/
 hooks/.agents/
 **/__pycache__/
+# 100x overhaul (P0): runtime tmp / lock / telemetry litter
+*.tmp.*
+daemon.lock
+daemon.status.json
+telemetry/*.jsonl
 .ponytail-active
 .blast-bypass
 .gateguard-last-impact.md

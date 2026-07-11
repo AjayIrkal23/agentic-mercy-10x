@@ -633,7 +633,7 @@
       "command": "npx"
     }
   },
-  "model": "sonnet",
+  "model": "opus[1m]",
   "permissions": {
     "defaultMode": "bypassPermissions"
   },

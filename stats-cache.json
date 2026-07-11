@@ -1,6 +1,6 @@
 {
   "version": 4,
-  "lastComputedDate": "2026-07-06",
+  "lastComputedDate": "2026-07-09",
   "dailyActivity": [
     {
       "date": "2026-05-14",
@@ -277,6 +277,24 @@
       "messageCount": 24663,
       "sessionCount": 195,
       "toolCallCount": 8025
+    },
+    {
+      "date": "2026-07-07",
+      "messageCount": 24599,
+      "sessionCount": 163,
+      "toolCallCount": 6394
+    },
+    {
+      "date": "2026-07-08",
+      "messageCount": 9383,
+      "sessionCount": 58,
+      "toolCallCount": 1914
+    },
+    {
+      "date": "2026-07-09",
+      "messageCount": 3999,
+      "sessionCount": 45,
+      "toolCallCount": 1075
     }
   ],
   "dailyModelTokens": [
@@ -614,14 +632,39 @@
         "claude-sonnet-5": 4248580,
         "claude-haiku-4-5-20251001": 682288
       }
+    },
+    {
+      "date": "2026-07-07",
+      "tokensByModel": {
+        "claude-sonnet-5": 4100888,
+        "claude-opus-4-8": 31003048,
+        "claude-haiku-4-5-20251001": 548515
+      }
+    },
+    {
+      "date": "2026-07-08",
+      "tokensByModel": {
+        "claude-sonnet-5": 3503996,
+        "claude-opus-4-8": 8263988,
+        "claude-haiku-4-5-20251001": 194680
+      }
+    },
+    {
+      "date": "2026-07-09",
+      "tokensByModel": {
+        "claude-sonnet-5": 5384125,
+        "claude-opus-4-8": 960871,
+        "claude-fable-5": 2365513,
+        "claude-haiku-4-5-20251001": 143682
+      }
     }
   ],
   "modelUsage": {
     "claude-opus-4-8": {
-      "inputTokens": 216850181,
-      "outputTokens": 182558368,
-      "cacheReadInputTokens": 24627584712,
-      "cacheCreationInputTokens": 1858983861,
+      "inputTokens": 243815977,
+      "outputTokens": 195820479,
+      "cacheReadInputTokens": 27427803510,
+      "cacheCreationInputTokens": 2087556096,
       "webSearchRequests": 0,
       "costUSD": 0,
       "contextWindow": 0,
@@ -668,10 +711,10 @@
       "maxOutputTokens": 0
     },
     "claude-haiku-4-5-20251001": {
-      "inputTokens": 43513,
-      "outputTokens": 3392959,
-      "cacheReadInputTokens": 78543453,
-      "cacheCreationInputTokens": 47113054,
+      "inputTokens": 54761,
+      "outputTokens": 4268588,
+      "cacheReadInputTokens": 99982632,
+      "cacheCreationInputTokens": 60512390,
       "webSearchRequests": 0,
       "costUSD": 0,
       "contextWindow": 0,
@@ -688,20 +731,20 @@
       "maxOutputTokens": 0
     },
     "claude-fable-5": {
-      "inputTokens": 11011189,
-      "outputTokens": 7676125,
-      "cacheReadInputTokens": 2655002656,
-      "cacheCreationInputTokens": 81884763,
+      "inputTokens": 12764264,
+      "outputTokens": 8288563,
+      "cacheReadInputTokens": 2831968329,
+      "cacheCreationInputTokens": 92970737,
       "webSearchRequests": 0,
       "costUSD": 0,
       "contextWindow": 0,
       "maxOutputTokens": 0
     },
     "claude-sonnet-5": {
-      "inputTokens": 11439385,
-      "outputTokens": 8784199,
-      "cacheReadInputTokens": 3263850234,
-      "cacheCreationInputTokens": 247968371,
+      "inputTokens": 18957673,
+      "outputTokens": 14254920,
+      "cacheReadInputTokens": 4477351155,
+      "cacheCreationInputTokens": 352337268,
       "webSearchRequests": 0,
       "costUSD": 0,
       "contextWindow": 0,
@@ -738,8 +781,8 @@
       "maxOutputTokens": 0
     }
   },
-  "totalSessions": 1487,
-  "totalMessages": 412484,
+  "totalSessions": 1753,
+  "totalMessages": 450465,
   "longestSession": {
     "sessionId": "d90ea0c8-20bb-404f-9040-586b20767f20",
     "duration": 394895489,
@@ -748,29 +791,29 @@
   },
   "firstSessionDate": "2026-05-14T07:24:08.931Z",
   "hourCounts": {
-    "0": 81,
-    "1": 47,
-    "2": 21,
-    "3": 38,
-    "4": 17,
-    "5": 13,
-    "6": 1,
-    "7": 3,
-    "8": 13,
-    "9": 11,
-    "10": 40,
-    "11": 57,
-    "12": 96,
-    "13": 143,
-    "14": 113,
-    "15": 95,
-    "16": 110,
-    "17": 103,
-    "18": 106,
-    "19": 82,
-    "20": 41,
-    "21": 79,
-    "22": 93,
-    "23": 84
+    "0": 92,
+    "1": 59,
+    "2": 29,
+    "3": 45,
+    "4": 20,
+    "5": 26,
+    "6": 30,
+    "7": 5,
+    "8": 15,
+    "9": 18,
+    "10": 51,
+    "11": 63,
+    "12": 101,
+    "13": 149,
+    "14": 120,
+    "15": 116,
+    "16": 126,
+    "17": 116,
+    "18": 124,
+    "19": 90,
+    "20": 46,
+    "21": 97,
+    "22": 103,
+    "23": 112
   }
 }
