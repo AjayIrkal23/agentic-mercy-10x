@@ -49,6 +49,10 @@ hooks/.agents/
 daemon.lock
 daemon.status.json
 telemetry/*.jsonl
+# 100x overhaul (P0-T5): gitignored-class litter relocated into attic
+# (recoverable on disk, deliberately not committed to avoid re-bloating the repo)
+attic/2026-07-11/skills/gstack/
+attic/2026-07-11/hooks/.agents/
 .ponytail-active
 .blast-bypass
 .gateguard-last-impact.md
