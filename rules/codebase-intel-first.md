@@ -111,11 +111,13 @@ what the graph is for.
 - **Debugging** — `jcodemunch get_call_hierarchy` + `find_implementations` +
   `get_signal_chains`; `graphify shortest_path` to connect two points.
 
-## Freshness (they are kept fresh automatically)
+## Freshness (checked on demand — NO daemons)
 
-The index + graph are rebuilt by systemd **watch daemons** and verified by the
-SessionStart guards (`jcodemunch-index-guard`, `graphify-index-guard`). You do
-NOT normally rebuild them. Act only if a guard prints **STALE / MISSING** at
+The index + graph are rebuilt **on demand** by the SessionStart guards
+(`jcodemunch-index-guard`, `graphify-index-guard`) and the event-driven
+`index-lifecycle` state machine (active-repo only) — there are **no persistent
+watch daemons** (the systemd watchers were removed 2026-07-09). You do NOT
+normally rebuild them. Act only if a guard prints **STALE / MISSING** at
 session start:
 - jcodemunch stale → `mcp__jcodemunch__index_folder({"path": "<root>", "incremental": true})`
 - graphify stale → `graphify update <root>` (Bash; cheap, no LLM)
