@@ -57,6 +57,7 @@ telemetry/*.jsonl
 .last-update-result.json
 
 # --- config backups & editor droppings ---
+*.bak*
 *.bak
 *.bak.*
 *.bak-*
