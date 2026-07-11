@@ -1,0 +1,756 @@
+{
+  "_generated_from": "skills-index",
+  "_meta": {
+    "superset_of": "trigger-floor.json",
+    "dropped": []
+  },
+  "rules": [
+    {
+      "id": "gen_api-contract-standards",
+      "paths": [
+        "src/schemas/",
+        "src/types/"
+      ],
+      "skills": [
+        "api-contract-standards"
+      ]
+    },
+    {
+      "id": "gen_backend-performance-standards",
+      "paths": [
+        "cmd/",
+        "internal/",
+        "server/"
+      ],
+      "skills": [
+        "backend-performance-standards"
+      ]
+    },
+    {
+      "id": "gen_backend-standards-always-follow",
+      "paths": [
+        "/models/",
+        "controller",
+        "internal/",
+        "internal/models/",
+        "server/",
+        "service"
+      ],
+      "skills": [
+        "backend-standards-always-follow"
+      ]
+    },
+    {
+      "id": "gen_dead-code-and-change-audit",
+      "paths": [
+        ".claude/hooks/",
+        ".claude/rules/"
+      ],
+      "skills": [
+        "dead-code-and-change-audit"
+      ]
+    },
+    {
+      "id": "gen_debug-investigation",
+      "paths": [
+        ".claude/hooks/",
+        ".claude/rules/"
+      ],
+      "skills": [
+        "debug-investigation"
+      ]
+    },
+    {
+      "id": "gen_frontend-response-handling",
+      "paths": [
+        "/api-client",
+        "/api/",
+        "/auth/",
+        "/guard/",
+        "/login/",
+        "api.js",
+        "api.ts",
+        "protected",
+        "session"
+      ],
+      "skills": [
+        "frontend-response-handling"
+      ]
+    },
+    {
+      "id": "gen_frontend-server-data-patterns",
+      "paths": [
+        ".hook.",
+        "/api-client",
+        "/api/",
+        "/hooks/use",
+        "/src/hooks/",
+        "api.js",
+        "api.ts",
+        "use-",
+        "useHook"
+      ],
+      "skills": [
+        "frontend-server-data-patterns"
+      ]
+    },
+    {
+      "id": "gen_frontend-standards-always-follow",
+      "paths": [
+        ".hook.",
+        ".jsx",
+        ".spec.",
+        ".test.",
+        ".tsx",
+        "/auth/",
+        "/components/",
+        "/guard/",
+        "/hooks/use",
+        "/login/",
+        "/pages/",
+        "/router/",
+        "/routes/",
+        "/src/hooks/",
+        "/store/",
+        "/views/",
+        "__tests__",
+        "_test.ts",
+        "_test.tsx",
+        "protected",
+        "reducer.",
+        "redux",
+        "route.ts",
+        "route.tsx",
+        "routes.ts",
+        "selector.",
+        "session",
+        "slice.",
+        "src/schemas/",
+        "src/types/",
+        "use-",
+        "useHook"
+      ],
+      "skills": [
+        "frontend-standards-always-follow"
+      ]
+    },
+    {
+      "id": "gen_frontend-structure-standards",
+      "paths": [
+        "/router/",
+        "/routes/",
+        "/store/",
+        "reducer.",
+        "redux",
+        "route.ts",
+        "route.tsx",
+        "routes.ts",
+        "selector.",
+        "slice.",
+        "src/schemas/",
+        "src/types/"
+      ],
+      "skills": [
+        "frontend-structure-standards"
+      ]
+    },
+    {
+      "id": "gen_frontend-ui-engineering",
+      "paths": [
+        "/components/",
+        "/layout/",
+        "/pages/",
+        "/views/"
+      ],
+      "skills": [
+        "frontend-ui-engineering"
+      ]
+    },
+    {
+      "id": "gen_owasp-security",
+      "paths": [
+        "/api-client",
+        "/api/",
+        "api.js",
+        "api.ts"
+      ],
+      "skills": [
+        "owasp-security"
+      ]
+    },
+    {
+      "id": "gen_react-hooks-patterns",
+      "paths": [
+        ".hook.",
+        ".jsx",
+        ".tsx",
+        "/components/",
+        "/hooks/use",
+        "/pages/",
+        "/src/hooks/",
+        "/store/",
+        "/views/",
+        "reducer.",
+        "redux",
+        "selector.",
+        "slice.",
+        "use-",
+        "useHook"
+      ],
+      "skills": [
+        "react-hooks-patterns"
+      ]
+    },
+    {
+      "id": "gen_scaffold-standards",
+      "paths": [
+        "/router/",
+        "/routes/",
+        "route.ts",
+        "route.tsx",
+        "routes.ts"
+      ],
+      "skills": [
+        "scaffold-standards"
+      ]
+    },
+    {
+      "id": "gen_service-layer-standards",
+      "paths": [
+        "/models/",
+        "controller",
+        "internal/",
+        "internal/models/",
+        "server/",
+        "service"
+      ],
+      "skills": [
+        "service-layer-standards"
+      ]
+    },
+    {
+      "id": "gen_tool-and-doc-selection",
+      "paths": [
+        ".claude/hooks/",
+        ".claude/rules/"
+      ],
+      "skills": [
+        "tool-and-doc-selection"
+      ]
+    },
+    {
+      "id": "gen_webapp-testing",
+      "paths": [
+        ".spec.",
+        ".test.",
+        "__tests__",
+        "_test.ts",
+        "_test.tsx"
+      ],
+      "skills": [
+        "webapp-testing"
+      ]
+    },
+    {
+      "id": "fe_api",
+      "skills": [
+        "frontend-response-handling",
+        "frontend-api-standards",
+        "frontend-server-data-patterns",
+        "owasp-security"
+      ],
+      "match": {
+        "path_contains_any": [
+          "/api/",
+          "/api-client",
+          "api.ts",
+          "api.js"
+        ]
+      }
+    },
+    {
+      "id": "fe_hooks",
+      "skills": [
+        "react-hooks-patterns",
+        "frontend-server-data-patterns",
+        "frontend-standards-always-follow"
+      ],
+      "match": {
+        "path_contains_any": [
+          "/src/hooks/",
+          "/hooks/use",
+          "use-",
+          "useHook",
+          ".hook."
+        ],
+        "exclude_paths": [
+          ".claude/hooks",
+          "/.claude/hooks"
+        ]
+      }
+    },
+    {
+      "id": "fe_store_redux",
+      "skills": [
+        "frontend-standards-always-follow",
+        "frontend-structure-standards",
+        "react-hooks-patterns"
+      ],
+      "match": {
+        "path_contains_any": [
+          "/store/",
+          "slice.",
+          "reducer.",
+          "redux",
+          "selector."
+        ]
+      }
+    },
+    {
+      "id": "fe_routes",
+      "skills": [
+        "frontend-standards-always-follow",
+        "frontend-structure-standards",
+        "scaffold-standards"
+      ],
+      "match": {
+        "path_contains_any": [
+          "/routes/",
+          "/router/",
+          "route.tsx",
+          "route.ts",
+          "routes.ts"
+        ],
+        "exclude_paths": [
+          "UDP_PLATFORM/server",
+          "server/internal"
+        ]
+      }
+    },
+    {
+      "id": "fe_types",
+      "skills": [
+        "api-contract-standards",
+        "frontend-structure-standards",
+        "frontend-standards-always-follow"
+      ],
+      "match": {
+        "path_contains_any": [
+          "src/types/",
+          "src/schemas/"
+        ]
+      }
+    },
+    {
+      "id": "fe_test",
+      "skills": [
+        "webapp-testing",
+        "browser-testing-with-devtools",
+        "tdd",
+        "frontend-standards-always-follow"
+      ],
+      "match": {
+        "path_contains_any": [
+          ".test.",
+          ".spec.",
+          "__tests__",
+          "_test.ts",
+          "_test.tsx"
+        ]
+      }
+    },
+    {
+      "id": "fe_ui_design",
+      "skills": [
+        "impeccable",
+        "huashu-design",
+        "ui-ux-pro-max",
+        "taste-skill",
+        "frontend-ui-engineering",
+        "design-extract"
+      ],
+      "match": {
+        "path_contains_any": [
+          "/components/",
+          "/layout/",
+          "/pages/",
+          "/views/"
+        ]
+      }
+    },
+    {
+      "id": "fe_review",
+      "skills": [
+        "frontend-code-review",
+        "frontend-standards-always-follow",
+        "react-hooks-patterns"
+      ],
+      "match": {
+        "path_contains_any": [
+          "/components/",
+          "/pages/",
+          "/views/",
+          ".tsx",
+          ".jsx"
+        ]
+      }
+    },
+    {
+      "id": "fe_vite_config",
+      "skills": [
+        "vite-react-best-practices",
+        "frontend-standards-always-follow",
+        "frontend-structure-standards"
+      ],
+      "match": {
+        "filename_contains_any": [
+          "vite",
+          "tsconfig",
+          "eslint",
+          "postcss",
+          "tailwind.config"
+        ]
+      }
+    },
+    {
+      "id": "fe_auth",
+      "skills": [
+        "security-and-hardening",
+        "frontend-standards-always-follow",
+        "frontend-response-handling"
+      ],
+      "match": {
+        "path_contains_any": [
+          "/auth/",
+          "/login/",
+          "/guard/",
+          "protected",
+          "session"
+        ]
+      }
+    },
+    {
+      "id": "fe_component_tsx",
+      "skills": [
+        "frontend-standards-always-follow",
+        "react-hooks-patterns",
+        "tailwind-design-system"
+      ],
+      "match": {
+        "extensions": [
+          ".tsx",
+          ".jsx"
+        ]
+      }
+    },
+    {
+      "id": "fe_default",
+      "skills": [
+        "frontend-standards-always-follow",
+        "frontend-structure-standards",
+        "react-hooks-patterns"
+      ],
+      "match": {
+        "catch_all": true
+      }
+    },
+    {
+      "id": "be_cursor_infra",
+      "skills": [
+        "tool-and-doc-selection",
+        "dead-code-and-change-audit",
+        "debug-investigation"
+      ],
+      "match": {
+        "path_contains_any": [
+          ".claude/hooks/",
+          ".claude/rules/",
+          ".claude/hooks/"
+        ]
+      }
+    },
+    {
+      "id": "be_go_test",
+      "skills": [
+        "golang-testing",
+        "tdd",
+        "backend-standards-always-follow"
+      ],
+      "match": {
+        "filename_contains_any": [
+          "_test.go"
+        ]
+      }
+    },
+    {
+      "id": "be_controller",
+      "skills": [
+        "backend-standards-always-follow",
+        "backend-api-standards",
+        "service-layer-standards"
+      ],
+      "match": {
+        "filename_contains_any": [
+          "controller",
+          ".controller."
+        ]
+      }
+    },
+    {
+      "id": "be_service",
+      "skills": [
+        "service-layer-standards",
+        "backend-standards-always-follow",
+        "backend-error-handling"
+      ],
+      "match": {
+        "filename_contains_any": [
+          "service",
+          ".service."
+        ]
+      }
+    },
+    {
+      "id": "be_schema",
+      "skills": [
+        "backend-standards-always-follow",
+        "backend-api-standards",
+        "scaffold-standards"
+      ],
+      "match": {
+        "filename_contains_any": [
+          "schema",
+          ".schema."
+        ]
+      }
+    },
+    {
+      "id": "be_model",
+      "skills": [
+        "backend-standards-always-follow",
+        "domain-scaffold-patterns",
+        "service-layer-standards"
+      ],
+      "match": {
+        "filename_contains_any": [
+          "model",
+          ".model."
+        ],
+        "path_contains_any": [
+          "internal/models/",
+          "/models/"
+        ]
+      }
+    },
+    {
+      "id": "be_route",
+      "skills": [
+        "backend-standards-always-follow",
+        "backend-api-standards",
+        "scaffold-standards"
+      ],
+      "match": {
+        "filename_contains_any": [
+          "route",
+          "router",
+          ".route."
+        ]
+      }
+    },
+    {
+      "id": "be_test",
+      "skills": [
+        "tdd",
+        "backend-standards-always-follow",
+        "backend-performance-standards"
+      ],
+      "match": {
+        "filename_contains_any": [
+          ".test.",
+          ".spec.",
+          "_test.ts"
+        ]
+      }
+    },
+    {
+      "id": "be_middleware",
+      "skills": [
+        "security-and-hardening",
+        "backend-standards-always-follow",
+        "backend-error-handling"
+      ],
+      "match": {
+        "filename_contains_any": [
+          "middleware",
+          "auth",
+          "guard",
+          "session"
+        ]
+      }
+    },
+    {
+      "id": "be_migration",
+      "skills": [
+        "postgres-patterns",
+        "backend-standards-always-follow",
+        "deprecation-and-migration"
+      ],
+      "match": {
+        "filename_contains_any": [
+          "migration",
+          "migrate",
+          ".sql"
+        ]
+      }
+    },
+    {
+      "id": "be_contract",
+      "skills": [
+        "api-contract-standards",
+        "backend-api-standards",
+        "backend-standards-always-follow"
+      ],
+      "match": {
+        "filename_contains_any": [
+          "contract",
+          "response",
+          "envelope"
+        ]
+      }
+    },
+    {
+      "id": "be_go_file",
+      "skills": [
+        "golang-patterns",
+        "backend-standards-always-follow",
+        "service-layer-standards"
+      ],
+      "match": {
+        "extensions": [
+          ".go"
+        ]
+      }
+    },
+    {
+      "id": "be_review_perf",
+      "skills": [
+        "forensic-hotspot-finder",
+        "forensic-complexity-trends",
+        "forensic-debt-quantification",
+        "backend-performance-standards"
+      ],
+      "match": {
+        "path_contains_any": [
+          "internal/",
+          "server/",
+          "cmd/"
+        ]
+      }
+    },
+    {
+      "id": "be_debug",
+      "skills": [
+        "debug-investigation",
+        "doubt-driven-development",
+        "backend-error-handling"
+      ],
+      "match": {
+        "filename_contains_any": [
+          "debug",
+          "trace",
+          "error"
+        ]
+      }
+    },
+    {
+      "id": "be_review",
+      "skills": [
+        "backend-code-review",
+        "backend-standards-always-follow",
+        "service-layer-standards"
+      ],
+      "match": {
+        "path_contains_any": [
+          "internal/",
+          "server/",
+          "controller",
+          "service"
+        ],
+        "extensions": [
+          ".go",
+          ".ts",
+          ".js"
+        ]
+      }
+    },
+    {
+      "id": "be_default",
+      "skills": [
+        "backend-standards-always-follow",
+        "service-layer-standards",
+        "backend-api-standards"
+      ],
+      "match": {
+        "catch_all": true
+      }
+    },
+    {
+      "id": "be_security_audit",
+      "skills": [
+        "cso",
+        "owasp-security",
+        "security-and-hardening"
+      ],
+      "match": {
+        "filename_contains_any": [
+          "security",
+          "audit",
+          "owasp"
+        ]
+      }
+    },
+    {
+      "id": "always",
+      "skills": [
+        "dead-code-and-change-audit"
+      ],
+      "match": {}
+    },
+    {
+      "id": "first_write_only",
+      "skills": [
+        "architect-system-design",
+        "codebase-start-point-guide",
+        "project-reference-linkage",
+        "project-structure-map",
+        "mcp-usage-standards",
+        "iterative-retrieval"
+      ],
+      "match": {}
+    },
+    {
+      "id": "verification",
+      "skills": [
+        "verification-loop",
+        "eval-harness"
+      ],
+      "match": {}
+    },
+    {
+      "id": "debug",
+      "skills": [
+        "doubt-driven-development",
+        "debug-investigation"
+      ],
+      "match": {}
+    },
+    {
+      "id": "implementation",
+      "skills": [
+        "source-driven-development",
+        "doubt-driven-development"
+      ],
+      "match": {}
+    }
+  ]
+}

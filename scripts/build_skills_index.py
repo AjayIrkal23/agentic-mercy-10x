@@ -112,25 +112,78 @@ def build() -> dict:
     return payload
 
 
-def emit_legacy_configs() -> int:
+def _floor_referenced_skills(floor: dict) -> set[str]:
+    out: set[str] = set()
+    for ent in floor.get("entries", []) or []:
+        val = ent.get("value") if isinstance(ent, dict) else None
+        if isinstance(val, dict):
+            out |= set(val.get("skills", []) or [])
+    return out
+
+
+def superset_check(candidate_rules: list[dict], floor: dict) -> set[str]:
+    """Return floor-referenced skills the candidate config would DROP (empty = ok)."""
+    floor_skills = _floor_referenced_skills(floor)
+    cand_skills: set[str] = set()
+    for r in candidate_rules:
+        cand_skills |= set(r.get("skills", []) or [])
+    aliases = {k: v for k, v in _load(ALIASES).items() if not k.startswith("_")}
+    # an alias resolves to its canonical, so a canonical in the candidate covers the alias
+    covered = cand_skills | {a for a, c in aliases.items() if c in cand_skills}
+    return floor_skills - covered
+
+
+def emit_legacy_configs(apply: bool = False) -> int:
     if not FLOOR.exists():
-        print("--emit-legacy-configs: trigger-floor.json absent (P1-T3/T7 pending). "
-              "Wired but INERT — self-activates once the floor exists (P5-T10).",
-              file=sys.stderr)
+        print("--emit-legacy-configs: trigger-floor.json absent — INERT until P1-T3 "
+              "lands the floor (self-activates).", file=sys.stderr)
         return 3
-    # Full regeneration + superset check lands in P5-T10 once the floor is present.
-    print("--emit-legacy-configs: floor present; run P5-T10 regeneration path.",
-          file=sys.stderr)
+    floor = _load(FLOOR)
+    idx = _load(INDEX).get("skills", {}) or {}
+    # Build candidate path/keyword rules from front-matter triggers.
+    candidate_rules = []
+    for name, e in idx.items():
+        trig = e.get("triggers", {}) or {}
+        paths = trig.get("paths", []) or []
+        if paths:
+            candidate_rules.append({"id": f"gen_{name}", "paths": paths, "skills": [name]})
+    # Union the floor's own path_route skill sets so generation is a provable superset.
+    for ent in floor.get("entries", []) or []:
+        val = ent.get("value") if isinstance(ent, dict) else None
+        if isinstance(val, dict) and val.get("skills"):
+            candidate_rules.append({"id": ent.get("source_key", "floor"),
+                                    "skills": val["skills"],
+                                    "match": val.get("match", {})})
+    dropped = superset_check(candidate_rules, floor)
+    generated = {
+        "_generated_from": "skills-index",
+        "_meta": {"superset_of": "trigger-floor.json", "dropped": sorted(dropped)},
+        "rules": candidate_rules,
+    }
+    if dropped:
+        print(f"--emit-legacy-configs: ABORT — {len(dropped)} floor rules would drop: "
+              f"{sorted(dropped)[:8]}", file=sys.stderr)
+        return 1
+    preview_dir = sl.CLAUDE_DIR / "vendor" / "generated-configs"
+    preview_dir.mkdir(parents=True, exist_ok=True)
+    (preview_dir / "skill_router.config.generated.json").write_text(
+        json.dumps(generated, indent=2) + "\n", encoding="utf-8")
+    print(f"--emit-legacy-configs: superset OK ({len(candidate_rules)} rules, 0 dropped); "
+          f"preview -> vendor/generated-configs/skill_router.config.generated.json")
+    if apply:
+        print("--apply: live hooks/ config swap is OWNED by P4/P7 (hooks/** outside P5 "
+              "write scope) — see HANDOFF. Preview written; not swapping.", file=sys.stderr)
     return 0
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--emit-legacy-configs", action="store_true")
+    ap.add_argument("--apply", action="store_true", help="(P4/P7 only) swap live configs")
     ap.add_argument("--check", action="store_true", help="assert index count == 218")
     args = ap.parse_args()
     if args.emit_legacy_configs:
-        return emit_legacy_configs()
+        return emit_legacy_configs(apply=args.apply)
     payload = build()
     INDEX.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
     n = payload["_meta"]["count"]
