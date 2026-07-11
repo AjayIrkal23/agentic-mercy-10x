@@ -1,0 +1,7 @@
+{
+  "_fixture": "PreToolUse Write into a repo lacking a root CLAUDE.md — dox-write-gate must deny (Charter dox hard-gate). Diffed legacy-standalone vs dispatch-chain in test_dispatch_parity.",
+  "event": "pre-tool-use",
+  "tool_name": "Write",
+  "session_id": "fixture-nodoxroot",
+  "tool_input": {"file_path": "{TMPREPO}/src/new_code.py", "content": "print(1)"}
+}
