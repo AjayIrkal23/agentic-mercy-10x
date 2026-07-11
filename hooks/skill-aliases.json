@@ -1,0 +1,12 @@
+{
+  "_meta": {
+    "purpose": "P5-T6 permanent alias->canonical map (trigger law). Consumed by select.py / skill_router.py / fullstack-skills-reminder.py \u2014 an alias hit surfaces the canonical and logs alias telemetry. No sunset.",
+    "schema": 1
+  },
+  "debugging-and-error-recovery": "debug-investigation",
+  "diagnose": "debug-investigation",
+  "backend-code-review": "code-review-and-quality",
+  "frontend-code-review": "code-review-and-quality",
+  "security-and-hardening": "owasp-security",
+  "browser-testing-with-devtools": "webapp-testing"
+}

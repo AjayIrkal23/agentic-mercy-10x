@@ -1,8 +1,7 @@
 ---
 name: debug-investigation
 description: Use when the cause of a bug, regression, crash, or unexpected behavior is unknown and evidence
-  is needed before proposing a fix. Diagnose unknown failures before fixing them Use to isolate the root
-  cause of an unknown issue.
+  is needed before proposing a fix.
 disable-model-invocation: false
 schema: 1
 category: debug
@@ -16,25 +15,61 @@ platforms:
 token-cost: 860
 triggers:
   keywords:
+  - approach
   - behavior
+  - break
+  - broken/throwing/failing
   - bug
+  - bugs
+  - builds
   - cause
   - crash
   - debug
+  - debugging
+  - describes
   - diagnose
+  - diagnosis
+  - disciplined
+  - doesn
+  - encounter
+  - error
   - evidence
+  - expectations
+  - fail
   - failures
+  - finding
   - fix
   - fixing
+  - guessing
+  - guides
+  - hard
+  - hypothesise
+  - instrument
   - investigation
   - isolate
   - issue
+  - loop
+  - match
+  - minimise
+  - need
   - needed
+  - performance
   - proposing
+  - rather
   - regression
+  - regression-test
+  - regressions
+  - reports
+  - reproduce
   - root
+  - root-cause
+  - says
+  - something
+  - systematic
+  - tests
   - unexpected
   - unknown
+  - user
   paths:
   - .claude/hooks/
   - .claude/rules/

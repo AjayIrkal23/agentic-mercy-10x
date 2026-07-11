@@ -15,24 +15,63 @@ platforms:
 token-cost: 3484
 triggers:
   keywords:
+  - adapt
   - agent
   - another
+  - applying
+  - asks
   - assess
+  - backend/service/api/database/migrations
   - branch
   - change
+  - changes
+  - checklist
   - code
+  - commands
   - conducts
+  - correctness
   - dimensions
+  - e.g
   - enters
+  - etc
+  - file
+  - files
+  - focused
+  - focuses
+  - frontend
   - human
+  - impact
+  - lint
+  - local/staged
   - main
+  - maintainability
   - merging
   - multi-axis
   - multiple
   - need
+  - npm
+  - pending-change
+  - preflight
   - quality
+  - references
+  - remote
+  - repo
+  - requests
   - review
   - reviewing
+  - reviews
+  - rules
+  - scripts
+  - security
+  - server
+  - server-side
+  - support
+  - test
+  - tests
+  - trigger
+  - tsx
+  - user
+  - while
   - written
   - yourself
   paths: []

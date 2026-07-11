@@ -19,21 +19,37 @@ triggers:
   - '2025'
   - '2026'
   - '5.0'
+  - accepts
+  - against
   - agentic
   - application
   - asvs
+  - authentication
   - authentication/authorization
+  - building
   - code
   - covers
+  - data
   - discussing
+  - external
+  - feature
   - handling
+  - hardens
   - implementing
   - input
+  - integrations
+  - interacts
   - llm
+  - manages
   - owasp
   - reviewing
   - security
+  - services
+  - sessions
+  - storage
+  - third-party
   - top
+  - untrusted
   - user
   - vulnerabilities
   - web

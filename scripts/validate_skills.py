@@ -128,16 +128,19 @@ def validate(fix: bool = False) -> int:
                 print(f"  R5  HARD {name}: claims windows but body has POSIX-only calls")
                 hard_fail += 1
 
-        # R6 references resolve — HARD (user-authored)
+        # R6 references resolve — HARD (user-authored). A ref written as
+        # "<skill>/references/x.md" is skill-root-relative (thin aliases point at
+        # their canonical); a bare "references/x.md" is dir-relative.
         if is_user:
-            refs = set(re.findall(r"references/[\w./-]+\.md", body))
+            refs = set(re.findall(r"(?:[\w-]+/)?references/[\w./-]+\.md", body))
             for lk in (fm.get("links") or []):
                 if isinstance(lk, str) and lk.endswith(".md"):
                     refs.add(lk)
             for r in refs:
-                if not (d / r).exists():
-                    print(f"  R6  HARD {name}: missing reference {r}")
-                    hard_fail += 1
+                if (d / r).exists() or (sl.SKILLS_DIR / r).exists():
+                    continue
+                print(f"  R6  HARD {name}: missing reference {r}")
+                hard_fail += 1
 
         # R7 overlap accounting
         intent_list = trig.get("intents") or [] if isinstance(trig, dict) else []

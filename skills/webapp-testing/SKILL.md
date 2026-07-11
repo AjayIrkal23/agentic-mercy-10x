@@ -1,8 +1,7 @@
 ---
 name: webapp-testing
-description: Use when validating a local web UI in a browser with Playwright, capturing screenshots, or
-  inspecting console and network behavior. Validate local web UIs with browser automation Use to reproduce
-  or validate a local web UI with Playwright.
+description: Use when testing a web application end-to-end in a real browser — driving flows, asserting
+  UI, capturing console/network/performance evidence, and verifying visual output with real runtime data.
 disable-model-invocation: true
 schema: 1
 category: testing
@@ -16,21 +15,40 @@ platforms:
 token-cost: 554
 triggers:
   keywords:
+  - analyze
+  - anything
   - automation
   - behavior
   - browser
+  - browsers
+  - building
+  - capture
   - capturing
+  - chrome
   - console
+  - debugging
+  - devtools
+  - dom
+  - errors
+  - inspect
   - inspecting
   - local
+  - mcp
+  - need
   - network
+  - performance
   - playwright
+  - profile
   - reproduce
+  - requests
+  - runs
   - screenshots
   - testing
+  - tests
   - uis
   - validate
   - validating
+  - verify
   - web
   - webapp
   paths:
