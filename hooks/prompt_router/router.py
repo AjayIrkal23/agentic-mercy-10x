@@ -153,6 +153,15 @@ def _builtin_items(profile, ctx: dict) -> list[dict]:
             txt = f"Intent {d['category']} (score {d['score']}): consider /invoke {d['act']}."
         items.append({"id": f"route:{d['act']}", "tier": 3, "section": "ROUTING", "text": txt})
 
+    # ---- model advice (pure; always-on; inverted opus bias — P2-T4) ----
+    try:
+        from prompt_router.modules import model_advice as _ma  # noqa: PLC0415
+        advice = _ma.advise(profile)
+        if advice:
+            items.append({"id": "model:advice", "tier": 3, "section": "MODEL", "text": advice})
+    except Exception:  # noqa: BLE001
+        pass
+
     return items
 
 
@@ -276,6 +285,8 @@ def run(argv: list[str]) -> int:
     ctx = {
         "sid": sid,
         "config": cfg,
+        "payload": payload,
+        "profile": profile,
         "repo": _repo.active_repo(payload) if _repo is not None else None,
         "mode": "shadow" if shadow else "live",
     }

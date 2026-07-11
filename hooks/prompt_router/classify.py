@@ -37,6 +37,20 @@ ACK_ALLOWLIST = frozenset({
     "yep", "yeah", "sure", "go", "do it", "sounds good", "lgtm", "y",
 })
 
+# Heavy-scale language signals — feed size/risk inference ONLY (not the keyword
+# trigger surface). A text-only architecture prompt carries no paths, so scale is
+# read from the words. Used by model_advice (opus task_matrix + heavy_qualifiers).
+_HEAVY_SIGNALS = (
+    "multi-service", "multi service", "microservice", "microservices",
+    "multiple services", "many modules", "several modules", "distributed",
+    "pipeline", "event pipeline", "event-driven", "across fe", "across the stack",
+    "fe+be", "frontend and backend", "front end and back end", "end-to-end",
+    "end to end", "whole system", "entire system", "cross-surface", "cross surface",
+    "cross-service", "across many", "greenfield", "from scratch", "new system",
+    "new architecture", "system design", "across the codebase", "multi-module",
+    "infra", "orchestration", "state machine", "many interdependent",
+)
+
 
 @dataclass
 class TaskProfile:
@@ -210,8 +224,12 @@ def _classify_impl(payload: dict) -> TaskProfile:
     if prof.is_ui:
         prof.surfaces.add("frontend")
 
+    # --- heavy signal scan (text-only prompts have no paths, so infer scale
+    #     from language; feeds size/risk ONLY — never the keyword trigger surface) ---
+    heavy_count = sum(1 for s in _HEAVY_SIGNALS if s in text)
+
     # --- size ---
-    if "LARGE" in prof.intents:
+    if "LARGE" in prof.intents or heavy_count >= 2:
         prof.size = "L"
     elif "MEDIUM" in prof.intents:
         prof.size = "M"
@@ -242,6 +260,8 @@ def _classify_impl(payload: dict) -> TaskProfile:
     if prof.size == "L":
         risk += 1
     if "IMPLEMENT" in prof.intents and len(prof.surfaces) >= 2:
+        risk += 1
+    if heavy_count >= 2:
         risk += 1
     prof.risk = min(risk, 3)
 
