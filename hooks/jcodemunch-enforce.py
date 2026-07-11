@@ -82,6 +82,29 @@ def _is_strict_mode(cfg: dict) -> bool:
     return bool(cfg.get("strict_mode", True))
 
 
+def _index_building(payload: dict) -> bool:
+    """True if index-lifecycle.py is building the active repo's index right now.
+
+    While a MISSING/STALE index self-heals in the background, the read gate is
+    relaxed so the agent is never bricked waiting on infrastructure (Spec B
+    §3.3). Loaded lazily and only when a block is otherwise imminent, so the
+    common (non-blocking) path pays nothing. Fail-open: any error → not building
+    → the gate behaves normally.
+    """
+    try:
+        import importlib.util
+
+        p = Path(__file__).resolve().parent / "index-lifecycle.py"
+        if not p.is_file():
+            return False
+        spec = importlib.util.spec_from_file_location("_index_lifecycle_probe", p)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        return bool(mod.is_building(payload))
+    except Exception:
+        return False
+
+
 # ---------------------------------------------------------------------------
 # Index existence check (unchanged from original)
 # ---------------------------------------------------------------------------
@@ -359,6 +382,10 @@ def pre_tool_use() -> int:
 
     # --- Gate 2: Index absent in strict_mode → HARD BLOCK (original behavior). ---
     if not _check_index_exists(target) and _is_strict_mode(cfg):
+        # …unless index-lifecycle is already building it in the background —
+        # then allow the read (never brick the agent on self-healing infra).
+        if _index_building(payload):
+            return 0
         root = _find_git_root(Path(target))
         root_str = str(root) if root else "unknown"
         block_msg = (
@@ -389,6 +416,9 @@ def pre_tool_use() -> int:
     blocks_so_far = state.get("read_blocked_count", 0)
 
     if blocks_so_far < initial_block_count:
+        # Relaxed while the index self-heals in the background (Spec B §3.3).
+        if _index_building(payload):
+            return 0
         # Still within the blocking budget — BLOCK this call.
         remaining_after = initial_block_count - blocks_so_far - 1
         state["read_blocked_count"] = blocks_so_far + 1

@@ -36,6 +36,11 @@ USER_MCP_RULE = HOME / ".claude" / "rules" / "user-mcp-inventory.mdc"
 MCP_USAGE_SKILL = HOME / ".claude" / "skills" / "mcp-usage-standards" / "SKILL.md"
 SESSION_GATE = HOOK_DIR / "session-plan-gate-hint.py"
 DOC_LIFECYCLE = HOOK_DIR / "documentation_lifecycle_hook.py"
+# index-lifecycle.py session-start REPLACES the four separate guard fan-outs at
+# SessionStart (P3-T5). INDEX_GUARD / GRAPHIFY_GUARD / JDOC_GUARD / DOX_GUARD
+# (session mode) stay defined + on disk, UNWIRED, retained for flip-back until
+# P7-T4; the interim wiring is re-homed into dispatch.py by P4-T7.
+INDEX_LIFECYCLE = HOOK_DIR / "index-lifecycle.py"
 INDEX_GUARD = HOOK_DIR / "jcodemunch-index-guard.py"
 GRAPHIFY_GUARD = HOOK_DIR / "graphify-index-guard.py"
 JDOC_GUARD = HOOK_DIR / "jdocmunch-index-guard.py"
@@ -290,16 +295,15 @@ def main() -> int:
         hook_jobs.append((["python3", str(SESSION_GATE)], 10))
     if DOC_LIFECYCLE.is_file():
         hook_jobs.append((["python3", str(DOC_LIFECYCLE), "session-start"], 8))
-    if INDEX_GUARD.is_file():
-        hook_jobs.append((["python3", str(INDEX_GUARD)], 6))
-    if GRAPHIFY_GUARD.is_file():
-        hook_jobs.append((["python3", str(GRAPHIFY_GUARD)], 6))
-    if JDOC_GUARD.is_file():
-        hook_jobs.append((["python3", str(JDOC_GUARD)], 6))
+    # ONE lifecycle probe replaces the jcodemunch/graphify/jdocmunch index
+    # guards + the dox session sweep: it probes all four surfaces in parallel
+    # and auto-spawns detached background builders for MISSING/STALE ones
+    # (STALE/MISSING still VISIBLY reported; the build is spawned automatically
+    # instead of demanded of the agent — Charter §7).
+    if INDEX_LIFECYCLE.is_file():
+        hook_jobs.append((["python3", str(INDEX_LIFECYCLE), "session-start"], 8))
     if TDD_INIT_GUARD.is_file():
         hook_jobs.append((["python3", str(TDD_INIT_GUARD), "session"], 8))
-    if DOX_GUARD.is_file():
-        hook_jobs.append((["python3", str(DOX_GUARD), "session"], 8))
 
     if hook_jobs:
         with ThreadPoolExecutor(max_workers=min(5, len(hook_jobs))) as pool:
