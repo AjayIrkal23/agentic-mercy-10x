@@ -1,0 +1,12 @@
+{
+  "_note": "Active-repo 4-surface index lifecycle (Spec B §4.2). NO PATH FIELDS EXIST BY DESIGN — the active repo root is resolved structurally from lib/repo_context.py, never from a list here. Only thresholds and toggles.",
+  "debounce": { "writes_threshold": 5, "seconds_threshold": 45 },
+  "probe_timeouts_ms": { "jcodemunch": 500, "jdocmunch": 800, "graphify": 3000, "dox": 300 },
+  "build_timeouts_s":  { "jcodemunch": 300, "jdocmunch": 120, "graphify": 120, "dox": 60 },
+  "max_build_failures": 3,
+  "lock_ttl_minutes": 30,
+  "max_doc_stats": 5000,
+  "incremental_file_cap": 20,
+  "surfaces_enabled": { "jcodemunch": true, "jdocmunch": true, "graphify": true, "dox": true },
+  "relax_read_gate_while_building": true
+}
