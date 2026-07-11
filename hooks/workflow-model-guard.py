@@ -26,11 +26,19 @@ THE FIX:
   The rewrite is a single safe token substitution (`agent(` -> `__wfAgent(`) plus a
   prepended wrapper; it does NOT try to parse each opts object, so it is robust.
 
+  The injected `__wfAgent` wrapper (see `_build_wrapper`) is arg-drop safe:
+    - it forwards EVERY argument via `(p, opts, ...rest) => __wfOrigAgent(p, o, ...rest)`
+      (a 3rd+ positional arg — callback, abort signal, args payload — is never lost);
+    - a 2nd arg that is not a plain object (string / function / number / array) is passed
+      through completely untouched (a shape we can't safely rewrite is never corrupted).
+
 SAFETY (fail-open, never corrupt a script):
   - Only inline `script` is rewritten. `scriptPath` / `name` (saved/on-disk workflows)
     are left untouched with an advisory — we never silently mutate a file on disk.
   - If the script is already processed (`__wfAgent` present) -> left unchanged.
-  - If the meta block can't be located/brace-matched -> left unchanged + advisory.
+  - No `export const meta = {` block -> the wrapper is prepended at position 0 (it only
+    references the `agent` runtime global, so it is safe at the top) and pinning still
+    happens. Only a meta block whose braces cannot be matched -> left unchanged + advisory.
   - Any exception -> allow unchanged. The hook can never block a workflow.
 
 Protocol:
@@ -138,16 +146,22 @@ def _build_wrapper(forced: str | None) -> str:
         "const __wfForce = " + forced_js + ";\n"
         "const __wfOpusAgents = new Set(['frontend-uiux-designer']);\n"
         "const __wfSonnetAgents = new Set(['explore', 'claude-code-guide']);\n"
-        "const __wfAgent = (p, opts) => {\n"
-        "  const o = (opts && typeof opts === 'object') ? { ...opts } : {};\n"
-        "  if (__wfForce) { o.model = __wfForce; return __wfOrigAgent(p, o); }\n"
+        "const __wfAgent = (p, opts, ...rest) => {\n"
+        # Defect 2: a 2nd arg we can't safely rewrite (string/function/number/array) is
+        # passed through with ALL args untouched — never replaced by {} or mutated.
+        "  if (opts !== undefined && (typeof opts !== 'object' || Array.isArray(opts))) {\n"
+        "    return __wfOrigAgent(p, opts, ...rest);\n"
+        "  }\n"
+        "  const o = opts ? { ...opts } : {};\n"
+        # Defect 1: forward every trailing argument via ...rest, never truncate to 2.
+        "  if (__wfForce) { o.model = __wfForce; return __wfOrigAgent(p, o, ...rest); }\n"
         "  if (!o.model) {\n"
         "    const at = (o.agentType || '').toLowerCase();\n"
         "    if (__wfOpusAgents.has(at)) o.model = 'opus';\n"
         "    else if (__wfSonnetAgents.has(at)) o.model = 'sonnet';\n"
         "    else o.model = 'sonnet';\n"
         "  }\n"
-        "  return __wfOrigAgent(p, o);\n"
+        "  return __wfOrigAgent(p, o, ...rest);\n"
         "};\n"
     )
 
@@ -187,13 +201,18 @@ def main() -> int:
         return _allow_unchanged()
 
     try:
-        end = _meta_end_index(script)
-        if end is None:
-            return _advisory(
-                "workflow-model-guard: could not locate the meta block, so agent() "
-                "models were NOT auto-pinned. Pass an explicit model to every agent() "
-                "(default 'sonnet') to avoid inheriting the Opus parent."
-            )
+        # Defect 3: distinguish "no meta block" (prepend the wrapper at the top and pin)
+        # from "meta present but braces unmatched" (truly unparseable -> advise, no mutate).
+        if META_RE.search(script) is None:
+            end = 0  # no meta -> the whole script is the body; wrapper goes at position 0
+        else:
+            end = _meta_end_index(script)
+            if end is None:
+                return _advisory(
+                    "workflow-model-guard: the meta block's braces could not be matched, "
+                    "so agent() models were NOT auto-pinned. Pass an explicit model to "
+                    "every agent() (default 'sonnet') to avoid inheriting the Opus parent."
+                )
 
         forced = _forced_model()
         head = script[:end]
