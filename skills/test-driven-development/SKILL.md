@@ -16,24 +16,38 @@ token-cost: 3620
 triggers:
   keywords:
   - arrives
+  - asks
   - behavior
   - bug
+  - bugs
+  - build
   - changing
   - code
   - development
   - driven
   - drives
   - existing
+  - features
+  - fix
   - fixing
   - functionality
   - implementing
+  - integration
   - logic
+  - loop
+  - mentions
   - modify
   - need
   - prove
+  - red-green-refactor
   - report
+  - tdd
   - test
+  - test-driven
+  - test-first
   - tests
+  - user
+  - wants
   - works
   paths: []
   intents:

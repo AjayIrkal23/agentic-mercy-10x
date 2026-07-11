@@ -1,7 +1,7 @@
 ---
 name: code-execution-standard
 description: Use when scope and root cause are already understood and the task is implementing a safe,
-  validated change. Implement known-scope changes safely Use to implement a known-scope change with validation.
+  validated, known-scope change.
 disable-model-invocation: false
 schema: 1
 category: general
@@ -15,23 +15,37 @@ token-cost: 1040
 triggers:
   keywords:
   - already
+  - amount
+  - big
   - cause
   - change
   - changes
   - code
+  - delivers
   - execution
+  - feature
+  - feels
+  - file
   - implement
   - implementing
+  - incrementally
   - known-scope
+  - land
+  - large
+  - once
   - root
   - safe
   - safely
   - scope
   - standard
+  - step
   - task
+  - too
+  - touches
   - understood
   - validated
   - validation
+  - write
   paths: []
   intents:
   - general

@@ -21,5 +21,10 @@
   "forensic-complexity-trends": "tech-debt-audit",
   "forensic-debt-quantification": "tech-debt-audit",
   "forensic-hotspot-finder": "tech-debt-audit",
-  "improve-codebase-architecture": "tech-debt-audit"
+  "improve-codebase-architecture": "tech-debt-audit",
+  "tdd": "test-driven-development",
+  "plan-exec-stack-guide": "workflow-orchestrator",
+  "strategic-compact": "context-engineering",
+  "incremental-implementation": "code-execution-standard",
+  "domain-scaffold-patterns": "scaffold-standards"
 }

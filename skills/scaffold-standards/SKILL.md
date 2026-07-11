@@ -17,16 +17,26 @@ triggers:
   - backend
   - crud
   - domain
+  - entry
   - feature
+  - file
+  - frontend
   - full-stack
+  - implementation
   - list
+  - minimum
+  - plan
+  - planning
+  - points
   - route/controller/service/schema
   - scaffold
   - scaffolding
   - skeleton
+  - skeletons
   - standard
   - standards
   - structure
+  - tree
   paths:
   - /router/
   - /routes/

@@ -1,7 +1,8 @@
 {
   "_meta": {
     "purpose": "Sidecar routing metadata for the 128 upstream-locked skills (SKILL-FATE \u00a71.2). build_skills_index merges these; no locked file is ever parsed beyond its native name/description.",
-    "schema": 1
+    "schema": 1,
+    "clusterEnriched": true
   },
   "_aliases": {
     "_comment": "sidecar name aliases for locked skills, e.g. taste-skill",
@@ -42,7 +43,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "workflow-orchestrator"
+      }
     },
     "benchmark": {
       "triggers": {
@@ -119,7 +123,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "webapp-testing"
+      }
     },
     "canary": {
       "triggers": {
@@ -142,7 +149,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "webapp-testing"
+      }
     },
     "careful": {
       "triggers": {
@@ -167,7 +177,12 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "cross_links": [
+          "guard"
+        ]
+      }
     },
     "codex": {
       "triggers": {
@@ -247,7 +262,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "context-engineering"
+      }
     },
     "context-save": {
       "triggers": {
@@ -270,7 +288,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "context-engineering"
+      }
     },
     "cso": {
       "triggers": {
@@ -295,7 +316,11 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "owasp-security",
+        "niche": "gstack Chief Security Officer mode"
+      }
     },
     "design-consultation": {
       "triggers": {
@@ -355,7 +380,10 @@
         "darwin",
         "windows"
       ],
-      "family": "vendored-design"
+      "family": "vendored-design",
+      "links": {
+        "member_of": "C6-ui-ux"
+      }
     },
     "design-html": {
       "triggers": {
@@ -507,7 +535,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "update-docs"
+      }
     },
     "document-release": {
       "triggers": {
@@ -532,7 +563,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "update-docs"
+      }
     },
     "find-skills": {
       "triggers": {
@@ -602,7 +636,13 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "cross_links": [
+          "unfreeze",
+          "guard"
+        ]
+      }
     },
     "gsd-add-tests": {
       "triggers": {
@@ -870,7 +910,10 @@
         "darwin",
         "windows"
       ],
-      "family": "gsd"
+      "family": "gsd",
+      "links": {
+        "member_of": "code-review-and-quality"
+      }
     },
     "gsd-complete-milestone": {
       "triggers": {
@@ -958,7 +1001,10 @@
         "darwin",
         "windows"
       ],
-      "family": "gsd"
+      "family": "gsd",
+      "links": {
+        "member_of": "debug-investigation"
+      }
     },
     "gsd-discuss-phase": {
       "triggers": {
@@ -1016,7 +1062,10 @@
         "darwin",
         "windows"
       ],
-      "family": "gsd"
+      "family": "gsd",
+      "links": {
+        "member_of": "update-docs"
+      }
     },
     "gsd-eval-review": {
       "triggers": {
@@ -1206,6 +1255,7 @@
           "gsd",
           "inspect",
           "knowledge",
+          "plan-graph",
           "planning/graphs",
           "project",
           "query"
@@ -1224,7 +1274,10 @@
         "darwin",
         "windows"
       ],
-      "family": "gsd"
+      "family": "gsd",
+      "links": {
+        "member_of": "codebase-intel-first"
+      }
     },
     "gsd-health": {
       "triggers": {
@@ -1435,7 +1488,10 @@
         "darwin",
         "windows"
       ],
-      "family": "gsd"
+      "family": "gsd",
+      "links": {
+        "member_of": "codebase-intel-first"
+      }
     },
     "gsd-milestone-summary": {
       "triggers": {
@@ -1748,7 +1804,10 @@
         "darwin",
         "windows"
       ],
-      "family": "gsd"
+      "family": "gsd",
+      "links": {
+        "member_of": "context-engineering"
+      }
     },
     "gsd-phase": {
       "triggers": {
@@ -1805,7 +1864,10 @@
         "darwin",
         "windows"
       ],
-      "family": "gsd"
+      "family": "gsd",
+      "links": {
+        "member_of": "workflow-orchestrator"
+      }
     },
     "gsd-plan-review-convergence": {
       "triggers": {
@@ -1868,7 +1930,10 @@
         "darwin",
         "windows"
       ],
-      "family": "gsd"
+      "family": "gsd",
+      "links": {
+        "member_of": "shipping-and-launch"
+      }
     },
     "gsd-profile-user": {
       "triggers": {
@@ -1988,7 +2053,10 @@
         "darwin",
         "windows"
       ],
-      "family": "gsd"
+      "family": "gsd",
+      "links": {
+        "member_of": "context-engineering"
+      }
     },
     "gsd-review": {
       "triggers": {
@@ -2074,7 +2142,10 @@
         "darwin",
         "windows"
       ],
-      "family": "gsd"
+      "family": "gsd",
+      "links": {
+        "member_of": "owasp-security"
+      }
     },
     "gsd-settings": {
       "triggers": {
@@ -2129,7 +2200,10 @@
         "darwin",
         "windows"
       ],
-      "family": "gsd"
+      "family": "gsd",
+      "links": {
+        "member_of": "shipping-and-launch"
+      }
     },
     "gsd-sketch": {
       "triggers": {
@@ -2311,7 +2385,10 @@
         "darwin",
         "windows"
       ],
-      "family": "gsd"
+      "family": "gsd",
+      "links": {
+        "member_of": "context-engineering"
+      }
     },
     "gsd-ui-phase": {
       "triggers": {
@@ -2655,7 +2732,14 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "cross_links": [
+          "careful",
+          "freeze",
+          "unfreeze"
+        ]
+      }
     },
     "health": {
       "triggers": {
@@ -2679,7 +2763,11 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "tech-debt-audit",
+        "niche": "gstack code-quality dashboard"
+      }
     },
     "higgsfield-generate": {
       "triggers": {
@@ -2765,7 +2853,8 @@
         "darwin",
         "windows"
       ],
-      "family": "installer-managed"
+      "family": "installer-managed",
+      "exec-note": "MCP-default posture: prefer mcp__higgsfield__* as the asset surface; CLI is the fallback. Posture lives here, not in the upstream skill body."
     },
     "higgsfield-marketplace-cards": {
       "triggers": {
@@ -2835,7 +2924,8 @@
         "darwin",
         "windows"
       ],
-      "family": "installer-managed"
+      "family": "installer-managed",
+      "exec-note": "MCP-default posture: prefer mcp__higgsfield__* as the asset surface; CLI is the fallback. Posture lives here, not in the upstream skill body."
     },
     "higgsfield-product-photoshoot": {
       "triggers": {
@@ -2929,7 +3019,8 @@
         "darwin",
         "windows"
       ],
-      "family": "installer-managed"
+      "family": "installer-managed",
+      "exec-note": "MCP-default posture: prefer mcp__higgsfield__* as the asset surface; CLI is the fallback. Posture lives here, not in the upstream skill body."
     },
     "higgsfield-soul-id": {
       "triggers": {
@@ -2989,7 +3080,8 @@
         "darwin",
         "windows"
       ],
-      "family": "installer-managed"
+      "family": "installer-managed",
+      "exec-note": "MCP-default posture: prefer mcp__higgsfield__* as the asset surface; CLI is the fallback. Posture lives here, not in the upstream skill body."
     },
     "higgsfield-websites": {
       "triggers": {
@@ -3084,7 +3176,8 @@
         "darwin",
         "windows"
       ],
-      "family": "installer-managed"
+      "family": "installer-managed",
+      "exec-note": "MCP-default posture: prefer mcp__higgsfield__* as the asset surface; CLI is the fallback. Posture lives here, not in the upstream skill body."
     },
     "huashu-design": {
       "triggers": {
@@ -3112,7 +3205,10 @@
         "darwin",
         "windows"
       ],
-      "family": "vendored-design"
+      "family": "vendored-design",
+      "links": {
+        "member_of": "C6-ui-ux"
+      }
     },
     "impeccable": {
       "triggers": {
@@ -3218,7 +3314,11 @@
         "darwin",
         "windows"
       ],
-      "family": "vendored-design"
+      "family": "vendored-design",
+      "links": {
+        "lead_of": "C6-ui-ux",
+        "note": "UI/UX cluster lead (ui-ux-playbook.mdc)"
+      }
     },
     "investigate": {
       "triggers": {
@@ -3244,7 +3344,11 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "debug-investigation",
+        "niche": "gstack loop w/ browse daemon"
+      }
     },
     "land-and-deploy": {
       "triggers": {
@@ -3267,7 +3371,11 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "shipping-and-launch",
+        "note": "natural cluster lead (locked)"
+      }
     },
     "landing-report": {
       "triggers": {
@@ -3317,7 +3425,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "context-engineering"
+      }
     },
     "make-pdf": {
       "triggers": {
@@ -3486,7 +3597,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "workflow-orchestrator"
+      }
     },
     "plan-design-review": {
       "triggers": {
@@ -3516,7 +3630,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "workflow-orchestrator"
+      }
     },
     "plan-devex-review": {
       "triggers": {
@@ -3543,7 +3660,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "workflow-orchestrator"
+      }
     },
     "plan-eng-review": {
       "triggers": {
@@ -3568,7 +3688,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "workflow-orchestrator"
+      }
     },
     "plan-tune": {
       "triggers": {
@@ -3596,7 +3719,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "workflow-orchestrator"
+      }
     },
     "qa": {
       "triggers": {
@@ -3623,7 +3749,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "webapp-testing"
+      }
     },
     "qa-only": {
       "triggers": {
@@ -3645,7 +3774,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "webapp-testing"
+      }
     },
     "retro": {
       "triggers": {
@@ -3692,7 +3824,11 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "code-review-and-quality",
+        "niche": "gstack pre-landing PR review"
+      }
     },
     "scrape": {
       "triggers": {
@@ -3771,7 +3907,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "shipping-and-launch"
+      }
     },
     "setup-gbrain": {
       "triggers": {
@@ -3844,7 +3983,10 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "member_of": "shipping-and-launch"
+      }
     },
     "skillify": {
       "triggers": {
@@ -3953,7 +4095,11 @@
         "darwin",
         "windows"
       ],
-      "family": "vendored-design"
+      "family": "vendored-design",
+      "links": {
+        "member_of": "C6-ui-ux"
+      },
+      "alias": "design-taste-frontend"
     },
     "ui-ux-pro-max": {
       "triggers": {
@@ -4064,7 +4210,11 @@
         "darwin",
         "windows"
       ],
-      "family": "vendored-design"
+      "family": "vendored-design",
+      "links": {
+        "member_of": "C6-ui-ux"
+      },
+      "exec-note": "invoke via absolute path: python3 ~/.claude/skills/ui-ux-pro-max/scripts/search.py"
     },
     "unfreeze": {
       "triggers": {
@@ -4092,7 +4242,12 @@
         "linux",
         "darwin"
       ],
-      "family": "gstack-clone"
+      "family": "gstack-clone",
+      "links": {
+        "cross_links": [
+          "freeze"
+        ]
+      }
     },
     "vite-react-best-practices": {
       "triggers": {
@@ -4139,5 +4294,74 @@
       ],
       "family": "embedded-git"
     }
+  },
+  "_gsd_name_map": {
+    "/gsd:add-tests": "gsd-add-tests",
+    "/gsd:ai-integration-phase": "gsd-ai-integration-phase",
+    "/gsd:audit-fix": "gsd-audit-fix",
+    "/gsd:audit-milestone": "gsd-audit-milestone",
+    "/gsd:audit-uat": "gsd-audit-uat",
+    "/gsd:autonomous": "gsd-autonomous",
+    "/gsd:capture": "gsd-capture",
+    "/gsd:cleanup": "gsd-cleanup",
+    "/gsd:code-review": "gsd-code-review",
+    "/gsd:complete-milestone": "gsd-complete-milestone",
+    "/gsd:config": "gsd-config",
+    "/gsd:debug": "gsd-debug",
+    "/gsd:discuss-phase": "gsd-discuss-phase",
+    "/gsd:docs-update": "gsd-docs-update",
+    "/gsd:eval-review": "gsd-eval-review",
+    "/gsd:execute-phase": "gsd-execute-phase",
+    "/gsd:explore": "gsd-explore",
+    "/gsd:extract-learnings": "gsd-extract-learnings",
+    "/gsd:fast": "gsd-fast",
+    "/gsd:forensics": "gsd-forensics",
+    "/gsd:graphify": "gsd-graphify",
+    "/gsd:health": "gsd-health",
+    "/gsd:help": "gsd-help",
+    "/gsd:import": "gsd-import",
+    "/gsd:inbox": "gsd-inbox",
+    "/gsd:ingest-docs": "gsd-ingest-docs",
+    "/gsd:manager": "gsd-manager",
+    "/gsd:map-codebase": "gsd-map-codebase",
+    "/gsd:milestone-summary": "gsd-milestone-summary",
+    "/gsd:mvp-phase": "gsd-mvp-phase",
+    "/gsd:new-milestone": "gsd-new-milestone",
+    "/gsd:new-project": "gsd-new-project",
+    "/gsd:ns-context": "gsd-ns-context",
+    "/gsd:ns-ideate": "gsd-ns-ideate",
+    "/gsd:ns-manage": "gsd-ns-manage",
+    "/gsd:ns-project": "gsd-ns-project",
+    "/gsd:ns-review": "gsd-ns-review",
+    "/gsd:ns-workflow": "gsd-ns-workflow",
+    "/gsd:pause-work": "gsd-pause-work",
+    "/gsd:phase": "gsd-phase",
+    "/gsd:plan-phase": "gsd-plan-phase",
+    "/gsd:plan-review-convergence": "gsd-plan-review-convergence",
+    "/gsd:pr-branch": "gsd-pr-branch",
+    "/gsd:profile-user": "gsd-profile-user",
+    "/gsd:progress": "gsd-progress",
+    "/gsd:quick": "gsd-quick",
+    "/gsd:resume-work": "gsd-resume-work",
+    "/gsd:review": "gsd-review",
+    "/gsd:review-backlog": "gsd-review-backlog",
+    "/gsd:secure-phase": "gsd-secure-phase",
+    "/gsd:settings": "gsd-settings",
+    "/gsd:ship": "gsd-ship",
+    "/gsd:sketch": "gsd-sketch",
+    "/gsd:spec-phase": "gsd-spec-phase",
+    "/gsd:spike": "gsd-spike",
+    "/gsd:stats": "gsd-stats",
+    "/gsd:surface": "gsd-surface",
+    "/gsd:thread": "gsd-thread",
+    "/gsd:ui-phase": "gsd-ui-phase",
+    "/gsd:ui-review": "gsd-ui-review",
+    "/gsd:ultraplan-phase": "gsd-ultraplan-phase",
+    "/gsd:undo": "gsd-undo",
+    "/gsd:update": "gsd-update",
+    "/gsd:validate-phase": "gsd-validate-phase",
+    "/gsd:verify-work": "gsd-verify-work",
+    "/gsd:workspace": "gsd-workspace",
+    "/gsd:workstreams": "gsd-workstreams"
   }
 }
