@@ -46,17 +46,84 @@ import re
 import sys
 from pathlib import Path
 
-STATE_DIR = Path.home() / ".claude" / "state"
-OPUS_ONLY_FLAG = STATE_DIR / "opus-only-mode"
-SONNET_ONLY_FLAG = STATE_DIR / "sonnet-only-mode"
-FABLE_ONLY_FLAG = STATE_DIR / "fable-only-mode"
-
-SONNET_ONLY_AGENTS = {"explore", "claude-code-guide"}
-OPUS_ONLY_AGENTS = {"frontend-uiux-designer", "implementation-engineer"}
-
-VALID_MODELS = {"sonnet", "opus", "fable"}
-
 PREFIX_RE = re.compile(r"^\[(sonnet|opus|fable)\]\s", re.IGNORECASE)
+
+# --- model-policy.json: the single model truth (P2). ---------------------------
+# opus-guard consumes it for the flag dir/names, the agent pins, and the valid-model
+# set. It FAILS OPEN to these literals if the file is missing/corrupt so the guard is
+# never disabled by a bad policy file. The Agent tool has no TaskProfile, so opus-guard
+# does NOT consult `task_matrix` (that step is a no-op at this boundary) — its decisions
+# are byte-identical to the pre-policy literals below whenever the policy matches them.
+POLICY_PATH = Path(__file__).resolve().parent / "model-policy.json"
+
+_DEFAULT_FLAG_DIR = "state"
+_DEFAULT_FLAG_NAMES = {
+    "sonnet": "sonnet-only-mode",
+    "opus": "opus-only-mode",
+    "fable": "fable-only-mode",
+}
+_DEFAULT_FLAG_PRECEDENCE = ["sonnet", "opus", "fable"]
+_DEFAULT_SONNET_ONLY_AGENTS = {"explore", "claude-code-guide"}
+_DEFAULT_OPUS_ONLY_AGENTS = {"frontend-uiux-designer", "implementation-engineer"}
+_DEFAULT_VALID_MODELS = {"sonnet", "opus", "fable"}
+_DEFAULT_MODEL = "sonnet"
+
+_POLICY_CACHE: dict | None = None
+
+
+def _load_policy() -> dict:
+    """Read model-policy.json once (cached). Fail-open to {} on any error."""
+    global _POLICY_CACHE
+    if _POLICY_CACHE is None:
+        try:
+            with open(POLICY_PATH, encoding="utf-8") as f:
+                data = json.load(f)
+            _POLICY_CACHE = data if isinstance(data, dict) else {}
+        except Exception:
+            _POLICY_CACHE = {}
+    return _POLICY_CACHE
+
+
+def _agent_sets() -> tuple[set[str], set[str]]:
+    """(sonnet_only_agents, opus_only_agents) from policy, fail-open to literals."""
+    pins = _load_policy().get("agent_pins")
+    pins = pins if isinstance(pins, dict) else {}
+    opus = pins.get("opus")
+    sonnet = pins.get("sonnet")
+    opus_set = {str(a).lower() for a in opus} if isinstance(opus, list) and opus else set(_DEFAULT_OPUS_ONLY_AGENTS)
+    sonnet_set = {str(a).lower() for a in sonnet} if isinstance(sonnet, list) and sonnet else set(_DEFAULT_SONNET_ONLY_AGENTS)
+    return sonnet_set, opus_set
+
+
+def _flag_paths() -> dict[str, Path]:
+    """{model: flag_path} under ~/.claude/<dir>/, from policy, fail-open to literals."""
+    sf = _load_policy().get("session_flags")
+    sf = sf if isinstance(sf, dict) else {}
+    fdir = sf.get("dir") if isinstance(sf.get("dir"), str) and sf.get("dir") else _DEFAULT_FLAG_DIR
+    base = Path.home() / ".claude" / fdir
+    out: dict[str, Path] = {}
+    for key, default_name in _DEFAULT_FLAG_NAMES.items():
+        name = sf.get(key)
+        out[key] = base / (name if isinstance(name, str) and name else default_name)
+    return out
+
+
+def _flag_precedence() -> list[str]:
+    prec = _load_policy().get("session_flags")
+    prec = prec.get("precedence") if isinstance(prec, dict) else None
+    if isinstance(prec, list) and all(p in _DEFAULT_FLAG_NAMES for p in prec) and prec:
+        return prec
+    return list(_DEFAULT_FLAG_PRECEDENCE)
+
+
+def _valid_models() -> set[str]:
+    ids = _load_policy().get("model_ids")
+    return set(ids) if isinstance(ids, dict) and ids else set(_DEFAULT_VALID_MODELS)
+
+
+def _default_model() -> str:
+    d = _load_policy().get("default")
+    return d if isinstance(d, str) and d else _DEFAULT_MODEL
 
 
 def _allow_unchanged() -> int:
@@ -65,23 +132,27 @@ def _allow_unchanged() -> int:
 
 
 def _resolve_required(subagent_type: str, model: str, description: str) -> tuple[str, str]:
-    """Return (required_model, reason)."""
-    if SONNET_ONLY_FLAG.is_file():
-        return "sonnet", "sonnet-only-mode active"
-    if OPUS_ONLY_FLAG.is_file():
-        return "opus", "opus-only-mode active"
-    if FABLE_ONLY_FLAG.is_file():
-        return "fable", "fable-only-mode active"
-    if subagent_type in OPUS_ONLY_AGENTS:
-        return "opus", f"'{subagent_type}' is a UI/UX (opus) agent"
-    if subagent_type in SONNET_ONLY_AGENTS:
-        return "sonnet", f"'{subagent_type}' is a sonnet-only agent"
-    if model in VALID_MODELS:
+    """Return (required_model, reason). Resolution order (unchanged from the literals,
+    now sourced from model-policy.json with fail-open):
+      session_flags -> agent_pins -> explicit model param -> [label] prefix -> default.
+    (task_matrix is intentionally skipped: the Agent tool carries no TaskProfile.)
+    """
+    flag_paths = _flag_paths()
+    for mdl in _flag_precedence():
+        fp = flag_paths.get(mdl)
+        if fp is not None and fp.is_file():
+            return mdl, f"{mdl}-only-mode active"
+    sonnet_agents, opus_agents = _agent_sets()
+    if subagent_type in opus_agents:
+        return "opus", f"'{subagent_type}' is a pinned opus agent"
+    if subagent_type in sonnet_agents:
+        return "sonnet", f"'{subagent_type}' is a pinned sonnet agent"
+    if model in _valid_models():
         return model, "explicit model param"
     m = PREFIX_RE.match(description)
     if m:
         return m.group(1).lower(), "description label"
-    return "sonnet", "default (no opus/fable signal)"
+    return _default_model(), "default (no opus/fable signal)"
 
 
 def main() -> int:

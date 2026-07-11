@@ -55,16 +55,75 @@ import re
 import sys
 from pathlib import Path
 
-STATE_DIR = Path.home() / ".claude" / "state"
-SONNET_ONLY_FLAG = STATE_DIR / "sonnet-only-mode"
-OPUS_ONLY_FLAG = STATE_DIR / "opus-only-mode"
-FABLE_ONLY_FLAG = STATE_DIR / "fable-only-mode"
-
 MARKER = "__wfAgent"
 # Match a bare `agent(` call (the workflow global), not `__wfAgent(`, `myagent(`,
 # `agentType`, etc. \b prevents matching when preceded by a word char like `_`.
 AGENT_CALL_RE = re.compile(r"\bagent\s*\(")
 META_RE = re.compile(r"export\s+const\s+meta\s*=\s*\{")
+
+# --- model-policy.json: the single model truth (P2). ---------------------------
+# workflow-model-guard consumes it for the session-flag dir/names/precedence and the
+# opus/sonnet agent pins injected into the wrapper. Fail-open to these literals if the
+# file is missing/corrupt. NOTE: sourcing agent_pins from the policy aligns the workflow
+# opus set with opus-guard — 'implementation-engineer' now defaults to opus in workflows
+# too (an intentional consistency fix). Explicit model params and force flags still win.
+POLICY_PATH = Path(__file__).resolve().parent / "model-policy.json"
+
+_DEFAULT_FLAG_DIR = "state"
+_DEFAULT_FLAG_NAMES = {
+    "sonnet": "sonnet-only-mode",
+    "opus": "opus-only-mode",
+    "fable": "fable-only-mode",
+}
+_DEFAULT_FLAG_PRECEDENCE = ["sonnet", "opus", "fable"]
+_DEFAULT_OPUS_AGENTS = ["frontend-uiux-designer", "implementation-engineer"]
+_DEFAULT_SONNET_AGENTS = ["explore", "claude-code-guide"]
+
+_POLICY_CACHE: dict | None = None
+
+
+def _load_policy() -> dict:
+    """Read model-policy.json once (cached). Fail-open to {} on any error."""
+    global _POLICY_CACHE
+    if _POLICY_CACHE is None:
+        try:
+            with open(POLICY_PATH, encoding="utf-8") as f:
+                data = json.load(f)
+            _POLICY_CACHE = data if isinstance(data, dict) else {}
+        except Exception:
+            _POLICY_CACHE = {}
+    return _POLICY_CACHE
+
+
+def _flag_paths() -> dict[str, Path]:
+    sf = _load_policy().get("session_flags")
+    sf = sf if isinstance(sf, dict) else {}
+    fdir = sf.get("dir") if isinstance(sf.get("dir"), str) and sf.get("dir") else _DEFAULT_FLAG_DIR
+    base = Path.home() / ".claude" / fdir
+    out: dict[str, Path] = {}
+    for key, default_name in _DEFAULT_FLAG_NAMES.items():
+        name = sf.get(key)
+        out[key] = base / (name if isinstance(name, str) and name else default_name)
+    return out
+
+
+def _flag_precedence() -> list[str]:
+    sf = _load_policy().get("session_flags")
+    prec = sf.get("precedence") if isinstance(sf, dict) else None
+    if isinstance(prec, list) and prec and all(p in _DEFAULT_FLAG_NAMES for p in prec):
+        return prec
+    return list(_DEFAULT_FLAG_PRECEDENCE)
+
+
+def _agent_sets() -> tuple[list[str], list[str]]:
+    """(sonnet_agents, opus_agents) as lowercased JS-set members, fail-open to literals."""
+    pins = _load_policy().get("agent_pins")
+    pins = pins if isinstance(pins, dict) else {}
+    opus = pins.get("opus")
+    sonnet = pins.get("sonnet")
+    opus_list = [str(a).lower() for a in opus] if isinstance(opus, list) and opus else list(_DEFAULT_OPUS_AGENTS)
+    sonnet_list = [str(a).lower() for a in sonnet] if isinstance(sonnet, list) and sonnet else list(_DEFAULT_SONNET_AGENTS)
+    return sonnet_list, opus_list
 
 
 def _allow_unchanged() -> int:
@@ -84,13 +143,14 @@ def _advisory(note: str) -> int:
 
 
 def _forced_model() -> str | None:
-    """Session kill-switch flag -> forced model, or None for smart routing."""
-    if SONNET_ONLY_FLAG.is_file():
-        return "sonnet"
-    if OPUS_ONLY_FLAG.is_file():
-        return "opus"
-    if FABLE_ONLY_FLAG.is_file():
-        return "fable"
+    """Session kill-switch flag -> forced model, or None for smart routing.
+    Flag dir/names/precedence come from model-policy.json (fail-open to literals).
+    """
+    flag_paths = _flag_paths()
+    for mdl in _flag_precedence():
+        fp = flag_paths.get(mdl)
+        if fp is not None and fp.is_file():
+            return mdl
     return None
 
 
@@ -140,12 +200,15 @@ def _meta_end_index(script: str) -> int | None:
 
 def _build_wrapper(forced: str | None) -> str:
     forced_js = f"'{forced}'" if forced else "null"
+    sonnet_agents, opus_agents = _agent_sets()
+    opus_js = json.dumps(opus_agents)
+    sonnet_js = json.dumps(sonnet_agents)
     return (
         "\n/* injected by workflow-model-guard: default subagents to sonnet */\n"
         "const __wfOrigAgent = agent;\n"
         "const __wfForce = " + forced_js + ";\n"
-        "const __wfOpusAgents = new Set(['frontend-uiux-designer']);\n"
-        "const __wfSonnetAgents = new Set(['explore', 'claude-code-guide']);\n"
+        "const __wfOpusAgents = new Set(" + opus_js + ");\n"
+        "const __wfSonnetAgents = new Set(" + sonnet_js + ");\n"
         "const __wfAgent = (p, opts, ...rest) => {\n"
         # Defect 2: a 2nd arg we can't safely rewrite (string/function/number/array) is
         # passed through with ALL args untouched — never replaced by {} or mutated.
