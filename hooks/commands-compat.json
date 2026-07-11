@@ -1,0 +1,739 @@
+{
+  "_meta": {
+    "purpose": "P5-T9 invoke_compat translator: historic /invoke-* name -> /invoke <acts>. Consumed by the UserPromptSubmit router; a typed retired combo resolves to the parametric dispatch (telemetry-logged). All 139 names stay resolvable.",
+    "count": 136
+  },
+  "map": {
+    "invoke-audit": [
+      "audit"
+    ],
+    "invoke-audit-clean": [
+      "audit",
+      "clean"
+    ],
+    "invoke-audit-debug": [
+      "audit",
+      "debug"
+    ],
+    "invoke-audit-debug-clean": [
+      "audit",
+      "debug",
+      "clean"
+    ],
+    "invoke-audit-debug-design": [
+      "audit",
+      "debug",
+      "design"
+    ],
+    "invoke-audit-debug-design-clean": [
+      "audit",
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-audit-design": [
+      "audit",
+      "design"
+    ],
+    "invoke-audit-design-clean": [
+      "audit",
+      "design",
+      "clean"
+    ],
+    "invoke-audit-impl": [
+      "audit",
+      "impl"
+    ],
+    "invoke-audit-impl-clean": [
+      "audit",
+      "impl",
+      "clean"
+    ],
+    "invoke-audit-impl-debug": [
+      "audit",
+      "impl",
+      "debug"
+    ],
+    "invoke-audit-impl-debug-clean": [
+      "audit",
+      "impl",
+      "debug",
+      "clean"
+    ],
+    "invoke-audit-impl-debug-design": [
+      "audit",
+      "impl",
+      "debug",
+      "design"
+    ],
+    "invoke-audit-impl-debug-design-clean": [
+      "audit",
+      "impl",
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-audit-impl-design": [
+      "audit",
+      "impl",
+      "design"
+    ],
+    "invoke-audit-impl-design-clean": [
+      "audit",
+      "impl",
+      "design",
+      "clean"
+    ],
+    "invoke-audit-plan": [
+      "audit",
+      "plan"
+    ],
+    "invoke-audit-plan-clean": [
+      "audit",
+      "plan",
+      "clean"
+    ],
+    "invoke-audit-plan-debug": [
+      "audit",
+      "plan",
+      "debug"
+    ],
+    "invoke-audit-plan-debug-clean": [
+      "audit",
+      "plan",
+      "debug",
+      "clean"
+    ],
+    "invoke-audit-plan-debug-design": [
+      "audit",
+      "plan",
+      "debug",
+      "design"
+    ],
+    "invoke-audit-plan-debug-design-clean": [
+      "audit",
+      "plan",
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-audit-plan-design": [
+      "audit",
+      "plan",
+      "design"
+    ],
+    "invoke-audit-plan-design-clean": [
+      "audit",
+      "plan",
+      "design",
+      "clean"
+    ],
+    "invoke-audit-plan-impl": [
+      "audit",
+      "plan",
+      "impl"
+    ],
+    "invoke-audit-plan-impl-clean": [
+      "audit",
+      "plan",
+      "impl",
+      "clean"
+    ],
+    "invoke-audit-plan-impl-debug": [
+      "audit",
+      "plan",
+      "impl",
+      "debug"
+    ],
+    "invoke-audit-plan-impl-debug-clean": [
+      "audit",
+      "plan",
+      "impl",
+      "debug",
+      "clean"
+    ],
+    "invoke-audit-plan-impl-debug-design": [
+      "audit",
+      "plan",
+      "impl",
+      "debug",
+      "design"
+    ],
+    "invoke-audit-plan-impl-debug-design-clean": [
+      "audit",
+      "plan",
+      "impl",
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-audit-plan-impl-design": [
+      "audit",
+      "plan",
+      "impl",
+      "design"
+    ],
+    "invoke-audit-plan-impl-design-clean": [
+      "audit",
+      "plan",
+      "impl",
+      "design",
+      "clean"
+    ],
+    "invoke-audit-spec": [
+      "audit",
+      "spec"
+    ],
+    "invoke-audit-spec-clean": [
+      "audit",
+      "spec",
+      "clean"
+    ],
+    "invoke-audit-spec-debug": [
+      "audit",
+      "spec",
+      "debug"
+    ],
+    "invoke-audit-spec-debug-clean": [
+      "audit",
+      "spec",
+      "debug",
+      "clean"
+    ],
+    "invoke-audit-spec-debug-design": [
+      "audit",
+      "spec",
+      "debug",
+      "design"
+    ],
+    "invoke-audit-spec-debug-design-clean": [
+      "audit",
+      "spec",
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-audit-spec-design": [
+      "audit",
+      "spec",
+      "design"
+    ],
+    "invoke-audit-spec-design-clean": [
+      "audit",
+      "spec",
+      "design",
+      "clean"
+    ],
+    "invoke-audit-spec-impl": [
+      "audit",
+      "spec",
+      "impl"
+    ],
+    "invoke-audit-spec-impl-clean": [
+      "audit",
+      "spec",
+      "impl",
+      "clean"
+    ],
+    "invoke-audit-spec-impl-debug": [
+      "audit",
+      "spec",
+      "impl",
+      "debug"
+    ],
+    "invoke-audit-spec-impl-debug-clean": [
+      "audit",
+      "spec",
+      "impl",
+      "debug",
+      "clean"
+    ],
+    "invoke-audit-spec-impl-debug-design": [
+      "audit",
+      "spec",
+      "impl",
+      "debug",
+      "design"
+    ],
+    "invoke-audit-spec-impl-debug-design-clean": [
+      "audit",
+      "spec",
+      "impl",
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-audit-spec-impl-design": [
+      "audit",
+      "spec",
+      "impl",
+      "design"
+    ],
+    "invoke-audit-spec-impl-design-clean": [
+      "audit",
+      "spec",
+      "impl",
+      "design",
+      "clean"
+    ],
+    "invoke-audit-spec-plan": [
+      "audit",
+      "spec",
+      "plan"
+    ],
+    "invoke-audit-spec-plan-clean": [
+      "audit",
+      "spec",
+      "plan",
+      "clean"
+    ],
+    "invoke-audit-spec-plan-debug": [
+      "audit",
+      "spec",
+      "plan",
+      "debug"
+    ],
+    "invoke-audit-spec-plan-debug-clean": [
+      "audit",
+      "spec",
+      "plan",
+      "debug",
+      "clean"
+    ],
+    "invoke-audit-spec-plan-debug-design": [
+      "audit",
+      "spec",
+      "plan",
+      "debug",
+      "design"
+    ],
+    "invoke-audit-spec-plan-debug-design-clean": [
+      "audit",
+      "spec",
+      "plan",
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-audit-spec-plan-design": [
+      "audit",
+      "spec",
+      "plan",
+      "design"
+    ],
+    "invoke-audit-spec-plan-design-clean": [
+      "audit",
+      "spec",
+      "plan",
+      "design",
+      "clean"
+    ],
+    "invoke-audit-spec-plan-impl": [
+      "audit",
+      "spec",
+      "plan",
+      "impl"
+    ],
+    "invoke-audit-spec-plan-impl-clean": [
+      "audit",
+      "spec",
+      "plan",
+      "impl",
+      "clean"
+    ],
+    "invoke-audit-spec-plan-impl-debug": [
+      "audit",
+      "spec",
+      "plan",
+      "impl",
+      "debug"
+    ],
+    "invoke-audit-spec-plan-impl-debug-clean": [
+      "audit",
+      "spec",
+      "plan",
+      "impl",
+      "debug",
+      "clean"
+    ],
+    "invoke-audit-spec-plan-impl-debug-design": [
+      "audit",
+      "spec",
+      "plan",
+      "impl",
+      "debug",
+      "design"
+    ],
+    "invoke-audit-spec-plan-impl-debug-design-clean": [
+      "audit",
+      "spec",
+      "plan",
+      "impl",
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-audit-spec-plan-impl-design": [
+      "audit",
+      "spec",
+      "plan",
+      "impl",
+      "design"
+    ],
+    "invoke-audit-spec-plan-impl-design-clean": [
+      "audit",
+      "spec",
+      "plan",
+      "impl",
+      "design",
+      "clean"
+    ],
+    "invoke-clean": [
+      "clean"
+    ],
+    "invoke-cleanup": [
+      "clean"
+    ],
+    "invoke-deadcode": [
+      "clean"
+    ],
+    "invoke-debug": [
+      "debug"
+    ],
+    "invoke-debug-clean": [
+      "debug",
+      "clean"
+    ],
+    "invoke-debug-design": [
+      "debug",
+      "design"
+    ],
+    "invoke-debug-design-clean": [
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-debugging": [
+      "debug"
+    ],
+    "invoke-design": [
+      "design"
+    ],
+    "invoke-design-clean": [
+      "design",
+      "clean"
+    ],
+    "invoke-docs": [
+      "docs"
+    ],
+    "invoke-fullstack": [
+      "spec",
+      "plan",
+      "impl"
+    ],
+    "invoke-impl": [
+      "impl"
+    ],
+    "invoke-impl-clean": [
+      "impl",
+      "clean"
+    ],
+    "invoke-impl-debug": [
+      "impl",
+      "debug"
+    ],
+    "invoke-impl-debug-clean": [
+      "impl",
+      "debug",
+      "clean"
+    ],
+    "invoke-impl-debug-design": [
+      "impl",
+      "debug",
+      "design"
+    ],
+    "invoke-impl-debug-design-clean": [
+      "impl",
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-impl-design": [
+      "impl",
+      "design"
+    ],
+    "invoke-impl-design-clean": [
+      "impl",
+      "design",
+      "clean"
+    ],
+    "invoke-implementation": [
+      "impl"
+    ],
+    "invoke-plan": [
+      "plan"
+    ],
+    "invoke-plan-clean": [
+      "plan",
+      "clean"
+    ],
+    "invoke-plan-debug": [
+      "plan",
+      "debug"
+    ],
+    "invoke-plan-debug-clean": [
+      "plan",
+      "debug",
+      "clean"
+    ],
+    "invoke-plan-debug-design": [
+      "plan",
+      "debug",
+      "design"
+    ],
+    "invoke-plan-debug-design-clean": [
+      "plan",
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-plan-design": [
+      "plan",
+      "design"
+    ],
+    "invoke-plan-design-clean": [
+      "plan",
+      "design",
+      "clean"
+    ],
+    "invoke-plan-impl": [
+      "plan",
+      "impl"
+    ],
+    "invoke-plan-impl-clean": [
+      "plan",
+      "impl",
+      "clean"
+    ],
+    "invoke-plan-impl-debug": [
+      "plan",
+      "impl",
+      "debug"
+    ],
+    "invoke-plan-impl-debug-clean": [
+      "plan",
+      "impl",
+      "debug",
+      "clean"
+    ],
+    "invoke-plan-impl-debug-design": [
+      "plan",
+      "impl",
+      "debug",
+      "design"
+    ],
+    "invoke-plan-impl-debug-design-clean": [
+      "plan",
+      "impl",
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-plan-impl-design": [
+      "plan",
+      "impl",
+      "design"
+    ],
+    "invoke-plan-impl-design-clean": [
+      "plan",
+      "impl",
+      "design",
+      "clean"
+    ],
+    "invoke-planning": [
+      "plan"
+    ],
+    "invoke-security": [
+      "security"
+    ],
+    "invoke-spec": [
+      "spec"
+    ],
+    "invoke-spec-clean": [
+      "spec",
+      "clean"
+    ],
+    "invoke-spec-debug": [
+      "spec",
+      "debug"
+    ],
+    "invoke-spec-debug-clean": [
+      "spec",
+      "debug",
+      "clean"
+    ],
+    "invoke-spec-debug-design": [
+      "spec",
+      "debug",
+      "design"
+    ],
+    "invoke-spec-debug-design-clean": [
+      "spec",
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-spec-design": [
+      "spec",
+      "design"
+    ],
+    "invoke-spec-design-clean": [
+      "spec",
+      "design",
+      "clean"
+    ],
+    "invoke-spec-impl": [
+      "spec",
+      "impl"
+    ],
+    "invoke-spec-impl-clean": [
+      "spec",
+      "impl",
+      "clean"
+    ],
+    "invoke-spec-impl-debug": [
+      "spec",
+      "impl",
+      "debug"
+    ],
+    "invoke-spec-impl-debug-clean": [
+      "spec",
+      "impl",
+      "debug",
+      "clean"
+    ],
+    "invoke-spec-impl-debug-design": [
+      "spec",
+      "impl",
+      "debug",
+      "design"
+    ],
+    "invoke-spec-impl-debug-design-clean": [
+      "spec",
+      "impl",
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-spec-impl-design": [
+      "spec",
+      "impl",
+      "design"
+    ],
+    "invoke-spec-impl-design-clean": [
+      "spec",
+      "impl",
+      "design",
+      "clean"
+    ],
+    "invoke-spec-plan": [
+      "spec",
+      "plan"
+    ],
+    "invoke-spec-plan-clean": [
+      "spec",
+      "plan",
+      "clean"
+    ],
+    "invoke-spec-plan-debug": [
+      "spec",
+      "plan",
+      "debug"
+    ],
+    "invoke-spec-plan-debug-clean": [
+      "spec",
+      "plan",
+      "debug",
+      "clean"
+    ],
+    "invoke-spec-plan-debug-design": [
+      "spec",
+      "plan",
+      "debug",
+      "design"
+    ],
+    "invoke-spec-plan-debug-design-clean": [
+      "spec",
+      "plan",
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-spec-plan-design": [
+      "spec",
+      "plan",
+      "design"
+    ],
+    "invoke-spec-plan-design-clean": [
+      "spec",
+      "plan",
+      "design",
+      "clean"
+    ],
+    "invoke-spec-plan-impl": [
+      "spec",
+      "plan",
+      "impl"
+    ],
+    "invoke-spec-plan-impl-clean": [
+      "spec",
+      "plan",
+      "impl",
+      "clean"
+    ],
+    "invoke-spec-plan-impl-debug": [
+      "spec",
+      "plan",
+      "impl",
+      "debug"
+    ],
+    "invoke-spec-plan-impl-debug-clean": [
+      "spec",
+      "plan",
+      "impl",
+      "debug",
+      "clean"
+    ],
+    "invoke-spec-plan-impl-debug-design": [
+      "spec",
+      "plan",
+      "impl",
+      "debug",
+      "design"
+    ],
+    "invoke-spec-plan-impl-debug-design-clean": [
+      "spec",
+      "plan",
+      "impl",
+      "debug",
+      "design",
+      "clean"
+    ],
+    "invoke-spec-plan-impl-design": [
+      "spec",
+      "plan",
+      "impl",
+      "design"
+    ],
+    "invoke-spec-plan-impl-design-clean": [
+      "spec",
+      "plan",
+      "impl",
+      "design",
+      "clean"
+    ],
+    "invoke-verify": [
+      "verify"
+    ]
+  }
+}
