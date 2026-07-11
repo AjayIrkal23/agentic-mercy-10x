@@ -181,6 +181,23 @@ VENDORED_DESIGN = ["impeccable", "taste-skill", "ui-ux-pro-max", "huashu-design"
                    "design-extract"]
 EMBEDDED_GIT = {"vite-react-best-practices": "github.com/claudiocebpaz/vite-react-best-practices"}
 SKILLS_CLI = {"find-skills": "npx skills ecosystem"}
+# Installer-managed by NAME so classification survives P5-T12 materialization
+# (symlink -> real copy). Detection must not rely on the dir still being a symlink.
+INSTALLER_MANAGED = {"higgsfield-generate", "higgsfield-marketplace-cards",
+                     "higgsfield-product-photoshoot", "higgsfield-soul-id",
+                     "higgsfield-websites", "mmx-cli"}
+
+
+def _is_gstack_pointer(d: Path) -> bool:
+    """A generated gstack pointer (post-P5-T12): real SKILL.md, provenance tag."""
+    sk = d / "SKILL.md"
+    if not sk.is_file():
+        return False
+    try:
+        text = sk.read_text(encoding="utf-8", errors="ignore")[:400]
+    except OSError:
+        return False
+    return "provenance: gstack-clone" in text
 
 
 def skill_dirs() -> list[Path]:
@@ -221,9 +238,10 @@ def derive_families() -> dict[str, str]:
         n = d.name
         if n == "gstack":
             fam[n] = "gstack-clone"
-        elif is_gstack_twin(d):
+        elif is_gstack_twin(d) or _is_gstack_pointer(d):
             fam[n] = "gstack-clone"
-        elif d.is_symlink() and ".agents/skills" in (os.readlink(d) if d.is_symlink() else ""):
+        elif n in INSTALLER_MANAGED or (
+                d.is_symlink() and ".agents/skills" in (os.readlink(d) if d.is_symlink() else "")):
             fam[n] = "installer-managed"
         elif n.startswith("gsd-"):
             fam[n] = "gsd"

@@ -105,3 +105,4 @@ plugins/known_marketplaces.json
 attic/2026-07-11/hooks/jcodemunch-index-guard.config.json
 # dox / tdd-guard auto-init sidecars created for THIS repo (fingerprints + state)
 .claude/
+vendor/gstack-deps/node_modules/
