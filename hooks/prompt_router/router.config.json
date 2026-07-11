@@ -4,7 +4,7 @@
   "consumes_entire_floor": true,
   "max_tokens_per_prompt": 24000,
   "auto_dispatch_threshold": 3,
-  "max_skill_pushes": 8,
+  "max_skill_pushes": 40,
   "priority_tiers": {
     "0": "gate-adjacent — first-write skill push, TDD init, dox (never budget-dropped)",
     "1": "substrate precedence — jcodemunch>lean-ctx (code), jdocmunch>lean-ctx (docs), sequential-thinking, graphify",

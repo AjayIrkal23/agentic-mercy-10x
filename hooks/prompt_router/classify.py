@@ -239,8 +239,17 @@ def _classify_impl(payload: dict) -> TaskProfile:
         prof.size = "M"
 
     # --- reasoning-shaped (drives sequential-thinking directive) ---
-    reasoning_cats = {"DEBUG", "DESIGN", "PLAN", "AUDIT", "SPEC", "SECURITY", "REVIEW"}
-    prof.is_reasoning = bool(reasoning_cats & set(prof.intents)) or prof.is_arch
+    # Match legacy sequential-thinking-mandate EXACTLY: it fires on any
+    # non-trivial prompt whose raw length > 60 chars (or a thinking word / any
+    # reasoning intent / arch / a file path). Matching its breadth keeps the
+    # router from ever under-firing the seqthink substrate.
+    reasoning_cats = {"DEBUG", "DESIGN", "PLAN", "AUDIT", "SPEC", "SECURITY",
+                      "REVIEW", "IMPLEMENT", "CLEANUP"}
+    raw_prompt_len = len(str(prompt).strip())
+    prof.is_reasoning = (
+        bool(reasoning_cats & set(prof.intents)) or prof.is_arch
+        or bool(prof.paths) or raw_prompt_len > 60
+    )
 
     # --- acts (priority-ordered) ---
     prof.acts = [ACT_MAP[c] for c in _ACT_PRIORITY if c in prof.intents and c in ACT_MAP]

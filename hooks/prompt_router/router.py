@@ -87,7 +87,8 @@ def _builtin_items(profile, ctx: dict) -> list[dict]:
             "text": ("TDD doctrine: write the failing test first, then implement "
                      "(tdd-guard runs in warn mode — treat its advisory as a directive)."),
         })
-    if in_repo and (has_code_paths or profile.first_write_candidate):
+    if in_repo:
+        # legacy dox-tree-guard fires on repo state for any in-repo prompt; match it.
         items.append({
             "id": "gate:dox", "tier": 0, "section": "GATES",
             "text": "dox: read root->target CLAUDE.md before editing; update the local CLAUDE.md after.",
@@ -124,7 +125,10 @@ def _builtin_items(profile, ctx: dict) -> list[dict]:
         })
 
     # ---- tier 2: ranked skill pushes (per-skill ids so a NEW skill always fires) ----
-    ranked = _select.rank_skills(profile, top_n=int(cfg.get("max_skill_pushes", 8)))
+    # Charter §1: the budget is ~24k, NOT a small cap — emit ALL triggered skills
+    # (the priority budget trims only if it ever exceeds 24k, which is rare). The
+    # win is dedup + priority ordering, never shrinkage.
+    ranked = _select.rank_skills(profile, top_n=int(cfg.get("max_skill_pushes", 40)))
     labels = ["MUST-READ", "SHOULD-READ", "REFERENCE"]
     for i, (name, score) in enumerate(ranked):
         label = labels[min(i, len(labels) - 1)] if i < 2 else "REFERENCE"

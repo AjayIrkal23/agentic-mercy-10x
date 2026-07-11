@@ -42,6 +42,12 @@ def _ac(payload: dict, argv=None) -> str:
     return _run_router(payload, argv).get("additionalContext", "")
 
 
+def _uid(tag: str) -> str:
+    import os
+    import time
+    return f"t11-{tag}-{os.getpid()}-{int(time.time()*1000)}"
+
+
 # --------------------------------------------------------------------------- #
 # budget
 # --------------------------------------------------------------------------- #
@@ -127,7 +133,7 @@ def test_trivial_ack_emits_nothing_e2e():
 
 def test_short_real_prompt_still_triggers_e2e():
     # "fix the login bug" is short but real -> must NOT be trivially exited
-    body = _ac({"prompt": "fix the login bug", "session_id": "t11-real-short-uniq"})
+    body = _ac({"prompt": "fix the login bug", "session_id": _uid("realshort")})
     assert body != ""
 
 
@@ -137,7 +143,7 @@ def test_short_real_prompt_still_triggers_e2e():
 def test_all_substrate_directives_when_applicable():
     payload = {"prompt": "debug and refactor the architecture, update the README docs, "
                          "trace the dependency graph and blast radius",
-               "session_id": "t11-substrate-uniq"}
+               "session_id": _uid("substrate")}
     body = _ac(payload)
     # jcodemunch (code), jdocmunch (docs), sequential-thinking (reasoning), graphify (arch)
     assert "jcodemunch" in body
@@ -183,7 +189,7 @@ def shadow_would_emit(prompt: str, sid: str) -> dict:
 
 
 def test_shadow_harness_produces_record():
-    rec = shadow_would_emit("debug the crash", "t11-shadow-harness")
+    rec = shadow_would_emit("debug the crash root cause in the service", _uid("shadow"))
     assert "would_emit" in rec and "emitted_ids" in rec
 
 
