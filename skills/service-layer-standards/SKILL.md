@@ -1,11 +1,47 @@
 ---
 name: service-layer-standards
-description: Use when any backend API, route, controller, schema, service, contract,
-  persistence, auth, validation, worker, queue, integration, or server behavior task
-  is requested. Backend Core Compliance Set member for controller, service, and transaction
-  boundaries As part of the Backend Core Compliance Set for any backend/server trigger
-  surface.
+description: Use when any backend API, route, controller, schema, service, contract, persistence, auth,
+  validation, worker, queue, integration, or server behavior task is requested.
 disable-model-invocation: false
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1028
+triggers:
+  keywords:
+  - api
+  - auth
+  - backend
+  - behavior
+  - contract
+  - controller
+  - integration
+  - layer
+  - persistence
+  - queue
+  - requested
+  - route
+  - schema
+  - server
+  - service
+  - standards
+  - task
+  - validation
+  - worker
+  paths:
+  - /models/
+  - controller
+  - internal/
+  - internal/models/
+  - server/
+  - service
+  intents:
+  - general
 ---
 # Service Layer Standards
 

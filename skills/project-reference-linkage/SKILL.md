@@ -1,9 +1,45 @@
 ---
 name: project-reference-linkage
-description: Global project navigation and linkage standards. Use this to understand
-  the directory structure and cross-module relationships across components, feature
-  hooks, frontend API layers, controllers, routes, schemas, and store slices.
+description: Global project navigation and linkage standards. Use this to understand the directory structure
+  and cross-module relationships across components, feature hooks, frontend API layers, controllers, routes,
+  schemas, and store slices.
 disable-model-invocation: false
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1431
+triggers:
+  keywords:
+  - api
+  - components
+  - controllers
+  - cross-module
+  - directory
+  - feature
+  - frontend
+  - global
+  - hooks
+  - layers
+  - linkage
+  - navigation
+  - project
+  - reference
+  - relationships
+  - routes
+  - schemas
+  - slices
+  - standards
+  - store
+  - structure
+  - understand
+  paths: []
+  intents:
+  - general
 ---
 ## Use When
 

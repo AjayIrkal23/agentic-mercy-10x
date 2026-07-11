@@ -1,13 +1,62 @@
 ---
 name: caveman
-description: >
-  ALWAYS-ON ultra-compressed communication mode for user-facing text output ONLY.
-  Cuts token usage ~75% by dropping filler, articles, and pleasantries while
-  keeping full technical accuracy. Does NOT affect: code output, model reasoning,
-  skill routing, hook processing, subagent prompts, or any operational logic.
-  This skill is mandatory and always active — no trigger phrase needed.
+description: 'ALWAYS-ON ultra-compressed communication mode for user-facing text output ONLY. Cuts token
+  usage ~75% by dropping filler, articles, and pleasantries while keeping full technical accuracy. Does
+  NOT affect: code output, model reasoning, skill routing, hook processing, subagent prompts, or any operational
+  logic. This skill is mandatory and always active — no trigger phrase needed.'
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 698
+triggers:
+  keywords:
+  - accuracy
+  - active
+  - affect
+  - always
+  - always-on
+  - articles
+  - caveman
+  - code
+  - communication
+  - cuts
+  - dropping
+  - filler
+  - full
+  - hook
+  - keeping
+  - logic
+  - mandatory
+  - mode
+  - model
+  - needed
+  - operational
+  - output
+  - phrase
+  - pleasantries
+  - processing
+  - prompts
+  - reasoning
+  - routing
+  - skill
+  - subagent
+  - technical
+  - text
+  - token
+  - trigger
+  - ultra-compressed
+  - usage
+  - user-facing
+  - while
+  paths: []
+  intents:
+  - general
 ---
-
 # Caveman Mode (ALWAYS-ON)
 
 Respond terse like smart caveman. All technical substance stay. Only fluff die.

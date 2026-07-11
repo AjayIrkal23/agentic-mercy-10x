@@ -1,11 +1,44 @@
 ---
 name: graphify
-description: >-
-  Build or use a graphify knowledge graph (graphify-out/) for codebase and architecture
-  questions. If GRAPH_REPORT.md / graph.json exist, read them first; if not, run a scoped
-  graphify pipeline (detect → extract → build → report) before brute-force repo reads.
+description: Build or use a graphify knowledge graph (graphify-out/) for codebase and architecture questions.
+  If GRAPH_REPORT.md / graph.json exist, read them first; if not, run a scoped graphify pipeline (detect
+  → extract → build → report) before brute-force repo reads.
+schema: 1
+category: intel
+surfaces:
+- codebase
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 690
+triggers:
+  keywords:
+  - architecture
+  - brute-force
+  - build
+  - codebase
+  - detect
+  - exist
+  - extract
+  - first
+  - graph
+  - graph.json
+  - graph_report.md
+  - graphify
+  - graphify-out
+  - knowledge
+  - pipeline
+  - questions
+  - read
+  - reads
+  - repo
+  - report
+  - scoped
+  paths: []
+  intents:
+  - intel
 ---
-
 # Graphify (Cursor)
 
 Turn a folder into **`graphify-out/graph.json`**, **`GRAPH_REPORT.md`**, **`graph.html`**, and optionally **`wiki/`**. Reduces exploratory reads by surfacing god nodes, communities, and suggested questions.

@@ -1,10 +1,85 @@
 ---
 name: frontend-standards-always-follow
-description: Use when any web/frontend UI, React, Next.js, Vite, dashboard, component,
-  CSS, client data, hook, state, styling, browser UX, or frontend performance work
-  is requested. Apply the always-on frontend baseline Use after the matching Build
-  Web Apps plugin skill for any web/frontend task.
+description: Use when any web/frontend UI, React, Next.js, Vite, dashboard, component, CSS, client data,
+  hook, state, styling, browser UX, or frontend performance work is requested. Apply the always-on frontend
+  baseline Use after the matching Build Web Apps plugin skill for any web/frontend task.
 disable-model-invocation: false
+schema: 1
+category: frontend
+surfaces:
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1188
+triggers:
+  keywords:
+  - always
+  - always-on
+  - apply
+  - apps
+  - baseline
+  - browser
+  - build
+  - client
+  - component
+  - css
+  - dashboard
+  - data
+  - follow
+  - frontend
+  - hook
+  - matching
+  - next.js
+  - performance
+  - plugin
+  - react
+  - requested
+  - skill
+  - standards
+  - state
+  - styling
+  - task
+  - vite
+  - web
+  - web/frontend
+  - work
+  paths:
+  - .hook.
+  - .jsx
+  - .spec.
+  - .test.
+  - .tsx
+  - /auth/
+  - /components/
+  - /guard/
+  - /hooks/use
+  - /login/
+  - /pages/
+  - /router/
+  - /routes/
+  - /src/hooks/
+  - /store/
+  - /views/
+  - __tests__
+  - _test.ts
+  - _test.tsx
+  - protected
+  - reducer.
+  - redux
+  - route.ts
+  - route.tsx
+  - routes.ts
+  - selector.
+  - session
+  - slice.
+  - src/schemas/
+  - src/types/
+  - use-
+  - useHook
+  intents:
+  - frontend
 ---
 # Frontend Standards Always Follow
 

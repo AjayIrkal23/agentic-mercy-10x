@@ -1,10 +1,42 @@
 ---
 name: api-contract-standards
-description: Use when backend response envelopes, list metadata, error shapes, versioning,
-  or separation between table, card, and summary contracts are being defined or reviewed.
-  Guard backend contract shape and compatibility Use to review or define a backend
-  contract change.
+description: Use when backend response envelopes, list metadata, error shapes, versioning, or the separation
+  between table, card, and summary contracts are being defined or reviewed.
 disable-model-invocation: false
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 642
+triggers:
+  keywords:
+  - api
+  - backend
+  - card
+  - contract
+  - contracts
+  - defined
+  - envelopes
+  - error
+  - list
+  - metadata
+  - response
+  - reviewed
+  - separation
+  - shapes
+  - standards
+  - summary
+  - table
+  - versioning
+  paths:
+  - src/schemas/
+  - src/types/
+  intents:
+  - general
 ---
 ## Use When
 

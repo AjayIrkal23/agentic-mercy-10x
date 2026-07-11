@@ -1,8 +1,43 @@
 ---
 name: lean-ctx
-description: Context compression for AI agents via shell hook. In this environment, lean-ctx runs as a shell hook only — it transparently intercepts Bash commands and compresses their output before Claude sees them. No special commands needed.
+description: Context compression for AI agents via shell hook. In this environment, lean-ctx runs as a
+  shell hook only — it transparently intercepts Bash commands and compresses their output before Claude
+  sees them. No special commands needed.
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 707
+triggers:
+  keywords:
+  - agents
+  - bash
+  - claude
+  - commands
+  - compresses
+  - compression
+  - context
+  - ctx
+  - environment
+  - hook
+  - intercepts
+  - lean
+  - lean-ctx
+  - needed
+  - output
+  - runs
+  - sees
+  - shell
+  - special
+  - transparently
+  paths: []
+  intents:
+  - general
 ---
-
 # lean-ctx — Shell Hook (This Environment)
 
 > **IMPORTANT: In this environment, lean-ctx runs as a shell hook only.**

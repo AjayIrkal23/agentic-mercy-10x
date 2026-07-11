@@ -1,8 +1,43 @@
 ---
 name: fix-lint-format
-description: Use when you have lint errors, formatting issues, CI failures, or before committing code to ensure it passes project checks. Adapts commands to the repo (Go, Node, React upstream examples).
+description: Use when you have lint errors, formatting issues, CI failures, or before committing code
+  to ensure it passes project checks. Adapts commands to the repo (Go, Node, React upstream examples).
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 436
+triggers:
+  keywords:
+  - adapts
+  - checks
+  - code
+  - commands
+  - committing
+  - ensure
+  - errors
+  - examples
+  - failures
+  - fix
+  - format
+  - formatting
+  - have
+  - issues
+  - lint
+  - node
+  - passes
+  - project
+  - react
+  - repo
+  - upstream
+  paths: []
+  intents:
+  - general
 ---
-
 # Fix lint and formatting
 
 ## Goal

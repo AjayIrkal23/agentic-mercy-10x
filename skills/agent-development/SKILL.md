@@ -1,9 +1,34 @@
 ---
 name: agent-development
-description: Use when creating or revising reusable agent definitions, trigger text,
-  or system prompts for autonomous helpers. Design reusable autonomous agent definitions
-  Use to draft or revise an autonomous agent definition.
+description: Use when creating or revising reusable agent definitions, trigger text, or system prompts
+  for autonomous helpers.
 disable-model-invocation: true
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 372
+triggers:
+  keywords:
+  - agent
+  - autonomous
+  - creating
+  - definitions
+  - development
+  - helpers
+  - prompts
+  - reusable
+  - revising
+  - system
+  - text
+  - trigger
+  paths: []
+  intents:
+  - general
 ---
 # Agent Development
 

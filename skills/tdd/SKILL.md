@@ -1,8 +1,45 @@
 ---
 name: tdd
-description: Test-driven development with red-green-refactor loop. Use when user wants to build features or fix bugs using TDD, mentions "red-green-refactor", wants integration tests, or asks for test-first development.
+description: Test-driven development with red-green-refactor loop. Use when user wants to build features
+  or fix bugs using TDD, mentions "red-green-refactor", wants integration tests, or asks for test-first
+  development.
+schema: 1
+category: testing
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1033
+triggers:
+  keywords:
+  - asks
+  - bugs
+  - build
+  - development
+  - features
+  - fix
+  - integration
+  - loop
+  - mentions
+  - red-green-refactor
+  - tdd
+  - test-driven
+  - test-first
+  - tests
+  - user
+  - wants
+  paths:
+  - .spec.
+  - .test.
+  - __tests__
+  - _test.ts
+  - _test.tsx
+  intents:
+  - testing
 ---
-
 # Test-Driven Development
 
 ## Philosophy

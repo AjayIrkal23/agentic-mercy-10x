@@ -1,8 +1,44 @@
 ---
 name: test-driven-development
-description: Drives development with tests. Use when implementing any logic, fixing any bug, or changing any behavior. Use when you need to prove that code works, when a bug report arrives, or when you're about to modify existing functionality.
+description: Drives development with tests. Use when implementing any logic, fixing any bug, or changing
+  any behavior. Use when you need to prove that code works, when a bug report arrives, or when you're
+  about to modify existing functionality.
+schema: 1
+category: testing
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 3620
+triggers:
+  keywords:
+  - arrives
+  - behavior
+  - bug
+  - changing
+  - code
+  - development
+  - driven
+  - drives
+  - existing
+  - fixing
+  - functionality
+  - implementing
+  - logic
+  - modify
+  - need
+  - prove
+  - report
+  - test
+  - tests
+  - works
+  paths: []
+  intents:
+  - testing
 ---
-
 # Test-Driven Development
 
 ## Overview

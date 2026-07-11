@@ -1,9 +1,29 @@
 ---
 name: verification-loop
-description: "A comprehensive verification system for Claude Code sessions."
+description: A comprehensive verification system for Claude Code sessions.
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 592
+triggers:
+  keywords:
+  - claude
+  - code
+  - comprehensive
+  - loop
+  - sessions
+  - system
+  - verification
+  paths: []
+  intents:
+  - general
 origin: ECC
 ---
-
 # Verification Loop Skill
 
 A comprehensive verification system for Claude Code sessions.

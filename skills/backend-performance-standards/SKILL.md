@@ -1,11 +1,40 @@
 ---
 name: backend-performance-standards
-description: Use when reviewing backend query efficiency, file-size pressure, repeated
-  DB work, scaling risk, or safe optimization boundaries. Backend Core Compliance
-  Set member for query efficiency and scaling risk As part of the Backend Core Compliance
-  Set for backend/server work, including query efficiency, repeated DB work, file-size
-  pressure, and scalability risks.
+description: Use when reviewing backend query efficiency, file-size pressure, repeated DB work, scaling
+  risk, or safe optimization boundaries.
 disable-model-invocation: false
+schema: 1
+category: backend
+surfaces:
+- backend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 264
+triggers:
+  keywords:
+  - backend
+  - boundaries
+  - efficiency
+  - file-size
+  - optimization
+  - performance
+  - pressure
+  - query
+  - repeated
+  - reviewing
+  - risk
+  - safe
+  - scaling
+  - standards
+  - work
+  paths:
+  - cmd/
+  - internal/
+  - server/
+  intents:
+  - backend
 ---
 # Backend Performance Standards
 

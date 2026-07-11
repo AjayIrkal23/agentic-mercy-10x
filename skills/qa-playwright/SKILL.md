@@ -1,8 +1,28 @@
 ---
 name: qa-playwright
 description: Systematic QA testing loop using Playwright MCP (adapted from GStack /qa)
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 237
+triggers:
+  keywords:
+  - adapted
+  - gstack
+  - loop
+  - mcp
+  - playwright
+  - systematic
+  - testing
+  paths: []
+  intents:
+  - general
 ---
-
 # QA with Playwright
 
 Systematic QA loop: test → find bugs → fix → retest → commit.

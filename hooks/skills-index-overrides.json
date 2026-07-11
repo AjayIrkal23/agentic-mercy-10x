@@ -7,5 +7,4137 @@
     "_comment": "sidecar name aliases for locked skills, e.g. taste-skill",
     "design-taste-frontend": "taste-skill"
   },
-  "skills": {}
+  "skills": {
+    "autoplan": {
+      "triggers": {
+        "keywords": [
+          "auto-decisions",
+          "auto-review",
+          "autoplan",
+          "ceo",
+          "decision",
+          "design",
+          "disk",
+          "eng",
+          "full",
+          "gstack",
+          "pipeline",
+          "principles",
+          "reads",
+          "review",
+          "runs",
+          "sequentially",
+          "skills"
+        ],
+        "paths": [],
+        "intents": [
+          "planning"
+        ]
+      },
+      "category": "planning",
+      "surfaces": [
+        "planning"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "benchmark": {
+      "triggers": {
+        "keywords": [
+          "benchmark",
+          "browse",
+          "daemon",
+          "detection",
+          "gstack",
+          "performance",
+          "regression"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "benchmark-models": {
+      "triggers": {
+        "keywords": [
+          "benchmark",
+          "cross-model",
+          "gstack",
+          "models",
+          "skills"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "browse": {
+      "triggers": {
+        "keywords": [
+          "browse",
+          "browser",
+          "dogfooding",
+          "fast",
+          "gstack",
+          "headless",
+          "site",
+          "testing"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "canary": {
+      "triggers": {
+        "keywords": [
+          "canary",
+          "gstack",
+          "monitoring",
+          "post-deploy"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "careful": {
+      "triggers": {
+        "keywords": [
+          "careful",
+          "commands",
+          "destructive",
+          "gstack",
+          "guardrails",
+          "safety"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "codex": {
+      "triggers": {
+        "keywords": [
+          "cli",
+          "codex",
+          "gstack",
+          "modes",
+          "openai",
+          "wrapper"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "connect-chrome": {
+      "triggers": {
+        "keywords": [
+          "ai-controlled",
+          "baked",
+          "browser",
+          "chrome",
+          "chromium",
+          "connect",
+          "extension",
+          "gstack",
+          "launch",
+          "sidebar"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "context-restore": {
+      "triggers": {
+        "keywords": [
+          "context",
+          "context-save",
+          "earlier",
+          "gstack",
+          "restore",
+          "saved",
+          "working"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "context-save": {
+      "triggers": {
+        "keywords": [
+          "context",
+          "gstack",
+          "save",
+          "working"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "cso": {
+      "triggers": {
+        "keywords": [
+          "chief",
+          "cso",
+          "gstack",
+          "mode",
+          "officer",
+          "security"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "design-consultation": {
+      "triggers": {
+        "keywords": [
+          "aesthetic",
+          "color",
+          "complete",
+          "consultation",
+          "design",
+          "font",
+          "generates",
+          "gstack",
+          "landscape",
+          "layout",
+          "motion",
+          "preview",
+          "product",
+          "proposes",
+          "researches",
+          "spacing",
+          "system",
+          "typography",
+          "understands"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "design-extract": {
+      "triggers": {
+        "keywords": [
+          "design",
+          "extract"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "vendored-design"
+    },
+    "design-html": {
+      "triggers": {
+        "keywords": [
+          "design",
+          "finalization",
+          "generates",
+          "gstack",
+          "html",
+          "html/css",
+          "pretext-native",
+          "production-quality"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "design-review": {
+      "triggers": {
+        "keywords": [
+          "design",
+          "designer",
+          "eye",
+          "finds",
+          "fixes",
+          "gstack",
+          "hierarchy",
+          "inconsistency",
+          "interactions",
+          "issues",
+          "patterns",
+          "problems",
+          "review",
+          "slop",
+          "slow",
+          "spacing",
+          "visual"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "design-shotgun": {
+      "triggers": {
+        "keywords": [
+          "board",
+          "collect",
+          "comparison",
+          "design",
+          "feedback",
+          "generate",
+          "gstack",
+          "iterate",
+          "multiple",
+          "open",
+          "shotgun",
+          "structured",
+          "variants"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "devex-review": {
+      "triggers": {
+        "keywords": [
+          "audit",
+          "developer",
+          "devex",
+          "experience",
+          "gstack",
+          "live",
+          "review"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "document-generate": {
+      "triggers": {
+        "keywords": [
+          "document",
+          "documentation",
+          "entire",
+          "feature",
+          "generate",
+          "gstack",
+          "missing",
+          "module",
+          "project",
+          "scratch"
+        ],
+        "paths": [],
+        "intents": [
+          "docs"
+        ]
+      },
+      "category": "docs",
+      "surfaces": [
+        "docs"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "document-release": {
+      "triggers": {
+        "keywords": [
+          "document",
+          "documentation",
+          "gstack",
+          "post-ship",
+          "release",
+          "update"
+        ],
+        "paths": [],
+        "intents": [
+          "docs"
+        ]
+      },
+      "category": "docs",
+      "surfaces": [
+        "docs"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "find-skills": {
+      "triggers": {
+        "keywords": [
+          "agent",
+          "ask",
+          "can",
+          "capabilities",
+          "discover",
+          "exist",
+          "express",
+          "extending",
+          "find",
+          "functionality",
+          "helps",
+          "install",
+          "installable",
+          "interest",
+          "like",
+          "looking",
+          "might",
+          "questions",
+          "should",
+          "skill",
+          "skills",
+          "user",
+          "users"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "skills-cli"
+    },
+    "freeze": {
+      "triggers": {
+        "keywords": [
+          "directory",
+          "edits",
+          "file",
+          "freeze",
+          "gstack",
+          "restrict",
+          "session",
+          "specific"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "gsd-add-tests": {
+      "triggers": {
+        "keywords": [
+          "add",
+          "based",
+          "completed",
+          "criteria",
+          "generate",
+          "gsd",
+          "implementation",
+          "phase",
+          "tests",
+          "uat"
+        ],
+        "paths": [],
+        "intents": [
+          "testing"
+        ]
+      },
+      "category": "testing",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-ai-integration-phase": {
+      "triggers": {
+        "keywords": [
+          "ai-spec.md",
+          "building",
+          "contract",
+          "design",
+          "generate",
+          "gsd",
+          "integration",
+          "involve",
+          "phase",
+          "phases",
+          "systems"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-audit-fix": {
+      "triggers": {
+        "keywords": [
+          "audit",
+          "audit-to-fix",
+          "autonomous",
+          "classify",
+          "commit",
+          "find",
+          "fix",
+          "gsd",
+          "issues",
+          "pipeline",
+          "test"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-audit-milestone": {
+      "triggers": {
+        "keywords": [
+          "against",
+          "archiving",
+          "audit",
+          "completion",
+          "gsd",
+          "intent",
+          "milestone",
+          "original"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-audit-uat": {
+      "triggers": {
+        "keywords": [
+          "audit",
+          "cross-phase",
+          "gsd",
+          "items",
+          "outstanding",
+          "uat",
+          "verification"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-autonomous": {
+      "triggers": {
+        "keywords": [
+          "autonomous",
+          "autonomously",
+          "discuss",
+          "execute",
+          "gsd",
+          "phase",
+          "phases",
+          "plan",
+          "remaining"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-capture": {
+      "triggers": {
+        "keywords": [
+          "capture",
+          "destination",
+          "gsd",
+          "ideas",
+          "notes",
+          "seeds",
+          "tasks"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-cleanup": {
+      "triggers": {
+        "keywords": [
+          "accumulated",
+          "archive",
+          "cleanup",
+          "completed",
+          "directories",
+          "gsd",
+          "milestones",
+          "phase"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-code-review": {
+      "triggers": {
+        "keywords": [
+          "bugs",
+          "changed",
+          "code",
+          "files",
+          "gsd",
+          "issues",
+          "phase",
+          "problems",
+          "quality",
+          "review",
+          "security",
+          "source"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-complete-milestone": {
+      "triggers": {
+        "keywords": [
+          "archive",
+          "complete",
+          "completed",
+          "gsd",
+          "milestone",
+          "next",
+          "prepare",
+          "version"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-config": {
+      "triggers": {
+        "keywords": [
+          "advanced",
+          "config",
+          "configure",
+          "gsd",
+          "integrations",
+          "knobs",
+          "model",
+          "profile",
+          "settings",
+          "toggles",
+          "workflow"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-debug": {
+      "triggers": {
+        "keywords": [
+          "context",
+          "debug",
+          "debugging",
+          "gsd",
+          "persistent",
+          "resets",
+          "state",
+          "systematic"
+        ],
+        "paths": [],
+        "intents": [
+          "debug"
+        ]
+      },
+      "category": "debug",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-discuss-phase": {
+      "triggers": {
+        "keywords": [
+          "adaptive",
+          "context",
+          "discuss",
+          "gather",
+          "gsd",
+          "phase",
+          "planning",
+          "questioning",
+          "through"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-docs-update": {
+      "triggers": {
+        "keywords": [
+          "against",
+          "codebase",
+          "docs",
+          "documentation",
+          "generate",
+          "gsd",
+          "project",
+          "update",
+          "verified"
+        ],
+        "paths": [],
+        "intents": [
+          "docs"
+        ]
+      },
+      "category": "docs",
+      "surfaces": [
+        "docs"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-eval-review": {
+      "triggers": {
+        "keywords": [
+          "audit",
+          "coverage",
+          "eval",
+          "eval-review.md",
+          "evaluation",
+          "executed",
+          "gsd",
+          "phase",
+          "plan",
+          "produce",
+          "remediation",
+          "review"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-execute-phase": {
+      "triggers": {
+        "keywords": [
+          "execute",
+          "gsd",
+          "parallelization",
+          "phase",
+          "plans",
+          "wave-based"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-explore": {
+      "triggers": {
+        "keywords": [
+          "committing",
+          "explore",
+          "gsd",
+          "idea",
+          "ideas",
+          "ideation",
+          "plans",
+          "routing",
+          "socratic",
+          "think",
+          "through"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-extract-learnings": {
+      "triggers": {
+        "keywords": [
+          "artifacts",
+          "completed",
+          "decisions",
+          "extract",
+          "gsd",
+          "learnings",
+          "lessons",
+          "patterns",
+          "phase",
+          "surprises"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-fast": {
+      "triggers": {
+        "keywords": [
+          "execute",
+          "fast",
+          "gsd",
+          "inline",
+          "overhead",
+          "planning",
+          "subagents",
+          "task",
+          "trivial"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-forensics": {
+      "triggers": {
+        "keywords": [
+          "diagnoses",
+          "failed",
+          "forensics",
+          "gsd",
+          "investigation",
+          "post-mortem",
+          "went",
+          "workflows",
+          "wrong"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-graphify": {
+      "triggers": {
+        "keywords": [
+          "build",
+          "graph",
+          "graphify",
+          "gsd",
+          "inspect",
+          "knowledge",
+          "planning/graphs",
+          "project",
+          "query"
+        ],
+        "paths": [],
+        "intents": [
+          "intel"
+        ]
+      },
+      "category": "intel",
+      "surfaces": [
+        "codebase"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-health": {
+      "triggers": {
+        "keywords": [
+          "diagnose",
+          "directory",
+          "gsd",
+          "health",
+          "issues",
+          "optionally",
+          "planning",
+          "repair"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-help": {
+      "triggers": {
+        "keywords": [
+          "available",
+          "commands",
+          "gsd",
+          "guide",
+          "help",
+          "show",
+          "usage"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-import": {
+      "triggers": {
+        "keywords": [
+          "against",
+          "anything",
+          "conflict",
+          "decisions",
+          "detection",
+          "external",
+          "gsd",
+          "import",
+          "ingest",
+          "plans",
+          "project",
+          "writing"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-inbox": {
+      "triggers": {
+        "keywords": [
+          "against",
+          "contribution",
+          "github",
+          "gsd",
+          "guidelines",
+          "inbox",
+          "issues",
+          "open",
+          "project",
+          "prs",
+          "review",
+          "templates",
+          "triage"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-ingest-docs": {
+      "triggers": {
+        "keywords": [
+          "adrs",
+          "bootstrap",
+          "docs",
+          "existing",
+          "gsd",
+          "ingest",
+          "merge",
+          "planning",
+          "prds",
+          "repo",
+          "setup",
+          "specs"
+        ],
+        "paths": [],
+        "intents": [
+          "docs"
+        ]
+      },
+      "category": "docs",
+      "surfaces": [
+        "docs"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-manager": {
+      "triggers": {
+        "keywords": [
+          "center",
+          "command",
+          "gsd",
+          "interactive",
+          "manager",
+          "managing",
+          "multiple",
+          "phases",
+          "terminal"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-map-codebase": {
+      "triggers": {
+        "keywords": [
+          "agents",
+          "analyze",
+          "codebase",
+          "documents",
+          "gsd",
+          "map",
+          "mapper",
+          "parallel",
+          "planning/codebase",
+          "produce"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-milestone-summary": {
+      "triggers": {
+        "keywords": [
+          "artifacts",
+          "comprehensive",
+          "generate",
+          "gsd",
+          "milestone",
+          "onboarding",
+          "project",
+          "review",
+          "summary",
+          "team"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-mvp-phase": {
+      "triggers": {
+        "keywords": [
+          "gsd",
+          "mvp",
+          "phase",
+          "plan",
+          "plan-phase",
+          "slice",
+          "spidr",
+          "splitting",
+          "story",
+          "user",
+          "vertical"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-new-milestone": {
+      "triggers": {
+        "keywords": [
+          "cycle",
+          "gsd",
+          "milestone",
+          "project.md",
+          "requirements",
+          "route",
+          "start",
+          "update"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-new-project": {
+      "triggers": {
+        "keywords": [
+          "context",
+          "deep",
+          "gathering",
+          "gsd",
+          "initialize",
+          "project",
+          "project.md"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-ns-context": {
+      "triggers": {
+        "keywords": [
+          "codebase",
+          "context",
+          "docs",
+          "graphify",
+          "gsd",
+          "intelligence",
+          "learnings",
+          "map"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-ns-ideate": {
+      "triggers": {
+        "keywords": [
+          "capture",
+          "exploration",
+          "explore",
+          "gsd",
+          "ideate",
+          "sketch",
+          "spec",
+          "spike"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-ns-manage": {
+      "triggers": {
+        "keywords": [
+          "config",
+          "gsd",
+          "inbox",
+          "manage",
+          "ship",
+          "thread",
+          "update",
+          "workspace",
+          "workstreams"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-ns-project": {
+      "triggers": {
+        "keywords": [
+          "audits",
+          "gsd",
+          "lifecycle",
+          "milestones",
+          "project",
+          "summary"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-ns-review": {
+      "triggers": {
+        "keywords": [
+          "audit",
+          "code",
+          "debug",
+          "eval",
+          "gates",
+          "gsd",
+          "quality",
+          "review",
+          "security"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-ns-workflow": {
+      "triggers": {
+        "keywords": [
+          "discuss",
+          "execute",
+          "gsd",
+          "phase",
+          "plan",
+          "progress",
+          "verify",
+          "workflow"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-pause-work": {
+      "triggers": {
+        "keywords": [
+          "context",
+          "create",
+          "gsd",
+          "handoff",
+          "mid-phase",
+          "pause",
+          "pausing",
+          "work"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-phase": {
+      "triggers": {
+        "keywords": [
+          "add",
+          "crud",
+          "edit",
+          "gsd",
+          "insert",
+          "phase",
+          "phases",
+          "remove",
+          "roadmap.md"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-plan-phase": {
+      "triggers": {
+        "keywords": [
+          "create",
+          "detailed",
+          "gsd",
+          "loop",
+          "phase",
+          "plan",
+          "plan.md",
+          "verification"
+        ],
+        "paths": [],
+        "intents": [
+          "planning"
+        ]
+      },
+      "category": "planning",
+      "surfaces": [
+        "planning"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-plan-review-convergence": {
+      "triggers": {
+        "keywords": [
+          "concerns",
+          "convergence",
+          "cross-ai",
+          "feedback",
+          "gsd",
+          "high",
+          "loop",
+          "plan",
+          "remain",
+          "replan",
+          "review",
+          "until"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-pr-branch": {
+      "triggers": {
+        "keywords": [
+          "branch",
+          "clean",
+          "code",
+          "commits",
+          "create",
+          "filtering",
+          "gsd",
+          "planning",
+          "ready",
+          "review"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-profile-user": {
+      "triggers": {
+        "keywords": [
+          "artifacts",
+          "behavioral",
+          "claude-discoverable",
+          "create",
+          "developer",
+          "generate",
+          "gsd",
+          "profile",
+          "user"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-progress": {
+      "triggers": {
+        "keywords": [
+          "advance",
+          "check",
+          "command",
+          "dispatch",
+          "freeform",
+          "gsd",
+          "intent",
+          "progress",
+          "situational",
+          "unified",
+          "workflow"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-quick": {
+      "triggers": {
+        "keywords": [
+          "agents",
+          "atomic",
+          "commits",
+          "execute",
+          "gsd",
+          "guarantees",
+          "optional",
+          "quick",
+          "skip",
+          "state",
+          "task",
+          "tracking"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-resume-work": {
+      "triggers": {
+        "keywords": [
+          "context",
+          "full",
+          "gsd",
+          "previous",
+          "restoration",
+          "resume",
+          "session",
+          "work"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-review": {
+      "triggers": {
+        "keywords": [
+          "clis",
+          "cross-ai",
+          "external",
+          "gsd",
+          "peer",
+          "phase",
+          "plans",
+          "request",
+          "review"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-review-backlog": {
+      "triggers": {
+        "keywords": [
+          "active",
+          "backlog",
+          "gsd",
+          "items",
+          "milestone",
+          "promote",
+          "review"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-secure-phase": {
+      "triggers": {
+        "keywords": [
+          "completed",
+          "gsd",
+          "mitigations",
+          "phase",
+          "retroactively",
+          "secure",
+          "threat",
+          "verify"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-settings": {
+      "triggers": {
+        "keywords": [
+          "configure",
+          "gsd",
+          "model",
+          "profile",
+          "settings",
+          "toggles",
+          "workflow"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-ship": {
+      "triggers": {
+        "keywords": [
+          "create",
+          "gsd",
+          "merge",
+          "passes",
+          "prepare",
+          "review",
+          "ship",
+          "verification"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-sketch": {
+      "triggers": {
+        "keywords": [
+          "frontier",
+          "gsd",
+          "html",
+          "ideas",
+          "mockups",
+          "mode",
+          "next",
+          "propose",
+          "sketch",
+          "throwaway",
+          "ui/design"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-spec-phase": {
+      "triggers": {
+        "keywords": [
+          "ambiguity",
+          "clarify",
+          "delivers",
+          "discuss-phase",
+          "gsd",
+          "phase",
+          "produces",
+          "scoring",
+          "spec",
+          "spec.md"
+        ],
+        "paths": [],
+        "intents": [
+          "planning"
+        ]
+      },
+      "category": "planning",
+      "surfaces": [
+        "planning"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-spike": {
+      "triggers": {
+        "keywords": [
+          "experiential",
+          "exploration",
+          "frontier",
+          "gsd",
+          "idea",
+          "mode",
+          "next",
+          "propose",
+          "spike",
+          "through"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-stats": {
+      "triggers": {
+        "keywords": [
+          "display",
+          "git",
+          "gsd",
+          "metrics",
+          "phases",
+          "plans",
+          "project",
+          "requirements",
+          "statistics",
+          "stats",
+          "timeline"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-surface": {
+      "triggers": {
+        "keywords": [
+          "apply",
+          "cluster",
+          "disable",
+          "gsd",
+          "list",
+          "profile",
+          "reinstall",
+          "skills",
+          "surface",
+          "surfaced",
+          "toggle",
+          "without"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-thread": {
+      "triggers": {
+        "keywords": [
+          "context",
+          "cross-session",
+          "gsd",
+          "manage",
+          "persistent",
+          "thread",
+          "threads",
+          "work"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-ui-phase": {
+      "triggers": {
+        "keywords": [
+          "contract",
+          "design",
+          "frontend",
+          "generate",
+          "gsd",
+          "phase",
+          "phases",
+          "ui-spec.md"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-ui-review": {
+      "triggers": {
+        "keywords": [
+          "6-pillar",
+          "audit",
+          "code",
+          "frontend",
+          "gsd",
+          "implemented",
+          "retroactive",
+          "review",
+          "visual"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-ultraplan-phase": {
+      "triggers": {
+        "keywords": [
+          "back",
+          "beta",
+          "browser",
+          "claude",
+          "cloud",
+          "code",
+          "gsd",
+          "import",
+          "offload",
+          "phase",
+          "plan",
+          "review",
+          "ultraplan"
+        ],
+        "paths": [],
+        "intents": [
+          "planning"
+        ]
+      },
+      "category": "planning",
+      "surfaces": [
+        "planning"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-undo": {
+      "triggers": {
+        "keywords": [
+          "back",
+          "checks",
+          "commits",
+          "dependency",
+          "git",
+          "gsd",
+          "manifest",
+          "phase",
+          "plan",
+          "revert",
+          "roll",
+          "safe",
+          "undo"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-update": {
+      "triggers": {
+        "keywords": [
+          "changelog",
+          "display",
+          "gsd",
+          "latest",
+          "update",
+          "version"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-validate-phase": {
+      "triggers": {
+        "keywords": [
+          "audit",
+          "completed",
+          "fill",
+          "gaps",
+          "gsd",
+          "nyquist",
+          "phase",
+          "retroactively",
+          "validate",
+          "validation"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-verify-work": {
+      "triggers": {
+        "keywords": [
+          "built",
+          "conversational",
+          "features",
+          "gsd",
+          "through",
+          "uat",
+          "validate",
+          "verify",
+          "work"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-workspace": {
+      "triggers": {
+        "keywords": [
+          "create",
+          "environments",
+          "gsd",
+          "isolated",
+          "list",
+          "manage",
+          "remove",
+          "workspace",
+          "workspaces"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gsd-workstreams": {
+      "triggers": {
+        "keywords": [
+          "complete",
+          "create",
+          "gsd",
+          "list",
+          "manage",
+          "parallel",
+          "progress",
+          "resume",
+          "status",
+          "switch",
+          "workstreams"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "gsd"
+    },
+    "gstack": {
+      "triggers": {
+        "keywords": [
+          "gstack",
+          "router",
+          "skill",
+          "suite"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "gstack-upgrade": {
+      "triggers": {
+        "keywords": [
+          "gstack",
+          "latest",
+          "upgrade",
+          "version"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "guard": {
+      "triggers": {
+        "keywords": [
+          "command",
+          "destructive",
+          "directory-scoped",
+          "edits",
+          "full",
+          "gstack",
+          "guard",
+          "mode",
+          "safety",
+          "warnings"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "health": {
+      "triggers": {
+        "keywords": [
+          "code",
+          "dashboard",
+          "gstack",
+          "health",
+          "quality"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "higgsfield-generate": {
+      "triggers": {
+        "keywords": [
+          "1.0",
+          "2.0",
+          "2/lite/pro",
+          "ads",
+          "analyze",
+          "animate",
+          "assets/audio",
+          "audio",
+          "banana",
+          "brain_activity",
+          "cards",
+          "chain",
+          "character",
+          "character/reference",
+          "consistency",
+          "create",
+          "defaults",
+          "draw_to_video",
+          "edit",
+          "edit/stylize/remix",
+          "effect",
+          "face/identity",
+          "generate",
+          "generation",
+          "gpt",
+          "higgsfield",
+          "higgsfield-soul-id",
+          "image",
+          "image-to-3d",
+          "image-to-video",
+          "image/design/text",
+          "images",
+          "images/videos/3d",
+          "import",
+          "listing",
+          "marketing",
+          "marketplace",
+          "model/glb",
+          "multi_image_to_3d",
+          "music",
+          "nano",
+          "photo",
+          "photoshoots",
+          "predictor",
+          "presenter",
+          "product",
+          "reframe",
+          "seed",
+          "seed_audio",
+          "seedance",
+          "sketch",
+          "soul",
+          "sound",
+          "studio",
+          "supports",
+          "tasks",
+          "text-to-audio",
+          "text-to-audio/music",
+          "text/chat/tts",
+          "training",
+          "ugc",
+          "unboxing",
+          "url",
+          "video",
+          "virality",
+          "workflow"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "installer-managed"
+    },
+    "higgsfield-marketplace-cards": {
+      "triggers": {
+        "keywords": [
+          "ads",
+          "asks",
+          "backend",
+          "brand",
+          "cards",
+          "character",
+          "cli",
+          "compliance",
+          "compliant",
+          "content",
+          "context",
+          "detail",
+          "generate",
+          "generation",
+          "generic",
+          "higgsfield",
+          "higgsfield-generate",
+          "higgsfield-product-photoshoot",
+          "higgsfield-soul-id",
+          "image",
+          "images",
+          "infographics",
+          "intent",
+          "lifestyle",
+          "listing",
+          "main",
+          "marketplace",
+          "marketplace/listing",
+          "modules",
+          "owns",
+          "photography",
+          "product",
+          "prompt",
+          "references",
+          "routes",
+          "sales-ready",
+          "secondary",
+          "sets",
+          "shots",
+          "skill",
+          "soul",
+          "style",
+          "templates",
+          "through",
+          "training",
+          "ugc",
+          "user",
+          "video",
+          "visuals",
+          "without"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "installer-managed"
+    },
+    "higgsfield-product-photoshoot": {
+      "triggers": {
+        "keywords": [
+          "ad_creative_pack",
+          "ads",
+          "assembles",
+          "avatar",
+          "backend",
+          "brand",
+          "brand-quality",
+          "brand/product",
+          "branded",
+          "cards",
+          "carousel",
+          "cgi/surreal",
+          "character",
+          "closeup",
+          "closeup_product_with_person",
+          "conceptual_product",
+          "creative",
+          "enhancement",
+          "entry",
+          "final",
+          "freehand",
+          "generate",
+          "gpt",
+          "gpt_image_2",
+          "hands",
+          "hero/banner",
+          "hero_banner",
+          "higgsfield",
+          "higgsfield-generate",
+          "higgsfield-marketplace-cards",
+          "higgsfield-soul-id",
+          "holding",
+          "image",
+          "images",
+          "levitating/floating/splash",
+          "lifestyle",
+          "lifestyle_scene",
+          "listing",
+          "marketing",
+          "marketplace",
+          "meta",
+          "model",
+          "modes",
+          "moodboard_pin",
+          "never",
+          "no-product",
+          "paid-social",
+          "person",
+          "photo",
+          "photoshoot",
+          "pin",
+          "pinterest",
+          "point",
+          "product",
+          "product-photoshoot",
+          "product_shot",
+          "professional",
+          "prompt",
+          "restyle",
+          "seasonal/aesthetic",
+          "shot",
+          "social_carousel",
+          "soul",
+          "studio",
+          "text-to-image",
+          "through",
+          "training",
+          "try-on",
+          "variation",
+          "video",
+          "virtual",
+          "virtual_model_tryout",
+          "visuals",
+          "wearing"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "installer-managed"
+    },
+    "higgsfield-soul-id": {
+      "triggers": {
+        "keywords": [
+          "appearance",
+          "avatar",
+          "avatars",
+          "build",
+          "chain",
+          "character",
+          "create",
+          "digital",
+          "face",
+          "generated",
+          "generation",
+          "higgsfield",
+          "higgsfield-generate",
+          "identity",
+          "identity-faithful",
+          "image",
+          "images",
+          "learn",
+          "like",
+          "model",
+          "models",
+          "named-character",
+          "non-photo",
+          "one-shot",
+          "one-time",
+          "person",
+          "personalized",
+          "prompt",
+          "reference_id",
+          "returns",
+          "soul",
+          "soul-id",
+          "soul_cinema_studio",
+          "swaps",
+          "text2image_soul_v2",
+          "train",
+          "twin",
+          "uses",
+          "video",
+          "want"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "installer-managed"
+    },
+    "higgsfield-websites": {
+      "triggers": {
+        "keywords": [
+          "agents.md",
+          "app",
+          "asset",
+          "boards",
+          "build",
+          "build-to-boards",
+          "cards",
+          "cli",
+          "clone",
+          "cloudflare",
+          "concept",
+          "create",
+          "d1/r2/kv/do/containers",
+          "dashboard",
+          "deploy",
+          "edit",
+          "editing",
+          "everything",
+          "flow",
+          "full-stack",
+          "gates",
+          "generation",
+          "hard",
+          "higgsfield",
+          "higgsfield-generate",
+          "higgsfield-marketplace-cards",
+          "higgsfield-product-photoshoot",
+          "image-grounded",
+          "image/video/audio",
+          "intake",
+          "integration",
+          "landing",
+          "layouts",
+          "loop",
+          "map",
+          "marketplace",
+          "motion",
+          "page",
+          "per-task",
+          "phased",
+          "photos",
+          "pipeline",
+          "portfolio",
+          "preview",
+          "product",
+          "production",
+          "publish",
+          "push",
+          "quanta",
+          "react",
+          "reference",
+          "references",
+          "repo-access",
+          "requires",
+          "review",
+          "rules",
+          "saas",
+          "sdk",
+          "ship",
+          "sign-in",
+          "single",
+          "site",
+          "ssr",
+          "standard",
+          "start",
+          "system",
+          "tanstack",
+          "template",
+          "tool",
+          "type",
+          "verify/deploy/publish",
+          "web",
+          "website",
+          "websites",
+          "worker"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "installer-managed"
+    },
+    "huashu-design": {
+      "triggers": {
+        "keywords": [
+          "app",
+          "design",
+          "html",
+          "huashu",
+          "mockup",
+          "mp4/gif",
+          "ppt",
+          "web"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "vendored-design"
+    },
+    "impeccable": {
+      "triggers": {
+        "keywords": [
+          "accessibility",
+          "adapt",
+          "alignment",
+          "ambitious",
+          "animate",
+          "anti-patterns",
+          "app",
+          "architecture",
+          "audit",
+          "backend-only",
+          "become",
+          "behavior",
+          "bland",
+          "bolder",
+          "browser",
+          "cases",
+          "clarify",
+          "cognitive",
+          "color",
+          "colorize",
+          "components",
+          "copy",
+          "covers",
+          "critique",
+          "dashboards",
+          "delightful",
+          "design",
+          "designs",
+          "distill",
+          "edge",
+          "effects",
+          "elements",
+          "empty",
+          "error",
+          "extract",
+          "extraordinary",
+          "feel",
+          "fonts",
+          "forms",
+          "frontend",
+          "handles",
+          "harden",
+          "hierarchy",
+          "i18n",
+          "impeccable",
+          "improve",
+          "information",
+          "interface",
+          "iteration",
+          "landing",
+          "layout",
+          "live",
+          "load",
+          "loud",
+          "micro-interactions",
+          "motion",
+          "need",
+          "non-ui",
+          "onboarding",
+          "optimize",
+          "otherwise",
+          "pages",
+          "performance",
+          "polish",
+          "product",
+          "quieter",
+          "redesign",
+          "responsive",
+          "reusable",
+          "review",
+          "settings",
+          "shape",
+          "shells",
+          "should",
+          "spacing",
+          "states",
+          "systems",
+          "tasks",
+          "technically",
+          "theming",
+          "tokens",
+          "typography",
+          "user",
+          "visual",
+          "wants",
+          "websites"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "vendored-design"
+    },
+    "investigate": {
+      "triggers": {
+        "keywords": [
+          "cause",
+          "debugging",
+          "gstack",
+          "investigate",
+          "investigation",
+          "root",
+          "systematic"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "land-and-deploy": {
+      "triggers": {
+        "keywords": [
+          "deploy",
+          "gstack",
+          "land",
+          "workflow"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "landing-report": {
+      "triggers": {
+        "keywords": [
+          "dashboard",
+          "gstack",
+          "landing",
+          "queue",
+          "read-only",
+          "report",
+          "ship",
+          "workspace-aware"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "learn": {
+      "triggers": {
+        "keywords": [
+          "learn",
+          "learnings",
+          "manage",
+          "project"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "make-pdf": {
+      "triggers": {
+        "keywords": [
+          "file",
+          "gstack",
+          "markdown",
+          "pdf",
+          "publication-quality",
+          "turn"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "mmx-cli": {
+      "triggers": {
+        "keywords": [
+          "api",
+          "chat",
+          "cli",
+          "content",
+          "create",
+          "generate",
+          "images",
+          "manage",
+          "media",
+          "minimax",
+          "mmx",
+          "models",
+          "music",
+          "perform",
+          "platform",
+          "resources",
+          "search",
+          "speech",
+          "terminal",
+          "text",
+          "user",
+          "video",
+          "wants",
+          "web"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "installer-managed"
+    },
+    "office-hours": {
+      "triggers": {
+        "keywords": [
+          "gstack",
+          "hours",
+          "modes",
+          "office"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "open-gstack-browser": {
+      "triggers": {
+        "keywords": [
+          "ai-controlled",
+          "baked",
+          "browser",
+          "chromium",
+          "extension",
+          "gstack",
+          "launch",
+          "open",
+          "sidebar"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "pair-agent": {
+      "triggers": {
+        "keywords": [
+          "agent",
+          "browser",
+          "gstack",
+          "pair",
+          "remote"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "plan-ceo-review": {
+      "triggers": {
+        "keywords": [
+          "ceo",
+          "ceo/founder-mode",
+          "gstack",
+          "plan",
+          "review"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "plan-design-review": {
+      "triggers": {
+        "keywords": [
+          "ceo",
+          "design",
+          "designer",
+          "eng",
+          "eye",
+          "gstack",
+          "interactive",
+          "like",
+          "plan",
+          "review"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "plan-devex-review": {
+      "triggers": {
+        "keywords": [
+          "developer",
+          "devex",
+          "experience",
+          "gstack",
+          "interactive",
+          "plan",
+          "review"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "plan-eng-review": {
+      "triggers": {
+        "keywords": [
+          "eng",
+          "gstack",
+          "manager-mode",
+          "plan",
+          "review"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "plan-tune": {
+      "triggers": {
+        "keywords": [
+          "developer",
+          "gstack",
+          "observational",
+          "plan",
+          "psychographic",
+          "question",
+          "self-tuning",
+          "sensitivity",
+          "tune"
+        ],
+        "paths": [],
+        "intents": [
+          "planning"
+        ]
+      },
+      "category": "planning",
+      "surfaces": [
+        "planning"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "qa": {
+      "triggers": {
+        "keywords": [
+          "application",
+          "bugs",
+          "fix",
+          "found",
+          "gstack",
+          "systematically",
+          "test",
+          "web"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "qa-only": {
+      "triggers": {
+        "keywords": [
+          "gstack",
+          "report-only",
+          "testing"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "retro": {
+      "triggers": {
+        "keywords": [
+          "engineering",
+          "gstack",
+          "retro",
+          "retrospective",
+          "weekly"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "review": {
+      "triggers": {
+        "keywords": [
+          "gstack",
+          "pre-landing",
+          "review"
+        ],
+        "paths": [],
+        "intents": [
+          "review"
+        ]
+      },
+      "category": "review",
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "scrape": {
+      "triggers": {
+        "keywords": [
+          "data",
+          "gstack",
+          "page",
+          "pull",
+          "scrape",
+          "web"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "setup-browser-cookies": {
+      "triggers": {
+        "keywords": [
+          "browse",
+          "browser",
+          "chromium",
+          "cookies",
+          "gstack",
+          "headless",
+          "import",
+          "real",
+          "session",
+          "setup"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "setup-deploy": {
+      "triggers": {
+        "keywords": [
+          "configure",
+          "deploy",
+          "deployment",
+          "land-and-deploy",
+          "settings",
+          "setup"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "setup-gbrain": {
+      "triggers": {
+        "keywords": [
+          "agent",
+          "brain",
+          "capture",
+          "cli",
+          "coding",
+          "gbrain",
+          "gstack",
+          "initialize",
+          "install",
+          "local",
+          "mcp",
+          "per-remote",
+          "pglite",
+          "policy",
+          "register",
+          "setup",
+          "supabase",
+          "trust"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "ship": {
+      "triggers": {
+        "keywords": [
+          "base",
+          "branch",
+          "bump",
+          "changelog",
+          "commit",
+          "create",
+          "detect",
+          "diff",
+          "gstack",
+          "merge",
+          "push",
+          "review",
+          "ship",
+          "tests",
+          "update",
+          "version",
+          "workflow"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "skillify": {
+      "triggers": {
+        "keywords": [
+          "browser-skill",
+          "codify",
+          "disk",
+          "flow",
+          "gstack",
+          "permanent",
+          "recent",
+          "scrape",
+          "skillify",
+          "successful"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "sync-gbrain": {
+      "triggers": {
+        "keywords": [
+          "agent",
+          "claude.md",
+          "code",
+          "current",
+          "gbrain",
+          "gstack",
+          "gstack-gbrain-sync",
+          "guidance",
+          "orchestrator",
+          "refresh",
+          "repo",
+          "search",
+          "state",
+          "sync",
+          "wraps"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "taste-skill": {
+      "triggers": {
+        "keywords": [
+          "agent",
+          "anti-slop",
+          "applicable",
+          "audit-first",
+          "brief",
+          "check",
+          "design",
+          "direction",
+          "frontend",
+          "infers",
+          "interfaces",
+          "landing",
+          "look",
+          "pages",
+          "portfolios",
+          "pre-flight",
+          "reads",
+          "real",
+          "redesigns",
+          "right",
+          "ships",
+          "skill",
+          "strict",
+          "systems",
+          "taste",
+          "templated"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "vendored-design"
+    },
+    "ui-ux-pro-max": {
+      "triggers": {
+        "keywords": [
+          "161",
+          "accessibility",
+          "actions",
+          "admin",
+          "animation",
+          "app",
+          "bento",
+          "blog",
+          "brutalism",
+          "build",
+          "button",
+          "card",
+          "chart",
+          "check",
+          "claymorphism",
+          "code",
+          "color",
+          "component",
+          "create",
+          "dark",
+          "dashboard",
+          "design",
+          "e-commerce",
+          "elements",
+          "enhance",
+          "examples",
+          "fix",
+          "flat",
+          "flutter",
+          "font",
+          "form",
+          "glassmorphism",
+          "gradient",
+          "grid",
+          "guidelines",
+          "html/css",
+          "implement",
+          "improve",
+          "includes",
+          "integrations",
+          "intelligence",
+          "interaction",
+          "landing",
+          "layout",
+          "max",
+          "mcp",
+          "minimalism",
+          "mobile",
+          "modal",
+          "mode",
+          "native",
+          "navbar",
+          "neumorphism",
+          "next.js",
+          "optimize",
+          "page",
+          "pairing",
+          "pairings",
+          "palettes",
+          "panel",
+          "plan",
+          "portfolio",
+          "pro",
+          "product",
+          "projects",
+          "react",
+          "refactor",
+          "responsive",
+          "review",
+          "saas",
+          "search",
+          "shadcn/ui",
+          "shadow",
+          "sidebar",
+          "skeuomorphism",
+          "spacing",
+          "stacks",
+          "states",
+          "styles",
+          "svelte",
+          "swiftui",
+          "systems",
+          "table",
+          "tailwind",
+          "topics",
+          "types",
+          "typography",
+          "ui/ux",
+          "vue",
+          "web",
+          "website"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "vendored-design"
+    },
+    "unfreeze": {
+      "triggers": {
+        "keywords": [
+          "again",
+          "allowing",
+          "boundary",
+          "clear",
+          "directories",
+          "edits",
+          "freeze",
+          "gstack",
+          "unfreeze"
+        ],
+        "paths": [],
+        "intents": [
+          "general"
+        ]
+      },
+      "category": "general",
+      "surfaces": [
+        "general"
+      ],
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "family": "gstack-clone"
+    },
+    "vite-react-best-practices": {
+      "triggers": {
+        "keywords": [
+          "applications",
+          "architecture",
+          "best",
+          "build",
+          "building",
+          "built",
+          "comprehensive",
+          "configurations",
+          "core",
+          "covers",
+          "deployment",
+          "guidelines",
+          "hosting",
+          "patterns",
+          "performance",
+          "practices",
+          "react",
+          "refactoring",
+          "requirements",
+          "reviewing",
+          "skill",
+          "spa",
+          "static",
+          "vite",
+          "vite-specific"
+        ],
+        "paths": [],
+        "intents": [
+          "frontend"
+        ]
+      },
+      "category": "frontend",
+      "surfaces": [
+        "frontend"
+      ],
+      "platforms": [
+        "linux",
+        "darwin",
+        "windows"
+      ],
+      "family": "embedded-git"
+    }
+  }
 }

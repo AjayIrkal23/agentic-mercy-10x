@@ -1,9 +1,31 @@
 ---
 name: iterative-retrieval
 description: Pattern for progressively refining context retrieval to solve the subagent context problem
+schema: 1
+category: intel
+surfaces:
+- codebase
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1516
+triggers:
+  keywords:
+  - context
+  - iterative
+  - pattern
+  - problem
+  - progressively
+  - refining
+  - retrieval
+  - solve
+  - subagent
+  paths: []
+  intents:
+  - intel
 origin: ECC
 ---
-
 # Iterative Retrieval Pattern
 
 Solves the "context problem" in multi-agent workflows where subagents don't know what context they need until they start working.

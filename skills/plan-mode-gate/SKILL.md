@@ -1,13 +1,64 @@
 ---
 name: plan-mode-gate
-description: Mandatory pre-flight gate for ALL planning and implementation work. Enforces superpowers discipline, jcodemunch codebase analysis, sequential thinking decomposition, and Context7 documentation lookup before any code changes. Use before EnterPlanMode, before writing any plan, and before direct implementation. This skill governs both Plan Mode and Code Mode.
-version: "1.0.0"
+description: Mandatory pre-flight gate for ALL planning and implementation work. Enforces superpowers
+  discipline, jcodemunch codebase analysis, sequential thinking decomposition, and Context7 documentation
+  lookup before any code changes. Use before EnterPlanMode, before writing any plan, and before direct
+  implementation. This skill governs both Plan Mode and Code Mode.
+version: 1.0.0
+schema: 1
+category: planning
+surfaces:
+- planning
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2898
+triggers:
+  keywords:
+  - analysis
+  - both
+  - changes
+  - code
+  - codebase
+  - context7
+  - decomposition
+  - direct
+  - discipline
+  - documentation
+  - enforces
+  - enterplanmode
+  - gate
+  - governs
+  - implementation
+  - jcodemunch
+  - lookup
+  - mandatory
+  - mode
+  - plan
+  - planning
+  - pre-flight
+  - sequential
+  - skill
+  - superpowers
+  - thinking
+  - work
+  - writing
+  paths: []
+  intents:
+  - planning
 license: MIT
 metadata:
   author: rohithambar
-  tags: [planning, implementation, gate, superpowers, jcodemunch, context7, sequential-thinking]
+  tags:
+  - planning
+  - implementation
+  - gate
+  - superpowers
+  - jcodemunch
+  - context7
+  - sequential-thinking
 ---
-
 # Plan Mode & Code Mode Gate
 
 <RIGID-SKILL>

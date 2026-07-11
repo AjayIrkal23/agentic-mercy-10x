@@ -1,9 +1,57 @@
 ---
 name: frontend-structure-standards
-description: Use when frontend work needs decisions about folder layout, module boundaries,
-  file decomposition, or where app-owned frontend types should live. Organize maintainable
-  frontend modules Use to plan frontend component, hook, and module boundaries.
+description: Use when frontend work needs decisions about folder layout, module boundaries, file decomposition,
+  or where app-owned frontend types should live. Organize maintainable frontend modules Use to plan frontend
+  component, hook, and module boundaries.
 disable-model-invocation: false
+schema: 1
+category: backend
+surfaces:
+- backend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2585
+triggers:
+  keywords:
+  - app-owned
+  - boundaries
+  - component
+  - decisions
+  - decomposition
+  - file
+  - folder
+  - frontend
+  - hook
+  - layout
+  - live
+  - maintainable
+  - module
+  - modules
+  - needs
+  - organize
+  - plan
+  - should
+  - standards
+  - structure
+  - types
+  - work
+  paths:
+  - /router/
+  - /routes/
+  - /store/
+  - reducer.
+  - redux
+  - route.ts
+  - route.tsx
+  - routes.ts
+  - selector.
+  - slice.
+  - src/schemas/
+  - src/types/
+  intents:
+  - backend
 ---
 FRONTEND STRUCTURE STANDARDS
 

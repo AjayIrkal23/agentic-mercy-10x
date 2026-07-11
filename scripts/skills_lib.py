@@ -229,6 +229,52 @@ def estimate_token_cost(skill_dir: Path) -> int:
     return max(1, round(len(text) / 4))
 
 
+def infer_category(name: str, body: str) -> str:
+    n = (body or "").lower()
+    nm = name.lower()
+    if nm.startswith("backend-") or "go_udp" in n or "fastify" in n:
+        return "backend"
+    if nm.startswith("frontend-") or "tailwind" in nm or nm.startswith("react") \
+            or "react" in nm:
+        return "frontend"
+    if "debug" in nm or "diagnos" in nm:
+        return "debug"
+    if "review" in nm or "audit" in nm or "forensic" in nm:
+        return "review"
+    if "test" in nm or nm == "tdd" or "tdd" in nm:
+        return "testing"
+    if "security" in nm or "owasp" in nm or "hardening" in nm:
+        return "security"
+    if "doc" in nm or "adr" in nm:
+        return "docs"
+    if "plan" in nm or "spec" in nm or "architect" in nm or "scaffold" in nm:
+        return "planning"
+    if "intel" in nm or "graph" in nm or "structure-map" in nm or "retrieval" in nm:
+        return "intel"
+    return "general"
+
+
+_CATEGORY_SURFACES = {
+    "backend": ["backend"], "frontend": ["frontend"], "debug": ["backend", "frontend"],
+    "review": ["backend", "frontend"], "testing": ["backend", "frontend"],
+    "security": ["backend", "frontend"], "docs": ["docs"], "planning": ["planning"],
+    "intel": ["codebase"], "general": ["general"],
+}
+
+
+def infer_surfaces(category: str) -> list[str]:
+    return _CATEGORY_SURFACES.get(category, ["general"])
+
+
+_POSIX_ONLY = re.compile(r"(?<![\w-])(\.sh\b|\bcaffeinate\b|\bsystemctl\b|\bopen\s+-a\b|/usr/bin/)")
+
+
+def infer_platforms(body: str) -> list[str]:
+    if _POSIX_ONLY.search(body or ""):
+        return ["linux", "darwin"]
+    return ["linux", "darwin", "windows"]
+
+
 def clone_member_description(name: str) -> str:
     """Description string of a gstack clone member (skills/gstack/<name>)."""
     fm, _, ok = read_frontmatter(SKILLS_DIR / "gstack" / name / "SKILL.md")

@@ -1,8 +1,48 @@
 ---
 name: debugging-and-error-recovery
-description: Guides systematic root-cause debugging. Use when tests fail, builds break, behavior doesn't match expectations, or you encounter any unexpected error. Use when you need a systematic approach to finding and fixing the root cause rather than guessing.
+description: Guides systematic root-cause debugging. Use when tests fail, builds break, behavior doesn't
+  match expectations, or you encounter any unexpected error. Use when you need a systematic approach to
+  finding and fixing the root cause rather than guessing.
+schema: 1
+category: debug
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2483
+triggers:
+  keywords:
+  - approach
+  - behavior
+  - break
+  - builds
+  - cause
+  - debugging
+  - doesn
+  - encounter
+  - error
+  - expectations
+  - fail
+  - finding
+  - fixing
+  - guessing
+  - guides
+  - match
+  - need
+  - rather
+  - recovery
+  - root
+  - root-cause
+  - systematic
+  - tests
+  - unexpected
+  paths: []
+  intents:
+  - debug
 ---
-
 # Debugging and Error Recovery
 
 ## Overview

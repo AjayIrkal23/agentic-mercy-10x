@@ -1,9 +1,45 @@
 ---
 name: codebase-start-point-guide
-description: Deterministic startup flow for engineers and agents to read the right docs,
-  confirm contracts, scope impacted layers, and create an execution plan before making
-  changes in any repository.
+description: Deterministic startup flow for engineers and agents to read the right docs, confirm contracts,
+  scope impacted layers, and create an execution plan before making changes in any repository.
 disable-model-invocation: false
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1856
+triggers:
+  keywords:
+  - agents
+  - changes
+  - codebase
+  - confirm
+  - contracts
+  - create
+  - deterministic
+  - docs
+  - engineers
+  - execution
+  - flow
+  - guide
+  - impacted
+  - layers
+  - making
+  - plan
+  - point
+  - read
+  - repository
+  - right
+  - scope
+  - start
+  - startup
+  paths: []
+  intents:
+  - general
 ---
 # Start point guide (repository-agnostic)
 

@@ -1,8 +1,56 @@
 ---
 name: forensic-hotspot-finder
-description: Use when planning refactoring priorities, investigating recurring bugs, identifying which files cause the most bugs, or determining problem areas to fix - identifies high-risk files by combining git change frequency with code complexity using research-backed formula (4-9x defect rates)
+description: Use when planning refactoring priorities, investigating recurring bugs, identifying which
+  files cause the most bugs, or determining problem areas to fix - identifies high-risk files by combining
+  git change frequency with code complexity using research-backed formula (4-9x defect rates)
+schema: 1
+category: review
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2546
+triggers:
+  keywords:
+  - 4-9x
+  - areas
+  - bugs
+  - cause
+  - change
+  - code
+  - combining
+  - complexity
+  - defect
+  - determining
+  - files
+  - finder
+  - fix
+  - forensic
+  - formula
+  - frequency
+  - git
+  - high-risk
+  - hotspot
+  - identifies
+  - identifying
+  - investigating
+  - planning
+  - priorities
+  - problem
+  - rates
+  - recurring
+  - refactoring
+  - research-backed
+  paths:
+  - cmd/
+  - internal/
+  - server/
+  intents:
+  - review
 ---
-
 # Forensic Hotspot Finder
 
 ## 🎯 When You Use This Skill

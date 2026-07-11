@@ -1,7 +1,53 @@
 ---
 name: backend-code-review
-description: Use when the user asks for a backend/service/API/database/migrations code review, or to review local/staged server changes or a remote PR with server-side impact. Focuses on correctness, maintainability, security, and tests. Adapt preflight commands to the repo (Go make lint / go test, npm scripts, etc.).
+description: Use when the user asks for a backend/service/API/database/migrations code review, or to review
+  local/staged server changes or a remote PR with server-side impact. Focuses on correctness, maintainability,
+  security, and tests. Adapt preflight commands to the repo (Go make lint / go test, npm scripts, etc.).
 disable-model-invocation: false
+schema: 1
+category: backend
+surfaces:
+- backend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 894
+triggers:
+  keywords:
+  - adapt
+  - asks
+  - backend
+  - backend/service/api/database/migrations
+  - changes
+  - code
+  - commands
+  - correctness
+  - etc
+  - focuses
+  - impact
+  - lint
+  - local/staged
+  - maintainability
+  - npm
+  - preflight
+  - remote
+  - repo
+  - review
+  - scripts
+  - security
+  - server
+  - server-side
+  - test
+  - tests
+  - user
+  paths:
+  - controller
+  - internal/
+  - server/
+  - service
+  intents:
+  - backend
 ---
 ## Use When
 

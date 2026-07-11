@@ -1,9 +1,89 @@
 ---
 name: jcodemunch-token-saver
-description: MANDATORY. Use the jcodemunch MCP server (jCodeMunch) for ALL code retrieval, symbol lookup, call graphs, dead-code analysis, and AST search instead of reading whole files with Read/grep/find. This dramatically reduces token usage (~95% on retrieval, ~45% on wire size). Trigger ANY TIME you need to (1) locate a function/class/method, (2) read the body of a known symbol, (3) trace callers or callees, (4) search by AST pattern, (5) audit dead code or blast radius, (6) understand cross-file structure. Skip ONLY for trivial single-file reads where you already know the exact path AND the file is small, or for non-code text files (markdown, JSON config, env files).
+description: MANDATORY. Use the jcodemunch MCP server (jCodeMunch) for ALL code retrieval, symbol lookup,
+  call graphs, dead-code analysis, and AST search instead of reading whole files with Read/grep/find.
+  This dramatically reduces token usage (~95% on retrieval, ~45% on wire size). Trigger ANY TIME you need
+  to (1) locate a function/class/method, (2) read the body of a known symbol, (3) trace callers or callees,
+  (4) search by AST pattern, (5) audit dead code or blast radius, (6) understand cross-file structure.
+  Skip ONLY for trivial single-file reads where you already know the exact path AND the file is small,
+  or for non-code text files (markdown, JSON config, env files).
 disable-model-invocation: false
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1122
+triggers:
+  keywords:
+  - already
+  - analysis
+  - ast
+  - audit
+  - blast
+  - body
+  - call
+  - callees
+  - callers
+  - code
+  - config
+  - cross-file
+  - dead
+  - dead-code
+  - dramatically
+  - env
+  - exact
+  - file
+  - files
+  - function/class/method
+  - graphs
+  - instead
+  - jcodemunch
+  - json
+  - know
+  - known
+  - locate
+  - lookup
+  - mandatory
+  - markdown
+  - mcp
+  - need
+  - non-code
+  - path
+  - pattern
+  - radius
+  - read
+  - read/grep/find
+  - reading
+  - reads
+  - reduces
+  - retrieval
+  - saver
+  - search
+  - server
+  - single-file
+  - size
+  - skip
+  - small
+  - structure
+  - symbol
+  - text
+  - time
+  - token
+  - trace
+  - trigger
+  - trivial
+  - understand
+  - usage
+  - whole
+  - wire
+  paths: []
+  intents:
+  - general
 ---
-
 # jCodeMunch Token Saver — Mandatory Code Retrieval Standard
 
 ## Why this exists

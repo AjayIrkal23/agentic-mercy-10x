@@ -1,10 +1,40 @@
 ---
 name: scaffold-standards
-description: Use when scaffolding a new backend or full-stack domain, route/controller/service/schema
-  skeleton, or standard list and CRUD feature structure. Define the standard domain
-  and feature skeleton Use to define the standard backend or full-stack route, controller,
-  service, schema, and feature skeleton.
+description: Use when scaffolding a new backend or full-stack domain, a route/controller/service/schema
+  skeleton, or a standard list and CRUD feature structure.
 disable-model-invocation: false
+schema: 1
+category: backend
+surfaces:
+- backend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1908
+triggers:
+  keywords:
+  - backend
+  - crud
+  - domain
+  - feature
+  - full-stack
+  - list
+  - route/controller/service/schema
+  - scaffold
+  - scaffolding
+  - skeleton
+  - standard
+  - standards
+  - structure
+  paths:
+  - /router/
+  - /routes/
+  - route.ts
+  - route.tsx
+  - routes.ts
+  intents:
+  - backend
 ---
 # Scaffold Standards
 

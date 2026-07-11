@@ -1,9 +1,58 @@
 ---
 name: tech-debt-audit
-description: Thorough, user-invoked tech debt and architecture audit of the current codebase. Produces TECH_DEBT_AUDIT.md with file-cited findings, severity, effort estimates, and a required "looks bad but is actually fine" section. Use when the user asks for a debt audit, codebase health check, architecture review, or code quality assessment of an entire repo. Does not auto-invoke.
+description: Thorough, user-invoked tech debt and architecture audit of the current codebase. Produces
+  TECH_DEBT_AUDIT.md with file-cited findings, severity, effort estimates, and a required "looks bad but
+  is actually fine" section. Use when the user asks for a debt audit, codebase health check, architecture
+  review, or code quality assessment of an entire repo. Does not auto-invoke.
 disable-model-invocation: false
+schema: 1
+category: review
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 3091
+triggers:
+  keywords:
+  - actually
+  - architecture
+  - asks
+  - assessment
+  - audit
+  - auto-invoke
+  - bad
+  - check
+  - code
+  - codebase
+  - current
+  - debt
+  - effort
+  - entire
+  - estimates
+  - file-cited
+  - findings
+  - fine
+  - health
+  - looks
+  - produces
+  - quality
+  - repo
+  - required
+  - review
+  - section
+  - severity
+  - tech
+  - tech_debt_audit.md
+  - thorough
+  - user
+  - user-invoked
+  paths: []
+  intents:
+  - review
 ---
-
 # Tech Debt Audit
 
 A Claude Code skill that conducts a deliberate, opinionated audit of an entire codebase and produces `TECH_DEBT_AUDIT.md` with cited findings.

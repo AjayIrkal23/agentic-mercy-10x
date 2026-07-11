@@ -1,8 +1,42 @@
 ---
 name: code-simplification
-description: Simplifies code for clarity. Use when refactoring code for clarity without changing behavior. Use when code works but is harder to read, maintain, or extend than it should be. Use when reviewing code that has accumulated unnecessary complexity.
+description: Simplifies code for clarity. Use when refactoring code for clarity without changing behavior.
+  Use when code works but is harder to read, maintain, or extend than it should be. Use when reviewing
+  code that has accumulated unnecessary complexity.
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 3301
+triggers:
+  keywords:
+  - accumulated
+  - behavior
+  - changing
+  - clarity
+  - code
+  - complexity
+  - extend
+  - harder
+  - has
+  - maintain
+  - read
+  - refactoring
+  - reviewing
+  - should
+  - simplification
+  - simplifies
+  - unnecessary
+  - without
+  - works
+  paths: []
+  intents:
+  - general
 ---
-
 # Code Simplification
 
 > Inspired by the [Claude Code Simplifier plugin](https://github.com/anthropics/claude-plugins-official/blob/main/plugins/code-simplifier/agents/code-simplifier.md). Adapted here as a model-agnostic, process-driven skill for any AI coding agent.

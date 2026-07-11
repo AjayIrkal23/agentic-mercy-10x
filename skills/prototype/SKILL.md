@@ -1,8 +1,60 @@
 ---
 name: prototype
-description: Build a throwaway prototype to flesh out a design before committing to it. Routes between two branches — a runnable terminal app for state/business-logic questions, or several radically different UI variations toggleable from one route. Use when the user wants to prototype, sanity-check a data model or state machine, mock up a UI, explore design options, or says "prototype this", "let me play with it", "try a few designs".
+description: Build a throwaway prototype to flesh out a design before committing to it. Routes between
+  two branches — a runnable terminal app for state/business-logic questions, or several radically different
+  UI variations toggleable from one route. Use when the user wants to prototype, sanity-check a data model
+  or state machine, mock up a UI, explore design options, or says "prototype this", "let me play with
+  it", "try a few designs".
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 691
+triggers:
+  keywords:
+  - app
+  - branches
+  - build
+  - committing
+  - data
+  - design
+  - designs
+  - different
+  - explore
+  - few
+  - flesh
+  - let
+  - machine
+  - mock
+  - model
+  - options
+  - play
+  - prototype
+  - questions
+  - radically
+  - route
+  - routes
+  - runnable
+  - sanity-check
+  - says
+  - several
+  - state
+  - state/business-logic
+  - terminal
+  - throwaway
+  - toggleable
+  - try
+  - user
+  - variations
+  - wants
+  paths: []
+  intents:
+  - general
 ---
-
 # Prototype
 
 A prototype is **throwaway code that answers a question**. The question decides the shape.

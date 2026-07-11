@@ -1,8 +1,46 @@
 ---
 name: frontend-code-review
-description: "Trigger when the user requests a review of frontend files (e.g., `.tsx`, `.ts`, `.js`). Support pending-change reviews and focused file reviews while applying the checklist rules in references/."
+description: Trigger when the user requests a review of frontend files (e.g., `.tsx`, `.ts`, `.js`). Support
+  pending-change reviews and focused file reviews while applying the checklist rules in references/.
+schema: 1
+category: frontend
+surfaces:
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 649
+triggers:
+  keywords:
+  - applying
+  - checklist
+  - code
+  - e.g
+  - file
+  - files
+  - focused
+  - frontend
+  - pending-change
+  - references
+  - requests
+  - review
+  - reviews
+  - rules
+  - support
+  - trigger
+  - tsx
+  - user
+  - while
+  paths:
+  - .jsx
+  - .tsx
+  - /components/
+  - /pages/
+  - /views/
+  intents:
+  - frontend
 ---
-
 # Frontend code review
 
 ## Intent

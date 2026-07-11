@@ -1,8 +1,40 @@
 ---
 name: shipping-and-launch
-description: Prepares production launches. Use when preparing to deploy to production. Use when you need a pre-launch checklist, when setting up monitoring, when planning a staged rollout, or when you need a rollback strategy.
+description: Prepares production launches. Use when preparing to deploy to production. Use when you need
+  a pre-launch checklist, when setting up monitoring, when planning a staged rollout, or when you need
+  a rollback strategy.
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2366
+triggers:
+  keywords:
+  - checklist
+  - deploy
+  - launch
+  - launches
+  - monitoring
+  - need
+  - planning
+  - pre-launch
+  - prepares
+  - preparing
+  - production
+  - rollback
+  - rollout
+  - setting
+  - shipping
+  - staged
+  - strategy
+  paths: []
+  intents:
+  - general
 ---
-
 # Shipping and Launch
 
 ## Overview

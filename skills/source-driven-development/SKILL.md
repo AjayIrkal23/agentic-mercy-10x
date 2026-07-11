@@ -1,9 +1,45 @@
 ---
 name: source-driven-development
-description: Grounds every implementation decision in official documentation. Use when you want authoritative, source-cited code free from outdated patterns. Use when building with any framework or library where correctness matters.
+description: Grounds every implementation decision in official documentation. Use when you want authoritative,
+  source-cited code free from outdated patterns. Use when building with any framework or library where
+  correctness matters.
 disable-model-invocation: false
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1966
+triggers:
+  keywords:
+  - authoritative
+  - building
+  - code
+  - correctness
+  - decision
+  - development
+  - documentation
+  - driven
+  - every
+  - framework
+  - free
+  - grounds
+  - implementation
+  - library
+  - matters
+  - official
+  - outdated
+  - patterns
+  - source
+  - source-cited
+  - want
+  paths: []
+  intents:
+  - general
 ---
-
 # Source-Driven Development
 
 ## Overview

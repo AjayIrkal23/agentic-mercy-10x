@@ -1,8 +1,43 @@
 ---
 name: spec-driven-development
-description: Creates specs before coding. Use when starting a new project, feature, or significant change and no specification exists yet. Use when requirements are unclear, ambiguous, or only exist as a vague idea.
+description: Creates specs before coding. Use when starting a new project, feature, or significant change
+  and no specification exists yet. Use when requirements are unclear, ambiguous, or only exist as a vague
+  idea.
+schema: 1
+category: planning
+surfaces:
+- planning
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1916
+triggers:
+  keywords:
+  - ambiguous
+  - change
+  - coding
+  - creates
+  - development
+  - driven
+  - exist
+  - exists
+  - feature
+  - idea
+  - project
+  - requirements
+  - significant
+  - spec
+  - specification
+  - specs
+  - starting
+  - unclear
+  - vague
+  - yet
+  paths: []
+  intents:
+  - planning
 ---
-
 # Spec-Driven Development
 
 ## Overview

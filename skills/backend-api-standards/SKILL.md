@@ -1,12 +1,40 @@
 ---
 name: backend-api-standards
-description: Use when a backend task needs strict list or search endpoint rules for
-  filtering, sorting, pagination, stable response shapes, query validation, or older
-  prompts explicitly call for backend API standards. Backend Core Compliance Set member
-  for list and search endpoint query rules As part of the Backend Core Compliance
-  Set for backend/server work, especially list or search endpoint query semantics,
-  sort and filter whitelists, and pagination rules.
+description: Use when a backend task needs strict list or search endpoint rules for filtering, sorting,
+  pagination, stable response shapes, or query validation.
 disable-model-invocation: false
+schema: 1
+category: backend
+surfaces:
+- backend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 962
+triggers:
+  keywords:
+  - api
+  - backend
+  - endpoint
+  - filtering
+  - list
+  - needs
+  - pagination
+  - query
+  - response
+  - rules
+  - search
+  - shapes
+  - sorting
+  - stable
+  - standards
+  - strict
+  - task
+  - validation
+  paths: []
+  intents:
+  - backend
 ---
 # Backend API Standards
 

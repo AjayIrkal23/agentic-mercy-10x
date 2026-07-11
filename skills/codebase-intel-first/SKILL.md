@@ -1,9 +1,96 @@
 ---
 name: codebase-intel-first
-description: MANDATORY orchestration step for ANY task that touches a codebase — planning, auditing, code review, implementing, refactoring, debugging, or "help me understand X". Run the jcodemunch symbol index + graphify dependency graph FIRST to build a structural mental model, BEFORE reading files, grepping, or spawning Explore agents. Resolves the precedence between lean-ctx (ctx_read/ctx_search, which owns file I/O) and code-intelligence retrieval (jcodemunch/graphify, which own discovery/understanding). Trigger at the START of every plan, audit, or coding task on easy and complex work alike — the graph/index answer structural questions in one call instead of dozens of round-trips and never miss cross-module edges. Use together with jcodemunch-token-saver and graphify.
+description: MANDATORY orchestration step for ANY task that touches a codebase — planning, auditing, code
+  review, implementing, refactoring, debugging, or "help me understand X". Run the jcodemunch symbol index
+  + graphify dependency graph FIRST to build a structural mental model, BEFORE reading files, grepping,
+  or spawning Explore agents. Resolves the precedence between lean-ctx (ctx_read/ctx_search, which owns
+  file I/O) and code-intelligence retrieval (jcodemunch/graphify, which own discovery/understanding).
+  Trigger at the START of every plan, audit, or coding task on easy and complex work alike — the graph/index
+  answer structural questions in one call instead of dozens of round-trips and never miss cross-module
+  edges. Use together with jcodemunch-token-saver and graphify.
 disable-model-invocation: false
+schema: 1
+category: intel
+surfaces:
+- codebase
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 935
+triggers:
+  keywords:
+  - agents
+  - alike
+  - answer
+  - audit
+  - auditing
+  - build
+  - call
+  - code
+  - code-intelligence
+  - codebase
+  - coding
+  - complex
+  - cross-module
+  - ctx_read/ctx_search
+  - debugging
+  - dependency
+  - discovery/understanding
+  - dozens
+  - easy
+  - edges
+  - every
+  - explore
+  - file
+  - files
+  - first
+  - graph
+  - graph/index
+  - graphify
+  - grepping
+  - help
+  - i/o
+  - implementing
+  - index
+  - instead
+  - intel
+  - jcodemunch
+  - jcodemunch-token-saver
+  - jcodemunch/graphify
+  - lean-ctx
+  - mandatory
+  - mental
+  - miss
+  - model
+  - never
+  - orchestration
+  - owns
+  - plan
+  - planning
+  - precedence
+  - questions
+  - reading
+  - refactoring
+  - resolves
+  - retrieval
+  - review
+  - round-trips
+  - spawning
+  - start
+  - step
+  - structural
+  - symbol
+  - task
+  - together
+  - touches
+  - trigger
+  - understand
+  - work
+  paths: []
+  intents:
+  - intel
 ---
-
 # Codebase Intel First
 
 The orchestration layer over `jcodemunch-token-saver` (symbol index) and

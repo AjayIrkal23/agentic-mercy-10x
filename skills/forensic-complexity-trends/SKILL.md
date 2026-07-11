@@ -1,9 +1,53 @@
 ---
 name: forensic-complexity-trends
-description: Use when monitoring code quality over time, measuring refactoring impact, tracking if complexity is improving or worsening, or validating technical debt work - tracks complexity metrics across git history identifying improving, stable, or deteriorating files
+description: Use when monitoring code quality over time, measuring refactoring impact, tracking if complexity
+  is improving or worsening, or validating technical debt work - tracks complexity metrics across git
+  history identifying improving, stable, or deteriorating files
 disable-model-invocation: false
+schema: 1
+category: review
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 4326
+triggers:
+  keywords:
+  - code
+  - complexity
+  - debt
+  - deteriorating
+  - files
+  - forensic
+  - git
+  - history
+  - identifying
+  - impact
+  - improving
+  - measuring
+  - metrics
+  - monitoring
+  - quality
+  - refactoring
+  - stable
+  - technical
+  - time
+  - tracking
+  - tracks
+  - trends
+  - validating
+  - work
+  - worsening
+  paths:
+  - cmd/
+  - internal/
+  - server/
+  intents:
+  - review
 ---
-
 # Forensic Complexity Trends Analysis
 
 ## 🎯 When You Use This Skill

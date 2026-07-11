@@ -1,9 +1,46 @@
 ---
 name: workflow-orchestrator
-description: Use when work spans multiple phases, domains, or specialist roles and
-  needs explicit sequencing, ownership, and quality gates. Route complex work across
-  execution modes Use to break this work into Architect, Code, and Debug phases.
+description: Use when work spans multiple phases, domains, or specialist roles and needs explicit sequencing,
+  ownership, and quality gates. Route complex work across execution modes Use to break this work into
+  Architect, Code, and Debug phases.
 disable-model-invocation: false
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 783
+triggers:
+  keywords:
+  - architect
+  - break
+  - code
+  - complex
+  - debug
+  - domains
+  - execution
+  - explicit
+  - gates
+  - modes
+  - multiple
+  - needs
+  - orchestrator
+  - ownership
+  - phases
+  - quality
+  - roles
+  - route
+  - sequencing
+  - spans
+  - specialist
+  - work
+  - workflow
+  paths: []
+  intents:
+  - general
 ---
 # Workflow Orchestrator
 

@@ -1,9 +1,58 @@
 ---
 name: doubt-driven-development
-description: Subjects every non-trivial decision to a fresh-context adversarial review before it stands. Use when correctness matters more than speed, when working in unfamiliar code, when stakes are high (production, security-sensitive logic, irreversible operations), or any time a confident output would be cheaper to verify now than to debug later.
+description: Subjects every non-trivial decision to a fresh-context adversarial review before it stands.
+  Use when correctness matters more than speed, when working in unfamiliar code, when stakes are high
+  (production, security-sensitive logic, irreversible operations), or any time a confident output would
+  be cheaper to verify now than to debug later.
 disable-model-invocation: false
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 4001
+triggers:
+  keywords:
+  - adversarial
+  - cheaper
+  - code
+  - confident
+  - correctness
+  - debug
+  - decision
+  - development
+  - doubt
+  - driven
+  - every
+  - fresh-context
+  - high
+  - irreversible
+  - later
+  - logic
+  - matters
+  - non-trivial
+  - now
+  - operations
+  - output
+  - production
+  - review
+  - security-sensitive
+  - speed
+  - stakes
+  - stands
+  - subjects
+  - time
+  - unfamiliar
+  - verify
+  - working
+  - would
+  paths: []
+  intents:
+  - general
 ---
-
 # Doubt-Driven Development
 
 ## Overview

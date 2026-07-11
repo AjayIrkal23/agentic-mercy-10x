@@ -1,8 +1,42 @@
 ---
 name: performance-optimization
-description: Optimizes application performance. Use when performance requirements exist, when you suspect performance regressions, or when Core Web Vitals or load times need improvement. Use when profiling reveals bottlenecks that need fixing.
+description: Optimizes application performance. Use when performance requirements exist, when you suspect
+  performance regressions, or when Core Web Vitals or load times need improvement. Use when profiling
+  reveals bottlenecks that need fixing.
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2783
+triggers:
+  keywords:
+  - application
+  - bottlenecks
+  - core
+  - exist
+  - fixing
+  - improvement
+  - load
+  - need
+  - optimization
+  - optimizes
+  - performance
+  - profiling
+  - regressions
+  - requirements
+  - reveals
+  - suspect
+  - times
+  - vitals
+  - web
+  paths: []
+  intents:
+  - general
 ---
-
 # Performance Optimization
 
 ## Overview

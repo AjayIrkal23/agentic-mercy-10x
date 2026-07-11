@@ -1,8 +1,60 @@
 ---
 name: dox-doc-tree
-description: MANDATORY before code work in any git repo. Establishes and maintains the dox CLAUDE.md documentation tree — read root→target before editing, follow local rules, update the local CLAUDE.md after edits. Use when a repo's dox tree is missing or incomplete, when scaffolding project docs, when SessionStart reports a missing/stubbed dox root, or before editing code in an undocumented directory. Code writes are hard-gated until a root CLAUDE.md exists.
+description: MANDATORY before code work in any git repo. Establishes and maintains the dox CLAUDE.md documentation
+  tree — read root→target before editing, follow local rules, update the local CLAUDE.md after edits.
+  Use when a repo's dox tree is missing or incomplete, when scaffolding project docs, when SessionStart
+  reports a missing/stubbed dox root, or before editing code in an undocumented directory. Code writes
+  are hard-gated until a root CLAUDE.md exists.
+schema: 1
+category: docs
+surfaces:
+- docs
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2209
+triggers:
+  keywords:
+  - claude.md
+  - code
+  - directory
+  - doc
+  - docs
+  - documentation
+  - dox
+  - editing
+  - edits
+  - establishes
+  - exists
+  - follow
+  - git
+  - hard-gated
+  - incomplete
+  - local
+  - maintains
+  - mandatory
+  - missing
+  - missing/stubbed
+  - project
+  - read
+  - repo
+  - reports
+  - root
+  - rules
+  - scaffolding
+  - sessionstart
+  - target
+  - tree
+  - undocumented
+  - until
+  - update
+  - work
+  - writes
+  paths: []
+  intents:
+  - docs
 ---
-
 # dox — the CLAUDE.md documentation tree
 
 > Adapted from [agent0ai/dox](https://github.com/agent0ai/dox). dox ships `AGENTS.md`;

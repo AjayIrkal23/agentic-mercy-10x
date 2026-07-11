@@ -1,10 +1,53 @@
 ---
 name: frontend-response-handling
-description: Use when frontend API work needs success parsing, normalized error handling,
-  or backend-driven list and query behavior. Parse frontend API responses and normalize
-  errors Use to handle frontend API parsing, normalized errors, and backend-driven
-  list/query flows.
+description: Use when frontend API work needs success parsing, normalized error handling, or backend-driven
+  list and query behavior. Parse frontend API responses and normalize errors Use to handle frontend API
+  parsing, normalized errors, and backend-driven list/query flows.
 disable-model-invocation: false
+schema: 1
+category: frontend
+surfaces:
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 792
+triggers:
+  keywords:
+  - api
+  - backend-driven
+  - behavior
+  - error
+  - errors
+  - flows
+  - frontend
+  - handle
+  - handling
+  - list
+  - list/query
+  - needs
+  - normalize
+  - normalized
+  - parse
+  - parsing
+  - query
+  - response
+  - responses
+  - success
+  - work
+  paths:
+  - /api-client
+  - /api/
+  - /auth/
+  - /guard/
+  - /login/
+  - api.js
+  - api.ts
+  - protected
+  - session
+  intents:
+  - frontend
 ---
 # Frontend Response Handling
 

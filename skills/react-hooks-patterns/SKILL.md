@@ -1,9 +1,51 @@
 ---
 name: react-hooks-patterns
-description: Use when implementing or reviewing React component state, effects, refs,
-  reducers, memoization, or custom hook extraction. Choose safe React state and effect
-  patterns Use to review hook usage in a React component.
+description: Use when implementing or reviewing React component state, effects, refs, reducers, memoization,
+  or custom hook extraction.
 disable-model-invocation: false
+schema: 1
+category: frontend
+surfaces:
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 460
+triggers:
+  keywords:
+  - component
+  - custom
+  - effects
+  - extraction
+  - hook
+  - hooks
+  - implementing
+  - memoization
+  - patterns
+  - react
+  - reducers
+  - refs
+  - reviewing
+  - state
+  paths:
+  - .hook.
+  - .jsx
+  - .tsx
+  - /components/
+  - /hooks/use
+  - /pages/
+  - /src/hooks/
+  - /store/
+  - /views/
+  - reducer.
+  - redux
+  - selector.
+  - slice.
+  - use-
+  - useHook
+  intents:
+  - frontend
 ---
 # React Hooks Patterns
 

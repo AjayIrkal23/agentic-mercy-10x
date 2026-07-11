@@ -1,8 +1,44 @@
 ---
 name: triage
-description: Triage issues through a state machine driven by triage roles. Use when user wants to create an issue, triage issues, review incoming bugs or feature requests, prepare issues for an AFK agent, or manage issue workflow.
+description: Triage issues through a state machine driven by triage roles. Use when user wants to create
+  an issue, triage issues, review incoming bugs or feature requests, prepare issues for an AFK agent,
+  or manage issue workflow.
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1147
+triggers:
+  keywords:
+  - afk
+  - agent
+  - bugs
+  - create
+  - driven
+  - feature
+  - incoming
+  - issue
+  - issues
+  - machine
+  - manage
+  - prepare
+  - requests
+  - review
+  - roles
+  - state
+  - through
+  - triage
+  - user
+  - wants
+  - workflow
+  paths: []
+  intents:
+  - general
 ---
-
 # Triage
 
 Move issues on the project issue tracker through a small state machine of triage roles.

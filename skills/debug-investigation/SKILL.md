@@ -1,9 +1,45 @@
 ---
 name: debug-investigation
-description: Use when the cause of a bug, regression, crash, or unexpected behavior
-  is unknown and evidence is needed before proposing a fix. Diagnose unknown failures
-  before fixing them Use to isolate the root cause of an unknown issue.
+description: Use when the cause of a bug, regression, crash, or unexpected behavior is unknown and evidence
+  is needed before proposing a fix. Diagnose unknown failures before fixing them Use to isolate the root
+  cause of an unknown issue.
 disable-model-invocation: false
+schema: 1
+category: debug
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 860
+triggers:
+  keywords:
+  - behavior
+  - bug
+  - cause
+  - crash
+  - debug
+  - diagnose
+  - evidence
+  - failures
+  - fix
+  - fixing
+  - investigation
+  - isolate
+  - issue
+  - needed
+  - proposing
+  - regression
+  - root
+  - unexpected
+  - unknown
+  paths:
+  - .claude/hooks/
+  - .claude/rules/
+  intents:
+  - debug
 ---
 # Debug Investigation
 

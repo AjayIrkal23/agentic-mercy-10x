@@ -1,9 +1,34 @@
 ---
 name: architect-system-design
-description: Use when the main task is design, decomposition, interface planning,
-  or implementation planning before code changes begin. Create build-ready design
-  and contract specs Use to produce a build-ready architecture spec.
+description: Use when the main task is design, decomposition, interface planning, or implementation planning
+  before code changes begin.
 disable-model-invocation: false
+schema: 1
+category: planning
+surfaces:
+- planning
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 858
+triggers:
+  keywords:
+  - architect
+  - begin
+  - changes
+  - code
+  - decomposition
+  - design
+  - implementation
+  - interface
+  - main
+  - planning
+  - system
+  - task
+  paths: []
+  intents:
+  - planning
 ---
 # Architect System Design
 

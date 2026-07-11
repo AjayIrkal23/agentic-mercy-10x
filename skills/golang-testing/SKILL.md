@@ -1,10 +1,45 @@
 ---
 name: golang-testing
-description: Use when writing or reviewing Go test files, adding table-driven tests, benchmarks, fuzz targets, or reviewing test coverage in a Go service. Apply before any `_test.go` file is created or modified.
-origin: ECC
+description: Use when writing or reviewing Go test files, adding table-driven tests, benchmarks, fuzz
+  targets, or reviewing test coverage in a Go service. Apply before any `_test.go` file is created or
+  modified.
 disable-model-invocation: false
+schema: 1
+category: testing
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 4106
+triggers:
+  keywords:
+  - adding
+  - apply
+  - benchmarks
+  - coverage
+  - created
+  - file
+  - files
+  - fuzz
+  - golang
+  - modified
+  - reviewing
+  - service
+  - table-driven
+  - targets
+  - test
+  - test.go
+  - testing
+  - tests
+  - writing
+  paths: []
+  intents:
+  - testing
+origin: ECC
 ---
-
 # Go Testing Patterns
 
 Comprehensive Go testing patterns for writing reliable, maintainable tests following TDD methodology.

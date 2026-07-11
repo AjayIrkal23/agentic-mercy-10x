@@ -1,9 +1,36 @@
 ---
 name: command-development
-description: Use when creating or updating command definitions, command frontmatter,
-  arguments, or reusable command workflows. Create or refine command definitions Use
-  to draft or update a command definition.
+description: Use when creating or updating command definitions, command frontmatter, arguments, or reusable
+  command workflows. Create or refine command definitions Use to draft or update a command definition.
 disable-model-invocation: true
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 357
+triggers:
+  keywords:
+  - arguments
+  - command
+  - create
+  - creating
+  - definition
+  - definitions
+  - development
+  - draft
+  - frontmatter
+  - refine
+  - reusable
+  - update
+  - updating
+  - workflows
+  paths: []
+  intents:
+  - general
 ---
 # Command Development
 

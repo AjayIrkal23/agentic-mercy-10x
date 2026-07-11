@@ -1,9 +1,41 @@
 ---
 name: domain-scaffold-patterns
-description: Use when planning the minimum backend, frontend, or full-stack file tree
-  and entry points for a new domain or feature before implementation. Scaffold new
-  feature or domain skeletons Use to plan the file tree for a new feature or domain.
+description: Use when planning the minimum backend, frontend, or full-stack file tree and entry points
+  for a new domain or feature before implementation. Scaffold new feature or domain skeletons Use to plan
+  the file tree for a new feature or domain.
 disable-model-invocation: false
+schema: 1
+category: planning
+surfaces:
+- planning
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 421
+triggers:
+  keywords:
+  - backend
+  - domain
+  - entry
+  - feature
+  - file
+  - frontend
+  - full-stack
+  - implementation
+  - minimum
+  - patterns
+  - plan
+  - planning
+  - points
+  - scaffold
+  - skeletons
+  - tree
+  paths:
+  - /models/
+  - internal/models/
+  intents:
+  - planning
 ---
 # Domain Scaffold Patterns
 

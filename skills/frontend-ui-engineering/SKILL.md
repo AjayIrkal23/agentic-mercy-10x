@@ -1,8 +1,48 @@
 ---
 name: frontend-ui-engineering
-description: Builds production-quality UIs. Use when building or modifying user-facing interfaces. Use when creating components, implementing layouts, managing state, or when the output needs to look and feel production-quality rather than AI-generated.
+description: Builds production-quality UIs. Use when building or modifying user-facing interfaces. Use
+  when creating components, implementing layouts, managing state, or when the output needs to look and
+  feel production-quality rather than AI-generated.
+schema: 1
+category: frontend
+surfaces:
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2615
+triggers:
+  keywords:
+  - ai-generated
+  - building
+  - builds
+  - components
+  - creating
+  - engineering
+  - feel
+  - frontend
+  - implementing
+  - interfaces
+  - layouts
+  - look
+  - managing
+  - modifying
+  - needs
+  - output
+  - production-quality
+  - rather
+  - state
+  - uis
+  - user-facing
+  paths:
+  - /components/
+  - /layout/
+  - /pages/
+  - /views/
+  intents:
+  - frontend
 ---
-
 # Frontend UI Engineering
 
 ## Overview

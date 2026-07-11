@@ -1,9 +1,38 @@
 ---
 name: strategic-compact
-description: Suggests manual context compaction at logical intervals to preserve context through task phases rather than arbitrary auto-compaction.
+description: Suggests manual context compaction at logical intervals to preserve context through task
+  phases rather than arbitrary auto-compaction.
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1258
+triggers:
+  keywords:
+  - arbitrary
+  - auto-compaction
+  - compact
+  - compaction
+  - context
+  - intervals
+  - logical
+  - manual
+  - phases
+  - preserve
+  - rather
+  - strategic
+  - suggests
+  - task
+  - through
+  paths: []
+  intents:
+  - general
 origin: ECC
 ---
-
 # Strategic Compact Skill
 
 Suggests manual `/compact` at strategic points in your workflow rather than relying on arbitrary auto-compaction.

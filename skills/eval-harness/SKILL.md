@@ -1,11 +1,38 @@
 ---
 name: eval-harness
-description: Formal evaluation framework for Claude Code sessions implementing eval-driven development (EDD) principles
+description: Formal evaluation framework for Claude Code sessions implementing eval-driven development
+  (EDD) principles
+disable-model-invocation: false
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1573
+triggers:
+  keywords:
+  - claude
+  - code
+  - development
+  - edd
+  - eval
+  - eval-driven
+  - evaluation
+  - formal
+  - framework
+  - harness
+  - implementing
+  - principles
+  - sessions
+  paths: []
+  intents:
+  - general
 origin: ECC
 tools: Read, Write, Edit, Bash, Grep, Glob
-disable-model-invocation: false
 ---
-
 # Eval Harness Skill
 
 A formal evaluation framework for Claude Code sessions, implementing eval-driven development (EDD) principles.

@@ -1,10 +1,49 @@
 ---
 name: postgres-patterns
-description: Use when writing PostgreSQL queries, designing schemas, creating indexes, or reviewing migration files for query efficiency, index coverage, and security (row-level security, prepared statements). Based on Supabase best practices.
-origin: ECC
+description: Use when writing PostgreSQL queries, designing schemas, creating indexes, or reviewing migration
+  files for query efficiency, index coverage, and security (row-level security, prepared statements).
+  Based on Supabase best practices.
 disable-model-invocation: false
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 906
+triggers:
+  keywords:
+  - based
+  - best
+  - coverage
+  - creating
+  - designing
+  - efficiency
+  - files
+  - index
+  - indexes
+  - migration
+  - patterns
+  - postgres
+  - postgresql
+  - practices
+  - prepared
+  - queries
+  - query
+  - reviewing
+  - row-level
+  - schemas
+  - security
+  - statements
+  - supabase
+  - writing
+  paths: []
+  intents:
+  - general
+origin: ECC
 ---
-
 # PostgreSQL Patterns
 
 Quick reference for PostgreSQL best practices. For detailed guidance, use the `database-reviewer` agent.

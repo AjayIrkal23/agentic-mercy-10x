@@ -1,8 +1,49 @@
 ---
 name: forensic-change-coupling
-description: Use when planning architecture refactoring, understanding cross-module dependencies, discovering hidden dependencies, finding shotgun surgery patterns, or identifying files that change together - reveals temporal coupling and architectural violations using git history analysis
+description: Use when planning architecture refactoring, understanding cross-module dependencies, discovering
+  hidden dependencies, finding shotgun surgery patterns, or identifying files that change together - reveals
+  temporal coupling and architectural violations using git history analysis
+schema: 1
+category: review
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 3949
+triggers:
+  keywords:
+  - analysis
+  - architectural
+  - architecture
+  - change
+  - coupling
+  - cross-module
+  - dependencies
+  - discovering
+  - files
+  - finding
+  - forensic
+  - git
+  - hidden
+  - history
+  - identifying
+  - patterns
+  - planning
+  - refactoring
+  - reveals
+  - shotgun
+  - surgery
+  - temporal
+  - together
+  - understanding
+  - violations
+  paths: []
+  intents:
+  - review
 ---
-
 # Forensic Change Coupling Analysis
 
 ## 🎯 When You Use This Skill

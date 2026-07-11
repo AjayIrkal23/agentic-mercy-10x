@@ -1,8 +1,40 @@
 ---
 name: deprecation-and-migration
-description: Manages deprecation and migration. Use when removing old systems, APIs, or features. Use when migrating users from one implementation to another. Use when deciding whether to maintain or sunset existing code.
+description: Manages deprecation and migration. Use when removing old systems, APIs, or features. Use
+  when migrating users from one implementation to another. Use when deciding whether to maintain or sunset
+  existing code.
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2177
+triggers:
+  keywords:
+  - another
+  - apis
+  - code
+  - deciding
+  - deprecation
+  - existing
+  - features
+  - implementation
+  - maintain
+  - manages
+  - migrating
+  - migration
+  - removing
+  - sunset
+  - systems
+  - users
+  - whether
+  paths: []
+  intents:
+  - general
 ---
-
 # Deprecation and Migration
 
 ## Overview

@@ -1,10 +1,58 @@
 ---
 name: frontend-api-standards
-description: Use when implementing raw fetch calls, SDK wrappers, or query layers
-  that must conform to backend query contracts (page, limit, sortBy, sortOrder, q)
-  but do not yet have a normalized response layer. For API work that also needs
-  success/error normalization, prefer frontend-response-handling instead.
+description: Use when implementing raw fetch calls, SDK wrappers, or query layers that must conform to
+  backend query contracts (page, limit, sortBy, sortOrder, q) but do not yet have a normalized response
+  layer. For API work that also needs success/error normalization, prefer frontend-response-handling instead.
 disable-model-invocation: false
+schema: 1
+category: frontend
+surfaces:
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 382
+triggers:
+  keywords:
+  - api
+  - backend
+  - calls
+  - conform
+  - contracts
+  - fetch
+  - frontend
+  - frontend-response-handling
+  - have
+  - implementing
+  - instead
+  - layer
+  - layers
+  - limit
+  - must
+  - needs
+  - normalization
+  - normalized
+  - page
+  - prefer
+  - query
+  - raw
+  - response
+  - sdk
+  - sortby
+  - sortorder
+  - standards
+  - success/error
+  - work
+  - wrappers
+  - yet
+  paths:
+  - /api-client
+  - /api/
+  - api.js
+  - api.ts
+  intents:
+  - frontend
 ---
 # Frontend API Standards
 

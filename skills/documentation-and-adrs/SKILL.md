@@ -1,8 +1,43 @@
 ---
 name: documentation-and-adrs
-description: Records decisions and documentation. Use when making architectural decisions, changing public APIs, shipping features, or when you need to record context that future engineers and agents will need to understand the codebase.
+description: Records decisions and documentation. Use when making architectural decisions, changing public
+  APIs, shipping features, or when you need to record context that future engineers and agents will need
+  to understand the codebase.
+schema: 1
+category: docs
+surfaces:
+- docs
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2109
+triggers:
+  keywords:
+  - adrs
+  - agents
+  - apis
+  - architectural
+  - changing
+  - codebase
+  - context
+  - decisions
+  - documentation
+  - engineers
+  - features
+  - future
+  - making
+  - need
+  - public
+  - record
+  - records
+  - shipping
+  - understand
+  - will
+  paths: []
+  intents:
+  - docs
 ---
-
 # Documentation and ADRs
 
 ## Overview

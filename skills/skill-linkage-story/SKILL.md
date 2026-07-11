@@ -1,8 +1,42 @@
 ---
 name: skill-linkage-story
-description: End-to-end story of how Cursor hooks inject skills from sessionStart through stop — sessionStart, beforeSubmit, preToolUse, postToolUse, stop. Use when onboarding to this config or debugging missing skill reminders.
+description: End-to-end story of how Cursor hooks inject skills from sessionStart through stop — sessionStart,
+  beforeSubmit, preToolUse, postToolUse, stop. Use when onboarding to this config or debugging missing
+  skill reminders.
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 580
+triggers:
+  keywords:
+  - beforesubmit
+  - config
+  - cursor
+  - debugging
+  - end-to-end
+  - hooks
+  - inject
+  - linkage
+  - missing
+  - onboarding
+  - posttooluse
+  - pretooluse
+  - reminders
+  - sessionstart
+  - skill
+  - skills
+  - stop
+  - story
+  - through
+  paths: []
+  intents:
+  - general
 ---
-
 # Skill Linkage Story — Hook → Skill E2E
 
 ## 1. sessionStart

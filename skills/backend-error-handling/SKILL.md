@@ -1,11 +1,35 @@
 ---
 name: backend-error-handling
-description: Use when defining backend error taxonomy, centralized handler behavior,
-  safe logging, redaction, or client-safe error mapping. Backend Core Compliance Set
-  member for error taxonomy and client-safe mapping As part of the Backend Core Compliance
-  Set for backend/server work, including error classes, centralized handler behavior,
-  safe logging, redaction rules, and client-safe error mapping.
+description: Use when defining backend error taxonomy, centralized handler behavior, safe logging, redaction,
+  or client-safe error mapping.
 disable-model-invocation: false
+schema: 1
+category: backend
+surfaces:
+- backend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 482
+triggers:
+  keywords:
+  - backend
+  - behavior
+  - centralized
+  - client-safe
+  - defining
+  - error
+  - handler
+  - handling
+  - logging
+  - mapping
+  - redaction
+  - safe
+  - taxonomy
+  paths: []
+  intents:
+  - backend
 ---
 # Backend Error Handling
 

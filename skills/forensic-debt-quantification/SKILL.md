@@ -1,8 +1,56 @@
 ---
 name: forensic-debt-quantification
-description: Use when justifying technical debt to executives, calculating the cost of quality issues, translating tech metrics to business language, or planning quality budgets - uses research-backed formulas (2-3x defects, productivity multipliers) to convert code problems into dollars and ROI
+description: Use when justifying technical debt to executives, calculating the cost of quality issues,
+  translating tech metrics to business language, or planning quality budgets - uses research-backed formulas
+  (2-3x defects, productivity multipliers) to convert code problems into dollars and ROI
+schema: 1
+category: review
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 3460
+triggers:
+  keywords:
+  - 2-3x
+  - budgets
+  - business
+  - calculating
+  - code
+  - convert
+  - cost
+  - debt
+  - defects
+  - dollars
+  - executives
+  - forensic
+  - formulas
+  - issues
+  - justifying
+  - language
+  - metrics
+  - multipliers
+  - planning
+  - problems
+  - productivity
+  - quality
+  - quantification
+  - research-backed
+  - roi
+  - tech
+  - technical
+  - translating
+  - uses
+  paths:
+  - cmd/
+  - internal/
+  - server/
+  intents:
+  - review
 ---
-
 # Forensic Debt Quantification
 
 ## 🎯 When You Use This Skill

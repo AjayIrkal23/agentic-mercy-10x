@@ -1,8 +1,57 @@
 ---
 name: browser-testing-with-devtools
-description: Tests in real browsers. Use when building or debugging anything that runs in a browser. Use when you need to inspect the DOM, capture console errors, analyze network requests, profile performance, or verify visual output with real runtime data via Chrome DevTools MCP.
+description: Tests in real browsers. Use when building or debugging anything that runs in a browser. Use
+  when you need to inspect the DOM, capture console errors, analyze network requests, profile performance,
+  or verify visual output with real runtime data via Chrome DevTools MCP.
+schema: 1
+category: testing
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2895
+triggers:
+  keywords:
+  - analyze
+  - anything
+  - browser
+  - browsers
+  - building
+  - capture
+  - chrome
+  - console
+  - data
+  - debugging
+  - devtools
+  - dom
+  - errors
+  - inspect
+  - mcp
+  - need
+  - network
+  - output
+  - performance
+  - profile
+  - real
+  - requests
+  - runs
+  - runtime
+  - testing
+  - tests
+  - verify
+  - visual
+  paths:
+  - .spec.
+  - .test.
+  - __tests__
+  - _test.ts
+  - _test.tsx
+  intents:
+  - testing
 ---
-
 # Browser Testing with DevTools
 
 ## Overview

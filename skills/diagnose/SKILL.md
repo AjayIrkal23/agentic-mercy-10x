@@ -1,8 +1,47 @@
 ---
 name: diagnose
-description: Disciplined diagnosis loop for hard bugs and performance regressions. Reproduce → minimise → hypothesise → instrument → fix → regression-test. Use when user says "diagnose this" / "debug this", reports a bug, says something is broken/throwing/failing, or describes a performance regression.
+description: Disciplined diagnosis loop for hard bugs and performance regressions. Reproduce → minimise
+  → hypothesise → instrument → fix → regression-test. Use when user says "diagnose this" / "debug this",
+  reports a bug, says something is broken/throwing/failing, or describes a performance regression.
+schema: 1
+category: debug
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1697
+triggers:
+  keywords:
+  - broken/throwing/failing
+  - bug
+  - bugs
+  - debug
+  - describes
+  - diagnose
+  - diagnosis
+  - disciplined
+  - fix
+  - hard
+  - hypothesise
+  - instrument
+  - loop
+  - minimise
+  - performance
+  - regression
+  - regression-test
+  - regressions
+  - reports
+  - reproduce
+  - says
+  - something
+  - user
+  paths: []
+  intents:
+  - debug
 ---
-
 # Diagnose
 
 A discipline for hard bugs. Skip phases only when explicitly justified.

@@ -1,10 +1,45 @@
 ---
 name: golang-patterns
-description: Use when writing, reviewing, or refactoring Go code to enforce idiomatic patterns, error wrapping, interface design, and concurrency safety. Required for any .go file in a backend service or CLI tool.
-origin: ECC
+description: Use when writing, reviewing, or refactoring Go code to enforce idiomatic patterns, error
+  wrapping, interface design, and concurrency safety. Required for any .go file in a backend service or
+  CLI tool.
 disable-model-invocation: false
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 3435
+triggers:
+  keywords:
+  - backend
+  - cli
+  - code
+  - concurrency
+  - design
+  - enforce
+  - error
+  - file
+  - golang
+  - idiomatic
+  - interface
+  - patterns
+  - refactoring
+  - required
+  - reviewing
+  - safety
+  - service
+  - tool
+  - wrapping
+  - writing
+  paths: []
+  intents:
+  - general
+origin: ECC
 ---
-
 # Go Development Patterns
 
 Idiomatic Go patterns and best practices for building robust, efficient, and maintainable applications.

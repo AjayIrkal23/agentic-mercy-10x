@@ -1,8 +1,28 @@
 ---
 name: canary-playwright
 description: Post-deploy canary monitoring using Playwright MCP (adapted from GStack /canary)
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 170
+triggers:
+  keywords:
+  - adapted
+  - canary
+  - gstack
+  - mcp
+  - monitoring
+  - playwright
+  - post-deploy
+  paths: []
+  intents:
+  - general
 ---
-
 # Canary Monitoring
 
 Post-deploy health checks using Playwright.

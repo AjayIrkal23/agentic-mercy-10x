@@ -1,9 +1,45 @@
 ---
 name: api-and-interface-design
-description: Guides stable API and interface design. Use when designing APIs, module boundaries, or any public interface. Use when creating REST or GraphQL endpoints, defining type contracts between modules, or establishing boundaries between frontend and backend.
+description: Guides stable API and interface design. Use when designing APIs, module boundaries, or any
+  public interface. Use when creating REST or GraphQL endpoints, defining type contracts between modules,
+  or establishing boundaries between frontend and backend.
 disable-model-invocation: false
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2488
+triggers:
+  keywords:
+  - api
+  - apis
+  - backend
+  - boundaries
+  - contracts
+  - creating
+  - defining
+  - design
+  - designing
+  - endpoints
+  - establishing
+  - frontend
+  - graphql
+  - guides
+  - interface
+  - module
+  - modules
+  - public
+  - rest
+  - stable
+  - type
+  paths: []
+  intents:
+  - general
 ---
-
 # API and Interface Design
 
 ## Overview

@@ -1,8 +1,46 @@
 ---
 name: tool-and-doc-selection
-description: Use when deciding which source of truth to consult among workspace files,
-  local docs, installed docs tools, MCP integrations, or web search. Choose the right
-  source of truth Use to choose the right local or external source for this task.
+description: Use when deciding which source of truth to consult among workspace files, local docs, installed
+  docs tools, MCP integrations, or web search. Choose the right source of truth Use to choose the right
+  local or external source for this task.
+schema: 1
+category: docs
+surfaces:
+- docs
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 582
+triggers:
+  keywords:
+  - among
+  - choose
+  - consult
+  - deciding
+  - doc
+  - docs
+  - external
+  - files
+  - installed
+  - integrations
+  - local
+  - mcp
+  - right
+  - search
+  - selection
+  - source
+  - task
+  - tool
+  - tools
+  - truth
+  - web
+  - workspace
+  paths:
+  - .claude/hooks/
+  - .claude/rules/
+  intents:
+  - docs
 ---
 # Tool And Doc Selection
 

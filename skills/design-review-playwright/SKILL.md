@@ -1,8 +1,33 @@
 ---
 name: design-review-playwright
 description: Live visual QA against design specs using Playwright screenshots (adapted from GStack /design-review)
+schema: 1
+category: review
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 182
+triggers:
+  keywords:
+  - adapted
+  - against
+  - design
+  - design-review
+  - gstack
+  - live
+  - playwright
+  - review
+  - screenshots
+  - specs
+  - visual
+  paths: []
+  intents:
+  - review
 ---
-
 # Design Review with Playwright
 
 Visual QA comparing implementation against design specs.

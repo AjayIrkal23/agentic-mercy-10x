@@ -1,9 +1,53 @@
 ---
 name: security-and-hardening
-description: Hardens code against vulnerabilities. Use when handling user input, authentication, data storage, or external integrations. Use when building any feature that accepts untrusted data, manages user sessions, or interacts with third-party services.
+description: Hardens code against vulnerabilities. Use when handling user input, authentication, data
+  storage, or external integrations. Use when building any feature that accepts untrusted data, manages
+  user sessions, or interacts with third-party services.
 disable-model-invocation: false
+schema: 1
+category: security
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2720
+triggers:
+  keywords:
+  - accepts
+  - against
+  - authentication
+  - building
+  - code
+  - data
+  - external
+  - feature
+  - handling
+  - hardening
+  - hardens
+  - input
+  - integrations
+  - interacts
+  - manages
+  - security
+  - services
+  - sessions
+  - storage
+  - third-party
+  - untrusted
+  - user
+  - vulnerabilities
+  paths:
+  - /auth/
+  - /guard/
+  - /login/
+  - protected
+  - session
+  intents:
+  - security
 ---
-
 # Security and Hardening
 
 ## Overview

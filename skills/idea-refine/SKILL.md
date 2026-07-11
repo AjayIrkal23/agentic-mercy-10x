@@ -1,8 +1,35 @@
 ---
 name: idea-refine
-description: Refines ideas iteratively. Refine ideas through structured divergent and convergent thinking. Use "idea-refine" or "ideate" to trigger.
+description: Refines ideas iteratively. Refine ideas through structured divergent and convergent thinking.
+  Use "idea-refine" or "ideate" to trigger.
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2000
+triggers:
+  keywords:
+  - convergent
+  - divergent
+  - idea
+  - idea-refine
+  - ideas
+  - ideate
+  - iteratively
+  - refine
+  - refines
+  - structured
+  - thinking
+  - through
+  - trigger
+  paths: []
+  intents:
+  - general
 ---
-
 # Idea Refine
 
 Refines raw ideas into sharp, actionable concepts worth building through structured divergent and convergent thinking.

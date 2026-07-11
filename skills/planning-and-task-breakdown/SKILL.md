@@ -1,8 +1,45 @@
 ---
 name: planning-and-task-breakdown
-description: Breaks work into ordered tasks. Use when you have a spec or clear requirements and need to break work into implementable tasks. Use when a task feels too large to start, when you need to estimate scope, or when parallel work is possible.
+description: Breaks work into ordered tasks. Use when you have a spec or clear requirements and need to
+  break work into implementable tasks. Use when a task feels too large to start, when you need to estimate
+  scope, or when parallel work is possible.
+schema: 1
+category: planning
+surfaces:
+- planning
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1876
+triggers:
+  keywords:
+  - break
+  - breakdown
+  - breaks
+  - clear
+  - estimate
+  - feels
+  - have
+  - implementable
+  - large
+  - need
+  - ordered
+  - parallel
+  - planning
+  - possible
+  - requirements
+  - scope
+  - spec
+  - start
+  - task
+  - tasks
+  - too
+  - work
+  paths: []
+  intents:
+  - planning
 ---
-
 # Planning and Task Breakdown
 
 ## Overview

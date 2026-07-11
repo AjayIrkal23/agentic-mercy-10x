@@ -1,8 +1,73 @@
 ---
 name: update-docs
-description: Use before substantive coding when you must read repo documentation first (Phase A); after implementation to sync Markdown/PR docs (Phase B), including GO_UDP (`server_docs` / `frontend_docs` / PROJECT_LINKAGES). Also use when the user asks to update documentation for code changes, check docs for a PR, sync docs with code, scaffold docs for a feature, review docs completeness, or mentions docs folders, MDX, changelogs, README impact, or "what documentation is affected". For Next.js monorepo work, see references/upstream-nextjs/. Optional split client/server example in references/examples/. GO_UDP mapping in references/go-udp-documentation-lifecycle.md.
+description: Use before substantive coding when you must read repo documentation first (Phase A); after
+  implementation to sync Markdown/PR docs (Phase B), including GO_UDP (`server_docs` / `frontend_docs`
+  / PROJECT_LINKAGES). Also use when the user asks to update documentation for code changes, check docs
+  for a PR, sync docs with code, scaffold docs for a feature, review docs completeness, or mentions docs
+  folders, MDX, changelogs, README impact, or "what documentation is affected". For Next.js monorepo work,
+  see references/upstream-nextjs/. Optional split client/server example in references/examples/. GO_UDP
+  mapping in references/go-udp-documentation-lifecycle.md.
+schema: 1
+category: backend
+surfaces:
+- backend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1216
+triggers:
+  keywords:
+  - affected
+  - asks
+  - changelogs
+  - changes
+  - check
+  - client/server
+  - code
+  - coding
+  - completeness
+  - docs
+  - documentation
+  - example
+  - feature
+  - first
+  - folders
+  - frontend_docs
+  - go_udp
+  - impact
+  - implementation
+  - including
+  - mapping
+  - markdown/pr
+  - mdx
+  - mentions
+  - monorepo
+  - must
+  - next.js
+  - optional
+  - phase
+  - project_linkages
+  - read
+  - readme
+  - references/examples
+  - references/go-udp-documentation-lifecycle.md
+  - references/upstream-nextjs
+  - repo
+  - review
+  - scaffold
+  - see
+  - server_docs
+  - split
+  - substantive
+  - sync
+  - update
+  - user
+  - work
+  paths: []
+  intents:
+  - backend
 ---
-
 # Update documentation
 
 Guides updating project documentation to match code changes. This skill is **generic**; repo-specific mappings live under `references/` and in your own repository.

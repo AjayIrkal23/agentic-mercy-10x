@@ -1,9 +1,50 @@
 ---
 name: owasp-security
-description: Use when reviewing code for security vulnerabilities, implementing authentication/authorization, handling user input, or discussing web application security. Covers OWASP Top 10:2025, ASVS 5.0, LLM Top 10 (2025), and Agentic AI security (2026).
+description: Use when reviewing code for security vulnerabilities, implementing authentication/authorization,
+  handling user input, or discussing web application security. Covers OWASP Top 10:2025, ASVS 5.0, LLM
+  Top 10 (2025), and Agentic AI security (2026).
 disable-model-invocation: false
+schema: 1
+category: security
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 5324
+triggers:
+  keywords:
+  - '2025'
+  - '2026'
+  - '5.0'
+  - agentic
+  - application
+  - asvs
+  - authentication/authorization
+  - code
+  - covers
+  - discussing
+  - handling
+  - implementing
+  - input
+  - llm
+  - owasp
+  - reviewing
+  - security
+  - top
+  - user
+  - vulnerabilities
+  - web
+  paths:
+  - /api-client
+  - /api/
+  - api.js
+  - api.ts
+  intents:
+  - security
 ---
-
 # OWASP Security Best Practices Skill
 
 Apply these security standards when writing or reviewing code.

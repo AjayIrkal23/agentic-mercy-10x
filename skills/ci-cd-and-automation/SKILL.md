@@ -1,8 +1,41 @@
 ---
 name: ci-cd-and-automation
-description: Automates CI/CD pipeline setup. Use when setting up or modifying build and deployment pipelines. Use when you need to automate quality gates, configure test runners in CI, or establish deployment strategies.
+description: Automates CI/CD pipeline setup. Use when setting up or modifying build and deployment pipelines.
+  Use when you need to automate quality gates, configure test runners in CI, or establish deployment strategies.
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2688
+triggers:
+  keywords:
+  - automate
+  - automates
+  - automation
+  - build
+  - ci/cd
+  - configure
+  - deployment
+  - establish
+  - gates
+  - modifying
+  - need
+  - pipeline
+  - pipelines
+  - quality
+  - runners
+  - setting
+  - setup
+  - strategies
+  - test
+  paths: []
+  intents:
+  - general
 ---
-
 # CI/CD and Automation
 
 ## Overview

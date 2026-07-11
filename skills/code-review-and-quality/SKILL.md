@@ -1,8 +1,44 @@
 ---
 name: code-review-and-quality
-description: Conducts multi-axis code review. Use before merging any change. Use when reviewing code written by yourself, another agent, or a human. Use when you need to assess code quality across multiple dimensions before it enters the main branch.
+description: Conducts multi-axis code review. Use before merging any change. Use when reviewing code written
+  by yourself, another agent, or a human. Use when you need to assess code quality across multiple dimensions
+  before it enters the main branch.
+schema: 1
+category: review
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 3484
+triggers:
+  keywords:
+  - agent
+  - another
+  - assess
+  - branch
+  - change
+  - code
+  - conducts
+  - dimensions
+  - enters
+  - human
+  - main
+  - merging
+  - multi-axis
+  - multiple
+  - need
+  - quality
+  - review
+  - reviewing
+  - written
+  - yourself
+  paths: []
+  intents:
+  - review
 ---
-
 # Code Review and Quality
 
 ## Overview

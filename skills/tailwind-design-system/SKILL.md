@@ -1,9 +1,36 @@
 ---
 name: tailwind-design-system
-description: Use when implementing or revising Tailwind CSS v4 tokens, themes, utility
-  conventions, or component primitives in a Tailwind-based frontend. Implement Tailwind
-  v4 design-system plumbing Use to update Tailwind v4 tokens or component primitives.
+description: Use when implementing or revising Tailwind CSS v4 tokens, themes, utility conventions, or
+  component primitives in a Tailwind-based frontend.
 disable-model-invocation: false
+schema: 1
+category: frontend
+surfaces:
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 589
+triggers:
+  keywords:
+  - component
+  - conventions
+  - css
+  - design
+  - frontend
+  - implementing
+  - primitives
+  - revising
+  - system
+  - tailwind
+  - tailwind-based
+  - themes
+  - tokens
+  - utility
+  paths: []
+  intents:
+  - frontend
 ---
 # Tailwind Design System
 

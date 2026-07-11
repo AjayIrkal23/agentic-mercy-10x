@@ -1,10 +1,57 @@
 ---
 name: frontend-server-data-patterns
-description: Use when building or changing API-backed tables, lists, search screens,
-  or frontend query-state flows with server-driven filtering, sorting, and pagination.
-  Model API-backed frontend query state Use to define query-state and async UI behavior
-  for a server-backed screen.
+description: Use when building or changing API-backed tables, lists, search screens, or frontend query-state
+  flows with server-driven filtering, sorting, and pagination. Model API-backed frontend query state Use
+  to define query-state and async UI behavior for a server-backed screen.
 disable-model-invocation: false
+schema: 1
+category: frontend
+surfaces:
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 468
+triggers:
+  keywords:
+  - api-backed
+  - async
+  - behavior
+  - building
+  - changing
+  - data
+  - define
+  - filtering
+  - flows
+  - frontend
+  - lists
+  - model
+  - pagination
+  - patterns
+  - query
+  - query-state
+  - screen
+  - screens
+  - search
+  - server
+  - server-backed
+  - server-driven
+  - sorting
+  - state
+  - tables
+  paths:
+  - .hook.
+  - /api-client
+  - /api/
+  - /hooks/use
+  - /src/hooks/
+  - api.js
+  - api.ts
+  - use-
+  - useHook
+  intents:
+  - frontend
 ---
 # Frontend Server Data Patterns
 

@@ -1,8 +1,40 @@
 ---
 name: git-workflow-and-versioning
-description: Structures git workflow practices. Use when making any code change. Use when committing, branching, resolving conflicts, or when you need to organize work across multiple parallel streams.
+description: Structures git workflow practices. Use when making any code change. Use when committing,
+  branching, resolving conflicts, or when you need to organize work across multiple parallel streams.
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2508
+triggers:
+  keywords:
+  - branching
+  - change
+  - code
+  - committing
+  - conflicts
+  - git
+  - making
+  - multiple
+  - need
+  - organize
+  - parallel
+  - practices
+  - resolving
+  - streams
+  - structures
+  - versioning
+  - work
+  - workflow
+  paths: []
+  intents:
+  - general
 ---
-
 # Git Workflow and Versioning
 
 ## Overview

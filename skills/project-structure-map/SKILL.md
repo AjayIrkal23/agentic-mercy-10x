@@ -1,10 +1,39 @@
 ---
 name: project-structure-map
-description: Use when you need a fast map of layer boundaries and likely impacted
-  files in an unfamiliar codebase before making changes. Map layer boundaries and
-  likely impacted files Use to identify likely impacted files and layer boundaries
-  for this codebase change.
+description: Use when you need a fast map of layer boundaries and likely impacted files in an unfamiliar
+  codebase before making changes. Map layer boundaries and likely impacted files Use to identify likely
+  impacted files and layer boundaries for this codebase change.
 disable-model-invocation: false
+schema: 1
+category: intel
+surfaces:
+- codebase
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 652
+triggers:
+  keywords:
+  - boundaries
+  - change
+  - changes
+  - codebase
+  - fast
+  - files
+  - identify
+  - impacted
+  - layer
+  - likely
+  - making
+  - map
+  - need
+  - project
+  - structure
+  - unfamiliar
+  paths: []
+  intents:
+  - intel
 ---
 # Project Structure Map
 

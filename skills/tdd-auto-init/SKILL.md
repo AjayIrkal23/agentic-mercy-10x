@@ -1,9 +1,70 @@
 ---
 name: tdd-auto-init
-description: Operate and customize the auto-initialized tdd-guard TDD system. Use when setting up TDD enforcement in a new repo, when tdd-guard isn't activating (or is firing where it shouldn't), when adding a test stack (Go/Vitest/Jest/pytest) and wiring its reporter, when a TDD advisory appears, or when pausing/forcing/troubleshooting tdd-guard. tdd-guard auto-initializes per project (like the jcodemunch/graphify index guards), runs in non-blocking WARN mode, and self-maintains its config as files/folders change — this skill is how you drive, scope, and debug that.
+description: Operate and customize the auto-initialized tdd-guard TDD system. Use when setting up TDD
+  enforcement in a new repo, when tdd-guard isn't activating (or is firing where it shouldn't), when adding
+  a test stack (Go/Vitest/Jest/pytest) and wiring its reporter, when a TDD advisory appears, or when pausing/forcing/troubleshooting
+  tdd-guard. tdd-guard auto-initializes per project (like the jcodemunch/graphify index guards), runs
+  in non-blocking WARN mode, and self-maintains its config as files/folders change — this skill is how
+  you drive, scope, and debug that.
 disable-model-invocation: false
+schema: 1
+category: testing
+surfaces:
+- backend
+- frontend
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 887
+triggers:
+  keywords:
+  - activating
+  - adding
+  - advisory
+  - appears
+  - auto
+  - auto-initialized
+  - auto-initializes
+  - change
+  - config
+  - customize
+  - debug
+  - drive
+  - enforcement
+  - files/folders
+  - firing
+  - go/vitest/jest/pytest
+  - guards
+  - index
+  - init
+  - isn
+  - jcodemunch/graphify
+  - like
+  - mode
+  - non-blocking
+  - operate
+  - pausing/forcing/troubleshooting
+  - project
+  - repo
+  - reporter
+  - runs
+  - scope
+  - self-maintains
+  - setting
+  - shouldn
+  - skill
+  - stack
+  - system
+  - tdd
+  - tdd-guard
+  - test
+  - warn
+  - wiring
+  paths: []
+  intents:
+  - testing
 ---
-
 # tdd-guard Auto-Init
 
 tdd-guard is installed globally, **auto-initialized per project**, runs in

@@ -1,8 +1,43 @@
 ---
 name: improve-codebase-architecture
-description: Find deepening opportunities in a codebase, informed by the domain language in CONTEXT.md and the decisions in docs/adr/. Use when the user wants to improve architecture, find refactoring opportunities, consolidate tightly-coupled modules, or make a codebase more testable and AI-navigable.
+description: Find deepening opportunities in a codebase, informed by the domain language in CONTEXT.md
+  and the decisions in docs/adr/. Use when the user wants to improve architecture, find refactoring opportunities,
+  consolidate tightly-coupled modules, or make a codebase more testable and AI-navigable.
+schema: 1
+category: planning
+surfaces:
+- planning
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1272
+triggers:
+  keywords:
+  - ai-navigable
+  - architecture
+  - codebase
+  - consolidate
+  - context.md
+  - decisions
+  - deepening
+  - docs/adr
+  - domain
+  - find
+  - improve
+  - informed
+  - language
+  - modules
+  - opportunities
+  - refactoring
+  - testable
+  - tightly-coupled
+  - user
+  - wants
+  paths: []
+  intents:
+  - planning
 ---
-
 # Improve Codebase Architecture
 
 Surface architectural friction and propose **deepening opportunities** — refactors that turn shallow modules into deep ones. The aim is testability and AI-navigability.

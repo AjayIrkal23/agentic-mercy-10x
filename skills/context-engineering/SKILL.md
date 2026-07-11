@@ -1,8 +1,40 @@
 ---
 name: context-engineering
-description: Optimizes agent context setup. Use when starting a new session, when agent output quality degrades, when switching between tasks, or when you need to configure rules files and context for a project.
+description: Optimizes agent context setup. Use when starting a new session, when agent output quality
+  degrades, when switching between tasks, or when you need to configure rules files and context for a
+  project.
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 2574
+triggers:
+  keywords:
+  - agent
+  - configure
+  - context
+  - degrades
+  - engineering
+  - files
+  - need
+  - optimizes
+  - output
+  - project
+  - quality
+  - rules
+  - session
+  - setup
+  - starting
+  - switching
+  - tasks
+  paths: []
+  intents:
+  - general
 ---
-
 # Context Engineering
 
 ## Overview

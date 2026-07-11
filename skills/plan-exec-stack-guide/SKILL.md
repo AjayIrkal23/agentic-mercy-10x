@@ -1,8 +1,52 @@
 ---
 name: plan-exec-stack-guide
-description: Use when choosing between planning vs implementation stacks, Superpowers vs mandatory frontend/backend skills, or when Cursor Plan mode and Agent execution need explicit skill ordering. Triggers include plan vs implement, which skills first, superpowers routing, architect vs code vs debug phases.
+description: Use when choosing between planning vs implementation stacks, Superpowers vs mandatory frontend/backend
+  skills, or when Cursor Plan mode and Agent execution need explicit skill ordering. Triggers include
+  plan vs implement, which skills first, superpowers routing, architect vs code vs debug phases.
+schema: 1
+category: planning
+surfaces:
+- planning
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 1069
+triggers:
+  keywords:
+  - agent
+  - architect
+  - choosing
+  - code
+  - cursor
+  - debug
+  - exec
+  - execution
+  - explicit
+  - first
+  - frontend/backend
+  - guide
+  - implement
+  - implementation
+  - include
+  - mandatory
+  - mode
+  - need
+  - ordering
+  - phases
+  - plan
+  - planning
+  - routing
+  - skill
+  - skills
+  - stack
+  - stacks
+  - superpowers
+  - triggers
+  paths: []
+  intents:
+  - planning
 ---
-
 # Plan / execution stack guide
 
 ## Quick routing

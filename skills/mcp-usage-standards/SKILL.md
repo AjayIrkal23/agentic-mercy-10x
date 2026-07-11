@@ -1,10 +1,47 @@
 ---
 name: mcp-usage-standards
-description: Use when MCP selection, evidence scope, or external verification strategy
-  materially affects design, debugging, implementation, or repo analysis. Choose the
-  right MCP and keep evidence retrieval disciplined Use to choose the right MCP, narrow
-  the evidence scope, and avoid unnecessary tool usage.
+description: Use when MCP selection, evidence scope, or external verification strategy materially affects
+  design, debugging, implementation, or repo analysis. Choose the right MCP and keep evidence retrieval
+  disciplined Use to choose the right MCP, narrow the evidence scope, and avoid unnecessary tool usage.
 disable-model-invocation: false
+schema: 1
+category: general
+surfaces:
+- general
+platforms:
+- linux
+- darwin
+- windows
+token-cost: 805
+triggers:
+  keywords:
+  - affects
+  - analysis
+  - avoid
+  - choose
+  - debugging
+  - design
+  - disciplined
+  - evidence
+  - external
+  - implementation
+  - materially
+  - mcp
+  - narrow
+  - repo
+  - retrieval
+  - right
+  - scope
+  - selection
+  - standards
+  - strategy
+  - tool
+  - unnecessary
+  - usage
+  - verification
+  paths: []
+  intents:
+  - general
 ---
 # MCP Usage Standards
 
