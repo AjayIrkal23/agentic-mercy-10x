@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "_about": "Single source of truth for subagent/workflow/invoke model selection. Consumers (opus-guard.py, workflow-model-guard.py, gen-invoke-commands.py, prompt_router/modules/model_advice.py) each fail OPEN to their own hardcoded defaults if this file is missing or corrupt. Sonnet is the default; Opus is reserved for UI/UX + heavy/complex work + the IMPLEMENT suite; Fable is reachable ONLY via an explicit override phrase, a [fable] label, model:\"fable\", or the fable-only-mode flag.",
+  "model_ids": {
+    "sonnet": "claude-sonnet-4-6",
+    "opus": "claude-opus-4-8",
+    "fable": "claude-fable-5"
+  },
+  "default": "sonnet",
+  "agent_pins": {
+    "_comment": "subagent_type -> forced model, regardless of intent. Fable never appears here.",
+    "opus": ["frontend-uiux-designer", "implementation-engineer"],
+    "sonnet": ["explore", "claude-code-guide"]
+  },
+  "task_matrix": {
+    "_comment": "TaskProfile intent -> model (consumed by /invoke categories and the router's model_advice; the Agent-tool opus-guard has no TaskProfile so it skips this step). Anything unlisted -> default (sonnet). Fable never appears here.",
+    "DESIGN": "opus",
+    "HEAVY_ARCHITECTURE": "opus",
+    "DEEP_DEBUG": "opus",
+    "IMPLEMENT_SUITE": "opus"
+  },
+  "heavy_qualifiers": {
+    "_comment": "HEAVY_ARCHITECTURE / DEEP_DEBUG promote to opus only when size:L AND risk>=2 in the TaskProfile — a keyword alone never promotes.",
+    "min_size": "L",
+    "min_risk": 2
+  },
+  "invoke_categories": {
+    "_comment": "Per-/invoke-category model pin. Replaces categories.<CAT>.model in autonomous-skill-router.config.json as the source of truth; gen-invoke-commands.py reads THIS (wired in P5).",
+    "IMPLEMENT": "opus"
+  },
+  "override_phrases": {
+    "_comment": "Explicit user phrases in the prompt that force a model for that turn.",
+    "opus": ["use opus", "on opus", "opus for this"],
+    "sonnet": ["use sonnet", "on sonnet", "cheap mode"],
+    "fable": ["use fable", "on fable", "fable for this"]
+  },
+  "session_flags": {
+    "_comment": "Flag files under ~/.claude/<dir>/; presence forces that model on every subagent/workflow agent. Precedence sonnet > opus > fable (sonnet is the kill-switch).",
+    "dir": "state",
+    "sonnet": "sonnet-only-mode",
+    "opus": "opus-only-mode",
+    "fable": "fable-only-mode",
+    "precedence": ["sonnet", "opus", "fable"]
+  },
+  "main_session_advice": {
+    "enabled": true,
+    "_comment": "Inverted from the old opus-bias: advise /model opus ONLY when the TaskProfile hits an opus row of task_matrix AND heavy_qualifiers pass. Otherwise silent (no per-prompt /model nag). Consumed by prompt_router/modules/model_advice.py (P2-T4, filled once P1 lands the router core)."
+  }
+}
