@@ -159,7 +159,7 @@ def emit_advisory(file_path: str, tool_name: str, codex_path: str) -> None:
     output = {
         "hookSpecificOutput": {
             "hookEventName": "PostToolUse",
-            "followup_message": msg,
+            "additionalContext": msg,
         }
     }
     sys.stdout.write(json.dumps(output))
@@ -208,6 +208,15 @@ def main() -> None:
     # Find CODEX.md relative to session workspace
     workspace = payload.get("cwd", "") or os.getcwd()
     codex_path = find_codex(workspace)
+
+    # Record the CODEX nag via the shared persist primitive (P4-T6/C18) so
+    # cross-writer CODEX prompting is coordinated. Non-suppressing here (the
+    # per-session sentinel above already dedups this hook). Fail-open.
+    try:
+        from lib import persist_common as _pc
+        _pc.already_persisted(cid, "codex-nag", f"{workspace}:{os.path.basename(file_path)}")
+    except Exception:
+        pass
 
     # Emit advisory
     emit_advisory(file_path, tool_name, codex_path)

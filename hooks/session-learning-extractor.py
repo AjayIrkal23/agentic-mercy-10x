@@ -545,9 +545,19 @@ def main() -> int:
     except OSError:
         pass
 
-    # Emit the learning prompt
+    # Emit the learning prompt (standard schema — P4-T6; was non-standard followup_message)
     followup = _build_followup_message(workspace, codex_path, writes, codex_exists)
-    sys.stdout.write(json.dumps({"followup_message": followup}, ensure_ascii=False) + "\n")
+    # Dedup via the shared persist primitive (P4-T6 / C18): don't re-emit the same
+    # learning prompt twice in one session. Fail-open (helper never raises).
+    try:
+        from lib import persist_common as _pc
+        if _pc.already_persisted(cid, "codex-learning", followup):
+            sys.stdout.write("{}\n")
+            return 0
+    except Exception:  # noqa: BLE001
+        pass
+    sys.stdout.write(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "Stop", "additionalContext": followup}}, ensure_ascii=False) + "\n")
     return 0
 
 

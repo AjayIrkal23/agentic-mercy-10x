@@ -291,6 +291,19 @@ def main() -> None:
         # Write to Memory MCP
         entity_name = get_entity_name(workspace, project_name)
         entity_type = "session_decision"
+
+        # Shared persist primitive (P4-T6 / C18): don't re-write the same
+        # observation set twice for this workspace. Fail-open (never blocks a
+        # real capture). Keyed by workspace since this hook has no session id.
+        try:
+            from lib import persist_common as _pc
+            _dedup_key = f"{entity_name}|{len(observations)}|{';'.join(observations)[:400]}"
+            if _pc.already_persisted(workspace, "memory-observation", _dedup_key):
+                print("{}")
+                return
+        except Exception:
+            pass
+
         mcp_ok = write_to_memory_mcp(entity_name, entity_type, observations)
 
         if not mcp_ok:
@@ -307,7 +320,7 @@ def main() -> None:
         output = {
             "hookSpecificOutput": {
                 "hookEventName": "Stop",
-                "followup_message": msg,
+                "additionalContext": msg,
             }
         }
         sys.stdout.write(json.dumps(output))

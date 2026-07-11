@@ -14,7 +14,7 @@ Gate summary:
   Gate 2 (docs)      — HARD BLOCK — missing server_docs/frontend_docs/PROJECT_LINKAGES
   Gate 3 (security)  — SEMI-HARD — semgrep not run on security-sensitive files
   Gate 4 (santa)     — SEMI-HARD — adversarial review not dispatched for 3+ writes
-  Gate 5 (dead code) — advisory, always PASS (reminder if 5+ writes)
+  Gate 5 (dead code) — SEMI-HARD — dead-code audit not recorded for 2+ writes
 
 State files read (all under STATE_DIR / {safe_cid}.*):
   .desloppify.json    — code_writes count
@@ -39,22 +39,13 @@ MIN_WRITES_DEAD  = 2   # code_writes threshold to require dead-code audit
 
 # Cursor config/hook paths — Santa adversarial review not required (verify-hooks.sh instead)
 _INFRA_PATH_MARKERS = (
-    "/.claude/hooks/",
-    "/.claude/rules/",
-    "/.claude/scripts/",
-    "/.claude/docs/",
-    "/.claude/mcp.profiles/",
-    "/.claude/hooks/",
-    "/.claude/rules/",
-    "/.claude/docs/",
+    # deduped (P4-T6): the ".claude/x/" forms are substrings of the "/.claude/x/"
+    # forms, so `marker in n` matches identically — one clean set, same behavior.
     ".claude/hooks/",
     ".claude/rules/",
     ".claude/scripts/",
     ".claude/docs/",
     ".claude/mcp.profiles/",
-    ".claude/hooks/",
-    ".claude/rules/",
-    ".claude/docs/",
 )
 
 
@@ -293,7 +284,7 @@ def gate4_santa(cid: str, code_writes: int) -> tuple[bool, str, str]:
     detail = (
         f"{code_writes} code file(s) written. "
         "Santa Method adversarial review not dispatched. "
-        "Fix: dispatch a code-reviewer agent (Agent tool, subagent_type \"code-reviewer\") "
+        "Fix: dispatch a gsd-code-reviewer agent (Agent tool, subagent_type \"gsd-code-reviewer\") "
         "to run the BREAKER + SIMPLIFIER passes on the diff before completing."
     )
     return False, "Gate 4 (santa)", detail
