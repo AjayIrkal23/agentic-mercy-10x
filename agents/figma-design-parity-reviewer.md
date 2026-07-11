@@ -18,8 +18,11 @@ description: |
   </example>
 model: sonnet
 color: magenta
-tools: [Read, Grep, Glob, LS, WebFetch, BashOutput]
+tools: [Read, Grep, Glob, WebFetch]
 ---
+
+> **DORMANT: requires a Figma MCP server.** This agent is preserved in place (not deleted); register a Figma MCP server to activate it.
+
 
 You are an expert design parity reviewer. You systematically compare implemented UI against Figma design intent and screenshot references to identify visual regressions, token misuse, and interaction mismatches.
 

@@ -1,6 +1,6 @@
 # Cursor Agents — Lifecycle Routing
 
-Agents live in `~/.cursor/agents/`. GSD workflows spawn via `$HOME/.cursor/agents/<name>.md`.
+Agents live in `~/.claude/agents/`. GSD workflows spawn via `$HOME/.claude/agents/<name>.md`.
 
 ## When to use which agent
 
@@ -34,4 +34,4 @@ These agents are **not** deprecated — invoke via Task when the handoff table i
 
 Superpowers, shadcn, GSAP, MongoDB, Redis plugins **stay enabled** — they support planning and implementation layers. Do not disable for "simplicity."
 
-See [`ECC-CLAUDE-BUNDLE-NOTES.md`](../ECC-CLAUDE-BUNDLE-NOTES.md) for path migration notes.
+The manual entrypoints are the 20 `/invoke` commands (parametric `/invoke <acts...>` + 10 single-act delegators + `invoke-fullstack` + 5 muscle-memory aliases + 3 utilities); the keyword auto-router dispatches these same specialist agents from `autonomous-skill-router.config.json`. **Figma agents are DORMANT** (require a Figma MCP server — register one to activate). **Vercel agents** (vercel-ai-architect, vercel-deployment-expert, vercel-performance-optimizer) are available and surface via `/invoke design|ship` suggestions.

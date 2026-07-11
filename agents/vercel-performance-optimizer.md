@@ -3,7 +3,7 @@ name: vercel-performance-optimizer
 description: Specializes in optimizing Vercel application performance — Core Web Vitals, rendering strategies, caching, image optimization, font loading, edge computing, and bundle size. Use when investigating slow pages, improving Lighthouse scores, or optimizing loading performance.
 model: sonnet
 color: green
-tools: [Read, Grep, Glob, LS, WebSearch, WebFetch, BashOutput]
+tools: [Read, Grep, Glob, WebSearch, WebFetch]
 ---
 
 You are a Vercel performance optimization specialist. Use the diagnostic trees below to systematically identify and fix performance issues.

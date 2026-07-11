@@ -18,8 +18,11 @@ description: |
   </example>
 model: sonnet
 color: cyan
-tools: [Read, Grep, Glob, LS, Write, Edit, BashOutput]
+tools: [Read, Grep, Glob, Write, Edit]
 ---
+
+> **DORMANT: requires a Figma MCP server.** This agent is preserved in place (not deleted); register a Figma MCP server to activate it.
+
 
 You are a Figma Code Connect specialist. You create and maintain parserless Code Connect template files (`.figma.js`) that map Figma components to code snippets, enabling bidirectional design-to-code connections.
 
