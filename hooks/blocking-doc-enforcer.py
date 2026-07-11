@@ -13,9 +13,21 @@ from pathlib import Path
 
 from tool_compat import is_shell_tool, tool_name
 
-STATE_DIR = Path(__file__).resolve().parent / ".state"
+SCRIPT_DIR = Path(__file__).resolve().parent
+STATE_DIR = SCRIPT_DIR / ".state"
 
 GIT_COMMIT_RE = re.compile(r"\bgit\s+commit\b")
+
+# Doc labels shown in the deny message — byte-identical GO_UDP defaults,
+# overridable via doc-enforcement.config.json (P4-T4). Never raises.
+_BE_LABEL, _FE_LABEL, _LINK_LABEL = "server_docs/", "frontend_docs/", "PROJECT_LINKAGES.md"
+try:
+    _cfg = json.loads((SCRIPT_DIR / "doc-enforcement.config.json").read_text(encoding="utf-8"))
+    _BE_LABEL = _cfg.get("backend_doc_label", _BE_LABEL)
+    _FE_LABEL = _cfg.get("frontend_doc_label", _FE_LABEL)
+    _LINK_LABEL = _cfg.get("linkage_label", _LINK_LABEL)
+except Exception:  # noqa: BLE001
+    pass
 
 
 def _safe_cid(cid: str) -> str:
@@ -101,11 +113,11 @@ def main() -> int:
 
     missing: list[str] = []
     if be_touched and not be_docs_written:
-        missing.append("- server_docs/ (backend code changed)")
+        missing.append(f"- {_BE_LABEL} (backend code changed)")
     if fe_touched and not fe_docs_written:
-        missing.append("- frontend_docs/ (frontend code changed)")
+        missing.append(f"- {_FE_LABEL} (frontend code changed)")
     if (be_touched or fe_touched) and not linkages_written:
-        missing.append("- PROJECT_LINKAGES.md")
+        missing.append(f"- {_LINK_LABEL}")
 
     if not missing:
         _allow()

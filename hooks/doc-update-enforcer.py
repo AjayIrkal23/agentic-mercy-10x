@@ -33,6 +33,32 @@ DOC_PATH_SEGMENTS = [
 BE_DOC_SEGMENTS = ["server_docs/"]
 FE_DOC_SEGMENTS = ["frontend_docs/"]
 LINKAGE_SEGMENTS = ["PROJECT_LINKAGES"]
+REPO_MARKERS = ["/UDP_PLATFORM/", "/GO_UDP/"]
+
+
+def _load_doc_config() -> None:
+    """Override the doc-marker constants from doc-enforcement.config.json (P4-T4).
+
+    Defaults above are byte-identical to the historic GO_UDP literals, so a
+    missing/partial config changes nothing. Never raises.
+    """
+    global DOC_PATH_SEGMENTS, BE_DOC_SEGMENTS, FE_DOC_SEGMENTS, LINKAGE_SEGMENTS, REPO_MARKERS
+    try:
+        import json as _json
+        cfg_path = SCRIPT_DIR / "doc-enforcement.config.json"
+        if not cfg_path.is_file():
+            return
+        cfg = _json.loads(cfg_path.read_text(encoding="utf-8"))
+        DOC_PATH_SEGMENTS = cfg.get("doc_path_segments", DOC_PATH_SEGMENTS)
+        BE_DOC_SEGMENTS = cfg.get("backend_doc_segments", BE_DOC_SEGMENTS)
+        FE_DOC_SEGMENTS = cfg.get("frontend_doc_segments", FE_DOC_SEGMENTS)
+        LINKAGE_SEGMENTS = cfg.get("linkage_segments", LINKAGE_SEGMENTS)
+        REPO_MARKERS = cfg.get("repo_markers", REPO_MARKERS)
+    except Exception:  # noqa: BLE001 - config errors must never break the hook
+        pass
+
+
+_load_doc_config()
 
 SKIP_PATTERNS = [
     ".claude/", "node_modules/", ".git/", "dist/", "build/",
@@ -108,8 +134,7 @@ def _is_dox_doc(fp: str) -> bool:
 
 def _relative_path(fp: str) -> str:
     norm = fp.replace("\\", "/")
-    markers = ["/UDP_PLATFORM/", "/GO_UDP/"]
-    for m in markers:
+    for m in REPO_MARKERS:
         idx = norm.find(m)
         if idx >= 0:
             return norm[idx + 1:]
@@ -237,7 +262,8 @@ def main() -> int:
         f"changed dir(s) — are updated. Phase 7 in mandatory-skill-protocol is non-negotiable."
     )
 
-    print(json.dumps({"additionalContext": msg}))
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "PostToolUse", "additionalContext": msg}}))
     return 0
 
 

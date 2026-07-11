@@ -1,0 +1,11 @@
+{
+  "_about": "Per-repo doc-enforcement markers for doc-update-enforcer.py (PostToolUse) and blocking-doc-enforcer.py (PreToolUse git-commit gate). Extracted from the two hooks in P4-T4 so doc enforcement works in ANY repo, not just GO_UDP. The DEFAULTS below are byte-identical to the values the hooks previously hardcoded — GO_UDP behavior is unchanged. Edit these to point at another repo's doc layout.",
+  "repo_markers": ["/UDP_PLATFORM/", "/GO_UDP/"],
+  "backend_doc_segments": ["server_docs/"],
+  "frontend_doc_segments": ["frontend_docs/"],
+  "linkage_segments": ["PROJECT_LINKAGES"],
+  "doc_path_segments": ["server_docs/", "frontend_docs/", "PROJECT_LINKAGES", "AGENTS.md", "/docs/"],
+  "backend_doc_label": "server_docs/",
+  "frontend_doc_label": "frontend_docs/",
+  "linkage_label": "PROJECT_LINKAGES.md"
+}
