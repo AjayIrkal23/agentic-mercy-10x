@@ -273,40 +273,13 @@ def main() -> int:
                 "Override: re-issue this exact edit once to proceed anyway (logged)."
             )
 
-        # ---- Tier 2: soft ask for a missing LOCAL CLAUDE.md ----
-        # When children are auto-created (PostToolUse dox-child-scaffold/engine), the
-        # local doc appears right after this write — no need to interrupt with an ask.
-        if cfg.get("autoCreateChildren", True):
-            return _allow()
-        if not cfg.get("softAskLocalDoc", True):
-            return _allow()
-        target_dir = abs_path.parent
-        try:
-            if target_dir.resolve() == root.resolve():
-                return _allow()  # root doc covers the repo root
-        except Exception:
-            return _allow()
-
-        local_doc = target_dir / ROOT_DOC
-        if local_doc.exists():
-            return _allow()
-
-        try:
-            rel_dir = target_dir.resolve().relative_to(root.resolve()).as_posix()
-        except Exception:
-            return _allow()
-
-        asked = set(state.get("asked_dirs") or [])
-        if rel_dir in asked or not _dir_is_significant(target_dir, cfg):
-            return _allow()
-        asked.add(rel_dir)
-        state["asked_dirs"] = sorted(asked)
-        _save_state(cid, state)
-        return _ask(
-            f"DOX: `{rel_dir}/` has no local `CLAUDE.md` (dox tree). Create/extend one "
-            "via the `dox-doc-tree` skill so local rules travel with the code — or approve "
-            "to proceed. (Asked once per directory.)"
-        )
+        # ---- Tier 2 REMOVED (P4-T3, audit §5 dead-code) ----
+        # The former soft-ask for a missing LOCAL CLAUDE.md was unreachable under
+        # the shipped config: `autoCreateChildren` defaults True, so the
+        # PostToolUse dox-child-scaffold/engine creates the local doc right after
+        # this write — interrupting with an ask was never correct. Root presence
+        # (Tier 1 above) is the only hard gate.
+        return _allow()
 
     except Exception as exc:  # noqa: BLE001
         print(f"[dox-write-gate] Error: {exc}", file=sys.stderr)

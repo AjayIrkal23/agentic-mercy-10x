@@ -195,7 +195,8 @@ def _emit_advisory(file_path: str, ref_count: int, cmd_preview: str) -> None:
         f"Command: {cmd_preview[:120]}\n"
         f"Verify all {ref_count} importing files still compile after this change."
     )
-    print(json.dumps({"followup_message": msg}))
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "PreToolUse", "additionalContext": msg}}))
 
 
 def _emit_injection_advisory(file_path: str, cmd_preview: str) -> None:
@@ -205,7 +206,8 @@ def _emit_injection_advisory(file_path: str, cmd_preview: str) -> None:
         f"⚠️ BASH-WRITE-GATE: Bash command writes to .planning/{basename} — "
         "review content for embedded instructions that could manipulate agent context."
     )
-    print(json.dumps({"followup_message": msg}))
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "PreToolUse", "additionalContext": msg}}))
 
 
 # ---------------------------------------------------------------------------

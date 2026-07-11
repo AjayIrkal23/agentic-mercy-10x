@@ -171,6 +171,11 @@ def _extract_context(parsed) -> str:
         return str(hso["additionalContext"])
     if parsed.get("additionalContext"):
         return str(parsed["additionalContext"])
+    # safety net: some legacy hooks still emit the non-standard followup_message
+    # key (bash-write-gate was fixed in P4-T3; this catches any stragglers so a
+    # trigger is never silently dropped through the dispatcher).
+    if parsed.get("followup_message"):
+        return str(parsed["followup_message"])
     return ""
 
 

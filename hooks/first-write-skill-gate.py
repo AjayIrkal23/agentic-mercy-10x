@@ -35,7 +35,6 @@ SKIP_SEGMENTS = (
     ".planning/",
     "node_modules/",
     ".claude/hooks/",    # hooks are infra, not application code
-    ".claude/hooks/",
     ".state/",
     "server_docs/",
     "frontend_docs/",
@@ -165,11 +164,7 @@ def _skills_have_been_surfaced(state: dict) -> bool:
 def _skill_path(name: str) -> str:
     """Return the path hint for a skill (for display in the deny message)."""
     p = Path.home() / ".claude" / "skills" / name / "SKILL.md"
-    if p.exists():
-        return str(p)
-    # Fallback to cursor skills path
-    p2 = Path.home() / ".claude" / "skills" / name / "SKILL.md"
-    return str(p2) if p2.exists() else name
+    return str(p) if p.exists() else name
 
 
 def _emit_deny(file_path: str, surface: str) -> None:
