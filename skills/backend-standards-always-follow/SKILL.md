@@ -82,14 +82,15 @@ triggers:
 > 9. `golang-testing`
 > 10. `postgres-patterns`
 >
-> This is non-negotiable. Do not skip, defer, or sample a subset. If any one is
-> not yet loaded this turn, load it now before writing backend code.
+> These 10 are the companion skills for backend work — NAMED here as trigger
+> pointers so none is lost. Load a companion's BODY lazily, only when the task
+> actually needs it — not all 10 in full up front.
 
 ## Overview
 
-This is the always-on backend baseline.
+This is the always-on backend baseline. The active backend stack is **Go (GO_UDP)** — all examples are Go-first; Node/TS/Fastify/Mongo variants live in `references/node-stack.md`.
 
-Start here for any backend task. The companion bundle above is loaded in full alongside it — every time, not conditionally.
+Start here for any backend task. The companion bundle above is NAMED (trigger pointers); load each companion's body LAZILY, only when the task needs it — not all in full every time.
 
 ## Always Apply
 

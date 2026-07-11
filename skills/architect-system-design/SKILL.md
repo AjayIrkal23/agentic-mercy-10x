@@ -32,6 +32,8 @@ triggers:
 ---
 # Architect System Design
 
+> Active stack: **Go (GO_UDP)** — examples are Go-first; Node/TS/Fastify/Mongo variants in `references/node-stack.md`.
+
 ## Overview
 
 This is the architecture shell.
@@ -55,7 +57,7 @@ It does not assume frontend and backend both matter. It classifies the touched s
 Choose the touched surface first:
 
 - Backend-only: load the mandatory Backend Core Compliance Set before design decisions: `backend-standards-always-follow`, `service-layer-standards`, `backend-api-standards`, `backend-error-handling`, and `backend-performance-standards`. Preserve `api-contract-standards` for envelope/contract work, `domain-scaffold-patterns` for new domain/feature skeleton planning, and `scaffold-standards` for concrete backend skeleton details.
-- Frontend-only: select and load the matching Build Web Apps plugin skill when available, then load the mandatory Frontend Core Compliance Set: `build-web-apps:frontend-app-builder` for new/redesign/visual surfaces or `build-web-apps:react-best-practices` for React/Vite/UI/code planning, plus `frontend-standards-always-follow`, `frontend-structure-standards`, `frontend-response-handling`, `frontend-server-data-patterns`, `frontend-api-standards`, and `react-hooks-patterns`.
+- Frontend-only: select and load the matching Build Web Apps plugin skill when available, then load the mandatory Frontend Core Compliance Set: `frontend-standards-always-follow:frontend-app-builder` for new/redesign/visual surfaces or `frontend-standards-always-follow:react-best-practices` for React/Vite/UI/code planning, plus `frontend-standards-always-follow`, `frontend-structure-standards`, `frontend-response-handling`, `frontend-server-data-patterns`, `frontend-api-standards`, and `react-hooks-patterns`.
 - Cross-surface: load the matching Build Web Apps plugin plus Frontend Core Compliance Set and Backend Core Compliance Set, then only the preserved add-ons required by the actual design.
 
 Use `project-reference-linkage` when the design crosses shared contracts or linked modules.

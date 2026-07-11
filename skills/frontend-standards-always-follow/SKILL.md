@@ -107,7 +107,7 @@ triggers:
 
 This is the always-on frontend baseline.
 
-Apply it immediately after the matching Build Web Apps plugin skill for any frontend task. The companion bundle above is loaded in full alongside it — every time, not conditionally.
+Apply it immediately after the matching Build Web Apps plugin skill for any frontend task. The companion bundle above is NAMED (trigger pointers); load each companion's body LAZILY, only when the task needs it — not all in full every time.
 
 ## Always Apply
 
@@ -147,7 +147,7 @@ Apply it immediately after the matching Build Web Apps plugin skill for any fron
 - `frontend-response-handling` for API parsing, normalized errors, and backend-driven list behavior.
 - `frontend-server-data-patterns` for tables, lists, search, and query-state flows.
 - `react-hooks-patterns` for complex local state, effects, refs, reducers, or custom hook extraction.
-- `tailwind-design-system`, `ui-ux-pro-max`, `gsap-ui-motion`, or `agentation-react` only when the task explicitly needs them.
+- `tailwind-design-system`, `ui-ux-pro-max`, `frontend-ui-engineering`, or `impeccable` only when the task explicitly needs them.
 
 ## Completion Checklist
 
