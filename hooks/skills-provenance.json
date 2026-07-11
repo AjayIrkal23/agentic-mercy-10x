@@ -1,0 +1,1166 @@
+{
+  "_meta": {
+    "purpose": "P5-T14 upstream-locked skill provenance + R10 baseline registry",
+    "count": 128,
+    "authority": "plans/SKILL-FATE-2026-07-11.md \u00a71",
+    "note": "Locked skills are NEVER edited; router integration is sidecar-only. R10 (validate_skills.py / doctor / CI) re-hashes and FAILS on any local edit."
+  },
+  "autoplan": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "738642ceb30c10fc9d9045b4c0aeb65a9f93f1b539eb72d6c662a23a009cb256",
+    "capturedAt": "2026-07-11"
+  },
+  "benchmark": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "7db2c23f9807b5bb7cecd0f355fdcc62a787486fbc5d89b72b64aef3cab66f3a",
+    "capturedAt": "2026-07-11"
+  },
+  "benchmark-models": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "9b5191459085e9c2b7fc348bdbfb90481fc9e49936d3d553fd523bcdb95af2bc",
+    "capturedAt": "2026-07-11"
+  },
+  "browse": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "c6a498057fc1ed1d7e4ae87073b31949b5453b8e2cef274c455f991682805027",
+    "capturedAt": "2026-07-11"
+  },
+  "canary": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "6d5612547ffcc77253193e39ce1da70fc91197cd37de028c805c47bdad13651b",
+    "capturedAt": "2026-07-11"
+  },
+  "careful": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "116fb49d74fce1d2c5fb559f6abfdd459b48394e698551bb29babd8e928d44d7",
+    "capturedAt": "2026-07-11"
+  },
+  "codex": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "29b9d8eb251ac762ab97db92844310add89210a3a0a7804264ffe0da860635af",
+    "capturedAt": "2026-07-11"
+  },
+  "connect-chrome": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "00a8fcada5a3693eafcb14e4940a3eb41ec56303de6e211c927c5b1708b134d4",
+    "capturedAt": "2026-07-11"
+  },
+  "context-restore": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "d1fd051fc09b9197de75c33177d705314c39932c0fb902098f9381fee5daf42c",
+    "capturedAt": "2026-07-11"
+  },
+  "context-save": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "0c60bb556d02f249ba17c117d869efe54d607c92c8b02b9bf98e6dd7cb5e27db",
+    "capturedAt": "2026-07-11"
+  },
+  "cso": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "c007aab81f884b2bfb3a8d5426cabd037477d5a99a98368972bebaebeafb9bfa",
+    "capturedAt": "2026-07-11"
+  },
+  "design-consultation": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "992f651462b3ff37ed2890a6d0e5cbaae0bb89ebad8242b970a283ba1c1ccd7b",
+    "capturedAt": "2026-07-11"
+  },
+  "design-extract": {
+    "family": "vendored-design",
+    "source": "author release (six-skill UI craft stack)",
+    "sourceType": "vendored",
+    "updateCommand": "re-vendor from author release",
+    "hashBasis": "content-hash",
+    "baselineHash": "d82d71662a4799e6d083cf0f7ce411503a4b0a8260e77549bd04d30d901d492c",
+    "capturedAt": "2026-07-11"
+  },
+  "design-html": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "33466af2bb48422a153f420dda680dea532617e487e4c6873ef1ee4c6c4e571f",
+    "capturedAt": "2026-07-11"
+  },
+  "design-review": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "4c32c0900eed3806ebc5a98a093cceb28adfdbd0d5b093fa5cb2a81f9f7714a0",
+    "capturedAt": "2026-07-11"
+  },
+  "design-shotgun": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "09d6eccbf731bb1ac79441c738d6c1c4b2e28e3f592f99df42f4b89bb2b88d38",
+    "capturedAt": "2026-07-11"
+  },
+  "devex-review": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "366a127b59e3e96cff0bbfebdb06f712d172739854f063d67d51986952377063",
+    "capturedAt": "2026-07-11"
+  },
+  "document-generate": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "c1e4f5e00b77a1afcc6439f4c079c12b97af7c683b0bad4577938e93e54312fa",
+    "capturedAt": "2026-07-11"
+  },
+  "document-release": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "e7448a702fd99459595d946425f7353a3725813117071170ace3ebd32be6434b",
+    "capturedAt": "2026-07-11"
+  },
+  "find-skills": {
+    "family": "skills-cli",
+    "source": "npx skills ecosystem discovery skill",
+    "sourceType": "skills-cli",
+    "updateCommand": "npx skills update",
+    "hashBasis": "content-hash",
+    "baselineHash": "7d1bbc434b82bd21e6ea60d28a1a770d9e8f821368737ef6c60861dc64ddb218",
+    "capturedAt": "2026-07-11"
+  },
+  "freeze": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "5bf34292a87d8af6c063cce6c0fc20ab937d0284531fcb79c002bc2c3ec8a4c0",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-add-tests": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "6ca499425ea16d3824cba122063b50e7ce6bc5d1939ab0535f485c14eb5b7b3e",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-ai-integration-phase": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "29f7a7122b243d68d669b59d65e3ddf601437dd63d7f066ce555a2bc6f05dac7",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-audit-fix": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "552572bbb2f38abab4d987affd3bed1066a863455479e245d762c1099cf5547a",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-audit-milestone": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "60602375af9eaaa86cfe73f2f87408b1a326d30d6c530168b4b924cfa060b8ea",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-audit-uat": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "4f7833188009b519e748e6a8aeb78de6381e0cd27d2a76ed177621e712950671",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-autonomous": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "ca7916c9f2d7db7c972e5a7bd80aee2ec68930b82098828f5021ce4da2c3cd0c",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-capture": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "75a55a1e0b9baded7d2e88ddfe3800cf1a635e83db714713ebe15c07a38fc786",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-cleanup": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "0702e6e666369647b7272d30bddfd0dc33236617a606e07435bd58fd930c8451",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-code-review": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "11f5b0bf7c49be9e6ef68f4791ad63deb136cd8a5f74a3f1079ccced6a80a243",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-complete-milestone": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "2feaa44340ac29e375c27f22385494df311fe779546393bbf53198cca58d770d",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-config": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "e6c155ed94f0af7d1a891208d1cec97bd649fd02d049842eec87f2a05653040a",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-debug": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "6df65f5165b82f16174ab289d8c45c334fa4f43964c4dd6c8fea361b9cdf3341",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-discuss-phase": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "771c95e6882eb3e73c5ac6ba125ecfa27bd66f5670b4a657a0bd5debcc81cd23",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-docs-update": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "88a2519f830b04070a3cdb6fb5fc4e753fa519ffacfba1763e6ca38c8bd9e92c",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-eval-review": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "9967630f88b7bc89f4739ee5800242398577a568f0990d3cfc311bedd7bcb820",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-execute-phase": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "16c02ba383865e2bc697d036dc85eae4fe4d6338ea016bb8c33fc0b45b3871c3",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-explore": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "fb1797ce65e934073a86d01e9f4ae785fdf3e89af3282b2012139960f8b752f7",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-extract-learnings": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "54887e1c898b6f14e495b2f3abc14f317ba0c7a00f072b94922e1e7e593968b1",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-fast": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "10e6ba245063ae4995b998a5ece7663ac7362de274ab06c76c8886bf25c8e284",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-forensics": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "e36e4bd9955f2121940ccdc0715a5be26f192e5d5f08d8adc3680457daa16d0a",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-graphify": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "d2e2f9f249cc004034e8a0fb985e98389e7e9df0b69103ed678470158ad5298d",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-health": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "fa42ebfb3c9da668ca7e5ab9bf30ab5db047bfe7da4911e79f7326e9e933545d",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-help": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "e8c4ed22e13a134a8fa3a2ecd718813249d42d7d8e67f9d48b451d35c608b347",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-import": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "cc09301b91a3b86d70514ff87cc0f4ff125947c3c122d08ca437990049154911",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-inbox": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "e93dcdb45bc1a7fd610d3d6c0cf2391caea15144f07491fd107470067920640f",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-ingest-docs": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "fc3ec4472f536c532c123caaf86f1873828f15b9fc3dda0687c518a39338655e",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-manager": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "cf92a9fd2c713342e03f5898e65573588c67fa8c90a87492ba7e9cc24b43624f",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-map-codebase": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "6892433a7a79e9caf5d4c6a51835696c24859e3e8478f056275762a4bf59e65d",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-milestone-summary": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "aa44b320364456ed07462e600ac667e3abdbd8e441b92bb212492374324b3dbe",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-mvp-phase": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "a11583d11e5357d3d2c83eb50f7f5614fd2b1ea1e8b8edfde9ee24fc10cc08a0",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-new-milestone": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "9b0586314154a6c0745b112016db0fd07992d7d8feab3f128e2eef74199455ad",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-new-project": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "8883279ff12749a3523c10b50b97e2e942a4f4927a75f34c43689c1652cdacca",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-ns-context": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "56556aba214a62e183cd6893df8df624e825c4ff57d39a95a87bbf68e9878655",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-ns-ideate": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "81e0dace22466e21b57955ccc0165b56b982b1e82547c7c53e1abab4091788b8",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-ns-manage": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "d09bd5245cff68bf4f0b9109d0b00cd5ab067cde8b854130c28cf913d3e99c07",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-ns-project": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "2e26cd8cdfb2d97ca9e52753aea18951261cdc0a1209c8c8b79d254c8460047e",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-ns-review": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "97ea67e3b44b64047d6fa1d135f4a7dc8cf7bbfb358e7db3363ba5b1dc708944",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-ns-workflow": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "f6ec01d5d5f30ddb18867e68e53011c26e3a0c138dd70505eb982e5d39bc2f0d",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-pause-work": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "63e0c65a8ba0d0e02c63aff2ed1e7105f2e22b181069c9051b4daa7fea66f5b3",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-phase": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "b3d68ef8f84921bb05765d967ae4fc2ee6c0482469350efa114ddc6fd745dba0",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-plan-phase": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "72cc92204922c65ca7c7da3442e5665ceb9f71c91c26b75c3d1d52d117492fbc",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-plan-review-convergence": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "eba598caa5ff64398149168737363503386770112618fbef90f73e60aeaedf54",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-pr-branch": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "3b77b06e6981fd1076dd8df06d2d9c3442ddbf71b42045a4961b9e084f8f6e25",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-profile-user": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "bd618c8fec057e1c940c7b087f6e0ea74e7a79ecf5c01e7a8b2d55001f9d6694",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-progress": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "6b8dd16e89fd5a8424e6425d961fdddc91fb46749f920a446db7e744c841e29a",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-quick": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "a50169ec3852284ed3f82f4ee974328e72f0f41426aca3043e7b0b83629ed618",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-resume-work": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "c4471d0fb213870b7939b01c0e984d4ad87e08e74656a03e20ecff65e7a1f94b",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-review": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "e6b3574b7217a6899bbefebb7af57fa54aca867e513f85f08dcdf6490a0f8f24",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-review-backlog": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "7b914199d342a85826ca316aa66366452d4a1c8c7958841ab44b7e24ac376ab7",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-secure-phase": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "c5676807e85e4d129fd501e400a8c21310ebf894937ae08076acd5fa16ed971b",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-settings": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "0afd8717801ce007681495e771f4fed97d2c2eb1ebed63c5e722608ee814aa56",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-ship": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "996f73ec65825eb2ee84514798afc54072b181f5b75b12e3f137c8cedf04b1af",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-sketch": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "aa0ed251aa46fa0c8d8f563531f6d4617d17b1bcfd77c2a105ebb6e04ecb14c6",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-spec-phase": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "1dff7bb14b8abacf4e95241c56cea16913465a7ba09312c9580bd6a3f2040560",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-spike": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "b2a906bceec9fdabbe1aaa16632978fe36c7dd68a9ed0df166f973de862f050d",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-stats": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "7ee5c0c2889f8b488eb81ddfb4d8ac11f617812b0c993a796f1df4f083a757d2",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-surface": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "dd5b7ca0177bf5bf70005010a93819427bffff6b88505456fecc7e0f6bba7768",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-thread": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "a35d4020e731517d71c27345a20fc2f31b54ae3e47f087ec13fbdbc24d45b073",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-ui-phase": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "db9b55372ea6b0a9aa65fb89d5e3be6b26df6be5c0d5abd72a974c5734bd6fe3",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-ui-review": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "6e5295e2c7da10a5252bb7e08bbd7e281d8fb09ac89bbafd260f7bae08440be4",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-ultraplan-phase": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "a768cfcfa40488367e7ec62e6f73443fcb764dfcfb8c01fc21b6c58aa6eba372",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-undo": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "e65b29f6e7e51dbbbb4d41a49e692befc2a038315f3e3ed1d2e7c5a1c01c9025",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-update": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "0206f1e18e713332f41e3dcd53c62a1f9b8c7c084c3703f213c9f1885990ed95",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-validate-phase": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "386db7743db801ce87f206195dce0126369bfeb1ae722ffa6d1ed1db7fba6637",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-verify-work": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "b1e96405abbad7c251add2236a117ad01a2cdad8daad546be20b4d79194cb3af",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-workspace": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "bceab078fb85f7dec10f4cadbe9ebf80a01e7026c9baefede7d7267335534e73",
+    "capturedAt": "2026-07-11"
+  },
+  "gsd-workstreams": {
+    "family": "gsd",
+    "source": "get-shit-done suite (~/.claude/get-shit-done)",
+    "sourceType": "vendored-suite",
+    "updateCommand": "gsd-update",
+    "hashBasis": "content-hash",
+    "baselineHash": "ad5eae0085469b9fad32e35d2e1f1ba5b37538390a3285de3a89f1a14b0e6dd3",
+    "capturedAt": "2026-07-11"
+  },
+  "gstack": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "git-clean",
+    "baselineHash": "",
+    "capturedAt": "2026-07-11"
+  },
+  "gstack-upgrade": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "1c184b00b20cd0f46ea593687f7ec6f275e23ac4da72c09f9673fc5c50d5b058",
+    "capturedAt": "2026-07-11"
+  },
+  "guard": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "e26d69a9d3627d4535cf338ea953ca1450a5fb98692a2b5d6eaf720e2f390648",
+    "capturedAt": "2026-07-11"
+  },
+  "health": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "7260f9d9c097a9097284f2957ea41493dad78d6d0e4cd0594d6170d275be3317",
+    "capturedAt": "2026-07-11"
+  },
+  "higgsfield-generate": {
+    "family": "installer-managed",
+    "source": "https://github.com/higgsfield-ai/skills (npx skills)",
+    "sourceType": "skills-cli",
+    "updateCommand": "npx skills update -> re-materialize -> re-hash",
+    "hashBasis": "content-hash",
+    "baselineHash": "ddeec9cd34c017fc5ce3f97746aa7a4f7407d239428424be160e99d25512130d",
+    "capturedAt": "2026-07-11",
+    "authoritativeCheck": "hooks/skills-lock.json computedHash"
+  },
+  "higgsfield-marketplace-cards": {
+    "family": "installer-managed",
+    "source": "https://github.com/higgsfield-ai/skills (npx skills)",
+    "sourceType": "skills-cli",
+    "updateCommand": "npx skills update -> re-materialize -> re-hash",
+    "hashBasis": "content-hash",
+    "baselineHash": "99f99c83b757bf7a917517175f35383453f7469b02f212cd66ea56c45daf4dd8",
+    "capturedAt": "2026-07-11",
+    "authoritativeCheck": "hooks/skills-lock.json computedHash"
+  },
+  "higgsfield-product-photoshoot": {
+    "family": "installer-managed",
+    "source": "https://github.com/higgsfield-ai/skills (npx skills)",
+    "sourceType": "skills-cli",
+    "updateCommand": "npx skills update -> re-materialize -> re-hash",
+    "hashBasis": "content-hash",
+    "baselineHash": "3eb049b7f0a20e94d55eddafd7715fb72619855482fc136712a0a547f29cc3ca",
+    "capturedAt": "2026-07-11",
+    "authoritativeCheck": "hooks/skills-lock.json computedHash"
+  },
+  "higgsfield-soul-id": {
+    "family": "installer-managed",
+    "source": "https://github.com/higgsfield-ai/skills (npx skills)",
+    "sourceType": "skills-cli",
+    "updateCommand": "npx skills update -> re-materialize -> re-hash",
+    "hashBasis": "content-hash",
+    "baselineHash": "72ce1fa3ef404bc74ae69d21958a96f939dd093d6ed4b6581e07d73ecbc100f7",
+    "capturedAt": "2026-07-11",
+    "authoritativeCheck": "hooks/skills-lock.json computedHash"
+  },
+  "higgsfield-websites": {
+    "family": "installer-managed",
+    "source": "https://github.com/higgsfield-ai/skills (npx skills)",
+    "sourceType": "skills-cli",
+    "updateCommand": "npx skills update -> re-materialize -> re-hash",
+    "hashBasis": "content-hash",
+    "baselineHash": "0752e9caa48c90b9b6f0774458b506e57e5ca578d5cd17cfa53417ed45944db9",
+    "capturedAt": "2026-07-11",
+    "authoritativeCheck": "hooks/skills-lock.json computedHash"
+  },
+  "huashu-design": {
+    "family": "vendored-design",
+    "source": "author release (six-skill UI craft stack)",
+    "sourceType": "vendored",
+    "updateCommand": "re-vendor from author release",
+    "hashBasis": "content-hash",
+    "baselineHash": "dc679f5c5d0c5a34c78b4a9cf4288668c68aa858a948e6e47a16c59e2d1f068d",
+    "capturedAt": "2026-07-11"
+  },
+  "impeccable": {
+    "family": "vendored-design",
+    "source": "author release (six-skill UI craft stack)",
+    "sourceType": "vendored",
+    "updateCommand": "re-vendor from author release",
+    "hashBasis": "content-hash",
+    "baselineHash": "a35e5a73b2927c958eee834f59bd1ce0470b960a92e050f8e39b8fc510c77d7a",
+    "capturedAt": "2026-07-11"
+  },
+  "investigate": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "15787b3d9540d27a59c275fcf7c5a4dac4ef0e0efe9b73ff77cac2bb0961ecfc",
+    "capturedAt": "2026-07-11"
+  },
+  "land-and-deploy": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "def22022ed06b6bd7576273464dda28dc1f92aaf2f8fc6c706206f111f603ca6",
+    "capturedAt": "2026-07-11"
+  },
+  "landing-report": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "fd4d197405b9141d63235475bcf7d8d3e108fcc4cbfd4ee831dfcbc25eaaf915",
+    "capturedAt": "2026-07-11"
+  },
+  "learn": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "ea69aeaba1341e762d2efa8924c70c06414502214d9e05ae46ebccbd225ad68c",
+    "capturedAt": "2026-07-11"
+  },
+  "make-pdf": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "17d7cbe13f70bf3605833d3d4b039da358020dfea52d95ae5ce36318ea7587ce",
+    "capturedAt": "2026-07-11"
+  },
+  "mmx-cli": {
+    "family": "installer-managed",
+    "source": "https://github.com/higgsfield-ai/skills (npx skills)",
+    "sourceType": "skills-cli",
+    "updateCommand": "npx skills update -> re-materialize -> re-hash",
+    "hashBasis": "content-hash",
+    "baselineHash": "3bdabd75c375455939038f763bc62c694f3db2cf39c7f10d5ac2dd72fef1aaea",
+    "capturedAt": "2026-07-11",
+    "authoritativeCheck": "hooks/skills-lock.json computedHash"
+  },
+  "office-hours": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "0aec7e20d10e6b5a3c955cd5891d08ff93782c02cb94e0a143d503a8e3806079",
+    "capturedAt": "2026-07-11"
+  },
+  "open-gstack-browser": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "00a8fcada5a3693eafcb14e4940a3eb41ec56303de6e211c927c5b1708b134d4",
+    "capturedAt": "2026-07-11"
+  },
+  "pair-agent": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "c62815e591cc5717f90db4e5dc8d9ff08371282a287739f66d95338f137d4fc6",
+    "capturedAt": "2026-07-11"
+  },
+  "plan-ceo-review": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "80597ff24a8a47c1564adbfb24758da8acb1484551f0a46081ae8e97468f396a",
+    "capturedAt": "2026-07-11"
+  },
+  "plan-design-review": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "b682b9d4871e22decd799a24d238789ba2fff36918f0fcfe9dd8642fc3c2a6c3",
+    "capturedAt": "2026-07-11"
+  },
+  "plan-devex-review": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "c3a22ad033299c5fed14459566ebbd83648962b16e658e7849c3d51856d2c096",
+    "capturedAt": "2026-07-11"
+  },
+  "plan-eng-review": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "a3200a156964015f7e227e0e6b0fcca93c8d4d0f7724199efdffe940c6f3f5cb",
+    "capturedAt": "2026-07-11"
+  },
+  "plan-tune": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "e8c65c3f661cafa6aadfb5934794c85a0acd22da7e9bf246a1c2de9c5b9da56e",
+    "capturedAt": "2026-07-11"
+  },
+  "qa": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "99a39b9e2a6405b67b66e88d6ab7f19d9a0a18ee96f3a7fabee4e938ab27a47c",
+    "capturedAt": "2026-07-11"
+  },
+  "qa-only": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "669f361f53213603aa3fcc01c5d3e365325b639ba7c948c5c7cfb940ba825545",
+    "capturedAt": "2026-07-11"
+  },
+  "retro": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "6e7c63da18a996ea67ae913a4692510d7cdf92b6955e53c87991ab0293a6632e",
+    "capturedAt": "2026-07-11"
+  },
+  "review": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "afe039fa86df91f19ea80109f3b6f5c3904c7109d19c1f412d0915d6b8b03b4f",
+    "capturedAt": "2026-07-11"
+  },
+  "scrape": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "8926d9978691408e0cc930785a3ef5bc9fb78f42457dc70d8becf1a95735e550",
+    "capturedAt": "2026-07-11"
+  },
+  "setup-browser-cookies": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "9ce52c73ab5464392ba03f346dec2aa12a680ec0df70694c1ccb3af53bcad354",
+    "capturedAt": "2026-07-11"
+  },
+  "setup-deploy": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "de4128325e41fce650afeb8957ba6929c8a859f4e37884bd31735e4cb71eb0d8",
+    "capturedAt": "2026-07-11"
+  },
+  "setup-gbrain": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "1b2692837b52366565e1ad48b4987d06c9c35cc4ffe9d11be6379f8ca5b328d6",
+    "capturedAt": "2026-07-11"
+  },
+  "ship": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "5aefb05ffc4de5827dba5431b9da170f036ff72a13f25f356d0ae37edc1c4d9b",
+    "capturedAt": "2026-07-11"
+  },
+  "skillify": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "caf39fdd3f44c6343d8006fa2d20f132e0e5848e5de8d6cee636a3f0fe9e034a",
+    "capturedAt": "2026-07-11"
+  },
+  "sync-gbrain": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "49eff37ff06552548d80b65dc0b254b24a5beeb914d9f314ed9fcf752eb502a0",
+    "capturedAt": "2026-07-11"
+  },
+  "taste-skill": {
+    "family": "vendored-design",
+    "source": "author release (six-skill UI craft stack)",
+    "sourceType": "vendored",
+    "updateCommand": "re-vendor from author release",
+    "hashBasis": "content-hash",
+    "baselineHash": "6037d19798d25d885e84e2789a992c27913a274d6ffb11e00c7df1c90541435e",
+    "capturedAt": "2026-07-11"
+  },
+  "ui-ux-pro-max": {
+    "family": "vendored-design",
+    "source": "author release (six-skill UI craft stack)",
+    "sourceType": "vendored",
+    "updateCommand": "re-vendor from author release",
+    "hashBasis": "content-hash",
+    "baselineHash": "767c8da4c0210e52d8a88014409b80eea390a18178761ea7a3d8a776a493efff",
+    "capturedAt": "2026-07-11"
+  },
+  "unfreeze": {
+    "family": "gstack-clone",
+    "source": "https://github.com/garrytan/gstack",
+    "sourceType": "git-clone",
+    "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
+    "hashBasis": "pointer-desc",
+    "baselineHash": "b3d89d6c4f18932cc208e5b2abaafbfe064cdc1033e162bd487c64ef1b8b93b0",
+    "capturedAt": "2026-07-11"
+  },
+  "vite-react-best-practices": {
+    "family": "embedded-git",
+    "source": "https://github.com/claudiocebpaz/vite-react-best-practices",
+    "sourceType": "embedded-git",
+    "updateCommand": "rename .git-upstream->.git; git pull; rename .git->.git-upstream",
+    "hashBasis": "content-hash",
+    "baselineHash": "71797cdda5444f4935aa98cfc56383b6e72da2e270714ecb806a9e901d89898e",
+    "capturedAt": "2026-07-11"
+  }
+}

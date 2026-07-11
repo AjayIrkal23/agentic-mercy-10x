@@ -1,0 +1,11 @@
+{
+  "_meta": {
+    "purpose": "Sidecar routing metadata for the 128 upstream-locked skills (SKILL-FATE \u00a71.2). build_skills_index merges these; no locked file is ever parsed beyond its native name/description.",
+    "schema": 1
+  },
+  "_aliases": {
+    "_comment": "sidecar name aliases for locked skills, e.g. taste-skill",
+    "design-taste-frontend": "taste-skill"
+  },
+  "skills": {}
+}
