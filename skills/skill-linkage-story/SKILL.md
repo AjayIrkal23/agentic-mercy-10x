@@ -1,6 +1,6 @@
 ---
 name: skill-linkage-story
-description: End-to-end story of how Cursor hooks inject skills from sessionStart through stop — sessionStart,
+description: End-to-end story of how Claude Code hooks inject skills from sessionStart through stop — sessionStart,
   beforeSubmit, preToolUse, postToolUse, stop. Use when onboarding to this config or debugging missing
   skill reminders.
 schema: 1

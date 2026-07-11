@@ -69,7 +69,7 @@ Skipping any gate produces incomplete plans, incorrect implementations, and wast
 ## Cursor adaptation (local port)
 
 - **Canonical first router:** read **`workflow-orchestrator`** before this gate so lifecycle routing stays single-source.
-- **jcodemunch / blast-radius:** optional unless you explicitly opted in — see **`~/.claude/ECC-CLAUDE-BUNDLE-NOTES.md`**. Prefer normal repo exploration, MCP you have enabled, and Superpowers discipline.
+- **jcodemunch / blast-radius:** MANDATORY-first for all code work per `~/.claude/rules/codebase-intel-first.md` — run the jcodemunch symbol index + graphify graph BEFORE reading/grepping. Use the MCP tools (plan_turn / assemble_task_context / get_blast_radius), then Superpowers discipline.
 - **Automation:** a **`sessionStart`** hook injects a short reminder via **`~/.claude/hooks/session-plan-gate-hint.py`**. For manual JSON from the repo root: `node ~/.claude/skills/plan-mode-gate/scripts/plan-mode-check.js`. Optional post-edit reminder (not wired to Cursor **`preToolUse`** by default): `node ~/.claude/skills/plan-mode-gate/scripts/code-mode-check.js`.
 
 ## Purpose

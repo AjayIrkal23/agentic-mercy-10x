@@ -40,9 +40,10 @@ triggers:
 ---
 # lean-ctx — Shell Hook (This Environment)
 
-> **IMPORTANT: In this environment, lean-ctx runs as a shell hook only.**
+> **IMPORTANT: lean-ctx runs BOTH as a shell hook AND as a configured MCP server here.**
 > The MCP tools (`ctx_read`, `ctx_search`, `ctx_shell`, `ctx_tree`, `ctx_edit`, etc.)
-> described in the full lean-ctx documentation are NOT configured and NOT available.
+> ARE configured and available — use them per `~/.claude/rules/lean-ctx.md` (residual
+> non-code I/O, shell output, dir trees). The shell hook additionally compresses Bash output.
 
 ## What the shell hook does
 
@@ -80,9 +81,9 @@ The hook runs via these entries in `~/.claude/settings.json`:
 - `PostToolUse` on `Bash` → `lean-ctx hook observe` (records token savings)
 - `SessionStart` / `SessionEnd` / `PreCompact` / `Stop` → `lean-ctx hook observe`
 
-## Full MCP mode (NOT configured in this environment)
+## Full MCP mode (configured — these tools are available)
 
-If you ever set up the full lean-ctx MCP server (`lean-ctx init --agent claude`), these tools become available — but they are NOT active now:
+The full lean-ctx MCP server is configured; these tools are available now (see `~/.claude/rules/lean-ctx.md` for the mandated mapping):
 
 | Tool | What it does |
 |------|--------------|

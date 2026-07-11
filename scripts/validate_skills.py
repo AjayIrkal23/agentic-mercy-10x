@@ -82,10 +82,14 @@ def validate(fix: bool = False) -> int:
             hard_fail += 1
             continue
 
-        # R1 name == dir
+        # R1 name == dir. Locked skills are upstream-named (e.g. the gstack twin
+        # dir 'connect-chrome' whose clone SKILL.md says 'open-gstack-browser', or
+        # vendored 'taste-skill' -> 'design-taste-frontend'); their sidecar alias
+        # handles routing and P5-T12 pointerization gives twins name==dir. So R1 is
+        # enforced only for user-authored skills.
         fm_name = str(fm.get("name", ""))
-        if fm_name != name and name not in exempt and fm_name not in exempt:
-            if fix and is_user:
+        if is_user and fm_name != name and name not in exempt and fm_name not in exempt:
+            if fix:
                 fm["name"] = name
                 sl.write_skill(d / "SKILL.md", fm, body)
                 print(f"  R1  FIX  {name}: name -> {name}")

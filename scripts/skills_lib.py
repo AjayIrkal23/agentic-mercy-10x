@@ -41,11 +41,35 @@ def read_frontmatter(path: Path) -> tuple[dict, str, bool]:
         return {}, text, False
     try:
         fm = yaml.safe_load(m.group(1)) or {}
+        if isinstance(fm, dict):
+            return fm, m.group(2), True
     except yaml.YAMLError:
-        return {}, text, False
-    if not isinstance(fm, dict):
-        return {}, text, False
-    return fm, m.group(2), True
+        pass
+    # Tolerant fallback: skill descriptions often contain a colon-space
+    # ("Commands: /extract") that trips strict YAML. Extract top-level
+    # `key: value` pairs (with indented continuation lines folded) so at least
+    # name/description are always readable — critical for LOCKED skills we must
+    # not edit but must still index by native name/description.
+    fm = _fallback_parse(m.group(1))
+    return fm, m.group(2), bool(fm)
+
+
+def _fallback_parse(fm_text: str) -> dict:
+    out: dict = {}
+    key = None
+    for line in fm_text.splitlines():
+        if not line.strip():
+            continue
+        if line[:1] in (" ", "\t") and key is not None:
+            out[key] = (str(out.get(key, "")) + " " + line.strip()).strip()
+            continue
+        mm = re.match(r"^([A-Za-z][\w-]*):\s?(.*)$", line)
+        if mm:
+            key = mm.group(1)
+            out[key] = mm.group(2).strip()
+        else:
+            key = None
+    return out
 
 
 def dump_frontmatter(fm: dict, body: str) -> str:

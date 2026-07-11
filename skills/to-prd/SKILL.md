@@ -31,7 +31,7 @@ triggers:
 ---
 This skill takes the current conversation context and codebase understanding and produces a PRD. Do NOT interview the user — just synthesize what you already know.
 
-The issue tracker and triage label vocabulary should have been provided to you — run `/setup-matt-pocock-skills` if not.
+The issue tracker and triage label vocabulary should have been provided to you; if not, configure them inline (tracker CLI/URL + label set) or in your project's CONTEXT.md / AGENTS.md.
 
 ## Process
 

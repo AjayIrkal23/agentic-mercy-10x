@@ -17,21 +17,21 @@ tools:
   - mcp__playwright__browser_resize
   - mcp__playwright__browser_take_screenshot
   - mcp__playwright__browser_snapshot
-  - mcp__claude_ai_higgsfield__models_explore
-  - mcp__claude_ai_higgsfield__generate_image
-  - mcp__claude_ai_higgsfield__generate_video
-  - mcp__claude_ai_higgsfield__generate_3d
-  - mcp__claude_ai_higgsfield__generate_audio
-  - mcp__claude_ai_higgsfield__upscale_image
-  - mcp__claude_ai_higgsfield__upscale_video
-  - mcp__claude_ai_higgsfield__outpaint_image
-  - mcp__claude_ai_higgsfield__reframe
-  - mcp__claude_ai_higgsfield__remove_background
-  - mcp__claude_ai_higgsfield__motion_control
-  - mcp__claude_ai_higgsfield__media_upload_widget
-  - mcp__claude_ai_higgsfield__job_status
-  - mcp__claude_ai_higgsfield__show_generations
-  - mcp__claude_ai_higgsfield__balance
+  - mcp__higgsfield__models_explore
+  - mcp__higgsfield__generate_image
+  - mcp__higgsfield__generate_video
+  - mcp__higgsfield__generate_3d
+  - mcp__higgsfield__generate_audio
+  - mcp__higgsfield__upscale_image
+  - mcp__higgsfield__upscale_video
+  - mcp__higgsfield__outpaint_image
+  - mcp__higgsfield__reframe
+  - mcp__higgsfield__remove_background
+  - mcp__higgsfield__motion_control
+  - mcp__higgsfield__media_upload_widget
+  - mcp__higgsfield__job_status
+  - mcp__higgsfield__show_generations
+  - mcp__higgsfield__balance
 color: pink
 memory: local
 ---

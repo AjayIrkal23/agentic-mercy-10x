@@ -2,39 +2,30 @@
 /**
  * Plan Mode Gate — Auto Context Extraction
  *
- * Accepts a task description and auto-extracts codebase context
- * using jcodemunch CLI tools.
+ * Accepts a task description and points at the jcodemunch MCP server for
+ * codebase context. NOTE: jcodemunch is an MCP server, not a shell CLI — there
+ * is no `jcodemunch-mcp` binary. Use the MCP tools directly:
+ *   mcp__jcodemunch__plan_turn / assemble_task_context / get_context_bundle.
+ * The symbol index is kept fresh by the SessionStart index-lifecycle guard.
  *
  * Usage: node auto-context.js "<task description>"
- * Output: JSON with plan_turn results, task context, and repo health
+ * Output: JSON with the MCP tool plan to run for this task
  */
 
-const { execSync } = require('child_process');
 const path = require('path');
 
-function runJcodemunch(args) {
-  try {
-    const output = execSync(`jcodemunch-mcp ${args}`, {
-      encoding: 'utf-8',
-      timeout: 30000,
-      stdio: ['pipe', 'pipe', 'ignore']
-    });
-    return JSON.parse(output);
-  } catch (err) {
-    return { error: err.message, stderr: err.stderr };
-  }
-}
-
-function resolveRepo(cwd) {
-  try {
-    const output = execSync(`jcodemunch-mcp index "${cwd}" --no-ai-summaries 2>&1`, {
-      encoding: 'utf-8',
-      timeout: 60000
-    });
-    return JSON.parse(output);
-  } catch (err) {
-    return { error: err.message };
-  }
+// jcodemunch has no CLI; return the MCP invocation plan instead of shelling out
+// to a nonexistent binary (fail-open, honest).
+function jcodemunchPlan(task) {
+  return {
+    via: 'mcp',
+    note: 'jcodemunch is an MCP server (no CLI). Run these tools for this task:',
+    tools: [
+      { tool: 'mcp__jcodemunch__plan_turn', arg: task },
+      { tool: 'mcp__jcodemunch__assemble_task_context', arg: task },
+      { tool: 'mcp__jcodemunch__get_repo_health' }
+    ]
+  };
 }
 
 function main() {
@@ -46,26 +37,15 @@ function main() {
     process.exit(1);
   }
 
-  // Step 1: Resolve repo
-  const repoInfo = resolveRepo(cwd);
-  const repo = repoInfo.repo || 'unknown';
-
-  // Step 2: Run plan_turn
-  const planTurn = runJcodemunch(`plan_turn "${task.replace(/"/g, '\\"')}" --repo "${repo}"`);
-
-  // Step 3: Run get_repo_health
-  const health = runJcodemunch(`health --repo "${repo}"`);
-
   const result = {
     task,
-    repo,
-    indexed: !repoInfo.error,
-    plan_turn: planTurn,
-    repo_health: health,
+    cwd,
+    jcodemunch: jcodemunchPlan(task),
     recommendations: {
       use_assemble_task_context: true,
-      use_sequential_thinking: (planTurn.recommended_symbols || []).length > 5,
-      check_hotspots: health.hotspots && health.hotspots.length > 0
+      use_sequential_thinking: true,
+      note: 'jcodemunch runs via MCP tools, not a CLI. The SessionStart '
+        + 'index-lifecycle guard keeps the symbol index fresh for the active repo.'
     }
   };
 

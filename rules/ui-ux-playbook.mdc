@@ -7,7 +7,7 @@ alwaysApply: false
 # UI/UX Six-Skill Stack (+ Higgsfield asset engine)
 
 > **Asset layer — Higgsfield is MANDATORY.** Every raster/video/3D/audio asset a
-> frontend needs is *generated* via Higgsfield (`mcp__claude_ai_higgsfield__*` /
+> frontend needs is *generated* via Higgsfield (`mcp__higgsfield__*` /
 > skill `higgsfield-generate`), never faked with placeholders, stock URLs, CSS-only
 > gradients, or emoji-icons. The six craft skills below *arrange* those assets. Full
 > capability→tool map + boundary: `rules/higgsfield-frontend-mandate.md`.
@@ -36,7 +36,7 @@ alwaysApply: false
 
 | Skill | Directory |
 |-------|-----------|
-| **Higgsfield (assets)** | `~/.claude/skills/higgsfield-generate/` (+ `-soul-id`, `-product-photoshoot`, `-marketplace-cards`, `-websites`); MCP `mcp__claude_ai_higgsfield__*` |
+| **Higgsfield (assets)** | `~/.claude/skills/higgsfield-generate/` (+ `-soul-id`, `-product-photoshoot`, `-marketplace-cards`, `-websites`); MCP `mcp__higgsfield__*` |
 | Impeccable | `~/.claude/skills/impeccable/` |
 | Huashu-Design | `~/.claude/skills/huashu-design/` |
 | UI/UX Pro Max | `~/.claude/skills/ui-ux-pro-max/` |

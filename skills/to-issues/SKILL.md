@@ -42,7 +42,7 @@ triggers:
 
 Break a plan into independently-grabbable issues using vertical slices (tracer bullets).
 
-The issue tracker and triage label vocabulary should have been provided to you — run `/setup-matt-pocock-skills` if not.
+The issue tracker and triage label vocabulary should have been provided to you; if not, configure them inline (tracker CLI/URL + label set) or in your project's CONTEXT.md / AGENTS.md.
 
 ## Process
 

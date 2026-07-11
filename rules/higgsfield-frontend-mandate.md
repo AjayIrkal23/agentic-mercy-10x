@@ -17,7 +17,7 @@ Higgsfield supplies the *materials*; the craft stack *arranges* them.
 
 ## Capability → tool map (what MUST be generated, not faked)
 
-| Frontend need | Higgsfield tool (connector `mcp__claude_ai_higgsfield__*`) | Model |
+| Frontend need | Higgsfield tool (connector `mcp__higgsfield__*`) | Model |
 |---|---|---|
 | Hero image, section imagery, background, texture, pattern | `generate_image` | GPT Image 2 |
 | Character / person / reference-consistent image | `generate_image` (+ `higgsfield-soul-id` for a trained face) | Nano Banana 2/Pro |
