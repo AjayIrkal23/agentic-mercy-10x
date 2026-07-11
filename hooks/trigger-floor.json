@@ -1,10 +1,10 @@
 {
   "_meta": {
     "purpose": "Charter v3 §2 verbatim trigger floor — removals forbidden, additions allowed.",
-    "generated": "2026-07-11T23:44:11",
+    "generated": "2026-07-12T00:15:03",
     "generator": "build-trigger-floor.py",
-    "checksum": "a56483ebe9fd1690a758c984ae880e5310e15b2cf4fe27ee38452c1c5767a81a",
-    "entry_count": 1972,
+    "checksum": "c2ab0c2f52419f6bf1a86a5bdbdcbf0009bd44ff1874e7e738f4b3166abd39d4",
+    "entry_count": 1973,
     "source_counts": {
       "skill_router.config.rules": 28,
       "skill_router.builtins": 24,
@@ -12,7 +12,7 @@
       "ui.keywords": 419,
       "graphify.arch+explore": 247,
       "fullstack.segments": 11,
-      "command_names": 139
+      "command_names": 140
     }
   },
   "entries": [
@@ -13353,6 +13353,13 @@
       "value": "how much",
       "source_file": "graphify-enforce.config.json",
       "source_key": "explore_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "command_name",
+      "value": "invoke",
+      "source_file": "commands/",
+      "source_key": "invoke",
       "weight": 1.0
     },
     {

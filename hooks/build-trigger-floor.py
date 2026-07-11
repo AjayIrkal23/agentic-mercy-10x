@@ -215,13 +215,24 @@ def _collect() -> list[dict]:
 
 
 def _command_names() -> list[str]:
-    """All /invoke-* command names on disk (bare name, no .md, no leading slash)."""
+    """All historic /invoke-* command names (Charter §5): the UNION of the names
+    on disk now AND the frozen historic list. This guarantees the parametric
+    139->20 collapse (P5) can never drop a retired name from the floor — the
+    names stay trigger-protected forever (the invoke_compat translator resolves
+    each to /invoke <acts>)."""
     names: set[str] = set()
     try:
         for p in _COMMANDS.glob("invoke*.md"):
             names.add(p.stem)
     except OSError:
         pass
+    frozen = _HOOKS / "historic-invoke-commands.json"
+    if frozen.is_file():
+        try:
+            data = json.loads(frozen.read_text(encoding="utf-8"))
+            names.update(data.get("names", []))
+        except (OSError, json.JSONDecodeError):
+            pass
     return sorted(names)
 
 
