@@ -8,5 +8,18 @@
   "backend-code-review": "code-review-and-quality",
   "frontend-code-review": "code-review-and-quality",
   "security-and-hardening": "owasp-security",
-  "browser-testing-with-devtools": "webapp-testing"
+  "browser-testing-with-devtools": "webapp-testing",
+  "api-and-interface-design": "api-contract-standards",
+  "frontend-api-standards": "frontend-response-handling",
+  "documentation-and-adrs": "update-docs",
+  "jcodemunch-token-saver": "codebase-intel-first",
+  "project-structure-map": "codebase-intel-first",
+  "iterative-retrieval": "codebase-intel-first",
+  "zoom-out": "codebase-intel-first",
+  "codebase-start-point-guide": "codebase-intel-first",
+  "forensic-change-coupling": "tech-debt-audit",
+  "forensic-complexity-trends": "tech-debt-audit",
+  "forensic-debt-quantification": "tech-debt-audit",
+  "forensic-hotspot-finder": "tech-debt-audit",
+  "improve-codebase-architecture": "tech-debt-audit"
 }

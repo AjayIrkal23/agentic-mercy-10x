@@ -20,37 +20,74 @@ platforms:
 token-cost: 935
 triggers:
   keywords:
+  - agent
   - agents
   - alike
+  - already
+  - analysis
   - answer
+  - ast
   - audit
   - auditing
+  - bigger
+  - blast
+  - body
+  - boundaries
+  - broader
   - build
   - call
+  - callees
+  - callers
+  - change
+  - changes
   - code
   - code-intelligence
   - codebase
   - coding
   - complex
+  - config
+  - confirm
+  - context
+  - contracts
+  - create
+  - cross-file
   - cross-module
   - ctx_read/ctx_search
+  - dead
+  - dead-code
   - debugging
   - dependency
+  - deterministic
   - discovery/understanding
+  - docs
   - dozens
+  - dramatically
   - easy
   - edges
+  - engineers
+  - env
   - every
+  - exact
+  - execution
   - explore
+  - fast
   - file
   - files
   - first
+  - fits
+  - flow
+  - function/class/method
+  - give
   - graph
   - graph/index
   - graphify
+  - graphs
   - grepping
   - help
+  - higher-level
   - i/o
+  - identify
+  - impacted
   - implementing
   - index
   - instead
@@ -58,35 +95,86 @@ triggers:
   - jcodemunch
   - jcodemunch-token-saver
   - jcodemunch/graphify
+  - json
+  - know
+  - known
+  - layer
+  - layers
   - lean-ctx
+  - likely
+  - locate
+  - lookup
+  - making
   - mandatory
+  - map
+  - markdown
+  - mcp
   - mental
   - miss
   - model
+  - need
   - never
+  - non-code
   - orchestration
   - owns
+  - path
+  - pattern
+  - perspective
+  - picture
   - plan
   - planning
   - precedence
+  - problem
+  - progressively
   - questions
+  - radius
+  - read
+  - read/grep/find
   - reading
+  - reads
+  - reduces
   - refactoring
+  - refining
+  - repository
   - resolves
   - retrieval
   - review
+  - right
   - round-trips
+  - scope
+  - search
+  - section
+  - server
+  - single-file
+  - size
+  - skip
+  - small
+  - solve
   - spawning
   - start
+  - startup
   - step
   - structural
+  - structure
+  - subagent
   - symbol
   - task
+  - tell
+  - text
+  - time
   - together
+  - token
   - touches
+  - trace
   - trigger
+  - trivial
   - understand
+  - unfamiliar
+  - usage
+  - whole
+  - wire
   - work
+  - zoom
   paths: []
   intents:
   - intel

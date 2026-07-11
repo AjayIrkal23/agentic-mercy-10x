@@ -19,37 +19,52 @@ token-cost: 1216
 triggers:
   keywords:
   - affected
+  - agents
+  - apis
+  - architectural
   - asks
   - changelogs
   - changes
+  - changing
   - check
   - client/server
   - code
+  - codebase
   - coding
   - completeness
+  - context
+  - decisions
   - docs
   - documentation
+  - engineers
   - example
   - feature
+  - features
   - first
   - folders
   - frontend_docs
+  - future
   - go_udp
   - impact
   - implementation
   - including
+  - making
   - mapping
   - markdown/pr
   - mdx
   - mentions
   - monorepo
   - must
+  - need
   - next.js
   - optional
   - phase
   - project_linkages
+  - public
   - read
   - readme
+  - record
+  - records
   - references/examples
   - references/go-udp-documentation-lifecycle.md
   - references/upstream-nextjs
@@ -58,11 +73,14 @@ triggers:
   - scaffold
   - see
   - server_docs
+  - shipping
   - split
   - substantive
   - sync
+  - understand
   - update
   - user
+  - will
   - work
   paths: []
   intents:

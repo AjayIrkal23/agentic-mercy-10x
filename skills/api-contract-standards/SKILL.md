@@ -15,22 +15,40 @@ token-cost: 642
 triggers:
   keywords:
   - api
+  - apis
   - backend
+  - boundaries
   - card
   - contract
   - contracts
+  - creating
   - defined
+  - defining
+  - design
+  - designing
+  - endpoints
   - envelopes
   - error
+  - establishing
+  - frontend
+  - graphql
+  - guides
+  - interface
   - list
   - metadata
+  - module
+  - modules
+  - public
   - response
+  - rest
   - reviewed
   - separation
   - shapes
+  - stable
   - standards
   - summary
   - table
+  - type
   - versioning
   paths:
   - src/schemas/

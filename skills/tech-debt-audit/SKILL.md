@@ -17,38 +17,128 @@ platforms:
 token-cost: 3091
 triggers:
   keywords:
+  - 2-3x
+  - 4-9x
   - actually
+  - ai-navigable
+  - analysis
+  - architectural
   - architecture
+  - areas
   - asks
   - assessment
   - audit
   - auto-invoke
   - bad
+  - budgets
+  - bugs
+  - business
+  - calculating
+  - cause
+  - change
   - check
   - code
   - codebase
+  - combining
+  - complexity
+  - consolidate
+  - context.md
+  - convert
+  - cost
+  - coupling
+  - cross-module
   - current
   - debt
+  - decisions
+  - deepening
+  - defect
+  - defects
+  - dependencies
+  - deteriorating
+  - determining
+  - discovering
+  - docs/adr
+  - dollars
+  - domain
   - effort
   - entire
   - estimates
+  - executives
   - file-cited
+  - files
+  - find
+  - finding
   - findings
   - fine
+  - fix
+  - formula
+  - formulas
+  - frequency
+  - git
   - health
+  - hidden
+  - high-risk
+  - history
+  - identifies
+  - identifying
+  - impact
+  - improve
+  - improving
+  - informed
+  - investigating
+  - issues
+  - justifying
+  - language
   - looks
+  - measuring
+  - metrics
+  - modules
+  - monitoring
+  - multipliers
+  - opportunities
+  - patterns
+  - planning
+  - priorities
+  - problem
+  - problems
   - produces
+  - productivity
   - quality
+  - rates
+  - recurring
+  - refactoring
   - repo
   - required
+  - research-backed
+  - reveals
   - review
+  - roi
   - section
   - severity
+  - shotgun
+  - stable
+  - surgery
   - tech
   - tech_debt_audit.md
+  - technical
+  - temporal
+  - testable
   - thorough
+  - tightly-coupled
+  - time
+  - together
+  - tracking
+  - tracks
+  - translating
+  - understanding
   - user
   - user-invoked
+  - uses
+  - validating
+  - violations
+  - wants
+  - work
+  - worsening
   paths: []
   intents:
   - review

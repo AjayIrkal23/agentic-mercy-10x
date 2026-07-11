@@ -1,17 +1,9 @@
 ---
 name: zoom-out
-description: Tell the agent to zoom out and give broader context or a higher-level perspective. Use when
-  you're unfamiliar with a section of code or need to understand how it fits into the bigger picture.
-disable-model-invocation: true
+description: Tell the agent to zoom out and give broader context or a higher-level perspective (alias
+  of codebase-intel-first).
+user-invocable: true
 schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 42
 triggers:
   keywords:
   - agent
@@ -31,7 +23,11 @@ triggers:
   - unfamiliar
   - zoom
   paths: []
-  intents:
-  - general
+  intents: []
+alias_of: codebase-intel-first
+provenance: self
 ---
-I don't know this area of code well. Go up a layer of abstraction. Give me a map of all the relevant modules and callers, using the project's domain glossary vocabulary.
+
+# zoom-out
+
+**Alias of [`codebase-intel-first`](../codebase-intel-first/SKILL.md).** The method content now lives at `codebase-intel-first/references/zoom-out.md` (supporting material, if any, at `codebase-intel-first/references/zoom-out/`). Invoke `codebase-intel-first`.

@@ -85,11 +85,11 @@ REWRITES = {
     "forensic-change-coupling":
         "# Change coupling (jcodemunch-backed)\n\n"
         "> Absorbed into `tech-debt-audit`. Reveals temporal coupling / shotgun-surgery "
-        "and hidden dependencies **without** the GNU `git log | awk | bc` pipelines.\n\n"
+        "and hidden dependencies **without** POSIX-only git-history shell pipelines.\n\n"
         "Use `mcp__jcodemunch__get_coupling_metrics` (files that change together), "
         "`mcp__jcodemunch__get_churn_rate`, and `mcp__jcodemunch__get_related_symbols` / "
         "`find_importers` to find architectural violations and cross-module dependencies. "
-        "No `date -d`, `bc`, or `awk` — the index computes the temporal-coupling graph "
+        "No shell history pipelines or coreutils date arithmetic — the index computes the temporal-coupling graph "
         "directly.\n",
     "forensic-complexity-trends":
         "# Complexity trends (jcodemunch-backed)\n\n"
@@ -98,7 +98,7 @@ REWRITES = {
         "Use `mcp__jcodemunch__get_symbol_complexity`, `mcp__jcodemunch__get_churn_rate`, "
         "`mcp__jcodemunch__diff_health_radar`, and `mcp__jcodemunch__get_repo_health` to "
         "measure refactoring impact and validate technical-debt work. Replaces the "
-        "`date -d`/`awk`/`bc` history walk (POSIX-only) with index queries.\n",
+        "POSIX-only history walk with cross-platform index queries.\n",
     "forensic-debt-quantification":
         "# Debt quantification — cost in dollars (jcodemunch-backed inputs)\n\n"
         "> Absorbed into `tech-debt-audit`. Translates code problems into ROI / dollars "
@@ -106,7 +106,7 @@ REWRITES = {
         "formulas).\n\n"
         "Source the metrics from `mcp__jcodemunch__get_hotspots`, `get_coupling_metrics`, "
         "`get_repo_health`, and `get_symbol_complexity`; apply the research-backed cost "
-        "formulas in-process. No `bc`/`awk` arithmetic pipelines.\n",
+        "formulas in-process. No POSIX-only shell arithmetic pipelines.\n",
     "forensic-hotspot-finder":
         "# Hotspot finder (jcodemunch-backed)\n\n"
         "> Absorbed into `tech-debt-audit`. Identifies high-risk files (change frequency × "
@@ -114,7 +114,7 @@ REWRITES = {
         "recurring bugs.\n\n"
         "Use `mcp__jcodemunch__get_hotspots` (frequency×complexity ranking already "
         "computed), plus `get_churn_rate` and `get_file_risk`. Replaces the "
-        "`git log`+`awk`+`bc` hotspot script (POSIX-only).\n",
+        "POSIX-only git-history hotspot script with a cross-platform index query.\n",
 }
 
 # Garbled canonical descriptions -> clean single sentences (canonical-side fix).
