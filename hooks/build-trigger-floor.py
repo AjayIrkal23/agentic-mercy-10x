@@ -315,14 +315,20 @@ def check(quiet: bool = False) -> int:
     # floor -> router.config coverage (only if the generated config exists)
     cfg = _load_json(_ROUTER_CONFIG)
     if cfg:
-        floor_ref = set(cfg.get("_floor_entry_keys", []))
-        if floor_ref:
-            uncovered = [e for e in disk_entries if _keystr(_value_key(e)) not in floor_ref]
-            if uncovered:
-                problems += len(uncovered)
-                if not quiet:
-                    print(f"FAIL: {len(uncovered)} floor entries not reachable in router.config.json",
-                          file=sys.stderr)
+        if cfg.get("consumes_entire_floor") is True:
+            pass  # router evaluates the whole floor at runtime -> every entry reachable
+        else:
+            floor_ref = set(cfg.get("_floor_entry_keys", []))
+            if floor_ref:
+                uncovered = [e for e in disk_entries if _keystr(_value_key(e)) not in floor_ref]
+                if uncovered:
+                    problems += len(uncovered)
+                    if not quiet:
+                        print(f"FAIL: {len(uncovered)} floor entries not reachable in router.config.json",
+                              file=sys.stderr)
+            elif not quiet:
+                print("WARN: router.config.json neither sets consumes_entire_floor nor "
+                      "lists _floor_entry_keys — floor->config coverage unverified", file=sys.stderr)
 
     checksum = _checksum(disk_entries)
     stored = on_disk.get("_meta", {}).get("checksum", "")

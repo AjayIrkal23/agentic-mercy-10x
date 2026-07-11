@@ -1,0 +1,27 @@
+{
+  "_comment": "Unified prompt-router config (P1-T2). Generated as trigger-floor.json UNION additions (Charter v3 §1/§2). The router loads and evaluates the ENTIRE trigger floor at runtime (classify.py::_floor_index), so every legacy rule is reachable — consumes_entire_floor=true is what build-trigger-floor.py --check verifies for floor->config coverage. Removals from the floor are forbidden; router-only tuning lives under 'additions'.",
+  "consumes_floor": "trigger-floor.json",
+  "consumes_entire_floor": true,
+  "max_tokens_per_prompt": 24000,
+  "auto_dispatch_threshold": 3,
+  "max_skill_pushes": 8,
+  "priority_tiers": {
+    "0": "gate-adjacent — first-write skill push, TDD init, dox (never budget-dropped)",
+    "1": "substrate precedence — jcodemunch>lean-ctx (code), jdocmunch>lean-ctx (docs), sequential-thinking, graphify",
+    "2": "ranked skill pushes (skills-index x weights); per-skill ids so a NEW skill always fires",
+    "3": "routing (suggest vs dispatch) + model advice"
+  },
+  "dedup": {
+    "mechanism": "session manifest at state/<sid>.router-manifest.json",
+    "invariant": "suppresses verbatim re-injection only; never suppresses a first fire (P1-T11 test)"
+  },
+  "trivial_fast_exit": {
+    "mode": "exact-match ack allowlist ONLY",
+    "note": "the legacy '<12 chars' heuristic is DROPPED as trigger-unsafe (Charter §1)"
+  },
+  "additions": {
+    "_comment": "Router-only trigger ADDITIONS atop the floor (never removals). Empty today; grows as new intents are added post-cutover — every addition must keep build-trigger-floor.py --check green.",
+    "intents": {},
+    "surfaces": {}
+  }
+}
