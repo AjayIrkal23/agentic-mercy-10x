@@ -14,9 +14,13 @@ change breaks, how the system is wired — reach for jcodemunch / graphify FIRST
 Only then drop to file I/O.** jcodemunch reads its own finds too
 (`get_symbol_source`, `get_file_outline`, `get_file_content`) — don't re-read a
 source file through lean-ctx once jcodemunch already returned it, that's a
-wasted second hop. lean-ctx (`ctx_read` / `ctx_search` / `ctx_shell` / `ctx_tree`)
-owns non-code (docs, config, markdown, env, lockfiles), shell output, and dir
-trees. It is NOT the tool for *discovering* code, and not the tool for reading
+wasted second hop. **Documentation SETS (md/rst/adoc trees, docs/ folders,
+README hierarchies) belong to jdocmunch** — its section-level index
+(`search_sections` / `get_toc` / `get_section`) beats whole-file doc reads the
+same way jcodemunch beats whole-file code reads. lean-ctx
+(`ctx_read` / `ctx_search` / `ctx_shell` / `ctx_tree`) owns the remaining
+non-code (single small configs, env, lockfiles), shell output, and dir trees.
+It is NOT the tool for *discovering* code or docs, and not the tool for reading
 source once jcodemunch has it.
 
 The pre-computed symbol index (jcodemunch) and dependency graph (graphify) answer
@@ -75,14 +79,20 @@ code slice in ONE call, so you rarely need a blind file read at all.
 | "Who depends on X?" | `mcp__graphify__get_neighbors` | grep imports |
 | "How do A and B connect?" | `mcp__graphify__shortest_path` | tracing by hand |
 | Natural-language structure Q | `mcp__graphify__query_graph` | Explore agent |
-| Read a doc / config / .env / md (non-code) | `ctx_read` (lean-ctx) | jcodemunch |
+| Search / navigate docs (md sets, docs/ folders, READMEs) | `mcp__jdocmunch__search_sections` / `get_toc` / `get_toc_tree` | ctx_read whole md files |
+| Read a specific doc section | `mcp__jdocmunch__get_section` / `get_sections` / `get_section_context` | Read / ctx_read full file |
+| One document's structure | `mcp__jdocmunch__get_document_outline` | scrolling a big md |
+| Doc health (broken links, coverage, stale pages) | `mcp__jdocmunch__get_broken_links` / `get_doc_coverage` / `get_stale_pages` | manual sweep |
+| Read a single small config / .env / lockfile | `ctx_read` (lean-ctx) | jcodemunch |
 | Run git / build / lint / test | `ctx_shell` (lean-ctx) | — |
 | List a directory / any path | `ctx_tree` (lean-ctx) | ls -R |
 
-**Decision shortcut:** "Am I discovering/understanding code, reading a source
-file, or reading something non-code?" Discovering or reading source → jcodemunch
-(it returns the content in the same call, no second read needed). Non-code
-(docs/config/env/lockfiles), shell output, or directory listing → lean-ctx.
+**Decision shortcut:** "Am I discovering/understanding code, navigating docs,
+or reading something else non-code?" Discovering or reading source → jcodemunch
+(it returns the content in the same call, no second read needed). Doc-set
+navigation/search → jdocmunch (indexed at `~/.doc-index`, guarded at
+SessionStart like the code index). Remaining non-code
+(single config/env/lockfiles), shell output, or directory listing → lean-ctx.
 Never `grep -r` / `find` / `ls -R` across source to discover structure — that's
 what the graph is for.
 

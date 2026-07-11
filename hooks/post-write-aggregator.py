@@ -16,6 +16,7 @@ CHAIN: list[tuple[str, int]] = [
     ("dox-child-scaffold.py", 6),
     ("doc-update-enforcer.py", 5),
     ("security-scan-gate.py", 5),
+    ("jdocmunch-reindex-hook.py", 6),
 ]
 
 

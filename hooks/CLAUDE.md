@@ -18,7 +18,9 @@ what does NOT belong here.>
 
 | File | Role |
 |------|------|
-| `<file>` | <what it does> |
+| `jdocmunch-index-guard.py` | SessionStart guard: doc index (`~/.doc-index/local/<name>.json`) missing/stale check — docs twin of `jcodemunch-index-guard.py`; wired in `session-start-aggregator.py` |
+| `jdocmunch-index-guard.config.json` | Informational roots + settings for the jdocmunch guard |
+| `jdocmunch-reindex-hook.py` | PostToolUse wrapper → `jdocmunch-mcp hook-posttooluse` (throttled background doc reindex after Edit/Write); chained in `post-write-aggregator.py` |
 
 ## Gotchas / fragile spots
 

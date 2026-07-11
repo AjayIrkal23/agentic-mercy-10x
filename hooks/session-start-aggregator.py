@@ -38,6 +38,7 @@ SESSION_GATE = HOOK_DIR / "session-plan-gate-hint.py"
 DOC_LIFECYCLE = HOOK_DIR / "documentation_lifecycle_hook.py"
 INDEX_GUARD = HOOK_DIR / "jcodemunch-index-guard.py"
 GRAPHIFY_GUARD = HOOK_DIR / "graphify-index-guard.py"
+JDOC_GUARD = HOOK_DIR / "jdocmunch-index-guard.py"
 TDD_INIT_GUARD = HOOK_DIR / "tdd-guard-init-guard.py"
 DOX_GUARD = HOOK_DIR / "dox-tree-guard.py"
 ROUTING_MD = HOME / ".claude" / "rules/agent-lifecycle-routing.md"
@@ -293,6 +294,8 @@ def main() -> int:
         hook_jobs.append((["python3", str(INDEX_GUARD)], 6))
     if GRAPHIFY_GUARD.is_file():
         hook_jobs.append((["python3", str(GRAPHIFY_GUARD)], 6))
+    if JDOC_GUARD.is_file():
+        hook_jobs.append((["python3", str(JDOC_GUARD)], 6))
     if TDD_INIT_GUARD.is_file():
         hook_jobs.append((["python3", str(TDD_INIT_GUARD), "session"], 8))
     if DOX_GUARD.is_file():

@@ -2,12 +2,16 @@
 <!-- lean-ctx-rules-v9 -->
 
 Scope (see `codebase-intel-first.md` for the full precedence): lean-ctx owns
-**non-code** files, shell output, dir trees, and edit fallback. **Source code**
-is jcodemunch's job end-to-end — discovery AND reading
+**residual non-code** files (single small configs, .env, lockfiles), shell
+output, dir trees, and edit fallback. **Source code** is jcodemunch's job
+end-to-end — discovery AND reading
 (`search_symbols`/`get_symbol_source`/`get_file_outline`/`get_file_content`).
-Don't `ctx_read` a source file jcodemunch already returned; that's a redundant
-second hop. Within its scope: ALWAYS use lean-ctx tools instead of native
-equivalents. This is NOT optional.
+**Documentation SETS** (md/rst/adoc trees, docs/ folders, READMEs) are
+jdocmunch's job end-to-end — discovery AND reading
+(`search_sections`/`get_toc`/`get_section`), indexed at `~/.doc-index`.
+Don't `ctx_read` a source file jcodemunch already returned, or a doc file
+jdocmunch has indexed; that's a redundant second hop. Within its scope:
+ALWAYS use lean-ctx tools instead of native equivalents. This is NOT optional.
 
 ## Tool Mapping
 | MUST USE | NEVER USE | Why |

@@ -73,8 +73,11 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
 > architecture) AND *reading* code (`get_symbol_source`, `get_file_outline`,
 > `assemble_task_context` / `get_context_bundle` — not `ctx_read` on source). Use
 > its full toolbox, not just `search_symbols` (catalog in `codebase-intel-first.md`).
-> lean-ctx below owns only: non-code I/O (docs/config/md/env/lockfiles), shell
-> (`ctx_shell`), and dir trees (`ctx_tree`). It does NOT own reading source files
+> **jdocmunch is the docs twin**: documentation SETS (md/rst trees, docs/ folders,
+> READMEs) route to `mcp__jdocmunch__search_sections`/`get_toc`/`get_section`
+> (section-level index at `~/.doc-index`, SessionStart-guarded like the code index).
+> lean-ctx below owns only: residual non-code I/O (single configs/env/lockfiles),
+> shell (`ctx_shell`), and dir trees (`ctx_tree`). It does NOT own reading source files
 > jcodemunch already located — jcodemunch reads its own finds (`get_symbol_source`
 > etc.), so no second read hop. The `jcodemunch-enforce` gate covers lean-ctx
 > `ctx_read`/`ctx_search` on source too, so a blind code read is steered back to
@@ -114,6 +117,7 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
 > `<!-- dox:index:start -->
 <!-- dox auto-syncs this block from the tree on disk; edit directories, not these lines -->
 - [`agent-memory/`](agent-memory/CLAUDE.md)
+- [`assets/`](assets/CLAUDE.md)
 - [`ast-grep-mcp/`](ast-grep-mcp/CLAUDE.md)
   - [`ast-grep-mcp/tests/`](ast-grep-mcp/tests/CLAUDE.md)
     - [`ast-grep-mcp/tests/fixtures/`](ast-grep-mcp/tests/fixtures/CLAUDE.md)
@@ -362,8 +366,6 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
 - [`gsd-migration-journal/`](gsd-migration-journal/CLAUDE.md)
 - [`hooks/`](hooks/CLAUDE.md)
   - [`hooks/lib/`](hooks/lib/CLAUDE.md)
-- [`image-cache/`](image-cache/CLAUDE.md)
-  - [`image-cache/9403513a-c723-4fa9-91ce-e0ffa6189e88/`](image-cache/9403513a-c723-4fa9-91ce-e0ffa6189e88/CLAUDE.md)
 - [`improvements/`](improvements/CLAUDE.md)
   - [`improvements/2026-05-28-robustness-overhaul/`](improvements/2026-05-28-robustness-overhaul/CLAUDE.md)
     - [`improvements/2026-05-28-robustness-overhaul/audits/`](improvements/2026-05-28-robustness-overhaul/audits/CLAUDE.md)
@@ -388,6 +390,7 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
   - [`rules/references/`](rules/references/CLAUDE.md)
 - [`shell-snapshots/`](shell-snapshots/CLAUDE.md)
 - [`state/`](state/CLAUDE.md)
+- [`telemetry/`](telemetry/CLAUDE.md)
 - [`templates/`](templates/CLAUDE.md)
 <!-- dox:index:end -->
 
