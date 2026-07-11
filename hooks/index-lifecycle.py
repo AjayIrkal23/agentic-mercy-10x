@@ -572,12 +572,17 @@ def _spawn_build(ctx, surfaces, incremental: bool, journal_file: Path | None) ->
 
 
 def _flush(ctx, state: dict, cfg: dict) -> None:
-    """Drain the write-journal: spawn one detached incremental worker, clear."""
+    """Drain the write-journal: spawn one detached incremental worker, clear.
+
+    Claims a per-surface lock before spawning so an incremental flush can never
+    overlap another build of the SAME surface (no duplicate ``graphify update``,
+    no concurrent index of the same DB). A surface already busy with a full
+    build is skipped here — that full build already covers the journaled files.
+    """
     journal = state.get("journal") or {}
     entries = journal.get("entries") or []
     if not entries:
         return
-    root = Path(ctx.root)
     paths = []
     seen = set()
     for e in entries:
@@ -590,17 +595,33 @@ def _flush(ctx, state: dict, cfg: dict) -> None:
                 paths.append(pth)
         except OSError:
             continue
+    if not paths:
+        # Journaled files all vanished (deletes) — nothing to incrementally
+        # index; a delete flips dirty_sha, so the next session-start probe marks
+        # the surface STALE and fully rebuilds. Truncate and move on.
+        state["journal"] = {"first_write_at": None, "entries": []}
+        _save_state(ctx, state)
+        return
     enabled = [s for s in SURFACES if cfg["surfaces_enabled"].get(s, True)]
-    if paths and enabled:
-        listing = STATE_DIR / f"{ctx.key}.flush-{os.getpid()}-{int(time.time())}.txt"
-        try:
-            STATE_DIR.mkdir(parents=True, exist_ok=True)
-            listing.write_text("\n".join(paths) + "\n", encoding="utf-8")
-        except OSError:
-            listing = None
-        _spawn_build(ctx, enabled, incremental=True, journal_file=listing)
+    ttl = cfg["lock_ttl_minutes"]
+    claimed = [s for s in enabled
+               if not _lock_is_live(ctx.key, s, ttl)
+               and _claim_lock(ctx.key, s, f"flush {s}")]
+    if not claimed:
+        # Every surface is mid-build — keep the journal and drain on the next
+        # tick / Stop / session-start rather than overlapping a build.
+        _telem("flush_deferred_all_locked", key=ctx.key, pending=len(paths))
+        return
+    listing = STATE_DIR / f"{ctx.key}.flush-{os.getpid()}-{int(time.time())}.txt"
+    try:
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        listing.write_text("\n".join(paths) + "\n", encoding="utf-8")
+    except OSError:
+        listing = None
+    _spawn_build(ctx, claimed, incremental=True, journal_file=listing)
     # Truncate the journal now (pragmatic: a failed build leaves the surface to
-    # be caught STALE + fully rebuilt at the next session-start probe).
+    # be caught STALE + fully rebuilt at the next session-start probe). The
+    # detached worker releases each claimed surface lock when it finishes.
     state["journal"] = {"first_write_at": None, "entries": []}
     _save_state(ctx, state)
 

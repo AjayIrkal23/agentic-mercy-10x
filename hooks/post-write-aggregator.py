@@ -12,7 +12,12 @@ import sys
 from pathlib import Path
 
 HOOK_DIR = Path(__file__).resolve().parent
-CHAIN: list[tuple[str, int]] = [
+# (script, timeout[, args]).  index-lifecycle post-write runs first: it journals
+# the touched path (active-repo only) and, at N=5 writes / T=45s, spawns ONE
+# detached incremental indexer — interim wiring, re-homed into dispatch.py by
+# P4-T7 (see HANDOFF-P4-registrations.md). It emits no additionalContext.
+CHAIN: list[tuple] = [
+    ("index-lifecycle.py", 8, ["post-write"]),
     ("dox-child-scaffold.py", 6),
     ("doc-update-enforcer.py", 5),
     ("security-scan-gate.py", 5),
@@ -29,8 +34,8 @@ def _merge(existing: str, add: str) -> str:
     return f"{existing.rstrip()}\n\n{add_st}"
 
 
-def _run(script: str, payload_txt: str, timeout: int) -> str:
-    cmd = ["python3", str(HOOK_DIR / script)]
+def _run(script: str, payload_txt: str, timeout: int, args=None) -> str:
+    cmd = ["python3", str(HOOK_DIR / script)] + list(args or [])
     try:
         proc = subprocess.run(
             cmd,
@@ -57,8 +62,10 @@ def main() -> int:
     payload_txt = raw if raw.strip() else "{}"
 
     aggregated = ""
-    for script, timeout in CHAIN:
-        chunk = _run(script, payload_txt, timeout)
+    for entry in CHAIN:
+        script, timeout = entry[0], entry[1]
+        args = entry[2] if len(entry) > 2 else None
+        chunk = _run(script, payload_txt, timeout, args)
         if chunk:
             aggregated = _merge(aggregated, chunk)
 
