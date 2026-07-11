@@ -46,7 +46,6 @@ CODE_EXTS = {
 }
 
 INDEX_DIR = Path.home() / ".code-index"
-OLD_CONFIG_FILE = Path(__file__).parent / "jcodemunch-index-guard.config.json"
 ENFORCE_CONFIG_FILE = Path(__file__).parent / "jcodemunch-enforce.config.json"
 STATE_DIR = Path(__file__).parent / ".state"
 
@@ -63,7 +62,7 @@ def _load_enforce_config() -> dict:
         "exempt_extensions": [
             ".md", ".json", ".yaml", ".yml", ".toml",
             ".env", ".txt", ".lock", ".sum", ".mod",
-            ".sql", ".csv", ".html", ".css", ".scss",
+            ".sql", ".csv",
             ".bak", ".log", ".xml",
         ],
         "small_file_threshold_lines": 50,
@@ -78,14 +77,9 @@ def _load_enforce_config() -> dict:
 
 
 def _is_strict_mode(cfg: dict) -> bool:
-    # Also honour the legacy index-guard config.
-    if not cfg.get("strict_mode", True):
-        return False
-    try:
-        legacy = json.loads(OLD_CONFIG_FILE.read_text(encoding="utf-8"))
-        return legacy.get("strict_mode", True)
-    except Exception:
-        return True
+    # The legacy jcodemunch-index-guard.config.json is retired (P3-T3); the
+    # enforce config is the single source of the strict_mode toggle now.
+    return bool(cfg.get("strict_mode", True))
 
 
 # ---------------------------------------------------------------------------

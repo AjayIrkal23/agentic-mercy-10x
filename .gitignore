@@ -100,7 +100,8 @@ settings.local.json
 # project roots; the target reinstalls via `claude plugin install` (see install.sh)
 plugins/installed_plugins.json
 plugins/known_marketplaces.json
-# jcodemunch index-guard watches this machine's private project roots
-hooks/jcodemunch-index-guard.config.json
+# jcodemunch index-guard config (machine-private project roots) — retired to
+# attic P3-T3; kept gitignored at its new home so /DATA paths never enter git
+attic/2026-07-11/hooks/jcodemunch-index-guard.config.json
 # dox / tdd-guard auto-init sidecars created for THIS repo (fingerprints + state)
 .claude/

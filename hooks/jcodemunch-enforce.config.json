@@ -15,7 +15,7 @@
   "exempt_extensions": [
     ".md", ".json", ".yaml", ".yml", ".toml",
     ".env", ".txt", ".lock", ".sum", ".mod",
-    ".sql", ".csv", ".html", ".css", ".scss",
+    ".sql", ".csv",
     ".bak", ".log", ".xml"
   ],
   "small_file_threshold_lines": 50,
