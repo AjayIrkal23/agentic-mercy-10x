@@ -22,7 +22,9 @@
   "~/.claude/downloads",
   "~/.claude/backups",
   "~/.claude/tasks",
-  "~/.claude/ide"
+  "~/.claude/ide",
+  "~/.claude/attic",
+  "~/.claude/improvements"
  ],
  "significantDirThreshold": 3,
  "rootDoxMarker": "<!-- dox:root v1 -->",

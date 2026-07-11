@@ -80,6 +80,7 @@ SKIP_DIRS = {
     ".code-index", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".idea",
     ".vscode", ".gradle", ".dart_tool", "Pods", ".terraform",
     "REFFER_ONLY_UDP_CODE_OLD",
+    "attic", "backups",
 }
 
 
