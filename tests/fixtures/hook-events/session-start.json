@@ -1,0 +1,8 @@
+{
+  "session_id": "doctor-fixture",
+  "hook_event_name": "SessionStart",
+  "source": "startup",
+  "workspace_roots": [
+    "/tmp/doctor-fixture-repo"
+  ]
+}

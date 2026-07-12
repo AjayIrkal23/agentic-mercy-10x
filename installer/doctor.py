@@ -100,6 +100,12 @@ def _check_palette(rows):
     _row(rows, "palette-commands", PASS if len(cmds) == want.get("command_files", 20) else FAIL, f"{len(cmds)} command files (want {want.get('command_files')})")
 
 
+def resolve_historic_commands(names, cmd_dir: Path, cmap: dict) -> list[str]:
+    """Pure resolver (testable): a historic /invoke name resolves iff it has a
+    command FILE or an invoke_compat translator entry. Returns the unresolved."""
+    return [n for n in names if not (cmd_dir / f"{n}.md").exists() and n not in cmap]
+
+
 def _check_command_resolution(rows):
     hist = _HOOKS / "historic-invoke-commands.json"
     compat = _HOOKS / "commands-compat.json"
@@ -110,12 +116,67 @@ def _check_command_resolution(rows):
     cmap = {}
     if compat.exists():
         cmap = json.loads(compat.read_text(encoding="utf-8")).get("map", {})
-    cmd_dir = _ROOT / "commands"
-    unresolved = [n for n in names if not (cmd_dir / f"{n}.md").exists() and n not in cmap]
+    unresolved = resolve_historic_commands(names, _ROOT / "commands", cmap)
     if unresolved:
         _row(rows, "command-resolution", FAIL, f"{len(unresolved)}/{len(names)} unresolved e.g. {unresolved[:5]}")
     else:
         _row(rows, "command-resolution", PASS, f"all {len(names)} historic names resolve (file or translator)")
+
+
+def _check_model_routing(rows):
+    # 1. IMPLEMENT suite pins Opus (the /invoke-impl carve-out; single source of truth).
+    try:
+        policy = json.loads((_HOOKS / "model-policy.json").read_text(encoding="utf-8"))
+        impl = (policy.get("invoke_categories") or {}).get("IMPLEMENT")
+        default = policy.get("default")
+        ok = impl == "opus" and default == "sonnet"
+        _row(rows, "model-routing", PASS if ok else FAIL, f"IMPLEMENT={impl} default={default}")
+    except Exception as exc:  # noqa: BLE001
+        _row(rows, "model-routing", FAIL, f"model-policy.json: {type(exc).__name__}: {exc}")
+        return
+    # 2. workflow-model-guard preserves tool_input.args byte-for-byte (P2 regression).
+    fx = _ROOT / "tests" / "fixtures" / "hook-events" / "workflow-model-guard.json"
+    guard = _HOOKS / "workflow-model-guard.py"
+    if not fx.exists() or not guard.exists():
+        _row(rows, "workflow-args", WARN, "fixture or guard missing")
+        return
+    try:
+        payload = json.loads(fx.read_text(encoding="utf-8"))
+        want_args = payload["tool_input"]["args"]
+        cp = _run_with_stdin([plat.python_exe(), str(guard)], json.dumps(payload))
+        out = json.loads(cp.stdout) if cp.stdout.strip() else {}
+        updated = (out.get("hookSpecificOutput") or {}).get("updatedInput") or {}
+        got_args = updated.get("args")
+        _row(rows, "workflow-args", PASS if got_args == want_args else FAIL,
+             "args preserved byte-for-byte" if got_args == want_args else f"args changed: {got_args}")
+    except Exception as exc:  # noqa: BLE001
+        _row(rows, "workflow-args", FAIL, f"{type(exc).__name__}: {exc}")
+
+
+def _run_with_stdin(cmd, stdin_data: str):
+    import subprocess
+    try:
+        return subprocess.run(cmd, input=stdin_data, capture_output=True, text=True, timeout=15, check=False)
+    except Exception:  # noqa: BLE001
+        return subprocess.CompletedProcess(cmd, 1, "", "")
+
+
+def _check_fixtures(rows):
+    fx_dir = _ROOT / "tests" / "fixtures" / "hook-events"
+    if not fx_dir.exists():
+        _row(rows, "hook-fixtures", WARN, "tests/fixtures/hook-events absent")
+        return
+    bad = []
+    for f in fx_dir.glob("*.json"):
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+            # a valid hook payload names its event or tool in one of these ways
+            if not isinstance(d, dict) or not any(k in d for k in ("hook_event_name", "event", "tool_name", "prompt", "source")):
+                bad.append(f.name)
+        except ValueError:
+            bad.append(f.name)
+    n = len(list(fx_dir.glob("*.json")))
+    _row(rows, "hook-fixtures", PASS if not bad else FAIL, f"{n} fixtures" + (f"; malformed={bad}" if bad else ""))
 
 
 def _check_aliases(rows):
@@ -188,6 +249,8 @@ def run_doctor(*, ci: bool = False) -> list[tuple[str, str, str]]:
     _check_validator(rows)
     _check_zero_symlinks(rows)
     _check_mcp_roster(rows)
+    _check_model_routing(rows)
+    _check_fixtures(rows)
     return rows
 
 

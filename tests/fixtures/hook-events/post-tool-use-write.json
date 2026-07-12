@@ -1,0 +1,12 @@
+{
+  "session_id": "doctor-fixture",
+  "hook_event_name": "PostToolUse",
+  "tool_name": "Write",
+  "tool_input": {
+    "file_path": "/tmp/doctor_probe.py",
+    "content": "x = 1\n"
+  },
+  "tool_response": {
+    "success": true
+  }
+}

@@ -54,8 +54,8 @@ def test_sub_splits_multiword_interpreter():
     out = deps._sub(["{PYTHON}", "{CLAUDE_DIR}/x.py"], {"PYTHON": "py -3", "CLAUDE_DIR": "/c/u/.claude"})
     assert out == ["py", "-3", "/c/u/.claude/x.py"]
     # single-word interpreter stays one element; embedded path token replaced
-    out2 = deps._sub(["{PYTHON}", "{CLAUDE_DIR}/y.py"], {"PYTHON": "python3", "CLAUDE_DIR": "/home/u/.claude"})
-    assert out2 == ["python3", "/home/u/.claude/y.py"]
+    out2 = deps._sub(["{PYTHON}", "{CLAUDE_DIR}/y.py"], {"PYTHON": "python3", "CLAUDE_DIR": "/opt/u/.claude"})
+    assert out2 == ["python3", "/opt/u/.claude/y.py"]
 
 
 def test_deps_dry_run_no_exceptions():

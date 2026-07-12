@@ -1,0 +1,9 @@
+{
+  "session_id": "doctor-fixture",
+  "hook_event_name": "PreToolUse",
+  "tool_name": "Agent",
+  "tool_input": {
+    "description": "[sonnet] probe",
+    "prompt": "noop"
+  }
+}

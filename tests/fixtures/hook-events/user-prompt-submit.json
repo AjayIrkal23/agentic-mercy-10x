@@ -1,0 +1,5 @@
+{
+  "session_id": "doctor-fixture",
+  "hook_event_name": "UserPromptSubmit",
+  "prompt": "add a login form and a backend route"
+}
