@@ -1,0 +1,41 @@
+{
+  "_about": "Declarative install manifest for the ~/.claude workbench (P6-T5). install.py + installer/{detect,deps,links,render,doctor}.py read this. Everything is idempotent + fail-visible. {PYTHON}/{NODE}/{CLAUDE_DIR} are substituted from installer/detect.py. `ci_stub:true` steps are SKIPPED under `install.py --ci` (no network in CI; the manifest itself is the contract the doctor asserts).",
+  "min_python": "3.10",
+  "deps": [
+    {"id": "semgrep",        "which": "semgrep",        "install_posix": ["uv", "tool", "install", "semgrep"], "install_windows": ["pipx", "install", "semgrep"], "ci_stub": true},
+    {"id": "lean-ctx",       "which": "lean-ctx",       "install": ["npm", "install", "-g", "lean-ctx"], "ci_stub": true},
+    {"id": "tdd-guard",      "which": "tdd-guard",      "install": ["npm", "install", "-g", "tdd-guard"], "ci_stub": true},
+    {"id": "tdd-guard-vitest","which": "tdd-guard-vitest","install": ["npm", "install", "-g", "tdd-guard-vitest"], "ci_stub": true, "optional": true},
+    {"id": "tdd-guard-pytest","which": "tdd-guard-pytest","install": ["npm", "install", "-g", "tdd-guard-pytest"], "ci_stub": true, "optional": true},
+    {"id": "jcodemunch-mcp", "which": "jcodemunch-mcp", "install": null, "note": "external tool (uv/pipx); install out of band", "ci_stub": true, "optional": true},
+    {"id": "jdocmunch-mcp",  "which": "jdocmunch-mcp",  "install": null, "note": "external tool (uv/pipx); install out of band", "ci_stub": true, "optional": true}
+  ],
+  "mcp_servers": [
+    {"name": "jcodemunch", "add": ["claude", "mcp", "add", "--scope", "user", "jcodemunch", "jcodemunch-mcp"], "ci_stub": true},
+    {"name": "jdocmunch",  "add": ["claude", "mcp", "add", "--scope", "user", "jdocmunch", "jdocmunch-mcp"], "ci_stub": true},
+    {"name": "graphify",   "add": ["claude", "mcp", "add", "--scope", "user", "graphify", "--", "{PYTHON}", "{CLAUDE_DIR}/hooks/graphify_launcher.py"], "ci_stub": true, "note": "portable python launcher — reconciles the settings.json/~/.claude.json graphify disagreement (audit §5)."}
+  ],
+  "links": [
+    {"_about": "Skill trees that must be MATERIALIZED as real files (never symlinks) so Windows works. On this workbench P5-T12 already de-symlinked everything (gstack pointers + higgsfield/mmx real dirs); links.materialize() is idempotent verify-or-create. The generator below is the source of truth for gstack pointers."}
+  ],
+  "post_steps": [
+    {"id": "sync-gstack-pointers", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/scripts/sync-gstack-pointers.py"], "optional": true, "note": "regenerate gstack pointer skills from the clone (trigger parity)."},
+    {"id": "build-skills-index",   "cmd": ["{PYTHON}", "{CLAUDE_DIR}/hooks/build-skills-index.py"], "optional": true, "note": "rebuild the ranked skills catalog."},
+    {"id": "build-trigger-floor",  "cmd": ["{PYTHON}", "{CLAUDE_DIR}/hooks/build-trigger-floor.py"], "optional": true, "note": "rebuild the never-miss trigger floor."},
+    {"id": "validate-skills",      "cmd": ["{PYTHON}", "{CLAUDE_DIR}/scripts/validate_skills.py"], "note": "R1..R10 incl. R9 floor guard + R10 upstream-intactness (fails the install on a broken catalog or an edited locked skill)."}
+  ],
+  "palette": {
+    "skill_names": 218,
+    "skill_bodies": 194,
+    "aliases": 24,
+    "command_files": 20,
+    "historic_command_names": 139
+  },
+  "doctor_probes": {
+    "link_doctor": true,
+    "interpreter_check": true,
+    "mcp_roster": ["jcodemunch", "jdocmunch", "graphify", "memory", "sequential-thinking", "context7"],
+    "catalog": ["r9_floor", "r10_provenance", "palette_counts", "zero_symlinks", "command_resolution"],
+    "model_routing": ["workflow_model_guard_args", "invoke_impl_opus"]
+  }
+}
