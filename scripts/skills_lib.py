@@ -166,7 +166,11 @@ def dir_content_hash(root: Path, follow_symlinks: bool = True) -> str:
             if Path(fn).suffix in _HASH_EXCLUDE_SUFFIX:
                 continue
             fp = Path(dirpath) / fn
-            rel = str(fp.relative_to(root))
+            # as_posix(), not str(): the R10 baseline hashes are computed on POSIX
+            # (forward-slash rel paths). str(PurePath) yields backslashes on Windows,
+            # which would drift every multi-dir locked skill's hash and false-FAIL
+            # R10 on the windows-latest CI leg. as_posix() is byte-identical on Linux.
+            rel = fp.relative_to(root).as_posix()
             try:
                 data = fp.read_bytes()
             except OSError:

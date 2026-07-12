@@ -150,3 +150,29 @@ def test_jdocmunch_registered_in_settings_and_template():
     for f in ("settings.json", "settings.template.json"):
         d = json.loads((_ROOT / f).read_text(encoding="utf-8"))
         assert "jdocmunch" in (d.get("mcpServers") or {}), f"jdocmunch missing from {f}"
+
+
+# --------------------------------------------------------------------------- #
+# 4. R10 content-hash is OS-path-separator independent (windows-latest leg)
+# --------------------------------------------------------------------------- #
+def test_dir_content_hash_rel_key_is_posix_normalized():
+    """dir_content_hash keys each file by rel path. The R10 baselines are computed
+    on POSIX (`/`); `str(PurePath)` yields `\\` on Windows and would false-FAIL R10
+    for every multi-dir locked skill. Pin that as_posix() is separator-independent
+    (str() is NOT — the bug this guards)."""
+    from pathlib import PurePosixPath, PureWindowsPath
+    # relative paths (no drive literal — the portability gate bans those)
+    root_w = PureWindowsPath("skills/foo")
+    fp_w = PureWindowsPath("skills/foo/references/a.md")
+    root_p = PurePosixPath("skills/foo")
+    fp_p = PurePosixPath("skills/foo/references/a.md")
+    assert fp_w.relative_to(root_w).as_posix() == "references/a.md"
+    assert fp_p.relative_to(root_p).as_posix() == "references/a.md"
+    # the discarded approach (str) drifts across OSes — the exact CI failure mode:
+    # PureWindowsPath renders the separator as a backslash, PurePosixPath as '/'.
+    assert str(fp_w.relative_to(root_w)) != str(fp_p.relative_to(root_p))
+    # and the live function uses the normalized form
+    sys.path.insert(0, str(_ROOT / "scripts"))
+    import skills_lib as sl
+    h1 = sl.dir_content_hash(_ROOT / "hooks" / "lib")
+    assert isinstance(h1, str) and len(h1) == 64  # deterministic sha256
