@@ -96,6 +96,12 @@ image-cache/
 # --- machine-specific state (per-user; regenerated on the target machine) ---
 # Local settings override (Claude Code convention: never shared)
 settings.local.json
+# settings.json is a RENDERED artifact (P6-T3): installer/render.py generates it
+# from settings.template.json (tracked source of truth) ⊕ settings.user.json
+# (per-machine overlay). The rendered output + the overlay are per-machine and
+# never shared; a fresh clone runs `python install.py` to render them.
+settings.json
+settings.user.json
 # Plugin manifests point at this machine's absolute cache paths + list private
 # project roots; the target reinstalls via `claude plugin install` (see install.sh)
 plugins/installed_plugins.json

@@ -1,0 +1,257 @@
+{
+  "agentPushNotifEnabled": true,
+  "autoCompactWindow": 900000,
+  "contextWindow": 1000000,
+  "effortLevel": "xhigh",
+  "enabledPlugins": {
+    "andrej-karpathy-skills@karpathy-skills": true,
+    "claude-mermaid@claude-mermaid": true,
+    "claude-session-driver@superpowers-marketplace": true,
+    "clickhouse@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "double-shot-latte@superpowers-marketplace": true,
+    "elements-of-style@superpowers-marketplace": true,
+    "firecrawl@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true,
+    "ponytail@ponytail": true,
+    "supabase@claude-plugins-official": true,
+    "superpowers-lab@superpowers-marketplace": true,
+    "superpowers@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true
+  },
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_EFFORT": "max",
+    "TDD_GUARD_MODEL_VERSION": "claude-sonnet-4-0",
+    "VALIDATION_CLIENT": "sdk"
+  },
+  "extraKnownMarketplaces": {
+    "claude-mermaid": {
+      "source": {
+        "repo": "veelenga/claude-mermaid",
+        "source": "github"
+      }
+    },
+    "karpathy-skills": {
+      "source": {
+        "repo": "forrestchang/andrej-karpathy-skills",
+        "source": "github"
+      }
+    },
+    "ponytail": {
+      "source": {
+        "repo": "DietrichGebert/ponytail",
+        "source": "github"
+      }
+    },
+    "superpowers-marketplace": {
+      "autoUpdate": true,
+      "source": {
+        "repo": "obra/superpowers-marketplace",
+        "source": "github"
+      }
+    }
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py session-start",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py user-prompt-submit",
+            "timeout": 45
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py pre-tool-use",
+            "timeout": 65
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py post-tool-use",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py stop",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py subagent-stop",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py pre-compact",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py session-end",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  },
+  "mcpServers": {
+    "ast-grep": {
+      "args": [
+        "run",
+        "--directory",
+        "{{CLAUDE_DIR}}/ast-grep-mcp",
+        "python",
+        "main.py"
+      ],
+      "command": "uv"
+    },
+    "browser-tools-mcp": {
+      "args": [
+        "-y",
+        "@agentdeskai/browser-tools-mcp@latest"
+      ],
+      "command": "npx"
+    },
+    "context7": {
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ],
+      "command": "npx"
+    },
+    "fetch": {
+      "args": [
+        "mcp-server-fetch"
+      ],
+      "command": "uvx"
+    },
+    "figma": {
+      "args": [
+        "-y",
+        "@anthropic-ai/figma-mcp@latest"
+      ],
+      "command": "npx"
+    },
+    "github": {
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "command": "npx",
+      "env": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "graphify": {
+      "args": [],
+      "command": "{{CLAUDE_DIR}}/hooks/graphify_launcher.py"
+    },
+    "jcodemunch": {
+      "args": [],
+      "command": "jcodemunch-mcp"
+    },
+    "markdownify": {
+      "args": [
+        "-y",
+        "mcp-markdownify-server"
+      ],
+      "command": "npx"
+    },
+    "memory": {
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ],
+      "command": "npx"
+    },
+    "playwright": {
+      "args": [
+        "-y",
+        "@playwright/mcp@latest",
+        "--headed"
+      ],
+      "command": "npx"
+    },
+    "semgrep": {
+      "args": [
+        "mcp"
+      ],
+      "command": "${HOME}/.local/bin/semgrep"
+    },
+    "sequential-thinking": {
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
+      "command": "npx"
+    }
+  },
+  "model": "opus[1m]",
+  "permissions": {
+    "defaultMode": "bypassPermissions"
+  },
+  "skillListingBudgetFraction": 0.1,
+  "skipDangerousModePermissionPrompt": true,
+  "statusLine": {
+    "command": "\"{{NODE}}\" \"{{CLAUDE_DIR}}/hooks/gsd-statusline.js\"",
+    "type": "command"
+  },
+  "theme": "dark"
+}
