@@ -308,10 +308,16 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
                             for ln in run_now}
                     for fut, ln in list(futs.items()):
                         try:
-                            parsed, _ = fut.result(timeout=float(ln.get("timeout_ms", 5000)) / 1000.0 + 1)
+                            parsed, raw = fut.result(timeout=float(ln.get("timeout_ms", 5000)) / 1000.0 + 1)
                         except Exception:  # noqa: BLE001
-                            parsed = None
+                            parsed, raw = None, ""
                         ctx = _extract_context(parsed)
+                        if not ctx and parsed is None and raw and raw.strip():
+                            # advisory links may emit RAW TEXT (not JSON) meant to
+                            # be injected — legacy Claude Code injects UserPromptSubmit
+                            # stdout verbatim (e.g. discovery-skills-reminder.sh).
+                            # Preserve it so no advisory is lost through dispatch.
+                            ctx = raw.strip()[:8000]
                         if ctx:
                             contexts.append((int(ln.get("priority", 5)), ctx))
             except Exception:  # noqa: BLE001
