@@ -54,490 +54,100 @@
     }
   },
   "hooks": {
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/skill-invocation-tracker.py",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/ponytail-caveman-guard.py post-skill",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": "Skill"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/fullstack-skills-reminder.py post-tool-use",
-            "timeout": 10,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/codex-capture.py",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/post-write-aggregator.py",
-            "timeout": 12,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/ui-ux-stack-orchestrator.py post-tool-use",
-            "timeout": 15,
-            "type": "command"
-          },
-          {
-            "command": "bash \"${HOME}/.claude/hooks/gsd-phase-boundary.sh\"",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": "Write|Edit|MultiEdit"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/desloppify-cleanup.py",
-            "timeout": 10,
-            "type": "command"
-          }
-        ],
-        "matcher": "Write|Edit|MultiEdit"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/santa-method-writer.py",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": "Task|Agent"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/security-semgrep-tracker.py post-tool-use",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "lean-ctx hook observe",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash"
-      },
-      {
-        "hooks": [
-          {
-            "command": "\"/usr/bin/node\" \"${HOME}/.claude/hooks/gsd-context-monitor.js\"",
-            "timeout": 10,
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash|Write|Edit|MultiEdit|Task|Agent"
-      },
-      {
-        "hooks": [
-          {
-            "command": "\"/usr/bin/node\" \"${HOME}/.claude/hooks/gsd-read-injection-scanner.js\"",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": "Read"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/jcodemunch-enforce.py mcp-used",
-            "timeout": 3,
-            "type": "command"
-          }
-        ],
-        "matcher": "mcp__jcodemunch__.*"
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "command": "lean-ctx hook observe",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/session-lifecycle.py pre-compact",
-            "timeout": 8,
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      }
-    ],
-    "PreToolUse": [
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/ponytail-caveman-guard.py pre-tool-use",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      },
-      {
-        "hooks": [
-          {
-            "command": "bash ${HOME}/.claude/hooks/tdd-guard-launcher.sh",
-            "timeout": 60,
-            "type": "command"
-          }
-        ],
-        "matcher": "Write|Edit|MultiEdit|TodoWrite"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/graphify-enforce.py pre-tool-use",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": "Task|Agent|Bash"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/first-write-skill-gate.py",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/gateguard-write-gate.py",
-            "timeout": 8,
-            "type": "command"
-          },
-          {
-            "command": "\"/usr/bin/node\" \"${HOME}/.claude/hooks/gsd-prompt-guard.js\"",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "\"/usr/bin/node\" \"${HOME}/.claude/hooks/gsd-workflow-guard.js\"",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/dox-write-gate.py",
-            "timeout": 6,
-            "type": "command"
-          }
-        ],
-        "matcher": "Write|Edit|MultiEdit"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/dangerous-bash-gate.py",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/dox-write-gate.py",
-            "timeout": 6,
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/bash-write-gate.py",
-            "timeout": 10,
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash"
-      },
-      {
-        "hooks": [
-          {
-            "command": "lean-ctx hook rewrite",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "lean-ctx hook redirect",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "bash \"${HOME}/.claude/hooks/gsd-validate-commit.sh\"",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/blocking-doc-enforcer.py",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/jcodemunch-enforce.py pre-tool-use",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": "Read|Grep|Glob"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/opus-guard.py",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": "Agent"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/workflow-model-guard.py",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": "Workflow"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/jcodemunch-enforce.py pre-tool-use",
-            "timeout": 3,
-            "type": "command"
-          }
-        ],
-        "matcher": "mcp__lean-ctx__ctx_read|mcp__lean-ctx__ctx_search|mcp__lean-ctx__ctx_multi_read"
-      }
-    ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "command": "lean-ctx hook observe",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/watch-daemon-session-end.py",
-            "timeout": 10,
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      }
-    ],
     "SessionStart": [
       {
+        "matcher": ".*",
         "hooks": [
           {
-            "command": "bash ${HOME}/.claude/hooks/tdd-guard-launcher.sh",
-            "timeout": 20,
-            "type": "command"
+            "type": "command",
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py session-start",
+            "timeout": 60
           }
-        ],
-        "matcher": "startup|resume|clear"
-      },
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/ponytail-caveman-guard.py session-start",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/session-start-aggregator.py",
-            "timeout": 45,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/memory-bootstrap-guard.py",
-            "timeout": 12,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/memory-load-on-start.py",
-            "timeout": 10,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/session-lifecycle.py session-start",
-            "timeout": 10,
-            "type": "command"
-          },
-          {
-            "command": "lean-ctx hook observe",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "bash \"${HOME}/.claude/hooks/gsd-session-state.sh\"",
-            "timeout": 10,
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/hard-completion-gate.py",
-            "timeout": 15,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/fullstack-skills-reminder.py stop",
-            "timeout": 15,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/session-memory-writer.py",
-            "timeout": 12,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/session-learning-extractor.py",
-            "timeout": 15,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/session-lifecycle.py stop",
-            "timeout": 10,
-            "type": "command"
-          },
-          {
-            "command": "lean-ctx hook observe",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/weekly-retro-trigger.py stop",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/invoke-suite-gate.py",
-            "timeout": 15,
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "command": "python3 ${HOME}/.claude/hooks/santa-method-writer.py subagent-stop",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/session-lifecycle.py subagent-stop",
-            "timeout": 8,
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
+        ]
       }
     ],
     "UserPromptSubmit": [
       {
+        "matcher": ".*",
         "hooks": [
           {
-            "command": "bash ${HOME}/.claude/hooks/tdd-guard-launcher.sh",
-            "timeout": 20,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/invoke-suite-manifest.py",
-            "timeout": 15,
-            "type": "command"
+            "type": "command",
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py user-prompt-submit",
+            "timeout": 45
           }
-        ],
-        "matcher": ".*"
-      },
+        ]
+      }
+    ],
+    "PreToolUse": [
       {
+        "matcher": ".*",
         "hooks": [
           {
-            "command": "python3 ${HOME}/.claude/hooks/model-router.py",
-            "timeout": 10,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/fullstack-skills-reminder.py before-submit",
-            "timeout": 8,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/autonomous-skill-router.py",
-            "timeout": 15,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/ui-ux-stack-orchestrator.py before-submit",
-            "timeout": 30,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/token-stack-prompt-reminder.py",
-            "timeout": 20,
-            "type": "command"
-          },
-          {
-            "command": "lean-ctx hook observe",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "bash ${HOME}/.claude/hooks/discovery-skills-reminder.sh prompt",
-            "timeout": 5,
-            "type": "command"
-          },
-          {
-            "command": "python3 ${HOME}/.claude/hooks/sequential-thinking-mandate.py",
-            "timeout": 8,
-            "type": "command"
+            "type": "command",
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py pre-tool-use",
+            "timeout": 65
           }
-        ],
-        "matcher": ".*"
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py post-tool-use",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py stop",
+            "timeout": 30
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py subagent-stop",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py pre-compact",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py session-end",
+            "timeout": 15
+          }
+        ]
       }
     ]
   },
