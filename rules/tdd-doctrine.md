@@ -9,7 +9,7 @@
 | Layer | Owns | Mechanism |
 |-------|------|-----------|
 | **1. KNOW-HOW** (skills) | *How* to do TDD well | `test-driven-development`, `tdd`, `golang-testing` (table-driven Go), `webapp-testing` — red→green→refactor mechanics |
-| **2. ENFORCEMENT** (tdd-guard, **warn mode**) | *Flagging* test-skipping at write-time | PreToolUse hook (`tdd-guard-launcher.sh` → `tdd-guard-gate.py`) flags impl-without-failing-test, over-implementation, and behavior-adding refactors as a **non-blocking advisory**. Auto-initialized per project. |
+| **2. ENFORCEMENT** (tdd-guard, **warn mode**) | *Flagging* test-skipping at write-time | PreToolUse hook (`tdd_guard_launcher.py` → `tdd-guard-gate.py`) flags impl-without-failing-test, over-implementation, and behavior-adding refactors as a **non-blocking advisory**. Auto-initialized per project. |
 | **3. VERIFICATION** (gates) | *Proving* it passes at the end | `verification-loop`, `hard-completion-gate`, Karpathy "write the failing test, then make it pass" |
 
 Skill = how. Guard = flag. Gate = verify.
@@ -31,8 +31,8 @@ directly (remove the gate) — not recommended globally.
 
 ## Auto-init (you never hand-write a config)
 
-`tdd-guard-init-guard.py` runs at SessionStart (via `session-start-aggregator.py`)
-and on UserPromptSubmit (via `token-stack-prompt-reminder.py`) — exactly like the
+`tdd-guard-init-guard.py` runs at SessionStart and on UserPromptSubmit (through the
+`dispatch.py` session-start and user-prompt-submit chains) — exactly like the
 jcodemunch/graphify index guards. It:
 
 1. Detects stacks (go.mod → go; vitest/jest in package.json → js; pytest → py).

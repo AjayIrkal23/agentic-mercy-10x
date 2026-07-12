@@ -8,6 +8,8 @@ See also: [`plan-exec-unified-stack.md`](plan-exec-unified-stack.md), [`skill-li
 
 > **Authority note:** Phase 0–7 lifecycle steps are defined exclusively in `mandatory-skill-protocol.mdc`. This table maps phases to hooks and skills only — it does not define lifecycle steps. For the authoritative Phase 0 procedure, see `mandatory-skill-protocol.mdc § PHASE 0`.
 
+> **Dispatch reality (100x overhaul):** the hooks named below are no longer 65 separate `settings.json` registrations — they run as **links inside 8 `dispatch.py <event>` orchestrators** (one per Claude Code event), declared in `hooks/dispatch.config.json` with per-link isolation, telemetry, and enable flags. The hook *names* below still identify the logic (each keeps its own file, Charter §3); only the registration shape changed. Prompt-time skill injection is consolidating into `hooks/prompt_router/router.py` (currently `--shadow` beside the legacy stack during the 30-day zero-miss window). See `hooks/README.md`.
+
 | Phase | Hooks | Primary skills |
 |-------|-------|----------------|
 | **0 Session** | `session-start-aggregator`, `session-lifecycle`, `jcodemunch-index-guard`, `graphify-index-guard` | `codebase-start-point-guide`, `using-agent-skills`, Superpowers `using-superpowers` |

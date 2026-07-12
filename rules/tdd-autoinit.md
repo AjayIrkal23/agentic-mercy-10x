@@ -9,9 +9,9 @@
 
 | Hook | Event | Mode | Does |
 |------|-------|------|------|
-| `tdd-guard-init-guard.py` | SessionStart (via `session-start-aggregator.py`) | `session` | full scan; (re)write config if structure fingerprint changed, else silent |
-| `tdd-guard-init-guard.py` | UserPromptSubmit (via `token-stack-prompt-reminder.py`) | `prompt` | if config missing → init; else no-op (cheap) |
-| `tdd-guard-launcher.sh` → `tdd-guard-gate.py` | PreToolUse `Write\|Edit\|MultiEdit\|TodoWrite` | — | runs tdd-guard in **warn mode**, scoped to the project; downgrades blocks to advisories; skips files outside the project root |
+| `tdd-guard-init-guard.py` | SessionStart (via the `dispatch.py` session-start chain) | `session` | full scan; (re)write config if structure fingerprint changed, else silent |
+| `tdd-guard-init-guard.py` | UserPromptSubmit (via the `dispatch.py` user-prompt-submit chain) | `prompt` | if config missing → init; else no-op (cheap) |
+| `tdd_guard_launcher.py` → `tdd-guard-gate.py` | PreToolUse `Write\|Edit\|MultiEdit\|TodoWrite` (dispatch pre-tool-use link) | — | runs tdd-guard in **warn mode**, scoped to the project; downgrades blocks to advisories; skips files outside the project root |
 
 ## Auto-detection → config
 

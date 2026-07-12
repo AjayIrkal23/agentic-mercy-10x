@@ -36,3 +36,14 @@ Slim User Rules (~400 tokens) free budget for skill/planning context. FE/BE list
 5. `fullstack-skills-reminder` + `skill_router` on first Write; session manifest surfaces remaining FE/BE skills over the conversation
 
 See [`agent-lifecycle-routing.md`](../rules/agent-lifecycle-routing.md) for phase → skill → hook map.
+
+---
+
+> **Vindication (2026-07-11 · 100x overhaul).** The overhaul in
+> [`../plans/PLAN-2026-07-11-100x.md`](../plans/PLAN-2026-07-11-100x.md) rebuilt the
+> routing/dispatch/index/model layers **without dropping a single trigger**: every
+> legacy keyword/path/intent was reverse-imported verbatim into
+> `hooks/trigger-floor.json` (checksum-guarded in CI), 65 hook registrations became
+> 8 isolated `dispatch.py` orchestrators with every hook keeping its own file, and
+> the cutover runs behind a one-flip 30-day revert. That is this doc's thesis —
+> preserve the trigger surface, strengthen the machinery around it — proven at scale.

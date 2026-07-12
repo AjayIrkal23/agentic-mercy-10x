@@ -6,28 +6,52 @@
 
 ## What lives here
 
-<One or two lines: the responsibility of this directory. What kind of files belong,
-what does NOT belong here.>
+Every Claude Code hook: gates, advisories, mutators, exec side-effects, the prompt
+router, the index-lifecycle state machine, and the dispatcher that ties them
+together. See `README.md` in this directory for the full dispatch architecture.
+Only hook logic and hook config belong here — no skill bodies, no app code.
 
 ## Local conventions
 
-- <e.g. naming pattern, file-size cap, import boundaries specific to this folder>
-- <e.g. "every X must register in Y" / "do not import from Z">
+- **One dispatcher per event.** `settings.json` registers 8 entries
+  (`dispatch.py <event>`); individual hooks are declared as links in
+  `dispatch.config.json` (`chains.<event>`), NOT re-added to `settings.json`.
+- **Every hook stays its own file** (Charter §3). To add behavior, add a link
+  (own `.py`/`.js`), never merge logic into an existing file.
+- **Portability:** shell out via `{PY}`/`{HOOKS}`/`{NODE}` tokens resolved by
+  `lib/platform.py`; no raw `.sh` in the live path (ports live as `*.py`/`*.js`).
+- **Never remove a trigger rule** — `trigger-floor.json` is a verbatim superset;
+  `build-trigger-floor.py --check` fails CI on any dropped keyword/path/intent.
+- **Model truth is single-sourced** in `model-policy.json`; guards read it, never
+  hardcode ids or pins.
 
 ## Key files
 
 | File | Role |
 |------|------|
-| `jdocmunch-index-guard.py` | SessionStart guard: doc index (`~/.doc-index/local/<name>.json`) missing/stale check — docs twin of `jcodemunch-index-guard.py`; wired in `session-start-aggregator.py` |
-| `jdocmunch-index-guard.config.json` | Informational roots + settings for the jdocmunch guard |
-| `jdocmunch-reindex-hook.py` | PostToolUse wrapper → `jdocmunch-mcp hook-posttooluse` (throttled background doc reindex after Edit/Write); chained in `post-write-aggregator.py` |
+| `dispatch.py` / `dispatch.config.json` | Universal per-event chain-runner + link declarations (8 events, 70 links) |
+| `prompt_router/router.py` | Single-process prompt router (classify → rank → 24k priority budget → manifest dedup); runs `--shadow` during the retention window |
+| `trigger-floor.json` / `build-trigger-floor.py` | Verbatim superset of all 4 legacy taxonomies + 139 command names; `--check` = CI floor guard |
+| `model-policy.json` | Single model-routing truth (sonnet default / opus UI+heavy / fable explicit) — consumed by `opus-guard.py`, `workflow-model-guard.py`, `gen-invoke-commands.py` |
+| `index-lifecycle.py` / `.config.json` | Active-repo-only, event-driven index freshness (journal → detached single-shot builder); zero daemons |
+| `lib/platform.py`, `lib/hook_telemetry.py`, `lib/repo_context.py` | Shared foundation: interpreter/token resolution, per-link telemetry, active-repo detection |
+| `jdocmunch-index-guard.py` / `.config.json` / `jdocmunch-reindex-hook.py` | Doc-index twin of the jcodemunch guard; run via the dispatch session-start / post-tool-use chains |
 
 ## Gotchas / fragile spots
 
-- <non-obvious thing that breaks if you're not careful>
+- During the 30-day shadow window, `user-prompt-submit` runs the **legacy injector
+  set + `router.py --shadow`** together; the live injection you see is the legacy
+  stack. Do not "fix" that — cutover is `flip-dispatch.py --router` after ≥10
+  zero-miss sessions.
+- The legacy prompt-stack + aggregator links (the prompt-reminder injector, the
+  session-start and post-write aggregators, `model-router.py`, the 3 index guards)
+  are still wired during the retention window but retire in P7-T4 — do not cite
+  them as the architecture; the architecture is `dispatch.py` + the router.
+- Dispatcher and every link **fail open** — a crashing link logs to telemetry and
+  the chain continues; never let a link raise past its own try/except.
 
 ## Up / down
 
 - Parent: [`../CLAUDE.md`](../CLAUDE.md)
-- Children: <links to deeper `*/CLAUDE.md`, or "none">
-- Related repo docs: <link to the numbered doc / CODEX.md section — link, don't restate>
+- Children: [`lib/CLAUDE.md`](lib/CLAUDE.md)
+- Related repo docs: `README.md` (dispatch architecture); `../rules/agent-lifecycle-routing.md` (phase→hook map); `../plans/PLAN-2026-07-11-100x.md` (the overhaul).

@@ -55,7 +55,7 @@ flow; an identical re-issued code edit overrides the gate once; every hook fails
 |-------|------|-----------|
 | **Engine** `dox_engine.py` | *Creating* docs + *syncing* the index | `collect` / `sweep` / `ensure_dir_documented`; shared by all hooks + the `sweep`/`plan` CLI; idempotent, never clobbers |
 | **Skill** `dox-doc-tree` | *How* to walk / flesh out / update the tree | read/scaffold/update procedures + templates |
-| **Auto-init sweep** `dox-tree-guard.py` | *Creating the whole tree* | SessionStart (via `session-start-aggregator`): full sweep → every dir gets `CLAUDE.md`+`AGENTS.md`, root index synced, fingerprint sidecar at `<repo>/.claude/dox/data/.doxinit.json`. UserPromptSubmit (via `token-stack-prompt-reminder`): bootstrap + read-first nudge. Never clobbers a hand-written root |
+| **Auto-init sweep** `dox-tree-guard.py` | *Creating the whole tree* | SessionStart (via the `dispatch.py` session-start chain): full sweep → every dir gets `CLAUDE.md`+`AGENTS.md`, root index synced, fingerprint sidecar at `<repo>/.claude/dox/data/.doxinit.json`. UserPromptSubmit (via the `dispatch.py` user-prompt-submit chain): bootstrap + read-first nudge. Never clobbers a hand-written root |
 | **Per-write scaffold** `dox-child-scaffold.py` | *Documenting a touched dir* | PostToolUse (chained in `post-write-aggregator.py`): write a file into an undocumented dir → its `CLAUDE.md`+`AGENTS.md` are created + root index re-synced |
 | **Hard gate** `dox-write-gate.py` | *Blocking* code writes with no root | PreToolUse `deny` when root missing (one-time override); Tier-2 soft-`ask` skipped while `autoCreateChildren` is on |
 
