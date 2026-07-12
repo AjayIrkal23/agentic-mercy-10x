@@ -18,7 +18,7 @@
 ![Specialists](https://img.shields.io/badge/specialist_agents-9-EC4899?style=for-the-badge)
 
 ![Built for Claude Code](https://img.shields.io/badge/built_for-Claude_Code-D97757?style=flat-square)
-![Platform](https://img.shields.io/badge/platform-Ubuntu-E95420?style=flat-square)
+![Platform](https://img.shields.io/badge/platform-Ubuntu%20%C2%B7%20Windows-E95420?style=flat-square)
 ![One-command install](https://img.shields.io/badge/install-one_command-22C55E?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-000000?style=flat-square)
 
@@ -605,22 +605,52 @@ The design work runs as its own pipeline — real design systems in, screenshot-
 
 ## 🚀 Install
 
-**One command** (clone next to your home, then run the installer):
+> [!NOTE]
+> **Release: the 100x overhaul (v2.0).** The workbench is now a single-truth,
+> cross-platform system. Highlights: a **unified prompt router** with a
+> never-miss **trigger floor** (one subprocess per prompt instead of ~15, with a
+> verbatim superset of every legacy keyword/path/intent rule proven by a
+> zero-miss shadow harness); a single **`model-policy.json`** truth
+> (sonnet default · opus for UI + heavy work · fable only on request) plus the
+> subagent model-guard crash fix; an **active-repo-only, event-driven index
+> lifecycle** with **zero background daemons**; **8 event dispatchers** where
+> every original hook survives as its own isolated, individually-toggleable
+> module; provenance-aware **skill consolidation** (128 upstream-locked skills
+> kept byte-identical and hash-verified, 24 merges each preserving the old name
+> as a routing alias, **139 commands collapsed to 20** with all historic names
+> still resolving); and a **Windows + Ubuntu `install.py`** with a two-OS CI
+> matrix. The full verification report and change list ship in the release notes.
+
+**One command**, on Ubuntu/macOS **or** Windows. `install.py` is a stdlib-only
+bootstrap (Python ≥ 3.10), OS auto-detected, idempotent, and non-destructive.
+
+**Ubuntu / macOS**
 
 ```bash
-git clone https://github.com/AjayIrkal23/agentic-mercy-10x ~/.claude-repo && ~/.claude-repo/install.sh
+git clone https://github.com/AjayIrkal23/agentic-mercy-10x ~/.claude && python3 ~/.claude/install.py
 ```
 
-The installer is **Ubuntu-focused, idempotent, and non-destructive**:
+**Windows (PowerShell)**
 
-- If `~/.claude` **doesn't exist**, it copies the workspace straight in.
-- If `~/.claude` **already exists**, it makes a timestamped backup (`~/.claude-backup-<ts>.tgz`) and then **merges** the workspace in — it never deletes files you already have (no `rsync --delete`).
-- It offers, with consent prompts, to clone the re-installable externals (gstack, ast-grep-mcp).
-- It prints exactly what you still need to do yourself: install plugins, configure MCP servers, and export your own secrets.
+```powershell
+git clone https://github.com/AjayIrkal23/agentic-mercy-10x $env:USERPROFILE\.claude ; py -3 $env:USERPROFILE\.claude\install.py
+```
 
-Requires `git` + `python3`. Optional: `bun` (to build the gstack skill), `gh`, `rsync`, `uv`.
+`install.py` runs, in order: **detect** OS/python/node/git → idempotent **deps** →
+register the **MCP servers** → **materialize** skills (copy or NTFS junction,
+never a symlink) → **render** `settings.json` from its tracked template → **build
++ validate** the skills catalog (R9 trigger-floor + R10 upstream-intactness) →
+run **doctor**.
 
-Everything path-related uses `$HOME` / `~` — **no hardcoded usernames**, so it works for any user on Ubuntu out of the box.
+```bash
+python install.py doctor     # health + trigger-surface + model-routing verifier
+python install.py update     # git pull --ff-only → deps → re-render → rebuild → doctor
+```
+
+Flags: `--dry-run` (print planned actions, mutate nothing) · `--ci` (skip
+networked steps). Requires `git` + `python3` (≥ 3.10); optional `node`/`bun`,
+`gh`, `uv`. Every path resolves through `hooks/lib/platform.py` — **no hardcoded
+usernames or drive letters**, so it works for any user on either OS.
 
 > [!TIP]
 > Want a lighter footprint? Everything is à-la-carte. Prune `settings.json` and any hooks you don't want — the system fails *open* where it matters, so removing a gate degrades gracefully instead of breaking.
@@ -648,8 +678,8 @@ After install, finish the setup:
 
 This workspace is meant to be forked and tuned:
 
-- **`hooks/autonomous-skill-router.config.json`** — the single source of truth for the `/invoke` suite: which skills each category loads, which model runs it, and how commands compose. Edit this, not the generated files.
-- **`hooks/gen-invoke-commands.py`** — regenerates all 139 `/invoke-*` commands from that config (`python3 hooks/gen-invoke-commands.py`). The output is deterministic.
+- **`hooks/autonomous-skill-router.config.json`** — the source of truth for the `/invoke` suite: which skills each category loads and how the acts compose. The **model** each category runs on lives in **`hooks/model-policy.json`** (single model truth). Edit these, not the generated command files.
+- **`hooks/gen-invoke-commands.py`** — regenerates the **20** `/invoke` command files (one parametric `/invoke <acts…>` + single-act delegators, aliases, and utilities) from that config (`python3 hooks/gen-invoke-commands.py`). All 139 historic command names still resolve — file or router translator — and `--emit-combos` re-expands the 120 combo files in seconds. The output is deterministic.
 - **`skills/.provenance.json`** — tracks every skill's upstream source and version, so you can see what's authored-here vs. vendored, and update accordingly.
 - **`settings.json`** — the hook wiring, MCP servers, model, and permissions. `rules/` + `CLAUDE.md` hold the always-on doctrine.
 
