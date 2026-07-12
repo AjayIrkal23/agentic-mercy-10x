@@ -57,6 +57,24 @@ _KNOWN_SWAPS = {
         "to `index-lifecycle.py session-end`; the link now runs that command "
         "directly (HANDOFF P3-T2). Deregistered + atticked in P4-T7.",
     ),
+    # P6-T2 cross-platform ports: bash launchers -> .py/.js, byte-parity verified
+    # (fixture-parity harness). The bash originals stay on disk for the 30-day
+    # flip-back window (legacy-settings-hooks.json restores them via
+    # flip-dispatch.py --legacy); they retire with the legacy stack in P7-T4/T5.
+    ("session-start", "tdd-guard-launcher.sh", ()): (
+        "tdd-guard-launcher", "P6-T2: bash launcher ported to tdd_guard_launcher.py (parity-verified)."),
+    ("user-prompt-submit", "tdd-guard-launcher.sh", ()): (
+        "tdd-guard-launcher-ups", "P6-T2: bash launcher ported to tdd_guard_launcher.py (parity-verified)."),
+    ("pre-tool-use", "tdd-guard-launcher.sh", ()): (
+        "tdd-guard-launcher-pre", "P6-T2: bash launcher ported to tdd_guard_launcher.py (parity-verified)."),
+    ("session-start", "gsd-session-state.sh", ()): (
+        "gsd-session-state", "P6-T2: bash launcher ported to gsd-session-state.js (parity-verified)."),
+    ("user-prompt-submit", "discovery-skills-reminder.sh", ("prompt",)): (
+        "discovery-skills", "P6-T2: bash launcher ported to discovery-skills-reminder.py (byte-identical stdout)."),
+    ("pre-tool-use", "gsd-validate-commit.sh", ()): (
+        "gsd-validate-commit", "P6-T2: bash launcher ported to gsd-validate-commit.js (deny/exit-2 parity)."),
+    ("post-tool-use", "gsd-phase-boundary.sh", ()): (
+        "gsd-phase-boundary", "P6-T2: bash launcher ported to gsd-phase-boundary.js (parity-verified)."),
 }
 
 
