@@ -106,11 +106,15 @@ def test_pyyaml_declared_as_installer_dep():
     pyy = [d for d in manifest["deps"] if d.get("import") == "yaml"]
     assert pyy, "no PyYAML dep (import==yaml) declared in manifest"
     assert pyy[0].get("install"), "PyYAML dep has no install command"
-    # the import-check resolves PRESENT here (this interpreter has yaml)
+    # the import-check runs and yields a valid status. PRESENT when the detected
+    # interpreter can import yaml; WOULD-INSTALL otherwise (e.g. Windows `py -3`
+    # resolving a different interpreter than the one pip installed into) — both
+    # prove the dep is declared + import-checked + installable, never MISSING.
     detect = _load("detect", "installer/detect.py")
     deps = _load("deps", "installer/deps.py")
     rows = dict(deps.install_deps(detect.detect(), ci=True, dry_run=True))
-    assert rows.get(pyy[0]["id"]) == "PRESENT", rows
+    status = rows.get(pyy[0]["id"], "")
+    assert status == "PRESENT" or status.startswith("WOULD-INSTALL"), rows
 
 
 # --------------------------------------------------------------------------- #

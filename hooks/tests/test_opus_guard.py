@@ -42,8 +42,15 @@ def _clean_home() -> Path:
 
 def run_agent(tool_input: dict, home: Path | None = None) -> dict:
     payload = {"tool_name": "Agent", "tool_input": tool_input}
+    h = str(home or _clean_home())
     env = dict(os.environ)
-    env["HOME"] = str(home or _clean_home())
+    # Path.home() reads USERPROFILE on Windows and HOME on POSIX — set both (and
+    # clear HOMEDRIVE/HOMEPATH) so the throwaway ~/.claude/state session flags are
+    # found on every OS, not just Linux.
+    env["HOME"] = h
+    env["USERPROFILE"] = h
+    env.pop("HOMEDRIVE", None)
+    env.pop("HOMEPATH", None)
     proc = subprocess.run(
         [sys.executable, str(HOOK)],
         input=json.dumps(payload),

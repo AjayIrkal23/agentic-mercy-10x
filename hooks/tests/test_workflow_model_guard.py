@@ -41,8 +41,14 @@ def _clean_home() -> Path:
 def run_hook(tool_input: dict, home: Path | None = None) -> dict:
     """Invoke the hook as a subprocess and return the parsed stdout ({} if empty)."""
     payload = {"tool_name": "Workflow", "tool_input": tool_input}
+    h = str(home or _clean_home())
     env = dict(os.environ)
-    env["HOME"] = str(home or _clean_home())
+    # Path.home() reads USERPROFILE on Windows and HOME on POSIX — set both so the
+    # throwaway ~/.claude/state session flags resolve on every OS.
+    env["HOME"] = h
+    env["USERPROFILE"] = h
+    env.pop("HOMEDRIVE", None)
+    env.pop("HOMEPATH", None)
     proc = subprocess.run(
         [sys.executable, str(HOOK)],
         input=json.dumps(payload),
