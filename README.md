@@ -10,21 +10,23 @@
 
 <img src="assets/hero.webp" alt="agentic-mercy-10x — an orchestrated AI development pipeline turning raw code into verified software" width="100%">
 
+<sub><i>The whole workbench in one frame: raw prompt in, verified software out — every stage gated.</i></sub>
+
 <br/><br/>
 
-![Skills](https://img.shields.io/badge/skills-200%2B-6E56CF?style=for-the-badge)
-![Hooks](https://img.shields.io/badge/hooks-70%2B-0EA5E9?style=for-the-badge)
-![Commands](https://img.shields.io/badge/%2Finvoke_commands-139-F59E0B?style=for-the-badge)
-![Specialists](https://img.shields.io/badge/specialist_agents-9-EC4899?style=for-the-badge)
+![Skills](https://img.shields.io/badge/skills-218-6E56CF?style=for-the-badge)
+![Invoke](https://img.shields.io/badge/%2Finvoke-20_files_·_139--name_compat-F59E0B?style=for-the-badge)
+![Dispatchers](https://img.shields.io/badge/hook_dispatchers-8-0EA5E9?style=for-the-badge)
+![Release](https://img.shields.io/badge/release-v2.0.0-EC4899?style=for-the-badge)
 
 ![Built for Claude Code](https://img.shields.io/badge/built_for-Claude_Code-D97757?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Ubuntu%20%C2%B7%20Windows-E95420?style=flat-square)
-![One-command install](https://img.shields.io/badge/install-one_command-22C55E?style=flat-square)
+![CI](https://img.shields.io/badge/CI-passing-22C55E?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-000000?style=flat-square)
 
 <br/>
 
-**[The Problem](#-the-problem-nobody-fixed) · [On Enter](#-what-actually-happens-when-you-hit-enter) · [One Prompt's Journey](#-the-journey-of-a-single-prompt) · [8 Superpowers](#-eight-superpowers-200-skills) · [Token Economy](#-the-token-economy) · [Structured Forever](#-your-codebase-stays-structured--forever) · [Install](#-install)**
+**[The Problem](#-the-problem-nobody-fixed) · [The v2.0.0 Overhaul](#-why-v200-the-100x-overhaul) · [On Enter](#-what-actually-happens-when-you-hit-enter) · [8 Superpowers](#-eight-superpowers-218-skills) · [Architecture](#-architecture--six-pillars) · [Token Economy](#-the-token-economy) · [Install](#-install)**
 
 </div>
 
@@ -53,6 +55,30 @@ AI coding agents are brilliant and **undisciplined**. Left alone, the same failu
 
 ---
 
+## 🚀 Why v2.0.0 — the 100x overhaul
+
+The workbench grew organically until it fought itself: prompt-time work fanned out across a fleet of independent injector hooks (one subprocess each), **65 loose hook registrations**, hundreds of skill folders with silent duplicates, and **139 hand-written command files**. A **579-item forensic audit** (`plans/AUDIT-2026-07-11-100x.md`) catalogued every rough edge — and v2.0.0, the *"100x Workflow Overhaul,"* is the answer.
+
+**The through-line: many moving parts → one source of truth per concern.**
+
+<div align="center">
+
+| Concern | Before | After (v2.0.0) |
+|---|---|---|
+| Prompt-time routing | ~11 injector hooks, one subprocess each | **1 classify-once router** (in-process delegates) |
+| Hook wiring | 65 loose registrations | **8 event dispatchers**, every hook still its own isolated file |
+| Skills | hundreds of folders, silent duplicates | **218 names** (194 bodies + 24 aliases), 128 upstream-locked & hash-verified |
+| Commands | 139 hand-written files | **20 files**, all 139 historic names still resolve |
+| Model choice | Opus-biased, guard crashed on args | **1 `model-policy.json`** — Sonnet default, guard crash fixed |
+| Indexing | background daemons | **event-driven, active-repo-only, zero daemons** |
+| Platform | Ubuntu-only, `.sh` hooks | **`install.py` for Ubuntu + Windows**, zero shell hooks |
+
+</div>
+
+Every retired part is preserved for rollback (`git tag pre-100x`, `attic/2026-07-11/MANIFEST.md`), and the two-OS CI matrix is green on **`ubuntu-latest` and `windows-latest`**.
+
+---
+
 ## 🎬 What actually happens when you hit Enter
 
 Every task runs the same disciplined spine — **understand → build → auto-close → prove** — with gates that don't let sloppiness through. This is the full lifecycle, from the moment you open a project to the moment the agent is *allowed* to say "done":
@@ -61,8 +87,8 @@ Every task runs the same disciplined spine — **understand → build → auto-c
 flowchart TD
     A(["🖥️  cd project && claude"]):::start --> S0
 
-    subgraph S0["①  SESSION START · hooks fire before you type a word"]
-      B["🧠 Symbol index + dep-graph refreshed<br/>🗂️ Memory + CODEX working-log loaded<br/>📚 dox doc-tree root verified<br/>🧾 Skill manifest primed · ponytail + caveman on"]:::hook
+    subgraph S0["①  SESSION START · dispatch.py fires before you type a word"]
+      B["🧠 Active-repo symbol index + dep-graph verified<br/>🗂️ Memory + CODEX working-log loaded<br/>📚 dox doc-tree root verified<br/>🧾 Skill manifest primed · ponytail + caveman on"]:::hook
     end
 
     S0 --> P(["⌨️  Your prompt"]):::start
@@ -105,60 +131,19 @@ flowchart TD
     classDef done fill:#22C55E,stroke:#15803D,color:#052e16,font-weight:bold
 ```
 
-**The magic:** you don't invoke those stages by hand. The command name composes them — `/invoke-audit-spec-plan-impl-clean` runs the whole spine; `/invoke-debug` runs one act. **139 commands, generated from a single config**, cover every combination you'd ever want.
+**The magic:** you don't invoke those stages by hand. One **parametric `/invoke <acts…>`** command composes them — `/invoke audit spec plan impl clean` runs the whole spine; `/invoke debug` runs one act. Ten acts (audit · spec · plan · impl · debug · design · clean · docs · verify · security) compose freely, and **all 139 historic command names still resolve** to the same acts.
 
 ---
 
-## 🧭 The journey of a single prompt
+## 🦸 Eight superpowers, 218 skills
 
-Zoom into *one* prompt. Here is literally every checkpoint it passes — from the shell to the final answer — and the invisible hook layer working the whole time so you don't have to:
-
-```mermaid
-sequenceDiagram
-    autonumber
-    participant You
-    participant CC as Claude Code
-    participant Hooks as Hook Layer
-    participant Mesh as Agent Mesh
-
-    You->>CC: cd project && claude
-    CC->>Hooks: SessionStart
-    Hooks-->>Mesh: index fresh · memory loaded · dox checked · ponytail+caveman armed
-    Note over Hooks,Mesh: 🩹 kills "cold-start amnesia" — the agent boots knowing your codebase
-
-    You->>CC: "add bulk CSV import"
-    CC->>Hooks: UserPromptSubmit
-    Hooks-->>Mesh: sequential-thinking mandate · intel-first · skill reminders
-    Note over Hooks,Mesh: 🩹 kills "leap before you look" — reasoning is forced to the surface
-
-    Mesh->>Hooks: EnterPlanMode
-    Hooks-->>Mesh: PLAN_GATE — jcodemunch + context7 + decomposition required
-    Note over Hooks,Mesh: 🩹 kills "code-first" — no mutation without a checked plan
-
-    Mesh->>Hooks: Write / Edit  (PreToolUse)
-    Hooks-->>Mesh: model routing · dox gate · TDD guard · fe/be skills injected
-    Note over Hooks,Mesh: 🩹 kills "forgot the standard" + "premium-model waste"
-
-    Hooks->>Hooks: PostToolUse — dead-code audit · doc enforcer · dox scaffold
-    Note over Hooks: 🩹 kills "rot accumulates silently"
-
-    Mesh->>CC: "done"
-    CC->>Hooks: Stop
-    Hooks-->>You: gates → docs ✔ · security ✔ · review ✔ · then allowed to finish
-    Note over Hooks,You: 🩹 kills "it's done (it wasn't)"
-```
-
-Nothing above is something you have to remember. **The hooks remember for you.**
-
----
-
-## 🦸 Eight superpowers, 200+ skills
-
-Every skill in this workspace exists to give a developer one of eight superpowers. This is the full roster — **not a teaser, the actual inventory** — of what 10x's your day:
+Every skill in this workspace exists to give a developer one of eight superpowers. This is the full roster — **not a teaser, the actual inventory** — of what 10x's your day.
 
 <div align="center">
 <img src="assets/superpowers-grid.webp" alt="Eight developer superpowers: Analyze, Organize, Execute, Test, Secure, Learn, Create, Design" width="100%">
 </div>
+
+<sub align="center"><i>Eight capability lanes, drawn from 218 skill names (194 bodies + 24 permanent aliases). 128 of them are upstream-locked and hash-verified byte-for-byte at install.</i></sub>
 
 <br/>
 
@@ -171,58 +156,39 @@ Every skill in this workspace exists to give a developer one of eight superpower
 | `codebase-intel-first` | Doctrine: build a structural model **before** reading a single line |
 | `jcodemunch-token-saver` | Symbol index — find a function, its callers, its blast radius in **one call**, not 20 file reads |
 | `graphify` | Dependency graph — "who depends on X?", "how do A and B connect?" answered instantly |
-| `project-structure-map` | Instant layer-boundary + impacted-files map for an unfamiliar repo |
-| `project-reference-linkage` | The cross-module wiring map (component ↔ hook ↔ api ↔ controller ↔ route ↔ schema ↔ slice) |
-| `iterative-retrieval` | Progressively refine context instead of dumping the whole tree |
+| `project-structure-map` · `project-reference-linkage` | Layer boundaries + the cross-module wiring an unfamiliar repo hides |
 | `lean-ctx` | Compressed I/O · 10 read modes · re-reads a file in **~13 tokens** |
 | `caveman` | Output compression — **~75% fewer tokens**, full technical accuracy |
-| `mcp-usage-standards` · `tool-and-doc-selection` | Pick the right source of truth, skip the wasteful search |
 
 ### 🗂️ ② ORGANIZE — a codebase that stays clean forever
 
-> *Structure is enforced, not hoped for. New code lands in the right place with the right shape, every time.*
-
 | Skill | What it 10x's |
 |---|---|
-| `frontend-structure-standards` · `frontend-standards-always-follow` | Domain-first folders, type ownership, 250-line file ceiling |
-| `backend-standards-always-follow` · `service-layer-standards` · `backend-api-standards` | Route → controller → service → schema boundaries that never blur |
+| `frontend-structure-standards` · `backend-standards-always-follow` · `service-layer-standards` | Domain-first FE folders + route → controller → service → schema BE boundaries |
 | `scaffold-standards` · `domain-scaffold-patterns` | New domain? Get the exact file tree before any logic is written |
 | `api-contract-standards` · `api-and-interface-design` | Stable envelopes + typed contracts across the FE/BE seam |
-| `architect-system-design` | Build-ready decomposition specs for new systems |
-| `golang-patterns` · `react-hooks-patterns` · `postgres-patterns` · `vite-react-best-practices` · `tailwind-design-system` | Idiomatic, per-stack patterns baked in |
 | `dead-code-and-change-audit` | Continuous hygiene — no orphaned imports, stale refs, or half-refactors survive |
-| `code-simplification` · `improve-codebase-architecture` · `ponytail:ponytail-audit` | Actively shrink complexity instead of accreting it |
 
 ### 🗺️ ③ EXECUTE — never vibe-code again
 
-> *No mutation without a plan. Reasoning is externalized, scope is questioned, work is sliced.*
-
 | Skill | What it 10x's |
 |---|---|
-| `plan-mode-gate` · `workflow-orchestrator` · `plan-exec-stack-guide` | Hard pre-flight: no code until there's a checked plan |
-| `spec-driven-development` · `planning-and-task-breakdown` · `writing-plans` | Turn a vague idea into ordered, testable tasks |
+| `plan-mode-gate` · `workflow-orchestrator` | Hard pre-flight: no code until there's a checked plan |
 | `source-driven-development` | Every decision grounded in official docs, not stale memory |
 | `sequential-thinking` (doctrine) | Externalize **all** reasoning — plan, audit, debug, decide |
-| `ponytail` | The laziest solution that actually works — kills over-engineering at the source |
-| `doubt-driven-development` | Adversarial self-review before a confident answer stands |
-| `incremental-implementation` · `subagent-driven-development` · `dispatching-parallel-agents` · `using-git-worktrees` | Ship in safe slices, fan out independent work |
+| `ponytail` · `doubt-driven-development` | The laziest solution that works, then an adversarial self-review |
+| `incremental-implementation` · `subagent-driven-development` | Ship in safe slices, fan out independent work |
 
 ### 🧪 ④ TEST — prove it works, don't claim it
 
-> *Evidence before assertions. Tests come first; "done" is earned, not announced.*
-
 | Skill | What it 10x's |
 |---|---|
-| `test-driven-development` · `tdd` · `golang-testing` | Red → green → refactor; table-driven Go tests |
+| `test-driven-development` · `golang-testing` | Red → green → refactor; table-driven Go tests |
 | `webapp-testing` · `browser-testing-with-devtools` | Real-browser DOM, console, network, and visual checks |
-| `verification-loop` · `verification-before-completion` · `eval-harness` | A finish line you have to actually cross |
-| `code-review-and-quality` · `frontend-code-review` · `backend-code-review` | Multi-axis review before merge |
-| `systematic-debugging` · `debug-investigation` · `diagnose` | Reproduce → root cause → minimal fix (no fix before cause) |
-| `fix-lint-format` | Green CI before you commit |
+| `verification-loop` · `eval-harness` | A finish line you have to actually cross |
+| `systematic-debugging` · `debug-investigation` | Reproduce → root cause → minimal fix (no fix before cause) |
 
 ### 🛡️ ⑤ SECURE — ship without holes
-
-> *Auth, input, and API changes get scanned automatically — a BLOCK verdict stops the session.*
 
 | Skill / agent | What it 10x's |
 |---|---|
@@ -232,96 +198,188 @@ Every skill in this workspace exists to give a developer one of eight superpower
 
 ### 📖 ⑥ LEARN — never forget, never re-derive
 
-> *Cross-session memory + a documentation tree that can't fall out of date.*
-
 | Skill / system | What it 10x's |
 |---|---|
 | `memory` (MCP) + memory protocol | Patterns, decisions, and fragile-area gotchas persist across sessions |
 | `dox-doc-tree` | A `CLAUDE.md` + `AGENTS.md` in **every** directory — read root→target before editing |
-| `update-docs` · `documentation-and-adrs` | Docs + ADRs synced to the change, Gate-enforced |
-| `CODEX.md` | A living working-decision log the whole team can read |
-| `codebase-start-point-guide` | Deterministic onboarding flow into any repo |
+| `update-docs` · `CODEX.md` | Docs + ADRs synced to the change, Gate-enforced; a living decision log |
 
 ### 🎼 ⑦ CREATE — a whole team of specialists in a box
 
-> *Nine specialist agents + 139 `/invoke` commands + forensic X-ray vision over your git history.*
-
 | Skill / agent | What it 10x's |
 |---|---|
-| 9 `/invoke` specialists + 139 commands | Audit · spec · plan · implement · debug · clean · docs · verify — composed on demand |
+| 10-act specialist corps + parametric `/invoke` | Audit · spec · plan · impl · debug · design · clean · docs · verify · security — composed on demand |
 | `forensic-hotspot-finder` · `forensic-change-coupling` | Which files cause the most bugs; what secretly changes together |
 | `forensic-complexity-trends` · `forensic-debt-quantification` | Is quality improving? What does the debt cost in **dollars**? |
-| `tech-debt-audit` | Whole-repo, file-cited debt report with severity + effort |
-| `workflow-orchestrator` | Routes multi-surface work across Architect / Code / Debug modes |
 
 ### 🎨 ⑧ DESIGN — UI that doesn't look AI-generated
-
-> *A six-skill anti-slop design stack on top of a real asset-generation engine — the images in this very README were generated by it.*
 
 | Skill / engine | What it 10x's |
 |---|---|
 | `impeccable` · `taste-skill` · `ui-ux-pro-max` · `huashu-design` | Anti-slop craft: tokens, typography, hierarchy, motion |
-| `frontend-ui-engineering` · `design-extract` · `frontend-design` | Production UIs; extract a design system from any live URL |
+| `frontend-ui-engineering` · `design-extract` | Production UIs; extract a design system from any live URL |
 | **Higgsfield** asset engine | Bespoke image / video / 3D / audio — real assets, never placeholders |
 
 ---
 
-## 🧠 Always-fresh code intelligence
+## 🏛️ Architecture — six pillars
 
-Every superpower above rests on one foundation: the agent **never works blind**. The moment a session starts, a guard checks that the repo's **symbol index** (jcodemunch) and **dependency graph** (graphify) are fresh — and silently re-indexes only what changed. No manual step, no stale map.
+v2.0.0 is a single-truth system. Six pillars carry it, each with one source of truth and no hidden coupling.
+
+### ① The unified prompt router + never-miss trigger floor
+
+How does the right skill or specialist show up at the right moment, without you asking? A **single router** sits between your prompt and the work. It classifies intent **once** into a `TaskProfile`, ranks skills by the file paths you're touching, packs the highest-signal set into a **~24k priority budget**, and dedups anything already acknowledged this session.
 
 <div align="center">
-<img src="assets/auto-index.webp" alt="Source code auto-scanned into a symbol index and a dependency graph, re-indexed automatically at session start" width="100%">
+<img src="assets/skill-router.webp" alt="A prompt entering a routing hub that fans out to only the relevant skills and specialist agents, with self-tuning weights" width="100%">
 </div>
+
+<sub align="center"><i>One classify-once router replaces the old fleet of injector hooks. Its trigger surface is a checksum-guarded floor of 1,973 verbatim rules — nothing routable is ever silently dropped.</i></sub>
 
 <br/>
 
-| Layer | What it builds | What the agent asks it |
+| Piece | What it does |
+|---|---|
+| **Classify-once `TaskProfile`** | Intent + touched paths are read a single time; every downstream decision reuses it |
+| **Ranked selection → ~24k budget** | Only the highest-signal skills load, priority-ordered, deduped against the session manifest |
+| **Trigger floor (`trigger-floor.json`)** | **1,973 verbatim entries** — a superset of every legacy keyword/path/intent rule, checksum-guarded, with a *never-remove* doctrine enforced in CI |
+| **Self-tuning weights** | A weight-updater learns which skills actually helped and re-ranks future routing (floor rules stay weight-independent) |
+| **One source of truth** | Every route + command composition lives in `hooks/autonomous-skill-router.config.json` |
+
+> [!NOTE]
+> **The router ships in 30-day SHADOW mode.** It runs *beside* the proven legacy stack and logs a zero-missed-trigger parity check on every prompt (fixtures: **12 prompts, 0 misses**). Cutover is one command — `flip-dispatch.py --router` — taken only after ≥10 real zero-miss sessions. See [Shadow mode](#-shadow-mode--the-honest-bit).
+
+### ② Model policy — one file decides who runs on what
+
+<div align="center">
+
+| Tier | When | Source of truth |
 |---|---|---|
-| **Symbol index** (`jcodemunch`) | Every function, class, type, caller, and reference — pre-parsed | *"Where is `X`? Who calls it? What's the blast radius if I change it?"* |
-| **Dependency graph** (`graphify`) | The whole module wiring as a queryable graph | *"Who depends on `X`? How do `A` and `B` connect? What are the god-nodes?"* |
-| **Freshness guards** (hooks) | A SessionStart check that re-indexes only the delta | *nothing — it just stays current, automatically* |
+| **Sonnet** | Default for everything | `hooks/model-policy.json` |
+| **Opus** | UI/UX work · genuinely heavy builds · the **IMPLEMENT** carve-out | `invoke_categories.IMPLEMENT: "opus"` |
+| **Fable** | Explicit user request only — never automatic | user-driven flag |
 
-**Why it matters:** a stock agent re-derives structure with grep on *every* task and still misses cross-module edges. Here it's a one-call lookup against an always-current map — which is exactly where the token savings below come from.
+</div>
 
----
+`model-policy.json` is the **single** place model choice lives. `opus-guard.py` pins each subagent's model from its `[sonnet]`/`[opus]`/`[fable]` prefix, and `workflow-model-guard.py` stops workflow subagents inheriting an Opus parent — the historical arg-drop crash there is **fixed, with regression tests**.
 
-## 🧭 The agent always knows where to look
+### ③ Hook orchestration — 8 dispatchers, every hook still its own file
 
-Point a stock agent at an unfamiliar repo and it wanders — opening files, guessing, backtracking. This workspace gives it a **GPS**: `codebase-start-point-guide` sets the entry point, and `project-reference-linkage` + `project-structure-map` trace the exact vertical slice a change touches, so it walks straight to the right files and skips the rest.
+Skills are *advice.* **Hooks are the enforcement.** v2.0.0 collapses **65 loose registrations into 8 per-event `dispatch.py` orchestrators** — but every original hook survives as its own isolated module with a `type`, an `enabled` flag, a priority, and a token budget. One link crashing can't take down its event.
 
 <div align="center">
-<img src="assets/codebase-navigation.webp" alt="An AI agent following a highlighted route from a start point straight to the exact target files, guided by project linkages" width="100%">
+<img src="assets/hooks-lifecycle.webp" alt="Hooks firing across five lifecycle phases: session start, prompt, pre-write, post-write, stop" width="100%">
 </div>
+
+<sub align="center"><i>Five lifecycle phases, now driven by 8 dispatchers instead of 65 scattered registrations. Parity is proven 65/65 and a link-doctor synthetically fires every link.</i></sub>
 
 <br/>
 
-The linkage map keeps the full slice traceable end to end — touch one node and the agent already knows every other node in the chain:
+Some links don't just advise — they **gate.** A risky change runs a gauntlet before it's allowed through, and a session can't even *end* until the closing gates pass:
+
+<div align="center">
+<img src="assets/hooks-gates.webp" alt="A code change passing through a gauntlet of gates: model, intel, TDD, dox, security, review" width="100%">
+</div>
+
+<sub align="center"><i>The gate chain: model routing → intel-first → TDD guard → dox tree → security scan → review — enforced by isolated links inside the pre-write and Stop dispatchers.</i></sub>
+
+<br/>
+
+| Phase | What the dispatcher does | Isolated links (a few) |
+|---|---|---|
+| **① SessionStart** | Boot knowing the codebase | `jcodemunch-index-guard` · `memory-load-on-start` · `dox-tree-guard` · `tdd-guard-init-guard` |
+| **② UserPromptSubmit** | Shape the request | `sequential-thinking-mandate` · the unified router (shadow) |
+| **③ PreToolUse** | Gate & route every action | `opus-guard` · `jcodemunch-enforce` · `dox-write-gate` · `tdd-guard-gate` · `security-scan-gate` |
+| **④ PostToolUse** | Clean up after every write | `desloppify-cleanup` · `doc-update-enforcer` · `dox-child-scaffold` |
+| **⑤ Stop** | Prove it's done, then learn | `hard-completion-gate` · `santa-method-writer` · `session-memory-writer` |
+
+### ④ Active-repo index lifecycle — zero background daemons
+
+Every superpower rests on the agent **never working blind** — but that no longer costs you a background process. `index-lifecycle.py` is an **event-driven state machine** that keeps four surfaces fresh (jcodemunch, jdocmunch, graphify, dox) **for the active repo only**, via **detached single-shot builders** with a debounced reindex (N=5 writes or T=45s). There are **zero daemons**, and by construction it *cannot* touch any other repo.
+
+<div align="center">
+<img src="assets/auto-index.webp" alt="Source code auto-scanned into a symbol index and a dependency graph, refreshed on session events" width="100%">
+</div>
+
+<sub align="center"><i>Symbol index + dependency graph, refreshed on session and write events — active repo only, single-shot builders, no always-on watchers.</i></sub>
+
+<br/>
+
+**Why it matters:** a stock agent re-derives structure with grep on *every* task and still misses cross-module edges. Here it's a one-call lookup against an always-current map — which is exactly where the [token savings](#-the-token-economy) come from.
+
+### ⑤ Skill provenance & FATE — merges you can trust
+
+Consolidating skills is dangerous if it silently rewrites vendored code. v2.0.0 makes it **provenance-aware**: **128 upstream-locked skills are hash-verified byte-intact** at install (validator rule R10), so cloned skill packs update cleanly. Only **24 user-authored duplicates** were folded into **14 canonicals** — and each old name lives on as a permanent routing alias. **Zero skills deleted.** The full record is in `hooks/skills-provenance.json`.
+
+### ⑥ The `/invoke` surface — 20 files, 139-name compat
+
+Type `/invoke audit spec plan impl design` and a **whole cross-functional team wakes up in order** — an auditor, an architect, a planner, an engineer, a designer — each a clean-context specialist handing its artifact to the next. And you often don't even type it: a plain-English prompt like *"fix this bug and clean up"* is auto-classified and the matching chain fires on its own.
+
+<div align="center">
+<img src="assets/invoke-team.webp" alt="One /invoke command igniting a chain of specialist agents — audit, spec, plan, implement, design, clean, docs, verify — also auto-triggered by keywords" width="100%">
+</div>
+
+<sub align="center"><i>One parametric /invoke composes the ten-act specialist corps. 20 command files back it; all 139 historic names resolve through the invoke_compat translator.</i></sub>
+
+<br/>
+
+Under the hood, every invocation runs the same **three acts** — which is why they compose so cleanly:
 
 ```mermaid
 flowchart LR
-    C["🧩 component"]:::fe --> H["🪝 hook"]:::fe --> A["🌐 api client"]:::fe
-    A --> RT["🛣️ route"]:::be --> CT["🎛️ controller"]:::be --> SV["⚙️ service"]:::be
-    SV --> SC["📐 schema"]:::be --> MD["🗄️ model"]:::be
-    H -.->|"UI state"| ST["🗃️ store / slice"]:::fe
+    subgraph ACT1["🎬 ACT 1 · INTEL"]
+      direction TB
+      I["Symbol index<br/>+ dependency graph<br/>➜ a codebase brief"]:::a1
+    end
+    subgraph ACT2["🎬 ACT 2 · DISPATCH"]
+      direction TB
+      D["audit · spec · plan · impl<br/>debug · design · security<br/>➜ in dependency order"]:::a2
+    end
+    subgraph ACT3["🎬 ACT 3 · AUTO-CLOSE"]
+      direction TB
+      C["clean · docs · verify<br/>➜ then stop-gates"]:::a3
+    end
+    I ==> D ==> C
 
-    classDef fe fill:#0EA5E9,stroke:#0369A1,color:#fff
-    classDef be fill:#6E56CF,stroke:#4B3B9C,color:#fff
+    classDef a1 fill:#0EA5E9,stroke:#0369A1,color:#fff
+    classDef a2 fill:#6E56CF,stroke:#4B3B9C,color:#fff
+    classDef a3 fill:#22C55E,stroke:#15803D,color:#052e16
 ```
 
-- `codebase-start-point-guide` — the deterministic "where do I begin" flow for any repo.
-- `project-structure-map` — instant layer boundaries + likely-impacted files.
-- `project-reference-linkage` — the cross-module wiring above, so nothing downstream is missed.
+The **20 files** are: one parametric `/invoke <acts…>` + 10 single-act delegators + `invoke-fullstack` + 5 muscle-memory aliases + 3 utilities (`invoke-session` / `invoke-status` / `invoke-update`). All 139 historic combo names resolve via `invoke_compat`, and `--emit-combos` re-expands every legacy file in seconds if you ever want them back on disk.
+
+#### The specialist corps
+
+<div align="center">
+
+| Agent | Act | Owns |
+|-------|----------|------|
+| 🔬 `audit-specialist` | **AUDIT** | Forensic hotspots, coupling/churn, dead code, repo-health — cited findings. |
+| 📐 `spec-architect` | **SPEC** | Requirements → typed contracts, acceptance criteria, an explicit Not-Doing list. |
+| 🗺️ `planning-director` | **PLAN** | Spec → dependency-ordered, file-pathed, per-task-TDD plan. |
+| ⚙️ `implementation-engineer` | **IMPLEMENT** | Executes the plan task-by-task with TDD *(runs on Opus by directive)*. |
+| 🐞 `debug-detective` | **DEBUG** | Reproduce → demonstrate root cause → minimal fix. *No fix before cause.* |
+| 🎨 `frontend-uiux-designer` | **DESIGN** | Anti-slop UI via a six-skill design stack *(runs on Opus)*. |
+| 🧹 `deadcode-reaper` | **CLEAN** | Removes only what *this* session's diff orphaned; delete-safe. |
+| 📖 `docs-sync-agent` | **DOCS** | Syncs docs + the per-directory `CLAUDE.md` tree to the change. |
+| ✅ `qa-verifier` | **VERIFY** | Runs the real flow and captures real output — evidence before "done". |
+| 🕵️ `security-sentinel` | **SECURITY** | Semgrep + OWASP pass on the diff → BLOCK/PASS verdict. |
+
+</div>
+
+Dozens of GSD, Figma, and Vercel helper agents round out the roster.
 
 ---
 
 ## 💰 The token economy
 
-Here is the part that pays for itself. A stock agent answers a question by **reading files** — it grep-scans, opens a dozen, and drowns its own context. This workspace answers the same question by **querying a pre-built symbol index and dependency graph**, then compresses everything that flows through. The result is dramatic:
+Here is the part that pays for itself. A stock agent answers a question by **reading files** — it grep-scans, opens a dozen, and drowns its own context. This workspace answers by **querying a pre-built symbol index and dependency graph**, then compresses everything that flows through. And at the prompt layer, v2.0.0 collapses a fleet of injector subprocesses into **one router**.
 
 <div align="center">
-<img src="assets/token-economics.webp" alt="Reading the entire codebase vs a surgical symbol lookup — 95% less token volume, 75% less processing" width="100%">
+<img src="assets/token-economics.webp" alt="Reading the entire codebase vs a surgical symbol lookup — far less token volume, far less processing" width="100%">
 </div>
+
+<sub align="center"><i>Two compounding wins: surgical index lookups instead of blind file dumps, and one classify-once router (packed into a ~24k priority budget) instead of many prompt-time injector spawns.</i></sub>
 
 ```mermaid
 xychart-beta
@@ -343,9 +401,32 @@ xychart-beta
 | "Re-read a file after an edit" | full re-read ≈ **3k tok** | `lean-ctx` diff ≈ **13 tok** | **~99%** |
 | "Explain the change you made" *(output)* | verbose prose ≈ **1.2k tok** | `caveman` ≈ **300 tok** | **~75%** |
 
-**Fewer tokens is not just cheaper — it's *smarter*.** Every token you *don't* waste on a blind file dump is a token of context left for actual reasoning. This is why the workspace stays sharp on large repos where a naive agent chokes.
+> Numbers are illustrative estimates drawn from each skill's own stated savings (`jcodemunch-token-saver` ≈ 95% on retrieval, `caveman` ≈ 75% on output, `lean-ctx` ≈ 13-token re-reads). Your mileage varies with repo size — the *shape* of the win does not.
 
-> Numbers above are illustrative estimates drawn from each skill's own stated savings (`jcodemunch-token-saver` ≈ 95% on retrieval, `caveman` ≈ 75% on output, `lean-ctx` ≈ 13-token re-reads). Your mileage varies with repo size — the *shape* of the win does not.
+---
+
+## 🧭 The agent always knows where to look
+
+Point a stock agent at an unfamiliar repo and it wanders — opening files, guessing, backtracking. This workspace gives it a **GPS**: `codebase-start-point-guide` sets the entry point, and `project-reference-linkage` + `project-structure-map` trace the exact vertical slice a change touches, so it walks straight to the right files and skips the rest.
+
+<div align="center">
+<img src="assets/codebase-navigation.webp" alt="An AI agent following a highlighted route from a start point straight to the exact target files, guided by project linkages" width="100%">
+</div>
+
+<sub align="center"><i>Start point → the exact vertical slice → done. The linkage map keeps every node in the chain traceable so nothing downstream is missed.</i></sub>
+
+<br/>
+
+```mermaid
+flowchart LR
+    C["🧩 component"]:::fe --> H["🪝 hook"]:::fe --> A["🌐 api client"]:::fe
+    A --> RT["🛣️ route"]:::be --> CT["🎛️ controller"]:::be --> SV["⚙️ service"]:::be
+    SV --> SC["📐 schema"]:::be --> MD["🗄️ model"]:::be
+    H -.->|"UI state"| ST["🗃️ store / slice"]:::fe
+
+    classDef fe fill:#0EA5E9,stroke:#0369A1,color:#fff
+    classDef be fill:#6E56CF,stroke:#4B3B9C,color:#fff
+```
 
 ---
 
@@ -357,11 +438,13 @@ Left unattended, an AI agent turns any codebase into spaghetti — files whereve
 <img src="assets/codebase-structure.webp" alt="Before: tangled spaghetti code. After: clean domain-organized architecture" width="100%">
 </div>
 
+<sub align="center"><i>The default outcome, not the hoped-for one: domain-organized structure enforced at scaffold time, write time, and close time.</i></sub>
+
 <br/>
 
 ### The standards, made visual
 
-Four always-on skill sets decide *where every file goes and what shape it takes* — so the structure above is what you get by default, not what you hope for:
+Four always-on skill sets decide *where every file goes and what shape it takes* — so the structure above is what you get by default:
 
 <table>
 <tr>
@@ -376,125 +459,42 @@ Four always-on skill sets decide *where every file goes and what shape it takes*
 
 Three enforcement layers keep it that way, permanently:
 
-- **At scaffold time** — `scaffold-standards` + `domain-scaffold-patterns` emit the exact file tree (validated against real production codebases: Fastify/TS, FastAPI/Python, Go/chi).
-- **At write time** — structure skills are injected on every edit; the 250-line file ceiling and layer boundaries are checked.
+- **At scaffold time** — `scaffold-standards` + `domain-scaffold-patterns` emit the exact file tree.
+- **At write time** — structure skills are injected on every edit; the 250-line ceiling and layer boundaries are checked.
 - **At close time** — `dead-code-and-change-audit` sweeps orphans and the `dox` tree drops a `CLAUDE.md` into any directory you touched.
 
 ---
 
-## 🛡️ Every step kills a real problem
+## 📖 A self-documenting codebase
 
-This is the part that matters. Each layer of the workspace exists to permanently retire one failure mode of agentic development:
+The **dox tree** guarantees every directory in every repo carries a `CLAUDE.md` (+ `AGENTS.md`) — and the moment you create a new folder, a link inside the PostToolUse dispatcher **auto-scaffolds** its doc. Before editing, the agent reads root → target, so it always inherits the local rules of the exact place it's working.
 
 <div align="center">
-
-| The agent used to… | …now it *structurally can't*, because | Layer |
-|---|---|---|
-| 🧠 Forget your standards mid-task | **200+ skills injected path-ranked on every write** (`fe_*` / `be_*` routing) | Enforcement |
-| 🔦 Read whole files & burn tokens | **`codebase-intel-first`** steers to a symbol index + dep graph; **lean-ctx** compresses I/O | Doctrine + MCP |
-| 🏃 Code before understanding | **plan-mode gate** + **spec-before-code** | Enforcement + Specialists |
-| 🧪 Skip tests | **TDD guard** flags implementation written before a failing test | Enforcement |
-| ☠️ Leave dead code behind | **`deadcode-reaper`** removes only what *your* diff orphaned — delete-safe | Specialists |
-| 📉 Let docs rot | **dox tree** + **`docs-sync-agent`** update every directory you touch | Enforcement + Specialists |
-| 🕳️ Ship security holes | **`security-sentinel`** — semgrep + OWASP → **BLOCK / PASS** | Specialists |
-| 🤥 Lie about "done" | **`qa-verifier`** — real run, real output, **evidence-before-assertion** | Specialists |
-| 💸 Burn premium-model $ on trivial work | **model routing** → cheapest capable model per subagent | Enforcement |
-| 🎈 Over-engineer & bloat | **ponytail** — the laziest solution that actually works | Doctrine |
-| 📜 Drown you in prose | **caveman** — ~75% fewer tokens, full technical accuracy | Doctrine |
-| 🔁 Re-derive structure every session | **jcodemunch index + graphify graph** kept fresh by guards | MCP + Enforcement |
-| 🌫️ Reason invisibly | **sequential-thinking mandate** externalizes every non-trivial decision | Doctrine |
-| 🫥 Forget across sessions | **memory MCP** + **CODEX.md** working log | Doctrine + MCP |
-
+<img src="assets/dox-tree.webp" alt="A self-documenting codebase — a doc in every folder, auto-scaffolded into new folders, read root to target" width="100%">
 </div>
+
+<sub align="center"><i>A doc in every folder, auto-scaffolded into new ones, read root → target before any edit — so the agent never violates a local rule it didn't know existed.</i></sub>
 
 ---
 
-## 🎼 One command, a whole team
+## 🎨 UI that never looks AI-generated
 
-Type `/invoke-audit-spec-plan-impl-design` and a **whole cross-functional team wakes up in order** — an auditor, an architect, a planner, an engineer, a designer — each a clean-context specialist, each handing its artifact to the next. And you often don't even type it: a plain-English prompt like *"fix this bug and clean up"* is **auto-classified by keywords** and the matching chain fires on its own.
+Most AI writes **slop UI** — templated cards, the same purple gradient, zero intention. This workspace refuses. A six-skill anti-slop design stack — on top of the **Higgsfield** asset engine — turns a brief into interfaces that look deliberately crafted.
 
 <div align="center">
-<img src="assets/invoke-team.webp" alt="One /invoke command igniting a chain of specialist agents — audit, spec, plan, implement, design, clean, docs, verify — also auto-triggered by keywords" width="100%">
+<img src="assets/uiux-antislop.webp" alt="AI slop vs crafted UI — a dramatic before and after" width="100%">
 </div>
+
+<sub align="center"><i>Slop in, craft out: the six-skill stack replaces templated defaults with intentional tokens, type, and hierarchy.</i></sub>
 
 <br/>
 
-Under the hood, every one of the 139 commands runs the same **three acts**. That uniformity is why they compose so cleanly:
-
-```mermaid
-flowchart LR
-    subgraph ACT1["🎬 ACT 1 · INTEL"]
-      direction TB
-      I["Symbol index<br/>+ dependency graph<br/>➜ a codebase brief"]:::a1
-    end
-    subgraph ACT2["🎬 ACT 2 · DISPATCH"]
-      direction TB
-      D["audit · spec · plan<br/>impl · debug · design<br/>➜ in dependency order"]:::a2
-    end
-    subgraph ACT3["🎬 ACT 3 · AUTO-CLOSE"]
-      direction TB
-      C["clean · docs · verify<br/>➜ then stop-gates"]:::a3
-    end
-    I ==> D ==> C
-
-    classDef a1 fill:#0EA5E9,stroke:#0369A1,color:#fff
-    classDef a2 fill:#6E56CF,stroke:#4B3B9C,color:#fff
-    classDef a3 fill:#22C55E,stroke:#15803D,color:#052e16
-```
-
-```
-ACT 1  Intel      → build a codebase brief (symbol index + dependency graph)
-ACT 2  Dispatch   → hand the brief to one or more specialist agents, in order
-ACT 3  Auto-close → dead-code sweep · doc sync · verification · stop-gates
-```
-
-Pick the acts you need and the command name writes itself: `/invoke-spec-plan-impl`, `/invoke-audit-debug-clean`, `/invoke-plan-impl-design`, … **139 in total, generated deterministically from one config file.**
-
----
-
-## 🧭 The dynamic skill router
-
-How does the right skill or specialist show up at the right moment, without you asking? A **dynamic router** sits between your prompt and the work. It classifies intent, ranks skills by the file paths you're touching, injects only what's relevant, and — over time — **tunes its own weights** based on what actually helped.
-
-<div align="center">
-<img src="assets/skill-router.webp" alt="A prompt entering a routing hub that fans out to only the relevant skills and specialist agents, with self-tuning weights" width="100%">
-</div>
-
-<br/>
-
-| Piece | What it does |
-|---|---|
-| **Keyword auto-dispatch** | A prompt's intent maps to an `/invoke` category and fires the matching specialist chain — no command typed |
-| **Path-ranked injection** | Editing a `.tsx`? You get `fe_*` skills. A Go service? `be_*` skills. Only the relevant standards load |
-| **Session skill manifest** | Batches the skills you *haven't* read yet, so nothing mandatory is silently skipped |
-| **Self-tuning weights** | A weight-updater learns which skills actually helped and re-ranks future routing |
-| **One source of truth** | Every route, model, and command composition lives in `autonomous-skill-router.config.json` — edit it, regenerate, done |
-
-**This is the brain of the workspace** — the reason 200+ skills, 9 specialists, and 139 commands feel like *one* system instead of a menu you have to memorize.
-
----
-
-## 🤖 Specialist corps
-
-Nine first-class specialists, each owning exactly one act of the pipeline. Clean context, sharp scope, no jack-of-all-trades mush:
-
-<div align="center">
-
-| Agent | Act | Owns |
-|-------|----------|------|
-| 🔬 `audit-specialist` | **AUDIT** | Forensic hotspots, coupling/churn, dead code, repo-health — cited findings. |
-| 📐 `spec-architect` | **SPEC** | Requirements → typed contracts, acceptance criteria, an explicit Not-Doing list. |
-| 🗺️ `planning-director` | **PLAN** | Spec → dependency-ordered, file-pathed, per-task-TDD plan. |
-| ⚙️ `implementation-engineer` | **IMPLEMENT** | Executes the plan task-by-task with TDD *(runs on Opus by directive)*. |
-| 🐞 `debug-detective` | **DEBUG** | Reproduce → demonstrate root cause → minimal fix. *No fix before cause.* |
-| 🧹 `deadcode-reaper` | **CLEANUP** | Removes only what *this* session's diff orphaned; delete-safe. |
-| 🕵️ `security-sentinel` | **SECURITY** | Semgrep + OWASP pass on the diff → BLOCK/PASS verdict. |
-| 📖 `docs-sync-agent` | **DOCS** | Syncs docs + the per-directory `CLAUDE.md` tree to the change. |
-| ✅ `qa-verifier` | **VERIFY** | Runs the real flow and captures real output — evidence before "done". |
-
-</div>
-
-`frontend-uiux-designer` owns all visual/UX work via a six-skill design stack. Dozens of GSD, Figma, and Vercel helper agents round out the roster.
+<table>
+<tr>
+<td width="50%"><img src="assets/uiux-stack-flow.webp" alt="The anti-slop design stack pipeline feeding a finished UI"><br/><b>The stack</b> — <code>impeccable</code> · <code>taste-skill</code> · <code>ui-ux-pro-max</code> · <code>huashu-design</code> · <code>frontend-ui-engineering</code> · <code>design-extract</code>, fed by Higgsfield-generated assets.</td>
+<td width="50%"><img src="assets/uiux-designer-loop.webp" alt="The UI/UX designer loop — 3 variations, self-critique, screenshot proof"><br/><b>The loop</b> — the <code>frontend-uiux-designer</code> agent explores <b>3 variations</b>, runs a <b>self-critique</b> pass, then captures <b>screenshot proof</b> at real breakpoints before presenting.</td>
+</tr>
+</table>
 
 ---
 
@@ -503,10 +503,10 @@ Nine first-class specialists, each owning exactly one act of the pipeline. Clean
 ```mermaid
 flowchart TD
     L1["🧭 <b>DOCTRINE</b> — CLAUDE.md + rules/<br/><i>always-in-context operating rules</i>"]:::l1
-    L2["🎨 <b>CRAFT</b> — 200+ skills<br/><i>how to do the work well</i>"]:::l2
-    L3["🛡️ <b>ENFORCEMENT</b> — 70+ hooks<br/><i>makes the doctrine real at write-time</i>"]:::l3
-    L4["🤖 <b>SPECIALISTS</b> — agent mesh<br/><i>one expert per act</i>"]:::l4
-    L5["🎼 <b>ORCHESTRATION</b> — 139 /invoke commands<br/><i>composes specialists into the 3-act flow</i>"]:::l5
+    L2["🎨 <b>CRAFT</b> — 218 skills<br/><i>how to do the work well</i>"]:::l2
+    L3["🛡️ <b>ENFORCEMENT</b> — 8 dispatchers · 65 isolated links<br/><i>makes the doctrine real at write-time</i>"]:::l3
+    L4["🤖 <b>SPECIALISTS</b> — 10-act corps<br/><i>one expert per act</i>"]:::l4
+    L5["🎼 <b>ORCHESTRATION</b> — 20 /invoke files (139-name compat)<br/><i>composes specialists into the 3-act flow</i>"]:::l5
     L1 --> L2 --> L3 --> L4 --> L5
 
     classDef l1 fill:#4B3B9C,stroke:#312566,color:#fff
@@ -519,110 +519,16 @@ flowchart TD
 | Layer | Path | Role |
 |-------|------|------|
 | **1 · Doctrine** | `CLAUDE.md`, `rules/` | Always-in-context operating rules — model routing, skill protocol, TDD/dox/codebase-intel doctrine. |
-| **2 · Craft** | `skills/` | 200+ skills the agent invokes to *do the work well* (standards, testing, security, design, forensics). |
-| **3 · Enforcement** | `hooks/` | 70+ hooks that make the doctrine real — skill injection, index guards, write gates, model guards, stop-gates. |
-| **4 · Specialists** | `agents/` | A specialist agent mesh (the `/invoke` corps + a UI/UX designer + GSD/Figma/Vercel helpers). |
-| **5 · Orchestration** | `commands/` | 139 `/invoke-*` commands composing the specialists into the 3-act flow. |
-
----
-
-## 🚧 70+ hooks across the lifecycle
-
-Skills are *advice*. **Hooks are the enforcement.** They fire at five points in every session — SessionStart, UserPromptSubmit, PreToolUse, PostToolUse, Stop — and they are the reason the discipline actually holds instead of drifting the moment the agent gets busy.
-
-<div align="center">
-<img src="assets/hooks-lifecycle.webp" alt="70+ hooks firing across five lifecycle phases: session start, prompt, pre-write, post-write, stop" width="100%">
-</div>
-
-<br/>
-
-Some of them don't just advise — they **gate**. A risky change runs a gauntlet before it's allowed through, and a session can't even *end* until the closing gates pass:
-
-<div align="center">
-<img src="assets/hooks-gates.webp" alt="A code change passing through a gauntlet of gates: model, intel, TDD, dox, security, review" width="100%">
-</div>
-
-<br/>
-
-| Phase | What the hooks do | A few of them |
-|---|---|---|
-| **① SessionStart** | Boot knowing the codebase | `jcodemunch-index-guard` · `graphify-index-guard` · `memory-load-on-start` · `dox-tree-guard` · `tdd-guard-init-guard` |
-| **② UserPromptSubmit** | Shape the request before work | `sequential-thinking-mandate` · `codebase-intel-router` · `autonomous-skill-router` · `ui-ux-stack-orchestrator` |
-| **③ PreToolUse** | Gate & route every action | `opus-guard` · `workflow-model-guard` · `jcodemunch-enforce` · `dox-write-gate` · `tdd-guard-gate` · `security-scan-gate` · `skill_router` · `ponytail-caveman-guard` |
-| **④ PostToolUse** | Clean up after every write | `post-write-aggregator` · `desloppify-cleanup` · `doc-update-enforcer` · `dox-child-scaffold` · `security-semgrep-tracker` |
-| **⑤ Stop** | Prove it's done, then learn | `hard-completion-gate` · `invoke-suite-gate` · `santa-method-writer` · `session-learning-extractor` · `session-memory-writer` |
-
-<details>
-<summary><b>Every hook, by phase</b> (click to expand the full roster)</summary>
-
-- **SessionStart** — `session-start-aggregator` · `session-lifecycle` · `jcodemunch-index-guard` · `graphify-index-guard` · `memory-load-on-start` · `memory-bootstrap-guard` · `dox-tree-guard` · `tdd-guard-init-guard` · `session-plan-gate-hint` · `discovery-skills-reminder`
-- **UserPromptSubmit** — `sequential-thinking-mandate` · `codebase-intel-router` · `token-stack-prompt-reminder` · `ui-ux-stack-orchestrator` · `autonomous-skill-router`
-- **PreToolUse** — `opus-guard` · `workflow-model-guard` · `model-router` · `force-sonnet-subagent` · `jcodemunch-enforce` · `graphify-enforce` · `graphify-context-hint` · `dox-write-gate` · `gateguard-write-gate` · `bash-write-gate` · `dangerous-bash-gate` · `tdd-guard-gate` · `security-scan-gate` · `first-write-skill-gate` · `fullstack-skills-reminder` · `skill_router` · `ponytail-caveman-guard` · `tool_compat`
-- **PostToolUse** — `post-write-aggregator` · `desloppify-cleanup` · `doc-update-enforcer` · `blocking-doc-enforcer` · `documentation_lifecycle_hook` · `dox-child-scaffold` · `security-semgrep-tracker` · `skill-invocation-tracker`
-- **Stop** — `hard-completion-gate` · `invoke-suite-gate` · `invoke-suite-manifest` · `suite_push` · `santa-method-writer` · `session-learning-extractor` · `session-memory-writer` · `codex-capture` · `skill-effectiveness-report` · `skill-router-weight-updater` · `weekly-retro-trigger` · `watch-daemon-session-end`
-- **Engines & generators** — `dox_engine` · `gen-invoke-commands` · `_watch_refcount`
-
-</details>
-
----
-
-## 📖 A self-documenting codebase
-
-One of those hooks deserves its own spotlight. The **dox tree** guarantees every directory in every repo carries a `CLAUDE.md` (+ `AGENTS.md`) — and the moment you create a new folder, a hook **auto-scaffolds** its doc. Before editing, the agent reads root → target, so it always inherits the local rules of the exact place it's working.
-
-<div align="center">
-<img src="assets/dox-tree.webp" alt="A self-documenting codebase — a doc in every folder, auto-scaffolded into new folders, read root to target" width="100%">
-</div>
-
-<br/>
-
-- **A doc in every folder** — local conventions live next to the code they govern.
-- **Auto-scaffold on new folders** — write into an undocumented dir and its `CLAUDE.md` appears, root index re-synced.
-- **Read root → target** — the agent walks the doc chain before it edits, so it never violates a local rule it didn't know existed.
-
----
-
-## 🎨 UI that never looks AI-generated
-
-Most AI writes **slop UI** — templated cards, the same purple gradient, zero intention. This workspace refuses. A six-skill anti-slop design stack — on top of the **Higgsfield** asset engine that generated *every image in this README* — turns a brief into interfaces that look deliberately crafted.
-
-<div align="center">
-<img src="assets/uiux-antislop.webp" alt="AI slop vs crafted UI — a dramatic before and after" width="100%">
-</div>
-
-<br/>
-
-The design work runs as its own pipeline — real design systems in, screenshot-verified UI out:
-
-<table>
-<tr>
-<td width="50%"><img src="assets/uiux-stack-flow.webp" alt="The anti-slop design stack pipeline feeding a finished UI"><br/><b>The stack</b> — <code>impeccable</code> · <code>taste-skill</code> · <code>ui-ux-pro-max</code> · <code>huashu-design</code> · <code>frontend-ui-engineering</code> · <code>design-extract</code>, fed by Higgsfield-generated assets.</td>
-<td width="50%"><img src="assets/uiux-designer-loop.webp" alt="The UI/UX designer loop — 3 variations, self-critique, screenshot proof"><br/><b>The loop</b> — the <code>frontend-uiux-designer</code> agent explores <b>3 variations</b>, runs a <b>self-critique</b> pass, then captures <b>screenshot proof</b> at real breakpoints before presenting.</td>
-</tr>
-</table>
+| **2 · Craft** | `skills/` | 218 skill names the agent invokes to *do the work well* (standards, testing, security, design, forensics). |
+| **3 · Enforcement** | `hooks/` | 8 event dispatchers wiring 65 isolated links — skill injection, index guards, write gates, model guards, stop-gates. |
+| **4 · Specialists** | `agents/` | A ten-act specialist corps + a UI/UX designer + GSD/Figma/Vercel helpers. |
+| **5 · Orchestration** | `commands/` | 20 `/invoke` files composing the specialists into the 3-act flow; all 139 historic names resolve. |
 
 ---
 
 ## 🚀 Install
 
-> [!NOTE]
-> **Release: the 100x overhaul (v2.0).** The workbench is now a single-truth,
-> cross-platform system. Highlights: a **unified prompt router** with a
-> never-miss **trigger floor** (one subprocess per prompt instead of ~15, with a
-> verbatim superset of every legacy keyword/path/intent rule proven by a
-> zero-miss shadow harness); a single **`model-policy.json`** truth
-> (sonnet default · opus for UI + heavy work · fable only on request) plus the
-> subagent model-guard crash fix; an **active-repo-only, event-driven index
-> lifecycle** with **zero background daemons**; **8 event dispatchers** where
-> every original hook survives as its own isolated, individually-toggleable
-> module; provenance-aware **skill consolidation** (128 upstream-locked skills
-> kept byte-identical and hash-verified, 24 merges each preserving the old name
-> as a routing alias, **139 commands collapsed to 20** with all historic names
-> still resolving); and a **Windows + Ubuntu `install.py`** with a two-OS CI
-> matrix. The full verification report and change list ship in the release notes.
-
-**One command**, on Ubuntu/macOS **or** Windows. `install.py` is a stdlib-only
-bootstrap (Python ≥ 3.10), OS auto-detected, idempotent, and non-destructive.
+**One command**, on Ubuntu/macOS **or** Windows. `install.py` is a stdlib-only bootstrap (Python ≥ 3.10), OS auto-detected via `hooks/lib/platform.py`, idempotent, and non-destructive.
 
 **Ubuntu / macOS**
 
@@ -636,24 +542,64 @@ git clone https://github.com/AjayIrkal23/agentic-mercy-10x ~/.claude && python3 
 git clone https://github.com/AjayIrkal23/agentic-mercy-10x $env:USERPROFILE\.claude ; py -3 $env:USERPROFILE\.claude\install.py
 ```
 
-`install.py` runs, in order: **detect** OS/python/node/git → idempotent **deps** →
-register the **MCP servers** → **materialize** skills (copy or NTFS junction,
-never a symlink) → **render** `settings.json` from its tracked template → **build
-+ validate** the skills catalog (R9 trigger-floor + R10 upstream-intactness) →
-run **doctor**.
+`install.py` runs, in order: **detect** OS/python/node/git → idempotent **deps** → register the **MCP servers** → **materialize** skills (copy or NTFS junction, never a symlink) → **render** `settings.json` from its tracked `settings.template.json` (+ `settings.user.json` overrides) → **build + validate** the skills catalog (R9 trigger-floor + R10 upstream-intactness) → run **doctor**.
 
 ```bash
 python install.py doctor     # health + trigger-surface + model-routing verifier
 python install.py update     # git pull --ff-only → deps → re-render → rebuild → doctor
 ```
 
-Flags: `--dry-run` (print planned actions, mutate nothing) · `--ci` (skip
-networked steps). Requires `git` + `python3` (≥ 3.10); optional `node`/`bun`,
-`gh`, `uv`. Every path resolves through `hooks/lib/platform.py` — **no hardcoded
-usernames or drive letters**, so it works for any user on either OS.
+Flags: `--dry-run` (print planned actions, mutate nothing) · `--ci` (skip networked steps). Every path resolves through `hooks/lib/platform.py` — **no hardcoded usernames or drive letters**, and there are **zero `.sh` hooks**, so it works for any user on either OS. The two-OS CI matrix (`ubuntu-latest` + `windows-latest`) is green.
 
 > [!TIP]
-> Want a lighter footprint? Everything is à-la-carte. Prune `settings.json` and any hooks you don't want — the system fails *open* where it matters, so removing a gate degrades gracefully instead of breaking.
+> Want a lighter footprint? Everything is à-la-carte. Prune `settings.json` and any dispatcher links you don't want — the system fails *open* where it matters, so removing a gate degrades gracefully instead of breaking.
+
+---
+
+## 🛡️ Safety & rollback
+
+The overhaul was built to be reversible at every layer:
+
+- **Whole-release rollback** — `git checkout pre-100x` restores everything as it was.
+- **Hook fabric** — `flip-dispatch.py --legacy` restores the pre-cutover 65-registration wiring in one command (for 30 days).
+- **Router** — `flip-router.py --legacy` reverts to the legacy taxonomies; the new router only shadow-runs until you flip it.
+- **Commands** — `--emit-combos` re-expands the 120 legacy combo files onto disk in seconds.
+- **Everything retired** lives in `attic/2026-07-11/` with a justified `MANIFEST.md`. **Zero skills were deleted.**
+- **Every new hook fails open** — a crash degrades to a pass, never a wedged session.
+
+---
+
+## 🌒 Shadow mode — the honest bit
+
+The new unified router is real and running, but it is **not yet the primary path.** It ships in a **30-day SHADOW window**, executing *beside* the proven legacy stack and logging a zero-missed-trigger parity check on every prompt. The parity bar is absolute: **not one routable trigger may be missed.**
+
+- Fixture harness today: **12 prompts, 0 misses.**
+- Cutover requires ≥10 **real** zero-miss sessions, then a single `flip-dispatch.py --router`.
+- Legacy retention closes 30 days after cutover, only if `trigger-miss-watch.jsonl` is empty.
+
+Until then you lose nothing — the legacy stack does the work while the router proves it can take over. This is deliberate, and it's tracked in `plans/VERIFY-2026-07-11-100x.md`.
+
+---
+
+## ✅ Verification
+
+Every number here comes from a real run on `main`, recorded in `plans/VERIFY-2026-07-11-100x.md` and `plans/REPORT-2026-07-11-100x.md`.
+
+<div align="center">
+
+| Check | Result |
+|---|---|
+| **pytest** (hook + router + installer suites) | **136 / 136** passed |
+| **Skills validator** (R1–R10) | **0 HARD failures**; R9 floor OK; R10 **128 locked hash-clean** |
+| **Doctor** (installer/doctor.py) | **13 / 13** PASS, 0 WARN, 0 FAIL |
+| **Trigger floor** | **1,973** entries, checksum-matched, verbatim superset |
+| **Dispatch parity** | **65 / 65** registrations accounted (57 mapped + 8 ported, 0 unmapped) |
+| **Zero-miss fixtures** | **12 prompts, 0 misses** |
+| **SessionStart wall** | **< 0.8s** (target < 2.5s) |
+| **Symlinks** | **0** (Windows-safe) |
+| **CI matrix** | green on **ubuntu-latest + windows-latest** (run 29180508005) |
+
+</div>
 
 ---
 
@@ -664,24 +610,25 @@ By design, the repo excludes anything that is a secret, a session artifact, pers
 - **Secrets** — `.credentials.json`, API keys, tokens, and `~/.claude.json` (your MCP config) are never committed. `settings.json` references env vars (e.g. `${GITHUB_TOKEN}`) instead.
 - **Sessions & personal data** — `projects/`, `history.jsonl`, `sessions/`, `file-history/`, `todos/`, shell snapshots, and per-machine state.
 - **Re-installable externals** — the plugin cache/marketplaces, `skills/gstack/`, `ast-grep-mcp/`, and the GSD (`get-shit-done/`) system. The installer + notes fetch these.
-- **Machine-specific manifests** — plugin install-paths and index-guard project roots, which are regenerated per machine.
 
 After install, finish the setup:
 
-1. **Plugins** — add the 5 marketplaces (`anthropics/claude-plugins-official`, `veelenga/claude-mermaid`, `obra/superpowers-marketplace`, `forrestchang/andrej-karpathy-skills`, `DietrichGebert/ponytail`) and `claude plugin install` the ones you want (superpowers, ponytail, karpathy-skills, mermaid, frontend-design, context7, supabase, firecrawl, playwright, clickhouse, LSPs, …).
-2. **MCP servers** — the hooks expect `jcodemunch`, `graphify`, `lean-ctx`, `memory`, `sequential-thinking`, and `context7` configured in your own `~/.claude.json`. `settings.json` also references `ast-grep`, `semgrep`, `playwright`, and others — trim what you don't use.
+1. **Plugins** — add the 5 marketplaces (`anthropics/claude-plugins-official`, `veelenga/claude-mermaid`, `obra/superpowers-marketplace`, `forrestchang/andrej-karpathy-skills`, `DietrichGebert/ponytail`) and `claude plugin install` the ones you want.
+2. **MCP servers** — the hooks expect `jcodemunch`, `graphify`, `lean-ctx`, `memory`, `sequential-thinking`, and `context7` configured in your own `~/.claude.json`. Trim what you don't use.
 3. **Secrets** — export your own tokens; nothing is shipped.
 
 ---
 
 ## 🛠️ Customization
 
-This workspace is meant to be forked and tuned:
+This workspace is meant to be forked and tuned. Edit the **sources of truth**, not the generated artifacts:
 
-- **`hooks/autonomous-skill-router.config.json`** — the source of truth for the `/invoke` suite: which skills each category loads and how the acts compose. The **model** each category runs on lives in **`hooks/model-policy.json`** (single model truth). Edit these, not the generated command files.
-- **`hooks/gen-invoke-commands.py`** — regenerates the **20** `/invoke` command files (one parametric `/invoke <acts…>` + single-act delegators, aliases, and utilities) from that config (`python3 hooks/gen-invoke-commands.py`). All 139 historic command names still resolve — file or router translator — and `--emit-combos` re-expands the 120 combo files in seconds. The output is deterministic.
-- **`skills/.provenance.json`** — tracks every skill's upstream source and version, so you can see what's authored-here vs. vendored, and update accordingly.
-- **`settings.json`** — the hook wiring, MCP servers, model, and permissions. `rules/` + `CLAUDE.md` hold the always-on doctrine.
+- **`hooks/autonomous-skill-router.config.json`** — which skills each `/invoke` category loads and how the acts compose.
+- **`hooks/model-policy.json`** — the single model truth (sonnet default · opus UI+heavy+IMPLEMENT · fable explicit-only).
+- **`hooks/dispatch.config.json`** — the 8 dispatchers and their per-link enable flags, priorities, and budgets.
+- **`hooks/gen-invoke-commands.py`** — regenerates the **20** `/invoke` command files deterministically; `--emit-combos` re-expands the legacy 120.
+- **`hooks/skills-provenance.json`** — every skill's upstream source and version (authored-here vs. vendored).
+- **`settings.json`** — rendered from `settings.template.json` + `settings.user.json`; holds hook wiring, MCP servers, and permissions.
 
 ---
 
@@ -689,20 +636,20 @@ This workspace is meant to be forked and tuned:
 
 So there are no surprises — the workspace ships opinionated gates. The notable ones:
 
-- **Skill routing** — path-ranked skills are injected on writes; a session skill manifest batches what you haven't read.
+- **Skill routing** — path-ranked skills are injected on writes; the session manifest batches what you haven't read.
 - **Codebase-intel-first** — blind source reads are steered toward the `jcodemunch` symbol index + `graphify` dependency graph.
-- **TDD guard** (warn mode) — flags implementation written before a failing test. Advisory, not blocking, but treated as a directive.
+- **TDD guard** (warn mode) — flags implementation written before a failing test. Advisory, but treated as a directive.
 - **dox documentation tree** — every git repo gets a `CLAUDE.md` + `AGENTS.md` in every directory; code writes are gated until a root `CLAUDE.md` exists.
-- **Model routing** — subagents default to the cheapest capable model unless explicitly escalated.
-- **Stop-gates** — docs sync, security scan (when auth files change), and a review pass before a session is allowed to end.
+- **Model routing** — subagents default to Sonnet unless explicitly escalated (`model-policy.json`).
+- **Stop-gates** — docs sync, security scan (when auth files change), and a review pass before a session may end.
 
-All hooks fail *open* where it matters, but they will change how the agent behaves. If you want a lighter setup, prune `settings.json` and the `hooks/` you don't want.
+All hooks fail *open* where it matters, but they change how the agent behaves. For a lighter setup, prune `settings.json` and the dispatcher links you don't want.
 
 ---
 
 ## 🙏 Credits
 
-This workspace stands on excellent third-party skills. **Each keeps its own upstream license** — see each project for terms. Huge thanks to their authors:
+This workspace stands on excellent third-party skills. **Each keeps its own upstream license** — see each project for terms. The 128 upstream-locked skills are hash-verified byte-intact at install, and `hooks/skills-provenance.json` records the exact source and pinned version of every vendored skill. Huge thanks to their authors:
 
 | Skill / suite | Upstream |
 |---------------|----------|
@@ -716,7 +663,7 @@ This workspace stands on excellent third-party skills. **Each keeps its own upst
 | Karpathy Guidelines | [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills) |
 | ast-grep MCP | [ast-grep/ast-grep-mcp](https://github.com/ast-grep/ast-grep-mcp) |
 
-Frontend design assets are generated with Higgsfield; GSD (`get-shit-done`) supplies the `gsd-*` command system. `skills/.provenance.json` records the exact source and pinned version of every vendored skill.
+Frontend design assets are generated with Higgsfield; GSD (`get-shit-done`) supplies the `gsd-*` command system.
 
 ---
 
