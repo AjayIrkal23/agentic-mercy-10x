@@ -16,6 +16,7 @@ Exports:
   node_exe()                    best-effort node interpreter path (str) or None
   run(cmd, ...)                 subprocess.run wrapper (never raises)
   spawn_detached(cmd, ...)      fire-and-forget detached worker (POSIX+Windows)
+  popen_new_group(cmd, ...)     start child in own process group, return live Popen
   kill_tree(pid)                kill a process and its children, best-effort
   materialize(template, subs)   {PLACEHOLDER} substitution in a command list
   slugify_path(path)            filesystem-safe slug of an arbitrary path
@@ -163,6 +164,40 @@ def spawn_detached(
         return None
 
 
+def popen_new_group(
+    cmd: Sequence[str] | str,
+    *,
+    shell: bool = False,
+    cwd: str | os.PathLike | None = None,
+    env: Mapping[str, str] | None = None,
+    stdout=None,
+    stderr=None,
+):
+    """Start a child in its OWN process group and return the live Popen handle.
+
+    Unlike :func:`spawn_detached` (fire-and-forget, DEVNULL, returns only a PID),
+    this returns the ``subprocess.Popen`` so the caller can ``poll()``/``wait()``
+    for readiness and later ``kill_tree(proc.pid)`` the whole group.
+
+    POSIX: ``start_new_session=True`` (new session ⇒ new process group ⇒ the whole
+    tree is reachable via ``killpg``).
+    Windows: ``CREATE_NEW_PROCESS_GROUP`` (so ``taskkill /T`` reaches the tree).
+    Raises the underlying OSError (callers that must stay fail-open should guard).
+    """
+    kwargs: dict = {
+        "cwd": str(cwd) if cwd is not None else None,
+        "env": dict(env) if env is not None else None,
+        "stdout": stdout,
+        "stderr": stderr,
+        "shell": shell,
+    }
+    if IS_WINDOWS:
+        kwargs["creationflags"] = 0x00000200  # CREATE_NEW_PROCESS_GROUP
+    else:
+        kwargs["start_new_session"] = True
+    return subprocess.Popen(list(cmd) if not shell else cmd, **kwargs)  # noqa: S603
+
+
 def kill_tree(pid: int) -> None:
     """Best-effort kill of a process (and its group/children). Never raises."""
     try:
@@ -278,6 +313,7 @@ __all__ = [
     "node_exe",
     "run",
     "spawn_detached",
+    "popen_new_group",
     "kill_tree",
     "pid_alive",
     "materialize",

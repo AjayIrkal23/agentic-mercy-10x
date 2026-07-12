@@ -32,6 +32,24 @@ import sys
 from datetime import date
 from pathlib import Path
 
+# Portable path slug helper (the ONE OS branching point). Fail-open: a POSIX
+# ``str.replace`` fallback keeps this hook working even if the lib is missing.
+_HOOKS_DIR = Path(__file__).resolve().parent
+if str(_HOOKS_DIR) not in sys.path:
+    sys.path.insert(0, str(_HOOKS_DIR))
+try:
+    from lib import platform as _plat  # noqa: E402
+except Exception:  # pragma: no cover - fail-open
+    _plat = None
+
+
+def _slug(workspace: str) -> str:
+    """Filesystem-safe slug of a workspace path (Windows backslashes included)."""
+    if _plat is not None:
+        return _plat.slugify_path(workspace)
+    return workspace.replace("\\", "-").replace("/", "-").strip("-") or "root"
+
+
 # ── Configuration ─────────────────────────────────────────────────────────────
 
 MCP_SERVER_NAME = "memory"
@@ -246,8 +264,8 @@ def write_to_wip_fallback(workspace: str, project_name: str, observations: list[
     Used when MCP write fails.
     """
     try:
-        # Build project slug
-        slug = workspace.replace("/", "-").lstrip("-")
+        # Build project slug (portable: slugify_path handles Windows backslashes)
+        slug = _slug(workspace)
         mem_dir = Path.home() / ".claude" / "projects" / slug / "memory"
         mem_dir.mkdir(parents=True, exist_ok=True)
         wip_path = mem_dir / "wip.md"

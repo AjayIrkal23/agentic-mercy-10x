@@ -5,13 +5,25 @@ from __future__ import annotations
 
 import argparse
 import os
-import signal
 import socket
 import subprocess
+import sys
 import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
+
+# Cross-platform process control via the ONE OS branching point
+# (~/.claude/hooks/lib/platform.py). Fail-open to a POSIX implementation so a
+# copied-elsewhere skill still runs on Linux/macOS.
+try:
+    _CLAUDE = Path(__file__).resolve().parents[3]
+    if str(_CLAUDE / "hooks") not in sys.path:
+        sys.path.insert(0, str(_CLAUDE / "hooks"))
+    from lib import platform as _plat  # noqa: E402
+except Exception:  # pragma: no cover - fail-open
+    _plat = None
 
 
 @dataclass
@@ -71,13 +83,29 @@ def wait_for_server(process: subprocess.Popen[bytes], server: ServerConfig, host
 def terminate_process_tree(process: subprocess.Popen[bytes], grace_period: int) -> None:
     if process.poll() is not None:
         return
+    if _plat is not None:
+        # Portable group kill (POSIX killpg / Windows taskkill /T) then reap.
+        _plat.kill_tree(process.pid)
+        try:
+            process.wait(timeout=grace_period)
+        except subprocess.TimeoutExpired:
+            _plat.kill_tree(process.pid)
+            try:
+                process.wait(timeout=grace_period)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
+        return
+    # Fail-open POSIX fallback (platform lib unavailable).
+    import signal as _signal
+
     try:
-        os.killpg(os.getpgid(process.pid), signal.SIGTERM)
+        os.killpg(os.getpgid(process.pid), _signal.SIGTERM)
         process.wait(timeout=grace_period)
     except ProcessLookupError:
         return
     except subprocess.TimeoutExpired:
-        os.killpg(os.getpgid(process.pid), signal.SIGKILL)
+        os.killpg(os.getpgid(process.pid), _signal.SIGKILL)
         process.wait()
 
 
@@ -137,7 +165,25 @@ def parse_server_configs(args: argparse.Namespace) -> list[ServerConfig]:
 def start_server(server: ServerConfig, quiet_servers: bool) -> subprocess.Popen[bytes]:
     stdout_target = subprocess.DEVNULL if quiet_servers else None
     stderr_target = subprocess.DEVNULL if quiet_servers else None
+    if _plat is not None and _plat.IS_WINDOWS:
+        # Windows: run the command string through the shell in its own process
+        # group (so terminate_process_tree's taskkill /T reaches the tree).
+        return _plat.popen_new_group(
+            server.command,
+            shell=True,
+            stdout=stdout_target,
+            stderr=stderr_target,
+        )
+    # POSIX: login shell so the server sees the user's PATH/profile, in a new
+    # session (== new process group) reachable via killpg. Byte-identical to the
+    # pre-portability behavior.
     shell_path = os.environ.get("SHELL") or "/bin/bash"
+    if _plat is not None:
+        return _plat.popen_new_group(
+            [shell_path, "-lc", server.command],
+            stdout=stdout_target,
+            stderr=stderr_target,
+        )
     return subprocess.Popen(
         [shell_path, "-lc", server.command],
         start_new_session=True,

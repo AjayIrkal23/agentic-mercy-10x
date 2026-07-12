@@ -39,7 +39,7 @@ try:
     _IS_WINDOWS = _plat.IS_WINDOWS
 except Exception:  # pragma: no cover - launcher must never hard-crash on import
     _plat = None
-    _IS_WINDOWS = sys.platform.startswith("win")
+    _IS_WINDOWS = os.name == "nt"  # platform.py owns OS detection; this is a fallback
 
 HOME = Path.home()
 DEFAULT_VENV = HOME / ".local" / "share" / "cursor-graphify-venv"

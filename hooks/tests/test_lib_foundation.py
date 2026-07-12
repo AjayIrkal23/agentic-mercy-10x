@@ -121,6 +121,46 @@ def test_timer_records_ms_and_swallows_exception():
     assert "unit_timer_link" in body and "boom" in body
 
 
+def test_popen_new_group_roundtrip_and_kill():
+    # POSIX/live path: launch a short-lived child in its own group, prove the
+    # handle is live and poll-able, then kill_tree it.
+    proc = plat.popen_new_group(
+        [plat.python_exe(), "-c", "import time; time.sleep(30)"],
+        stdout=None,
+        stderr=None,
+    )
+    try:
+        assert proc.poll() is None  # still running
+        assert plat.pid_alive(proc.pid)
+    finally:
+        plat.kill_tree(proc.pid)
+        try:
+            proc.wait(timeout=5)
+        except Exception:
+            proc.kill()
+            proc.wait()
+    assert proc.poll() is not None  # reaped
+
+
+def test_popen_new_group_windows_flags(monkeypatch):
+    # Windows branch: assert CREATE_NEW_PROCESS_GROUP is passed and
+    # start_new_session is NOT (that kwarg is POSIX-only) — without spawning.
+    captured = {}
+
+    class _FakePopen:
+        def __init__(self, cmd, **kwargs):
+            captured["cmd"] = cmd
+            captured["kwargs"] = kwargs
+            self.pid = 4321
+
+    monkeypatch.setattr(plat, "IS_WINDOWS", True)
+    monkeypatch.setattr(plat.subprocess, "Popen", _FakePopen)
+    plat.popen_new_group("echo hi", shell=True)
+    assert captured["kwargs"].get("creationflags") == 0x00000200
+    assert "start_new_session" not in captured["kwargs"]
+    assert captured["kwargs"].get("shell") is True
+
+
 def _run_all():
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for fn in fns:
