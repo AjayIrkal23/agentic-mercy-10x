@@ -588,7 +588,16 @@ After install, finish the setup:
 
 1. **Plugins** — add the marketplaces (`anthropics/claude-plugins-official`, `veelenga/claude-mermaid`, `obra/superpowers-marketplace`, `forrestchang/andrej-karpathy-skills`, `DietrichGebert/ponytail`) and `claude plugin install` the ones you want.
 2. **MCP servers** — the hooks expect `jcodemunch`, `graphify`, `lean-ctx`, `memory`, `sequential-thinking`, and `context7` configured in your own `~/.claude.json`. Trim what you don't use.
-3. **Secrets** — export your own tokens; nothing is shipped.
+3. **Code-intelligence engines (recommended)** — the symbol and docs indexes come from [jCodeMunch](https://j.gravelle.us/jCodeMunch/descriptions.php). Install via uv, then register:
+
+   ```bash
+   uv tool install jcodemunch-mcp && uv tool install jdocmunch-mcp   # Windows: pipx install <name>
+   claude mcp add --scope user jcodemunch jcodemunch-mcp
+   claude mcp add --scope user jdocmunch jdocmunch-mcp               # or run scripts/install-jdocmunch.sh
+   ```
+
+   The installer prints the same guidance if either engine is missing; everything else works without them.
+4. **Secrets** — export your own tokens; nothing is shipped.
 
 ---
 

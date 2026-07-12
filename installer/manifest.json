@@ -8,8 +8,8 @@
     {"id": "tdd-guard",      "which": "tdd-guard",      "install": ["npm", "install", "-g", "tdd-guard"], "ci_stub": true},
     {"id": "tdd-guard-vitest","which": "tdd-guard-vitest","install": ["npm", "install", "-g", "tdd-guard-vitest"], "ci_stub": true, "optional": true},
     {"id": "tdd-guard-pytest","which": "tdd-guard-pytest","install": ["npm", "install", "-g", "tdd-guard-pytest"], "ci_stub": true, "optional": true},
-    {"id": "jcodemunch-mcp", "which": "jcodemunch-mcp", "install": null, "note": "external tool (uv/pipx); install out of band", "ci_stub": true, "optional": true},
-    {"id": "jdocmunch-mcp",  "which": "jdocmunch-mcp",  "install": null, "note": "external tool (uv/pipx); install out of band", "ci_stub": true, "optional": true}
+    {"id": "jcodemunch-mcp", "which": "jcodemunch-mcp", "install_posix": ["uv", "tool", "install", "--upgrade", "jcodemunch-mcp"], "install_windows": ["pipx", "install", "jcodemunch-mcp"], "note": "Code-intelligence MCP engine (PyPI: jcodemunch-mcp). Install via uv: `uv tool install jcodemunch-mcp` (or pipx on Windows). Info + licensing: https://j.gravelle.us/jCodeMunch/descriptions.php", "ci_stub": true, "optional": true},
+    {"id": "jdocmunch-mcp",  "which": "jdocmunch-mcp",  "install_posix": ["uv", "tool", "install", "--upgrade", "jdocmunch-mcp"], "install_windows": ["pipx", "install", "jdocmunch-mcp"], "note": "Docs-index MCP engine (PyPI: jdocmunch-mcp), jCodeMunch's docs twin. Install via uv: `uv tool install jdocmunch-mcp` (or pipx on Windows); full wiring + first index: scripts/install-jdocmunch.sh. Info + licensing: https://j.gravelle.us/jCodeMunch/descriptions.php", "ci_stub": true, "optional": true}
   ],
   "mcp_servers": [
     {"name": "jcodemunch", "add": ["claude", "mcp", "add", "--scope", "user", "jcodemunch", "jcodemunch-mcp"], "ci_stub": true},
