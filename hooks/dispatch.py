@@ -199,6 +199,22 @@ def _extract_updated_input(parsed):
     return hso.get("updatedInput") or parsed.get("updatedInput")
 
 
+def _has_hidden_control_chars(obj) -> bool:
+    """True if any string in a (possibly nested) tool_input contains a C0 control
+    character (newline/carriage-return/etc., excluding tab) that the harness
+    rejects in an updatedInput as "control characters hidden in the approval
+    dialog". Used to drop a mutator's rewrite that would fail validation — the
+    ORIGINAL command (already accepted by the harness) then runs unmodified.
+    """
+    if isinstance(obj, str):
+        return any((ord(c) < 0x20 and c != "\t") or ord(c) == 0x7F for c in obj)
+    if isinstance(obj, dict):
+        return any(_has_hidden_control_chars(v) for v in obj.values())
+    if isinstance(obj, (list, tuple)):
+        return any(_has_hidden_control_chars(v) for v in obj)
+    return False
+
+
 # --------------------------------------------------------------------------- #
 # main dispatch
 # --------------------------------------------------------------------------- #
@@ -248,11 +264,19 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
             parsed, _ = _run_link(ln, event, payload_text, sid)
             ui = _extract_updated_input(parsed)
             if ui is not None:
-                updated_input = ui
-                # thread the mutation forward
-                newp = dict(payload)
-                newp["tool_input"] = ui
-                payload_text = json.dumps(newp, ensure_ascii=False)
+                if _has_hidden_control_chars(ui):
+                    # a rewrite that would fail the harness updatedInput schema
+                    # (control chars) is DROPPED — the original, already-accepted
+                    # input runs unmodified. (e.g. lean-ctx wrapping a multi-line
+                    # Bash command preserves newlines the validator rejects.)
+                    _telemeter(event, ln.get("id", "?"), decision="mutation-dropped",
+                               session=sid, note="control-chars-in-updatedInput")
+                else:
+                    updated_input = ui
+                    # thread the mutation forward
+                    newp = dict(payload)
+                    newp["tool_input"] = ui
+                    payload_text = json.dumps(newp, ensure_ascii=False)
             ctx = _extract_context(parsed)
             if ctx:
                 contexts.append((int(ln.get("priority", 5)), ctx))
