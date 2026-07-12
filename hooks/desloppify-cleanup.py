@@ -29,7 +29,7 @@ STATE_DIR = SCRIPT_DIR / ".state"
 
 # After this many code writes, trigger the cleanup reminder (matches mandatory protocol Phase 4b).
 # Lowered 8->3 so typical surgical sessions (2-5 files) still get the wrap-up nudge.
-WRITES_THRESHOLD = 3
+WRITES_THRESHOLD = 8
 
 SKIP_EXTENSIONS = (
     ".md", ".mdx", ".json", ".yaml", ".yml", ".toml", ".env",

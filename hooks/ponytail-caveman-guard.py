@@ -48,6 +48,11 @@ def session_start():
 
 
 def pre_tool_use():
+    # P4-T8 (Charter §7): the former `.*` deny-all was a system-brick risk — a
+    # single missing flag would DENY every tool including the ones needed to
+    # recover. DOWNGRADED to a non-blocking advisory: it reminds (additionalContext)
+    # but never denies. Re-enable happens organically when the skills are invoked
+    # (post-skill mode re-touches the flags).
     try:
         data = json.load(sys.stdin)
     except Exception:
@@ -57,15 +62,14 @@ def pre_tool_use():
         return
     missing = _missing()
     if not missing:
-        return  # both on -> allow
+        return  # both on -> nothing to say
     print(json.dumps({
         "hookSpecificOutput": {
             "hookEventName": "PreToolUse",
-            "permissionDecision": "deny",
-            "permissionDecisionReason": (
-                "Please use ponytail and caveman. Both must be ACTIVE (top-priority, always-on). "
-                "Currently off: " + ", ".join(missing) + ". "
-                "Invoke the ponytail and caveman skills to re-enable, then retry."
+            "additionalContext": (
+                "Reminder: keep ponytail (laziest working solution) and caveman "
+                "(ultra-compressed prose) active — currently off: " + ", ".join(missing) +
+                ". Invoke those skills to re-enable. (Advisory only — not blocking.)"
             ),
         }
     }))

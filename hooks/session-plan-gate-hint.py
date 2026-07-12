@@ -40,15 +40,16 @@ def main() -> None:
             pass
 
     msg = (
-        "### Session: plan / code discipline (ECC port)\n\n"
+        "### Session: plan / code discipline\n\n"
         "- Before large plans or multi-file work, skim **`~/.claude/skills/plan-mode-gate/SKILL.md`** "
         "after **`workflow-orchestrator`**.\n"
-        "- **jcodemunch** steps in that skill are **optional** unless you opted in — "
-        "see **`~/.claude/ECC-CLAUDE-BUNDLE-NOTES.md`**.\n"
+        "- **jcodemunch** steps in that skill are **MANDATORY** (codebase-intel-first rule): "
+        "run the symbol index + dependency graph BEFORE reading/grepping.\n"
         "- Manual pre-flight from repo root: "
         "`node ~/.claude/skills/plan-mode-gate/scripts/plan-mode-check.js`.\n"
     )
-    print(json.dumps({"additionalContext": msg + extra}))
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "SessionStart", "additionalContext": msg + extra}}))
 
 
 if __name__ == "__main__":
