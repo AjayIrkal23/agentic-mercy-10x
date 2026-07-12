@@ -201,7 +201,7 @@
     },
     "graphify": {
       "args": [],
-      "command": "${HOME}/.claude/hooks/graphify-mcp-launcher.sh"
+      "command": "${HOME}/.claude/hooks/graphify_launcher.py"
     },
     "jcodemunch": {
       "args": [],

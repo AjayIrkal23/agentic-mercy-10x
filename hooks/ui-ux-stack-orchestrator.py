@@ -304,7 +304,7 @@ def _checklist_block_full(extra_search: str | None, impeccable_ctx: str | None, 
         f"files/components, taste dials ({dials} — override in chat), and the "
         f"auto-loaded context below.",
         "**ASSETS — HIGGSFIELD MANDATORY:** every image/video/3D/audio asset is GENERATED via "
-        "Higgsfield (`mcp__claude_ai_higgsfield__generate_image|generate_video|generate_3d|generate_audio`, "
+        "Higgsfield (`mcp__higgsfield__generate_image|generate_video|generate_3d|generate_audio`, "
         "skill `higgsfield-generate`) — NO placeholders, stock URLs, CSS-fake gradients, or emoji-icons. "
         f"Boundary + capability map: {home}/.claude/rules/higgsfield-frontend-mandate.md",
         f"Alternative the user can type: /invoke-design (full orchestrated flow). "
