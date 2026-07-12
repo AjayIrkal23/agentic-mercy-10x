@@ -93,12 +93,47 @@ def _is_retro_session(payload: dict) -> bool:
     return False
 
 
+def _run_weight_loop_if_stale() -> None:
+    """P4-T9 scheduler (event-driven, NO cron/daemon): when the
+    ``.telemetry/.weights-last-run`` sidecar is missing or >7 days old, fire the
+    skill-effectiveness report + the floor-safe weight updater ONCE, then touch
+    the sidecar. Runs at every Stop but only ACTS weekly. Fail-open."""
+    import os
+    import subprocess
+    import time
+    from pathlib import Path
+
+    try:
+        tel = Path(__file__).resolve().parent / ".telemetry"
+        tel.mkdir(parents=True, exist_ok=True)
+        sidecar = tel / ".weights-last-run"
+        now = time.time()
+        if sidecar.exists() and (now - sidecar.stat().st_mtime) < 7 * 86400:
+            return  # ran within the last 7 days — nothing to do
+        py = sys.executable or "python3"
+        hooks = Path(__file__).resolve().parent
+        for script in ("skill-effectiveness-report.py", "skill-router-weight-updater.py"):
+            p = hooks / script
+            if p.is_file():
+                try:
+                    subprocess.run([py, str(p)], capture_output=True, text=True, timeout=30)
+                except Exception:  # noqa: BLE001 - one report failure must not block the other
+                    pass
+        # touch the sidecar last so a mid-run failure retries next Stop
+        sidecar.write_text(str(int(now)), encoding="utf-8")
+    except Exception:  # noqa: BLE001 - scheduler must never break the Stop chain
+        pass
+
+
 def main() -> int:
     try:
         payload = json.load(sys.stdin)
     except (json.JSONDecodeError, EOFError):
         sys.stdout.write("{}")
         return 0
+
+    # Fire the self-tuning weight loop if the weekly sidecar is stale (P4-T9).
+    _run_weight_loop_if_stale()
 
     tracker = _load_tracker()
 
@@ -157,7 +192,7 @@ def main() -> int:
         f"Total sessions logged: {tracker['total_sessions']}."
     )
 
-    out = {"followup_message": msg}
+    out = {"hookSpecificOutput": {"hookEventName": "Stop", "additionalContext": msg}}
     sys.stdout.write(json.dumps(out))
     return 0
 

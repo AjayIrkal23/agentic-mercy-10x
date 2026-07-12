@@ -782,10 +782,11 @@ def _stop(payload: dict) -> dict:
     if not cid:
         return {}
 
-    # Allow "stopped" and "interrupted" in addition to "completed"
-    status = payload.get("status") or ""
-    if status not in ("completed", "stopped", "interrupted"):
-        return {}
+    # NOTE (P4-T9): the former `payload["status"]` gate is REMOVED — Claude Code's
+    # Stop payload has no `status` field (verified root cause, Spec A §0), so the
+    # gate always short-circuited here and the skill-effectiveness telemetry loop
+    # never ran. Stop always proceeds now; the effectiveness record below is what
+    # feeds the self-tuning weight updater.
 
     try:
         from documentation_lifecycle_hook import stop_followup_message as _doc_stop_followup
