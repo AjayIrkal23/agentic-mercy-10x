@@ -17,7 +17,10 @@ import os
 import re
 from pathlib import Path
 
-import yaml
+try:
+    import yaml  # optional accelerant; a stdlib fallback parser runs without it
+except ImportError:  # pragma: no cover - CI runners install no PyYAML
+    yaml = None  # type: ignore[assignment]
 
 CLAUDE_DIR = Path(__file__).resolve().parent.parent
 SKILLS_DIR = CLAUDE_DIR / "skills"
@@ -39,12 +42,13 @@ def read_frontmatter(path: Path) -> tuple[dict, str, bool]:
     m = _FM_RE.match(text)
     if not m:
         return {}, text, False
-    try:
-        fm = yaml.safe_load(m.group(1)) or {}
-        if isinstance(fm, dict):
-            return fm, m.group(2), True
-    except yaml.YAMLError:
-        pass
+    if yaml is not None:
+        try:
+            fm = yaml.safe_load(m.group(1)) or {}
+            if isinstance(fm, dict):
+                return fm, m.group(2), True
+        except yaml.YAMLError:
+            pass
     # Tolerant fallback: skill descriptions often contain a colon-space
     # ("Commands: /extract") that trips strict YAML. Extract top-level
     # `key: value` pairs (with indented continuation lines folded) so at least
@@ -91,6 +95,12 @@ def dump_frontmatter(fm: dict, body: str) -> str:
     for k in sorted(fm):
         if k not in ordered:
             ordered[k] = fm[k]
+    if yaml is None:  # pragma: no cover - WRITE path; fail loud rather than corrupt
+        raise RuntimeError(
+            "PyYAML is required to WRITE skill front-matter (validate --fix / merge / "
+            "alias tools). Install it with `pip install pyyaml`. Read-only validation "
+            "and the doctor run fine without it."
+        )
     dumped = yaml.dump(
         ordered, sort_keys=False, default_flow_style=False, allow_unicode=True,
         width=100,

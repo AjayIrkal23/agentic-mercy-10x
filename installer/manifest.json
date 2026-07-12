@@ -2,6 +2,7 @@
   "_about": "Declarative install manifest for the ~/.claude workbench (P6-T5). install.py + installer/{detect,deps,links,render,doctor}.py read this. Everything is idempotent + fail-visible. {PYTHON}/{NODE}/{CLAUDE_DIR} are substituted from installer/detect.py. `ci_stub:true` steps are SKIPPED under `install.py --ci` (no network in CI; the manifest itself is the contract the doctor asserts).",
   "min_python": "3.10",
   "deps": [
+    {"id": "pyyaml",         "import": "yaml",          "install": ["{PYTHON}", "-m", "pip", "install", "--quiet", "pyyaml"], "optional": true, "note": "PyYAML powers the skill validator's front-matter parser (R2/R5/R6/R10 fidelity). Runtime hooks are pure stdlib and never import it; skills_lib degrades to a stdlib fallback (no crash) when it is absent, but the doctor's R9/R10 probe needs it for full fidelity."},
     {"id": "semgrep",        "which": "semgrep",        "install_posix": ["uv", "tool", "install", "semgrep"], "install_windows": ["pipx", "install", "semgrep"], "ci_stub": true},
     {"id": "lean-ctx",       "which": "lean-ctx",       "install": ["npm", "install", "-g", "lean-ctx"], "ci_stub": true},
     {"id": "tdd-guard",      "which": "tdd-guard",      "install": ["npm", "install", "-g", "tdd-guard"], "ci_stub": true},

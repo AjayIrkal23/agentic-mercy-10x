@@ -31,8 +31,19 @@ def _load_manifest() -> dict:
 def _exec_tokens(env) -> dict:
     """Tokens for the installer's OWN subprocess commands — CLAUDE_DIR is the
     REAL path (not the ${HOME}/.claude render token, which only Claude Code
-    expands). PYTHON/NODE may be multi-word (e.g. 'py -3')."""
-    return {"PYTHON": env.python, "NODE": env.node, "CLAUDE_DIR": env.real_dir or str(plat.claude_dir())}
+    expands). PYTHON/NODE may be multi-word (e.g. 'py -3').
+
+    Every ``{CLAUDE_DIR}/...`` the installer *executes* (post-step scripts, the
+    graphify launcher) is a REPO-LOCAL file. When installing FROM a checkout that
+    is not yet ~/.claude — a fresh `git clone` elsewhere, or the CI runner where
+    `actions/checkout` lands the repo in the workspace and ~/.claude is the empty
+    runner home — those files live under the installer's own repo root (``_ROOT``),
+    not under the real ~/.claude. Resolve them against ``_ROOT`` whenever the two
+    differ so install-from-checkout works anywhere; when the repo already IS
+    ~/.claude (``_ROOT == real``) this is byte-identical to the old behavior."""
+    real = env.real_dir or str(plat.claude_dir())
+    claude_dir = str(_ROOT) if str(_ROOT) != real else real
+    return {"PYTHON": env.python, "NODE": env.node, "CLAUDE_DIR": claude_dir}
 
 
 def _sub(cmd: list, tokens: dict) -> list:
@@ -57,6 +68,13 @@ def _sub(cmd: list, tokens: dict) -> list:
     return out
 
 
+def _importable(module: str, env) -> bool:
+    """True when ``import <module>`` succeeds under the target interpreter.
+    Used for Python-library deps (e.g. PyYAML) that have no ``which`` CLI."""
+    cp = plat.run(_sub(["{PYTHON}", "-c", f"import {module}"], _exec_tokens(env)), timeout=30)
+    return cp.returncode == 0
+
+
 def install_deps(env, *, ci: bool = False, dry_run: bool = False) -> list[tuple[str, str]]:
     manifest = _load_manifest()
     results: list[tuple[str, str]] = []
@@ -64,6 +82,10 @@ def install_deps(env, *, ci: bool = False, dry_run: bool = False) -> list[tuple[
         did = dep["id"]
         which = dep.get("which")
         if which and shutil.which(which):
+            results.append((did, "PRESENT"))
+            continue
+        imp = dep.get("import")
+        if imp and _importable(imp, env):
             results.append((did, "PRESENT"))
             continue
         if ci and dep.get("ci_stub"):

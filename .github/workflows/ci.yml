@@ -36,6 +36,14 @@ jobs:
         with:
           node-version: "20"
 
+      # PyYAML is the ONE tooling dependency (skill-validator front-matter parser
+      # for R2/R5/R6/R10). Runtime hooks are pure stdlib; skills_lib degrades to a
+      # stdlib fallback without it (no crash), but the R10 upstream-intactness
+      # baselines need yaml's exact scalar folding for full fidelity. This mirrors
+      # what a real (non-dry-run) `install.py install` does via its deps step.
+      - name: Install PyYAML (skill-validator tooling dep)
+        run: python -m pip install --quiet pyyaml
+
       # The gstack skill suite is an upstream clone (gitignored); clone it so the
       # palette (218), R10 upstream-intactness, and the skills index are faithful.
       - name: Clone gstack upstream (vendored skill suite)

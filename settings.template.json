@@ -207,6 +207,10 @@
       "args": [],
       "command": "jcodemunch-mcp"
     },
+    "jdocmunch": {
+      "args": [],
+      "command": "jdocmunch-mcp"
+    },
     "markdownify": {
       "args": [
         "-y",
