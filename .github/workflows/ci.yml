@@ -1,0 +1,63 @@
+name: ci
+
+# Two-OS validation of the ~/.claude workbench (P6-T7). Every future change is
+# checked on ubuntu AND windows, against the trigger floor, the portability
+# grep-gates, and the full test suite — so a trigger loss, an edited upstream-
+# locked skill, or a non-portable literal becomes a build failure forever.
+
+on:
+  push:
+    branches: [main, "100x-overhaul"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  workbench:
+    name: workbench (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # The gstack skill suite is an upstream clone (gitignored); clone it so the
+      # palette (218), R10 upstream-intactness, and the skills index are faithful.
+      - name: Clone gstack upstream (vendored skill suite)
+        run: git clone --depth 1 https://github.com/garrytan/gstack.git skills/gstack
+
+      # Full install orchestration, mutation-free (--dry-run keeps the committed
+      # settings.json intact so the doctor's render-equivalence stays meaningful;
+      # --ci stubs the networked MCP/dep installs). Ends with a green doctor.
+      - name: Install (dry-run, CI mode)
+        run: python install.py install --ci --dry-run
+
+      - name: Doctor (hook-fire matrix + trigger-surface + model routing)
+        run: python install.py doctor --ci
+
+      - name: Validate skills (R9 floor guard + R10 upstream-intactness)
+        run: python scripts/validate_skills.py
+
+      - name: Trigger floor is a verbatim superset (incl. 139 historic command names)
+        run: python hooks/build-trigger-floor.py --check
+
+      - name: Portability grep-gates (no sys.platform outside platform.py; no home/drive literals; no new .sh)
+        run: python scripts/grep_gates.py
+
+      - name: Tests (platform, prompt-router, dispatch parity, index-lifecycle, model-guard, installer, doctor)
+        run: python -m pytest tests/ hooks/tests/ -q

@@ -94,8 +94,19 @@ def _count_skill_mds() -> int:
 def _check_palette(rows):
     manifest = json.loads((_ROOT / "installer" / "manifest.json").read_text(encoding="utf-8"))
     want = manifest.get("palette", {})
+    want_sk = want.get("skill_names", 218)
     n_sk = _count_skill_mds()
-    _row(rows, "palette-skills", PASS if n_sk == want.get("skill_names", 218) else FAIL, f"{n_sk} SKILL.md (want {want.get('skill_names')})")
+    # The gstack clone (skills/gstack/, gitignored, upstream) contributes exactly
+    # one depth-2 SKILL.md — the router. Before `gstack-upgrade`/the installer
+    # clones it (fresh checkout, CI pre-clone), the count is want-1; that is still
+    # a healthy workbench, so treat it as PASS with a note rather than a FAIL.
+    gstack_present = (_ROOT / "skills" / "gstack" / "SKILL.md").exists()
+    if n_sk == want_sk and gstack_present:
+        _row(rows, "palette-skills", PASS, f"{n_sk} SKILL.md (want {want_sk})")
+    elif n_sk == want_sk - 1 and not gstack_present:
+        _row(rows, "palette-skills", PASS, f"{n_sk} SKILL.md (gstack clone not installed; full={want_sk})")
+    else:
+        _row(rows, "palette-skills", FAIL, f"{n_sk} SKILL.md (want {want_sk}, gstack={'yes' if gstack_present else 'no'})")
     cmds = list((_ROOT / "commands").glob("*.md"))
     _row(rows, "palette-commands", PASS if len(cmds) == want.get("command_files", 20) else FAIL, f"{len(cmds)} command files (want {want.get('command_files')})")
 
