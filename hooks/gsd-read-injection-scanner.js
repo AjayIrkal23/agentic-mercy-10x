@@ -5,32 +5,10 @@
 
 const path = require('path');
 const { emitPostContext } = require('./lib/gsd-hook-io');
-
-const SUMMARISATION_PATTERNS = [
-  /when\s+(?:summari[sz]ing|compressing|compacting),?\s+(?:retain|preserve|keep)\s+(?:this|these)/i,
-  /this\s+(?:instruction|directive|rule)\s+is\s+(?:permanent|persistent|immutable)/i,
-  /preserve\s+(?:these|this)\s+(?:rules?|instructions?|directives?)\s+(?:in|through|after|during)/i,
-  /(?:retain|keep)\s+(?:this|these)\s+(?:in|through|after)\s+(?:summar|compress|compact)/i,
-];
-
-const INJECTION_PATTERNS = [
-  /ignore\s+(all\s+)?previous\s+instructions/i,
-  /ignore\s+(all\s+)?above\s+instructions/i,
-  /disregard\s+(all\s+)?previous/i,
-  /forget\s+(all\s+)?(your\s+)?instructions/i,
-  /override\s+(system|previous)\s+(prompt|instructions)/i,
-  /you\s+are\s+now\s+(?:a|an|the)\s+/i,
-  /act\s+as\s+(?:a|an|the)\s+(?!plan|phase|wave)/i,
-  /pretend\s+(?:you(?:'re| are)\s+|to\s+be\s+)/i,
-  /from\s+now\s+on,?\s+you\s+(?:are|will|should|must)/i,
-  /(?:print|output|reveal|show|display|repeat)\s+(?:your\s+)?(?:system\s+)?(?:prompt|instructions)/i,
-  /<\/?(?:system|assistant|human)>/i,
-  /\[SYSTEM\]/i,
-  /\[INST\]/i,
-  /<<\s*SYS\s*>>/i,
-];
-
-const ALL_PATTERNS = [...INJECTION_PATTERNS, ...SUMMARISATION_PATTERNS];
+// Shared injection-pattern lib (P6-T4) — single source of truth, no drift.
+// INJECTION_PATTERNS here = the union (HARD_BLOCK ∪ ADVISORY act-as); identical
+// to this scanner's historical 14-pattern array. SUMMARISATION unchanged.
+const { INJECTION_PATTERNS, SUMMARISATION_PATTERNS, ALL_PATTERNS } = require('./lib/injection-patterns');
 
 function isExcludedPath(filePath) {
   const p = filePath.replace(/\\/g, '/');

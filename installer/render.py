@@ -8,7 +8,7 @@ Ubuntu, and makes ``git pull`` unable to clobber local settings deltas (they liv
 in the gitignored user overlay + the gitignored rendered output).
 
 Tokens (kept to the three the plan specifies):
-    {{PYTHON}}      python invocation      (e.g. "python3", "py -3", "C:\\...python.exe")
+    {{PYTHON}}      python invocation      (e.g. "python3", "py -3", or a Windows python.exe path)
     {{NODE}}        node interpreter       (e.g. "/usr/bin/node", "node")
     {{CLAUDE_DIR}}  the ~/.claude dir path (kept as the literal ``${HOME}/.claude``
                     on POSIX so Claude Code expands it; a concrete path on Windows)

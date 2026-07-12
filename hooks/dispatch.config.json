@@ -22,7 +22,8 @@
       {"id": "memory-load-on-start",    "type": "advisory", "cmd": ["{PY}", "{HOOKS}/memory-load-on-start.py"], "timeout_ms": 10000, "priority": 1, "enabled": true, "_reg": 5},
       {"id": "session-lifecycle-start", "type": "exec",     "cmd": ["{PY}", "{HOOKS}/session-lifecycle.py", "session-start"], "timeout_ms": 10000, "priority": 1, "enabled": true, "_reg": 6},
       {"id": "leanctx-observe-start",   "type": "exec",     "cmd": ["lean-ctx", "hook", "observe"], "timeout_ms": 5000, "priority": 2, "enabled": true, "_reg": 7},
-      {"id": "gsd-session-state",       "type": "exec",     "cmd": ["{NODE}", "{HOOKS}/gsd-session-state.js"], "timeout_ms": 10000, "priority": 2, "enabled": true, "_reg": 8, "_port": "P6-T2: bash launcher ported to js (parity-verified); bash original kept for 30-day flip-back only"}
+      {"id": "gsd-session-state",       "type": "exec",     "cmd": ["{NODE}", "{HOOKS}/gsd-session-state.js"], "timeout_ms": 10000, "priority": 2, "enabled": true, "_reg": 8, "_port": "P6-T2: bash launcher ported to js (parity-verified); bash original kept for 30-day flip-back only"},
+      {"id": "gsd-check-update",        "type": "advisory", "cmd": ["{NODE}", "{HOOKS}/gsd-check-update-launcher.js"], "timeout_ms": 5000, "priority": 2, "enabled": true, "_new": "P6-T4: ACTIVATE gsd-check-update on a 7-day TTL (launcher gates the npm-hitting worker); surfaces update/stale-hook advisory. GSD-managed files untouched."}
     ],
     "user-prompt-submit": [
       {"id": "tdd-guard-launcher-ups",  "type": "advisory", "cmd": ["{PY}", "{HOOKS}/tdd_guard_launcher.py"], "timeout_ms": 20000, "priority": 0, "enabled": true, "_reg": 9, "_router_set": "legacy", "_port": "P6-T2: bash launcher ported to py (byte-parity); flip-back restores the bash original from legacy-settings-hooks.json"},
@@ -42,8 +43,8 @@
       {"id": "dangerous-bash-gate",     "type": "gate",     "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/dangerous-bash-gate.py"], "timeout_ms": 5000, "enabled": true, "_reg": 27, "_order": "DANGER FIRST"},
       {"id": "first-write-skill-gate",  "type": "gate",     "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/first-write-skill-gate.py"], "timeout_ms": 5000, "enabled": true, "_reg": 22},
       {"id": "gateguard-write-gate",    "type": "gate",     "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/gateguard-write-gate.py"], "timeout_ms": 8000, "enabled": true, "_reg": 23},
-      {"id": "gsd-prompt-guard",        "type": "gate",     "tools": "Write|Edit|MultiEdit", "cmd": ["node", "{HOOKS}/gsd-prompt-guard.js"], "timeout_ms": 5000, "enabled": true, "_reg": 24},
-      {"id": "gsd-workflow-guard",      "type": "gate",     "tools": "Write|Edit|MultiEdit", "cmd": ["node", "{HOOKS}/gsd-workflow-guard.js"], "timeout_ms": 5000, "enabled": true, "_reg": 25},
+      {"id": "gsd-prompt-guard",        "type": "gate",     "tools": "Write|Edit|MultiEdit", "cmd": ["{NODE}", "{HOOKS}/gsd-prompt-guard.js"], "timeout_ms": 5000, "enabled": true, "_reg": 24},
+      {"id": "gsd-workflow-guard",      "type": "gate",     "tools": "Write|Edit|MultiEdit", "cmd": ["{NODE}", "{HOOKS}/gsd-workflow-guard.js"], "timeout_ms": 5000, "enabled": true, "_reg": 25},
       {"id": "dox-write-gate-write",    "type": "gate",     "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/dox-write-gate.py"], "timeout_ms": 6000, "enabled": true, "_reg": 26},
       {"id": "dox-write-gate-bash",     "type": "gate",     "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/dox-write-gate.py"], "timeout_ms": 6000, "enabled": true, "_reg": 28},
       {"id": "bash-write-gate",         "type": "gate",     "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/bash-write-gate.py"], "timeout_ms": 6000, "enabled": true, "_reg": 29},
@@ -71,8 +72,8 @@
       {"id": "santa-method-writer",     "type": "exec",     "tools": "Task|Agent", "cmd": ["{PY}", "{HOOKS}/santa-method-writer.py"], "timeout_ms": 5000, "enabled": true, "_reg": 46},
       {"id": "security-semgrep-tracker","type": "exec",     "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/security-semgrep-tracker.py", "post-tool-use"], "timeout_ms": 5000, "enabled": true, "_reg": 47},
       {"id": "leanctx-observe-post",    "type": "exec",     "tools": "Bash", "cmd": ["lean-ctx", "hook", "observe"], "timeout_ms": 5000, "enabled": true, "_reg": 48},
-      {"id": "gsd-context-monitor",     "type": "exec",     "tools": "Bash|Write|Edit|MultiEdit|Task|Agent", "cmd": ["node", "{HOOKS}/gsd-context-monitor.js"], "timeout_ms": 10000, "enabled": true, "_reg": 49},
-      {"id": "gsd-read-injection",      "type": "gate",     "tools": "Read", "cmd": ["node", "{HOOKS}/gsd-read-injection-scanner.js"], "timeout_ms": 5000, "enabled": true, "_reg": 50},
+      {"id": "gsd-context-monitor",     "type": "exec",     "tools": "Bash|Write|Edit|MultiEdit|Task|Agent", "cmd": ["{NODE}", "{HOOKS}/gsd-context-monitor.js"], "timeout_ms": 10000, "enabled": true, "_reg": 49},
+      {"id": "gsd-read-injection",      "type": "gate",     "tools": "Read", "cmd": ["{NODE}", "{HOOKS}/gsd-read-injection-scanner.js"], "timeout_ms": 5000, "enabled": true, "_reg": 50},
       {"id": "jcm-mcp-used",            "type": "exec",     "tools": "mcp__jcodemunch__.*", "cmd": ["{PY}", "{HOOKS}/jcodemunch-enforce.py", "mcp-used"], "timeout_ms": 3000, "enabled": true, "_reg": 51}
     ],
     "stop": [

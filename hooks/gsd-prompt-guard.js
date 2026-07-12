@@ -11,33 +11,20 @@
 const fs = require('fs');
 const path = require('path');
 const { toolName, isWriteTool, emitPreContext } = require('./lib/gsd-hook-io');
+// Shared injection-pattern lib (P6-T4) — single source of truth, no drift.
+// HARD_BLOCK_PATTERNS = the strict deny set (unchanged 13). Advisory tier now
+// also covers SUMMARISATION_PATTERNS (strictly stronger; advisory, never a block).
+const {
+  HARD_BLOCK_PATTERNS: INJECTION_PATTERNS,
+  ADVISORY_PATTERNS: _ROLE_ADVISORY,
+  SUMMARISATION_PATTERNS,
+} = require('./lib/injection-patterns');
 
 const STATE_DIR = path.join(__dirname, '.state');
 
-// Patterns that HARD-BLOCK on first attempt.
-// Rationale: these are unambiguous adversarial tokens with no legitimate use
-// in .planning/ phase files or GSD plan documents.
-const INJECTION_PATTERNS = [
-  /ignore\s+(all\s+)?previous\s+instructions/i,
-  /ignore\s+(all\s+)?above\s+instructions/i,
-  /disregard\s+(all\s+)?previous/i,
-  /forget\s+(all\s+)?(your\s+)?instructions/i,
-  /override\s+(system|previous)\s+(prompt|instructions)/i,
-  /you\s+are\s+now\s+(?:a|an|the)\s+/i,
-  /pretend\s+(?:you(?:'re| are)\s+|to\s+be\s+)/i,
-  /from\s+now\s+on,?\s+you\s+(?:are|will|should|must)/i,
-  /(?:print|output|reveal|show|display|repeat)\s+(?:your\s+)?(?:system\s+)?(?:prompt|instructions)/i,
-  /<\/?(?:system|assistant|human)>/i,
-  /\[SYSTEM\]/i,
-  /\[INST\]/i,
-  /<<\s*SYS\s*>>/i,
-];
-
-// Advisory-only pattern — false-positive risk too high for hard block.
-// "act as a reviewer" in documentation would be incorrectly blocked.
-const ADVISORY_PATTERNS = [
-  /act\s+as\s+(?:a|an|the)\s+(?!plan|phase|wave)/i,
-];
+// Advisory-only patterns (role-assignment + summarisation-persistence) —
+// emitPreContext, never deny (false-positive risk too high for a hard block).
+const ADVISORY_PATTERNS = [..._ROLE_ADVISORY, ...SUMMARISATION_PATTERNS];
 
 function _safeCid(cid) {
   return cid.replace(/[^a-zA-Z0-9_-]/g, '_');
