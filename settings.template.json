@@ -71,9 +71,14 @@
         "matcher": ".*",
         "hooks": [
           {
-            "type": "command",
-            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py user-prompt-submit",
-            "timeout": 45
+            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/prompt_router/router.py",
+            "timeout": 20,
+            "type": "command"
+          },
+          {
+            "command": "lean-ctx hook observe",
+            "timeout": 5,
+            "type": "command"
           }
         ]
       }
