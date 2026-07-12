@@ -6,9 +6,11 @@
 
 ## Rule
 
-Any command that loads the **IMPLEMENT** suite — `/invoke-impl`, `/invoke-implementation`,
-and every combo whose name contains `impl` (`/invoke-spec-plan-impl`, `/invoke-impl-clean`,
-`/invoke-audit-impl-debug`, …) — does its implementation on **Opus**:
+Any run that loads the **IMPLEMENT** act — the `/invoke-impl` and `/invoke-implementation`
+delegators, and any parametric `/invoke <acts…>` whose act list contains `impl` (plus any
+historic `*impl*` combo name, e.g. `/invoke-spec-plan-impl`, which the router's
+`invoke_compat` translator resolves to the equivalent `/invoke` dispatch) — does its
+implementation on **Opus**:
 
 - Spawn every implementation subagent with an `[opus]` description prefix **and**
   `model:"opus"`. `opus-guard.py` (PreToolUse, Agent matcher) then pins it to Opus.
@@ -23,20 +25,20 @@ Single source of truth: `~/.claude/hooks/model-policy.json` →
 `invoke_categories.IMPLEMENT: "opus"` (the one config that owns every model pin — see
 CLAUDE.md § "Agent tool — REQUIRED prefix"). `gen-invoke-commands.py` reads that pin
 and renders a `⚠️ RUNS ON OPUS (mandatory)` callout at the top of the IMPLEMENT block
-of every generated implement command, so the directive is in front of the agent every
-time the command runs. (The generator is wired to read model-policy.json as part of the
-P5 command collapse; until then the router config's IMPLEMENT category mirrors the pin,
-kept equal at `opus`.)
+of the generated parametric `/invoke` command, so the directive is in front of the agent
+every time an `impl` act runs. (`gen-invoke-commands.py` now reads `model-policy.json`
+directly; the `autonomous-skill-router.config.json` `categories.IMPLEMENT.model` is kept
+equal at `opus` for the still-installed legacy router but is no longer the source of truth.)
 
 To change: edit `invoke_categories` in `hooks/model-policy.json` (NOT the generated
 `.md`) and re-run `python3 ~/.claude/hooks/gen-invoke-commands.py`. Setting any
 category's pin there makes the same callout fire for that category.
 
-> Scope note (P5): the IMPLEMENT-on-Opus carve-out covers `/invoke-impl`,
-> `/invoke-implementation`, and every combo whose name contains `impl` today; when the
-> command surface collapses to the parametric `/invoke <acts…>`, it covers any run whose
-> act list contains `impl` (historic combo names still resolve via the router
-> translator). The Opus pin itself is unchanged — only the command spelling.
+> Scope note (P5): the command surface is now the parametric `/invoke <acts…>` (20 files),
+> so the IMPLEMENT-on-Opus carve-out covers `/invoke-impl`, `/invoke-implementation`, and
+> any `/invoke` run whose act list contains `impl`; the retired `*impl*` combo names still
+> resolve via the router's `invoke_compat` translator. The Opus pin itself is unchanged —
+> only the command spelling.
 
 Related: `rules/agent-lifecycle-routing.md`, CLAUDE.md model-routing section,
 `hooks/opus-guard.py`, `hooks/workflow-model-guard.py`, memory `skill-router-full-suites`.
