@@ -180,10 +180,18 @@ def test_router_fail_open_on_internal_error(monkeypatch=None):
 # --------------------------------------------------------------------------- #
 def shadow_would_emit(prompt: str, sid: str) -> dict:
     """Run the router in --shadow and return the logged would-emit record.
-    Reusable by the parity harness."""
-    _run_router({"prompt": prompt, "session_id": sid}, argv=["--shadow"])
-    from lib import platform as plat
-    log = plat.telemetry_dir() / f"{sid}.router-shadow.jsonl"
+    Reusable by the parity harness. Telemetry is isolated to a temp
+    CLAUDE_CONFIG_DIR (claude_dir() honors it) so it never depends on the real
+    ~/.claude — the CI checkout is not ~/.claude."""
+    import os
+    import tempfile
+    cfg = tempfile.mkdtemp()
+    env = dict(os.environ)
+    env["CLAUDE_CONFIG_DIR"] = cfg
+    cmd = [sys.executable, str(_HOOKS / "prompt_router" / "router.py"), "--shadow"]
+    subprocess.run(cmd, input=json.dumps({"prompt": prompt, "session_id": sid}),
+                   text=True, capture_output=True, timeout=30, check=False, env=env)
+    log = pathlib.Path(cfg) / "telemetry" / f"{sid}.router-shadow.jsonl"
     last = log.read_text(encoding="utf-8").strip().splitlines()[-1]
     return json.loads(last)
 

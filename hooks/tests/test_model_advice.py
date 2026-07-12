@@ -171,15 +171,21 @@ def test_router_live_silent_model_for_light_prompt():
     assert "/model " + _OPUS_ID not in body
 
 
-def test_router_shadow_injects_nothing_but_logs_would_emit():
-    # shadow-safe: legacy model-router.py still runs live during the window, so
-    # the router must inject NOTHING even for a heavy prompt.
+def test_router_shadow_injects_nothing_but_logs_would_emit(tmp_path):
+    # shadow-safe: legacy model-router.py still runs live during the window, so the
+    # router must inject NOTHING even for a heavy prompt. Isolate telemetry to a
+    # temp CLAUDE_CONFIG_DIR (claude_dir() honors it) so the test never depends on
+    # the real ~/.claude — the CI checkout is NOT ~/.claude.
+    import os
     sid = _uid("heavy-shadow")
-    cp = _run_router(_HEAVY, sid, argv=["--shadow"])
+    env = dict(os.environ)
+    env["CLAUDE_CONFIG_DIR"] = str(tmp_path)
+    cmd = [sys.executable, str(_HOOKS / "prompt_router" / "router.py"), "--shadow"]
+    cp = subprocess.run(cmd, input=json.dumps({"prompt": _HEAVY, "session_id": sid}),
+                        text=True, capture_output=True, timeout=30, check=False, env=env)
     emitted = json.loads(cp.stdout.strip().splitlines()[-1])
     assert emitted == {}                      # nothing injected in shadow
-    from lib import platform as plat
-    log = plat.telemetry_dir() / f"{sid}.router-shadow.jsonl"
+    log = tmp_path / "telemetry" / f"{sid}.router-shadow.jsonl"
     rec = json.loads(log.read_text(encoding="utf-8").strip().splitlines()[-1])
     assert "/model" in rec["would_emit"] and _OPUS_ID in rec["would_emit"]
 

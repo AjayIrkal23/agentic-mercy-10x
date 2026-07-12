@@ -1,0 +1,8 @@
+# Byte-identical checkouts on every OS. The R10 upstream-intactness baselines
+# (scripts/skills_lib.py::dir_content_hash reads raw file BYTES) must match on the
+# windows-latest CI leg. GitHub's Windows runners default to core.autocrlf=true,
+# which would rewrite LF->CRLF on checkout and drift every locked-skill hash
+# (render-equivalence survives only because read_text() normalizes newlines;
+# read_bytes() does not). `-text` disables all EOL conversion so files land exactly
+# as committed (LF) on Windows too.
+* -text

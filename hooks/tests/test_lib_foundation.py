@@ -77,8 +77,14 @@ def test_pid_alive_self_true_bogus_false():
 def test_active_repo_inside_claude():
     ctx = rc.active_repo(cwd=str(_HOOKS))
     assert ctx is not None
-    assert ctx.name == ".claude"
-    assert ctx.key.startswith(".claude-")
+    # portable: resolve to the real git root and assert against ITS name — the dev
+    # box checks out at ~/.claude, CI at the workspace dir; the invariant is that
+    # active_repo returns the enclosing git repo, whatever it is named.
+    root = pathlib.Path(ctx.root)
+    assert (root / ".git").exists()
+    assert str(_HOOKS).startswith(str(root))          # _HOOKS lives inside it
+    assert ctx.name == root.name
+    assert ctx.key.startswith(ctx.name + "-")
     assert len(ctx.key.rsplit("-", 1)[1]) == 8
 
 
@@ -88,8 +94,13 @@ def test_active_repo_outside_git_is_none():
 
 
 def test_active_repo_resolution_order_payload_workspace_roots():
+    # workspace_roots[0] wins over cwd=os.sep (which would resolve to None)
     ctx = rc.active_repo({"workspace_roots": [str(_HOOKS)], "cwd": os.sep})
-    assert ctx is not None and ctx.name == ".claude"
+    assert ctx is not None
+    root = pathlib.Path(ctx.root)
+    assert (root / ".git").exists()
+    assert ctx.name == root.name
+    assert str(_HOOKS).startswith(str(root))
 
 
 def test_is_inside_containment():

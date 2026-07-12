@@ -238,18 +238,17 @@ def test_dox_and_jcm_dual_matchers_both_mapped():
 # --------------------------------------------------------------------------- #
 # fixture diff: gate decision standalone vs through dispatch (plan P4-T2 part d)
 # --------------------------------------------------------------------------- #
-def _run_standalone(cmd_str: str, payload: dict) -> str | None:
-    """Run a legacy command string standalone; return its permissionDecision."""
-    import os
+def _run_standalone(script: str, payload: dict) -> str | None:
+    """Run a repo hook script standalone with the current interpreter; return its
+    permissionDecision. `script` is a hooks-relative path — portable, with no
+    ${HOME}/.claude or `python3` assumption (CI checks the repo out OUTSIDE
+    ~/.claude, and Windows has no `python3` on PATH)."""
     import subprocess
-    cmd = cmd_str.replace("${HOME}", os.path.expanduser("~"))
+    import sys as _sys
+    target = _HOOKS / script
     try:
-        toks = shlex.split(cmd)
-    except ValueError:
-        toks = cmd.split()
-    try:
-        proc = subprocess.run(toks, input=json.dumps(payload), capture_output=True,
-                              text=True, timeout=15, check=False)
+        proc = subprocess.run([_sys.executable, str(target)], input=json.dumps(payload),
+                              capture_output=True, text=True, timeout=15, check=False)
         s = (proc.stdout or "").strip()
         if s.startswith("{"):
             d = json.loads(s)
@@ -284,8 +283,7 @@ def test_fixture_diff_dangerous_bash_gate():
              "tool_input": {"command": f"{danger}  # standalone-{uuid.uuid4().hex}"}}
     p_disp = {"session_id": "fx-danger", "tool_name": "Bash",
               "tool_input": {"command": f"{danger}  # dispatch-{uuid.uuid4().hex}"}}
-    standalone = _run_standalone(
-        "python3 ${HOME}/.claude/hooks/dangerous-bash-gate.py", p_std)
+    standalone = _run_standalone("dangerous-bash-gate.py", p_std)
     chained = _run_via_dispatch("pre-tool-use", p_disp)
     assert standalone == "deny", f"standalone gate did not deny: {standalone}"
     assert chained == "deny", f"dispatch chain did not deny the dangerous command: {chained}"
