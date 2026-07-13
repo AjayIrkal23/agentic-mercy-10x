@@ -18,7 +18,6 @@ description: |
   </example>
 model: sonnet
 color: magenta
-tools: [Read, Grep, Glob, WebFetch]
 ---
 
 > **DORMANT: requires a Figma MCP server.** This agent is preserved in place (not deleted); register a Figma MCP server to activate it.

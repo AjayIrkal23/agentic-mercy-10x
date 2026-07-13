@@ -122,14 +122,108 @@ def _find_git_root(p: Path) -> Path | None:
     return None
 
 
+def _sanitize(name: str) -> str:
+    """Mirror jcodemunch's db-name sanitization: non-alphanumerics → '-', collapsed.
+
+    jcodemunch turns a repo name like "VAIBHAV KATWE" into "VAIBHAV-KATWE" when it
+    builds the db filename. The old detector compared against the RAW folder name
+    (with the space), so the glob never matched and an indexed repo was reported
+    "missing". Sanitize the same way before matching.
+    """
+    out: list[str] = []
+    prev_dash = False
+    for ch in name:
+        if ch.isalnum():
+            out.append(ch)
+            prev_dash = False
+        elif not prev_dash:
+            out.append("-")
+            prev_dash = True
+    return "".join(out).strip("-")
+
+
+def _git_remote_identity(root: Path) -> str | None:
+    """Reconstruct jcodemunch's git-identity db stem '{owner}-{repo}' from .git/config.
+
+    jcodemunch names a repo's index db after its git REMOTE (owner/repo), NOT the
+    local folder — so a project whose folder differs from its remote, or whose
+    folder contains characters jcodemunch sanitizes (e.g. a space), was otherwise
+    reported as "index missing" even though it is fully indexed. Fail-soft: any
+    problem → None.
+    """
+    try:
+        gitdir = root / ".git"
+        cfg: Path | None = None
+        if gitdir.is_dir():
+            cfg = gitdir / "config"
+        elif gitdir.is_file():
+            # worktree / submodule: '.git' is a pointer file to the real gitdir.
+            for line in gitdir.read_text(encoding="utf-8", errors="ignore").splitlines():
+                line = line.strip()
+                if line.startswith("gitdir:"):
+                    real = Path(line.split(":", 1)[1].strip())
+                    if not real.is_absolute():
+                        real = (root / real).resolve()
+                    cfg = real / "config"
+                    break
+        if not cfg or not cfg.is_file():
+            return None
+        url = None
+        for line in cfg.read_text(encoding="utf-8", errors="ignore").splitlines():
+            s = line.strip()
+            if s.startswith("url") and "=" in s:
+                url = s.split("=", 1)[1].strip()
+                break
+        if not url:
+            return None
+        u = url[:-4] if url.endswith(".git") else url
+        if "://" in u:                       # https://host/owner/repo
+            u = u.split("://", 1)[1]
+            u = u.split("/", 1)[1] if "/" in u else u
+        elif ":" in u:                       # git@host:owner/repo (scp-like ssh)
+            u = u.split(":", 1)[1]
+        segs = [p for p in u.split("/") if p]
+        if len(segs) < 2:
+            return None
+        owner, repo = segs[-2], segs[-1]
+        return f"{_sanitize(owner)}-{_sanitize(repo)}"
+    except Exception:
+        return None
+
+
 def _check_index_exists(target_path: str) -> bool:
     try:
         root = _find_git_root(Path(target_path))
         if root is None:
             return True
+        # An index for this repo may be stored under EITHER identity mode:
+        #   • git identity (jcodemunch's DEFAULT when a git remote exists):
+        #       {owner}-{repo}.db  (e.g. AjayIrkal23-VAIBHAV-KATWE.db)
+        #   • local identity (path-keyed):  local-{name}-{sha1(path)[:8]}.db
+        #   • bare name fallback:            {repo}.db
+        # Names are matched with jcodemunch's sanitization (space→'-', etc.) AND
+        # the git-remote identity is reconstructed from .git/config — because the
+        # db is named after the REMOTE, not the local folder. Without this, a repo
+        # whose folder name has a space (or differs from its remote) was falsely
+        # reported "index missing" and every source read was hard-blocked.
         h = hashlib.sha1(str(root).encode()).hexdigest()[:8]
-        db = INDEX_DIR / f"local-{root.name}-{h}.db"
-        return db.is_file()
+        name = root.name
+        sname = _sanitize(name)
+        for cand in (
+            f"local-{name}-{h}.db", f"local-{sname}-{h}.db",
+            f"{name}.db", f"{sname}.db",
+        ):
+            if (INDEX_DIR / cand).is_file():
+                return True
+        # git-remote identity ({owner}-{repo}.db) — jcodemunch's DEFAULT naming.
+        ident = _git_remote_identity(root)
+        if ident and (INDEX_DIR / f"{ident}.db").is_file():
+            return True
+        # any-owner glob fallback ("*-{repo}.db"), sanitized then raw.
+        for pat in (f"*-{sname}.db", f"*-{name}.db"):
+            if any(INDEX_DIR.glob(pat)):
+                return True
+        return False
     except Exception:
         return True
 
@@ -380,18 +474,43 @@ def pre_tool_use() -> int:
     if _is_exempt(target, cfg):
         return 0
 
-    # --- Gate 2: Index absent in strict_mode → HARD BLOCK (original behavior). ---
+    # --- Gate 2: Index absent in strict_mode → nudge, but NEVER brick. ---
     if not _check_index_exists(target) and _is_strict_mode(cfg):
         # …unless index-lifecycle is already building it in the background —
         # then allow the read (never brick the agent on self-healing infra).
         if _index_building(payload):
             return 0
+        # Untrackable context (e.g. a subagent whose payload carries no session
+        # id, and which may not even hold a jcodemunch tool to satisfy the block)
+        # → fail OPEN immediately. A read must never be permanently deadlocked.
+        if not conversation_id:
+            return 0
+        # Budgeted nudge: block a couple of times, then fail OPEN. This matches
+        # the module contract ("you are never stuck"); previously Gate 2 had no
+        # budget and could brick a subagent with no jcodemunch tool forever.
+        st = _load_state(conversation_id)
+        idx_budget = int(cfg.get("index_missing_block_budget", 2))
+        idx_blocks = int(st.get("index_block_count", 0))
+        if idx_blocks >= idx_budget:
+            _emit_additional_context(
+                "PreToolUse",
+                "Advisory: jcodemunch index appears absent — index the repo for "
+                "cheaper reads, but this read is allowed.",
+            )
+            return 0
+        st["index_block_count"] = idx_blocks + 1
+        _save_state(conversation_id, st)
         root = _find_git_root(Path(target))
         root_str = str(root) if root else "unknown"
+        remaining = idx_budget - idx_blocks - 1
+        tail = (
+            f"({remaining} more block{'s' if remaining != 1 else ''}, then reads allowed)"
+            if remaining > 0 else "(last block — subsequent reads allowed)"
+        )
         block_msg = (
             f"BLOCKED: jcodemunch index missing for `{root_str}`. "
             f"Run mcp__jcodemunch__index_folder({{\"path\": \"{root_str}\"}}) first, "
-            f"then retry {tool}."
+            f"then retry {tool}. {tail}"
         )
         _emit_block(block_msg)
         return 0

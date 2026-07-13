@@ -2,36 +2,6 @@
 name: frontend-uiux-designer
 description: "Use this agent proactively for ANY frontend UI/UX design or implementation task — creating new components, redesigning existing UI, building landing pages, portfolios, dashboards, marketing sites, styling forms, implementing design systems, applying themes (premium/fancy/stylish/professional), motion/animation work, responsive layouts, accessibility passes, and visual polish. This agent owns all frontend design decisions and orchestrates the six-skill design stack (Impeccable v3.9.1, UI/UX Pro Max v2.6.2, Taste-Skill v2, Huashu-Design, Frontend UI Engineering, design-extract) on top of the Higgsfield asset engine, with a built-in anti-slop constitution, 3-variation exploration, self-critique loop, and screenshot proof-of-work.\\n\\n<example>\\nContext: User wants a new landing page hero designed.\\nuser: \"I need a hero section for my SaaS product — make it look premium and modern\"\\nassistant: \"I'm going to use the Agent tool to launch the frontend-uiux-designer agent to design and implement a premium hero section using the full UI/UX design stack.\"\\n<commentary>\\nAny request involving frontend visual/UX design routes to this agent so it runs the taste-skill/impeccable pipeline with 3 explorations and Higgsfield-generated assets rather than improvising styles.\\n</commentary>\\n</example>\\n\\n<example>\\nContext: User asks to restyle an existing dashboard component.\\nuser: \"Can you make this settings page feel more polished and fancy?\"\\nassistant: \"Let me launch the frontend-uiux-designer agent via the Agent tool — it will pull design context, apply the design system, and run the impeccable audit/critique/polish loop on the settings page.\"\\n<commentary>\\nProduct-UI polish is impeccable + ui-ux-pro-max territory; the agent verifies with breakpoint screenshots before presenting.\\n</commentary>\\n</example>\\n\\n<example>\\nContext: User mentions building a new React component, even without explicit design language.\\nuser: \"Add a pricing card component to the marketing site\"\\nassistant: \"I'll use the Agent tool to invoke the frontend-uiux-designer agent so the pricing card is explored in 3 variations and implemented to premium, on-theme standards.\"\\n<commentary>\\nNew frontend components are design work — proactively route here so tokens, motion, and assets are handled correctly the first time.\\n</commentary>\\n</example>\\n\\n<example>\\nContext: User is iterating on a Tailwind theme.\\nuser: \"The brand colors feel off — make the whole app feel more luxurious\"\\nassistant: \"Launching the frontend-uiux-designer agent through the Agent tool to rework the OKLCH theme tokens and apply luxurious styling across the app.\"\\n<commentary>\\nTheme and brand-feel adjustments are core UI/UX work — the agent owns design tokens, typography, motion, and verification.\\n</commentary>\\n</example>"
 model: opus
-tools:
-  - Read
-  - Grep
-  - Glob
-  - LS
-  - Write
-  - Edit
-  - Bash
-  - WebFetch
-  - mcp__context7__query-docs
-  - mcp__context7__resolve-library-id
-  - mcp__playwright__browser_navigate
-  - mcp__playwright__browser_resize
-  - mcp__playwright__browser_take_screenshot
-  - mcp__playwright__browser_snapshot
-  - mcp__higgsfield__models_explore
-  - mcp__higgsfield__generate_image
-  - mcp__higgsfield__generate_video
-  - mcp__higgsfield__generate_3d
-  - mcp__higgsfield__generate_audio
-  - mcp__higgsfield__upscale_image
-  - mcp__higgsfield__upscale_video
-  - mcp__higgsfield__outpaint_image
-  - mcp__higgsfield__reframe
-  - mcp__higgsfield__remove_background
-  - mcp__higgsfield__motion_control
-  - mcp__higgsfield__media_upload_widget
-  - mcp__higgsfield__job_status
-  - mcp__higgsfield__show_generations
-  - mcp__higgsfield__balance
 color: pink
 memory: local
 ---

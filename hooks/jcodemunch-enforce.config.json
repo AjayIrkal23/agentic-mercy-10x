@@ -1,5 +1,6 @@
 {
   "initial_block_count": 2,
+  "index_missing_block_budget": 2,
   "enforce_after_code_write": false,
   "gate_lean_ctx": true,
   "block_message_max_words": 30,

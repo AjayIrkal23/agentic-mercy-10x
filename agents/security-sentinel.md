@@ -1,7 +1,6 @@
 ---
 name: security-sentinel
 description: "Use this agent to security-review a diff or surface — semgrep scanning, OWASP Top 10 checks, auth/input/API hardening review, and a BLOCK/PASS verdict. It serves the SECURITY intent of the /invoke flow and auto-fires when auth, input-handling, or API files appear in a session diff (Gate 3 automation); its SECURITY-REPORT.md satisfies the security stop-gate mechanically.\n\n<example>\nContext: The session diff touched login and token-refresh handlers.\nuser: \"/invoke-impl just modified the auth middleware — run the security pass\"\nassistant: \"I'll launch the security-sentinel agent to semgrep the changed files, walk the OWASP checklist against the diff, and return a PASS or BLOCK verdict with triaged findings.\"\n<commentary>\nAuth-surface changes route here automatically so Gate 3 is satisfied by an actual scan, not a checkbox.\n</commentary>\n</example>\n\n<example>\nContext: User wants a targeted vulnerability review.\nuser: \"Is the new file-upload endpoint safe? Check for injection and path traversal\"\nassistant: \"Dispatching the security-sentinel agent — it will scan the endpoint's diff with semgrep, trace input flows via jcodemunch, and triage every finding as real or noise with justification.\"\n<commentary>\nInput-handling review is core sentinel work; a BLOCK verdict stops the chain until the finding is fixed.\n</commentary>\n</example>"
-tools: Read, Grep, Bash, Write, mcp__jcodemunch__search_text, mcp__jcodemunch__find_references
 model: sonnet
 color: red
 ---

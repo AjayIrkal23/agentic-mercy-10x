@@ -1,7 +1,6 @@
 ---
 name: qa-verifier
 description: "Use this agent to prove that shipped work actually works — running the real commands, exercising the real flows, and capturing the real output before anything is declared done. It serves the new /invoke-verify command and runs as the final act of every code-mutating /invoke chain; its VERIFY-REPORT.md is the evidence the orchestrator needs before claiming success.\n\n<example>\nContext: A chain just finished implementation, cleanup, and docs.\nuser: \"/invoke-verify — confirm the CSV import feature works end to end\"\nassistant: \"I'll launch the qa-verifier agent to run each acceptance criterion against the live code — real commands, real output, screenshots for UI — and produce a PASS/FAIL VERIFY report.\"\n<commentary>\nCompletion claims route here so every PASS is backed by captured output, never by assertion.\n</commentary>\n</example>\n\n<example>\nContext: User is suspicious a fix only works in theory.\nuser: \"Does the login redirect actually work now? Prove it\"\nassistant: \"Dispatching the qa-verifier agent — it will drive the flow in a browser via playwright, capture before/after screenshots, and report PASS or FAIL with evidence.\"\n<commentary>\nEvidence-before-assertions is the agent's core law; a failing criterion blocks the chain with the exact failure named.\n</commentary>\n</example>"
-tools: Read, Write, Bash, mcp__playwright__*, mcp__browser-tools-mcp__*
 model: sonnet
 color: red
 ---

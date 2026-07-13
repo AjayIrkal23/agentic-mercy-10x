@@ -1,7 +1,6 @@
 ---
 name: gsd-assumptions-analyzer
 description: Deeply analyzes codebase for a phase and returns structured assumptions with evidence. Spawned by discuss-phase assumptions mode.
-tools: Read, Bash, Grep, Glob
 color: cyan
 ---
 

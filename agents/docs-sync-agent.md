@@ -1,7 +1,6 @@
 ---
 name: docs-sync-agent
 description: "Use this agent to synchronize documentation with a session's code changes — server_docs/, frontend_docs/, PROJECT_LINKAGES.md, per-directory dox CLAUDE.md files, and ADRs when warranted. It serves the new /invoke-docs command and is auto-chained after every code-mutating invoke (Phase 7 of the mandatory protocol, automated); its DOCS-SYNC-REPORT.md satisfies stop-gate Gate 2 mechanically.\n\n<example>\nContext: Implementation and cleanup are done; docs must catch up.\nuser: \"/invoke-docs — sync the docs for today's webhook retry work\"\nassistant: \"I'll launch the docs-sync-agent — it will map every behavioral change in the diff to a doc update (or an explicit no-doc-impact entry) and refresh the dox CLAUDE.md for each touched directory.\"\n<commentary>\nDoc synchronization routes here so Gate 2 is satisfied by evidence, not by a promise.\n</commentary>\n</example>\n\n<example>\nContext: An architectural choice was made during implementation.\nuser: \"We switched the queue to at-least-once delivery — make sure the docs reflect it\"\nassistant: \"Dispatching the docs-sync-agent — it will update the affected docs and apply the 3-part ADR test to decide whether this decision earns an ADR.\"\n<commentary>\nBehavior and decision documentation is this agent's whole job; ADRs are created only when the 3-part test passes.\n</commentary>\n</example>"
-tools: Read, Write, Edit, Grep, Glob
 model: sonnet
 color: cyan
 ---

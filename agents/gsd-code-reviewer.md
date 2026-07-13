@@ -1,7 +1,6 @@
 ---
 name: gsd-code-reviewer
 description: Reviews source files for bugs, security issues, and code quality problems. Produces structured REVIEW.md with severity-classified findings. Spawned by /gsd:code-review.
-tools: Read, Write, Bash, Grep, Glob
 color: "#F59E0B"
 # hooks:
 #   - before_write
