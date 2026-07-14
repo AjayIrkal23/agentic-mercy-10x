@@ -1,5 +1,0 @@
-{
-  "_about": "Config for intel-router.py — the tri-tool question router. Classifies a prompt into ONE intelligence surface (jcodemunch / graphify / jdocmunch) and emits a single directive. Availability-aware, throttled, fail-open. Edit keywords/tie_break here; the .py embeds the same defaults.",
-  "max_directives_per_session": 12,
-  "tie_break": ["graphify", "jdocmunch", "jcodemunch"]
-}

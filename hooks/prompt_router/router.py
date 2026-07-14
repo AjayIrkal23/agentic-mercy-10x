@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """router.py — the single-process unified prompt router (P1-T2).
 
+LIVE since 2026-07-12: this module IS the UserPromptSubmit handler (settings.json;
+user-directed early flip). The ``--shadow`` mode below is now only a test/parity
+harness, NOT the operational mode — do not describe the router as "in shadow".
+
 Pipeline (Charter v3 §1/§2):
   S0  ingest stdin payload + trivial fast-exit ONLY on an exact-match ack
       (yes/ok/continue/... — the legacy "<12 chars" heuristic is DROPPED).
@@ -66,9 +70,36 @@ def _config() -> dict:
 _DOC_KEYWORDS = ("readme", "docs", "documentation", "changelog", ".md", "guide", "adr")
 
 
+def _graph_exists(repo) -> bool:
+    """Availability check (folded in from v2.2.0 intel-router): does the OPEN repo
+    have a built graphify graph? Drives the build-hint vs use-it substrate text."""
+    try:
+        return repo is not None and (repo.path / "graphify-out" / "graph.json").is_file()
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _doc_index_exists(repo) -> bool:
+    """Does jDocMunch have a section index for the OPEN repo (~/.doc-index/local/<name>.json)?"""
+    if repo is None:
+        return False
+    try:
+        base = Path.home() / ".doc-index" / "local"
+        names = {repo.name}
+        try:
+            from lib.repo_context import sanitize_name
+            names.add(sanitize_name(repo.name))
+        except Exception:  # noqa: BLE001
+            pass
+        return any((base / f"{n}.json").is_file() for n in names if n)
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _builtin_items(profile, ctx: dict) -> list[dict]:
     items: list[dict] = []
-    in_repo = ctx.get("repo") is not None
+    repo = ctx.get("repo")
+    in_repo = repo is not None
     has_code_paths = bool(profile.paths)
     cfg = ctx.get("config", {})
     threshold = int(cfg.get("auto_dispatch_threshold", _select.DEFAULT_AUTO_DISPATCH_THRESHOLD))
@@ -106,11 +137,14 @@ def _builtin_items(profile, ctx: dict) -> list[dict]:
         })
     docs_signal = ("docs" in profile.surfaces) or any(k in profile.text for k in _DOC_KEYWORDS)
     if docs_signal:
-        items.append({
-            "id": "substrate:jdocmunch", "tier": 1, "section": "SUBSTRATE",
-            "text": ("Docs work: use jdocmunch (search_sections/get_toc/get_section) over "
-                     "whole-file reads; lean-ctx only for single small non-doc files."),
-        })
+        if _doc_index_exists(repo):
+            _jd = ("Docs work: use jdocmunch (search_sections/get_toc/get_section) over "
+                   "whole-file reads; lean-ctx only for single small non-doc files.")
+        else:
+            _jd = ("Docs work: prefer jdocmunch section tools (search_sections/get_toc/get_section) "
+                   "over whole-file reads — this repo isn't doc-indexed yet (index-lifecycle builds "
+                   "it on writes).")
+        items.append({"id": "substrate:jdocmunch", "tier": 1, "section": "SUBSTRATE", "text": _jd})
     if profile.is_reasoning:
         items.append({
             "id": "substrate:seqthink", "tier": 1, "section": "SUBSTRATE",
@@ -118,11 +152,15 @@ def _builtin_items(profile, ctx: dict) -> list[dict]:
                      "before deciding/planning/auditing/debugging."),
         })
     if profile.is_arch:
-        items.append({
-            "id": "substrate:graphify", "tier": 1, "section": "SUBSTRATE",
-            "text": ("Architecture/dependency question: use graphify (god_nodes/get_neighbors/"
-                     "shortest_path/query_graph) for structure instead of manual grep."),
-        })
+        if _graph_exists(repo):
+            _gf = ("Architecture/dependency question: use graphify (god_nodes/get_neighbors/"
+                   "shortest_path/query_graph) for structure instead of manual grep.")
+        else:
+            _root = repo.root if repo is not None else "<repo-root>"
+            _gf = ("Architecture/dependency question: graphify graph not built for this repo yet — "
+                   f"build it (`graphify update {_root}`), then use god_nodes/get_neighbors/"
+                   "query_graph (or read graphify-out/GRAPH_REPORT.md).")
+        items.append({"id": "substrate:graphify", "tier": 1, "section": "SUBSTRATE", "text": _gf})
 
     # ---- tier 2: ranked skill pushes (per-skill ids so a NEW skill always fires) ----
     # Charter §1: the budget is ~24k, NOT a small cap — emit ALL triggered skills

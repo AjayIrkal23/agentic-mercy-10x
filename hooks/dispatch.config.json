@@ -1,7 +1,7 @@
 {
   "_about": "The ONE ordered chain map for dispatch.py (P4-T1, Charter §3). Every legacy settings.json hook is a LINK here (still its own file, run as a subprocess). Registered once per event in settings.json after the P4-T7 cutover. Link types: gate|mutator|advisory|exec. tools = regex on tool_name (replaces the 19 PreToolUse matchers). enabled toggles a link off without deleting it. priority 0 = mandatory-trigger advisory (never budget-dropped); higher = droppable only when gates already blew the wall budget. timeout_ms is per-link.",
-  "_router_mode": "legacy",
-  "_router_mode_note": "user-prompt-submit runs the full legacy injector set + router.py --shadow (Charter §2: 30-day zero-miss shadow window). flip to router-only set via scripts/flip-dispatch.py --router once plans/P1-shadow-parity.md shows 0 misses over >=10 real sessions.",
+  "_router_mode": "router",
+  "_router_mode_note": "LIVE: settings.json routes UserPromptSubmit to prompt_router/router.py directly (user-directed early flip 2026-07-12, commit c865377). This dispatch user-prompt-submit chain is NO LONGER invoked on prompts — retained only for flip-back via scripts/flip-dispatch.py --legacy. The router is a provable superset (classify/select consume the entire trigger-floor.json).",
   "budgets": {
     "session-start":     {"ms": 2500, "chars": 3500},
     "user-prompt-submit":{"ms": 1500, "chars": 24000},
@@ -36,7 +36,6 @@
       {"id": "leanctx-observe-ups",     "type": "exec",     "cmd": ["lean-ctx", "hook", "observe"], "timeout_ms": 5000, "priority": 2, "enabled": true, "_reg": 16},
       {"id": "discovery-skills",        "type": "advisory", "cmd": ["{PY}", "{HOOKS}/discovery-skills-reminder.py", "prompt"], "timeout_ms": 5000, "priority": 1, "enabled": true, "_reg": 17, "_router_set": "legacy", "_port": "P6-T2: bash launcher ported to py (byte-identical stdout); bash original NOT deleted (legacy member, retires P7-T4)"},
       {"id": "sequential-thinking",     "type": "advisory", "cmd": ["{PY}", "{HOOKS}/sequential-thinking-mandate.py"], "timeout_ms": 8000, "priority": 0, "enabled": true, "_reg": 18, "_router_set": "legacy"},
-      {"id": "intel-router",            "type": "advisory", "cmd": ["{PY}", "{HOOKS}/intel-router.py", "prompt-submit"], "timeout_ms": 6000, "priority": 1, "enabled": true, "_new": "2026-07-14 tri-tool: prompt-time router — classify a prompt into ONE intel surface (jcodemunch/graphify/jdocmunch), availability-aware; the decision layer over the 3 per-surface read gates."},
       {"id": "router-shadow",           "type": "exec",     "cmd": ["{PY}", "{HOOKS}/prompt_router/router.py", "--shadow"], "timeout_ms": 20000, "priority": 0, "enabled": true, "_new": "HANDOFF P1-T8: shadow-log the router's would-be injection; starts the >=10-real-session zero-miss clock. Emits nothing.", "_router_set": "both"},
       {"id": "index-tick",              "type": "exec",     "cmd": ["{PY}", "{HOOKS}/index-lifecycle.py", "tick"], "timeout_ms": 5000, "priority": 0, "enabled": true, "_new": "HANDOFF P3-T4: T-check on prompt turns (Spec B 2.2)."}
     ],

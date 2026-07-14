@@ -29,7 +29,7 @@ Browser triage: **`fetch`** → **`playwright`** → **`browser-tools-mcp`** (pi
 
 Code search triage: **`jcodemunch`** (symbols/refs) → **`ast-grep`** (structural patterns) → **`grep`** (literal strings).
 
-Intel routing: **`intel-router.py`** (UserPromptSubmit) picks ONE surface per prompt — **`jcodemunch`** (code structure) · **`graphify`** (architecture/deps) · **`jdocmunch`** (docs) — then each surface's read-gate (`jcodemunch-enforce`, `graphify-enforce`, `jdocmunch-enforce`) enforces its own reads. All three kept fresh by `index-lifecycle.py` (active repo, event-driven).
+Intel routing: the **live prompt router** (**`prompt_router/router.py`**, the UserPromptSubmit handler) classifies each prompt and emits availability-aware tri-tool precedence — **`jcodemunch`** (code structure) · **`graphify`** (architecture/deps, build hint when no graph) · **`jdocmunch`** (docs, index-aware). Each surface's read-gate (`jcodemunch-enforce`, `graphify-enforce`, `jdocmunch-enforce`) enforces its own reads. All three kept fresh by `index-lifecycle.py` (active repo, event-driven).
 
 Security triage: **`semgrep`** (SAST rules) → manual review (business logic).
 

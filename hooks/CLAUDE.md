@@ -30,20 +30,23 @@ Only hook logic and hook config belong here — no skill bodies, no app code.
 | File | Role |
 |------|------|
 | `dispatch.py` / `dispatch.config.json` | Universal per-event chain-runner + link declarations (8 events, 70 links) |
-| `prompt_router/router.py` | Single-process prompt router (classify → rank → 24k priority budget → manifest dedup); runs `--shadow` during the retention window |
+| `prompt_router/router.py` | Single-process prompt router (classify → rank → 24k priority budget → manifest dedup); **LIVE UserPromptSubmit handler** since 2026-07-12. `--shadow` is now only a test/parity mode |
 | `trigger-floor.json` / `build-trigger-floor.py` | Verbatim superset of all 4 legacy taxonomies + 139 command names; `--check` = CI floor guard |
 | `model-policy.json` | Single model-routing truth (sonnet default / opus UI+heavy / fable explicit) — consumed by `opus-guard.py`, `workflow-model-guard.py`, `gen-invoke-commands.py` |
 | `index-lifecycle.py` / `.config.json` | Active-repo-only, event-driven index freshness (journal → detached single-shot builder); zero daemons |
 | `lib/platform.py`, `lib/hook_telemetry.py`, `lib/repo_context.py` | Shared foundation: interpreter/token resolution, per-link telemetry, active-repo detection + git-remote identity helpers (`git_root`, `git_remote_identity`, `sanitize_name`) |
 | `jdocmunch-index-guard.py` / `.config.json` / `jdocmunch-reindex-hook.py` | Doc-index twin of the jcodemunch guard; run via the dispatch session-start / post-tool-use chains |
-| `intel-router.py`, `graphify_launcher.py`, `graphify-enforce.py`, `jdocmunch-enforce.py` | Tri-tool code/doc intelligence (2026-07-14): `intel-router.py` (user-prompt-submit) picks ONE of jcode/graphify/jdoc per prompt; `graphify_launcher.py` = claude-native graphify MCP launcher (off the cursor venv, repo-identity validated, fail-open); `graphify-enforce`/`jdocmunch-enforce` = per-surface pre-tool-use advisories |
+| `graphify_launcher.py`, `graphify-enforce.py`, `jdocmunch-enforce.py` | Tri-tool code/doc intelligence (2026-07-14): prompt-time tri-tool routing lives in **`prompt_router/router.py`** (SUBSTRATE section, availability-aware); `graphify_launcher.py` = claude-native graphify MCP launcher (off the cursor venv, repo-identity validated, fail-open); `graphify-enforce`/`jdocmunch-enforce` = per-surface pre-tool-use read advisories |
 
 ## Gotchas / fragile spots
 
-- During the 30-day shadow window, `user-prompt-submit` runs the **legacy injector
-  set + `router.py --shadow`** together; the live injection you see is the legacy
-  stack. Do not "fix" that — cutover is `flip-dispatch.py --router` after ≥10
-  zero-miss sessions.
+- **UserPromptSubmit is handled LIVE by `prompt_router/router.py`** (settings.json;
+  user-directed flip 2026-07-12, commit c865377). The dispatch `user-prompt-submit`
+  chain (legacy injectors) is **no longer invoked on prompts** — retained only for
+  flip-back (`flip-dispatch.py --legacy`). The router is a provable superset
+  (classify/select consume the entire `trigger-floor.json`). Verify the live wiring
+  in **settings.json**, NOT these dispatch comments (that stale claim caused a real
+  agent error on 2026-07-14).
 - The legacy prompt-stack + aggregator links (the prompt-reminder injector, the
   session-start and post-write aggregators, `model-router.py`, the 3 index guards)
   are still wired during the retention window but retire in P7-T4 — do not cite

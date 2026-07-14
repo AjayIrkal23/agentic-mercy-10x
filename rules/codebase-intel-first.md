@@ -142,10 +142,11 @@ NOT normally rebuild anything by hand. Act only if a guard prints
 - `jdocmunch-enforce.py pre-tool-use` steers whole-file reads of indexed docs
   (`.md`/`.rst`/`.adoc`) to the jDocMunch section tools (`search_sections` /
   `get_toc` / `get_section`) when the repo has a `~/.doc-index` index.
-- `intel-router.py` (UserPromptSubmit) classifies each prompt into ONE surface —
-  jcodemunch (code structure) / graphify (architecture-deps) / jdocmunch (docs) —
-  availability-aware, the decision layer over the three read gates. All three are
-  kept fresh by `index-lifecycle.py` (active repo, event-driven).
+- The **live prompt router** (`prompt_router/router.py`, the UserPromptSubmit handler)
+  classifies each prompt and emits **availability-aware** tool precedence in its
+  SUBSTRATE section — jcodemunch (code structure) / graphify (architecture-deps, with a
+  `graphify update <root>` build hint when no graph exists) / jdocmunch (docs, doc-index
+  aware). All three are kept fresh by `index-lifecycle.py` (active repo, event-driven).
 
 Deep playbook: skill `codebase-intel-first` (and `jcodemunch-token-saver`,
 `graphify`).
