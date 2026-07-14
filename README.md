@@ -536,10 +536,14 @@ powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\.claude\install.ps1   
 `install.py` runs, in order: **detect** OS/python/node/git/uv/npm · **check prerequisites** (reports any you must install by hand) · idempotent **deps** · register **all MCP servers** · install **plugins** · **materialize** skills (copy or NTFS junction, never a symlink) · **render** `settings.json` from its tracked `settings.template.json` (plus optional `settings.user.json` overrides) · **build and validate** the skills catalog (trigger-floor guard + upstream-intactness) · run **doctor**.
 
 ```bash
+python install.py ui         # VISUAL installer — pick the folder, live status, step-by-step  (= python install-ui.py)
 python install.py verify     # WORKFLOW TESTER: prereqs/deps/MCP/plugins/wiring status + a fix per gap  (= python check.py)
 python install.py doctor     # config health + trigger-surface + model-routing verifier
 python install.py update     # git pull --ff-only · deps · re-render · rebuild · doctor
 ```
+
+> [!TIP]
+> **Prefer a UI?** `python install.py ui` opens a local web page (127.0.0.1, stdlib only — no Node/Electron) that **auto-detects your global `.claude`**, lets you **Browse** to another folder and Continue, shows a **live preflight** (prerequisites · privileges · deps · MCP servers · plugins · wiring), then installs **everything step-by-step** — each step turning green/amber/red as it runs — ending in a **WORKFLOW ACTIVE** banner. Same engine as the CLI, identical on Ubuntu and Windows.
 
 Flags: `--dry-run` (print planned actions, mutate nothing) · `--ci` (skip networked steps). Every path resolves through `hooks/lib/platform.py` — **no hardcoded usernames or drive letters**, and there are **zero `.sh` hooks** — so it works for any user on either OS.
 

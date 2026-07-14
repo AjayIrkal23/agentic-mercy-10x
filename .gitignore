@@ -6,6 +6,10 @@
 
 # --- secrets & auth (NEVER commit) ---
 .credentials.json
+# per-machine claude state/config (machineID, userID, oauthAccount, MCP creds).
+# canonical home is ~/.claude.json; a stray copy can appear here if CLAUDE_CONFIG_DIR
+# points at the repo root — never commit either.
+.claude.json
 mcp-needs-auth-cache.json
 *.pem
 *.key

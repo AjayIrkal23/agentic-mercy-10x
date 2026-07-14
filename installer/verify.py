@@ -2,18 +2,19 @@
 """verify.py — the ~/.claude WORKFLOW TESTER (Windows + Ubuntu/macOS).
 
 Answers "is my whole workflow installed and active?" in one report:
-  · PREREQUISITES   python3 / node / npm / git / claude / uv / pipx (+ versions)
+  · PREREQUISITES   python3 / node / git / claude (+ versions)
+  · PRIVILEGES      ~/.claude user-owned + npm -g prefix writable (the sudo trap)
   · DEPENDENCIES    lean-ctx, tdd-guard, semgrep, jcodemunch-mcp, jdocmunch-mcp, graphify
-  · MCP SERVERS     every server in the manifest, checked against `claude mcp list`
-                    (+ the claude.ai connectors, which are UI-added)
+  · MCP SERVERS     every manifest server vs `claude mcp list` (+ claude.ai connectors)
   · PLUGINS         superpowers / ponytail / karpathy / mermaid vs `claude plugin list`
   · WIRING          settings.json -> UserPromptSubmit=router.py (LIVE) + PreToolUse=dispatch.py
   · PALETTE         skill + command counts vs the manifest
 
-Every gap prints the EXACT fix command. Read-only. ASCII markers (Windows-safe).
-Exit 0 = all required checks green; 1 = one or more required gaps.
+`collect()` returns the report as STRUCTURED data (JSON-able) so both the CLI
+(`python check.py`) and the visual installer (installer/ui.py) render the same
+truth. Every gap carries an exact `fix` command. Read-only. Exit 0 = all green.
 
-Run:  python install.py verify        or:  python check.py
+Run:  python install.py verify   ·   python check.py   ·   python install.py ui
 """
 from __future__ import annotations
 
@@ -30,7 +31,10 @@ for _p in (str(_ROOT / "installer"), str(_ROOT / "hooks")):
 from lib import platform as plat  # noqa: E402
 
 MANIFEST = _ROOT / "installer" / "manifest.json"
-OK, MISS, WARN, CONN = "[OK]  ", "[MISS]", "[WARN]", "[conn]"
+
+# semantic status tokens (JSON-safe); the CLI maps them to ASCII markers.
+OK, MISS, WARN, CONN = "ok", "miss", "warn", "conn"
+_MARK = {OK: "[OK]  ", MISS: "[MISS]", WARN: "[WARN]", CONN: "[conn]"}
 
 
 def _manifest() -> dict:
@@ -41,35 +45,55 @@ def _ver(binary: str) -> str:
     for flag in ("--version", "version", "-V"):
         cp = plat.run([binary, flag], timeout=15)
         if cp.returncode == 0 and (cp.stdout or cp.stderr):
-            return (cp.stdout or cp.stderr).strip().splitlines()[0][:40]
+            return (cp.stdout or cp.stderr).strip().splitlines()[0][:44]
     return ""
 
 
 def _claude_list(kind: list[str]) -> tuple[bool, str]:
-    """Return (claude_present, listing_text). kind e.g. ['mcp','list'] / ['plugin','list']."""
+    """(claude_present, listing_text). kind e.g. ['mcp','list'] / ['plugin','list']."""
     if not shutil.which("claude"):
         return False, ""
     cp = plat.run(["claude", *kind], timeout=40)
-    return True, (cp.stdout or "") if cp.returncode == 0 else (True, "")[1]
+    return True, ((cp.stdout or "") if cp.returncode == 0 else "")
 
 
-def _row(rows, mark, name, detail=""):
-    rows.append((mark, name, detail))
+def _registered_mcps() -> tuple[set, str]:
+    """Registered MCP server names — read AUTHORITATIVELY from the claude config
+    file (instant, no network). `claude mcp list` runs a per-server health check
+    that network-probes each server and can exceed our timeout, so it is only the
+    fallback. Returns (names, source_label)."""
+    for cand in (os.environ.get("CLAUDE_CONFIG_DIR"), str(Path.home())):
+        if not cand:
+            continue
+        f = Path(cand) / ".claude.json"
+        if not f.is_file():
+            continue
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        names = set((d.get("mcpServers") or {}).keys())
+        for pv in (d.get("projects") or {}).values():
+            names |= set(((pv or {}).get("mcpServers") or {}).keys())
+        if names:
+            return names, f.name  # ".claude.json"
+    ok, txt = _claude_list(["mcp", "list"])  # fallback (slow: health-checks each server)
+    if ok and txt:
+        return ({ln.split(":", 1)[0].strip() for ln in txt.splitlines() if ":" in ln},
+                "claude mcp list")
+    return set(), ("claude mcp list" if ok else "")
 
 
-def _section(title, rows) -> int:
-    print(f"\n{title}")
-    issues = 0
-    for mark, name, detail in rows:
-        print(f"  {mark} {name:22s} {detail}".rstrip())
-        if mark == MISS:
-            issues += 1
-    return issues
+def _row(rows, mark, name, detail="", fix=""):
+    rows.append({"mark": mark, "name": name, "detail": detail, "fix": fix})
 
 
-def check(env, *, os_name: str) -> int:
+def collect(env, target: Path | None = None) -> tuple[list, int]:
+    """Return (sections, hard_gap_count). sections = [{title, subtitle, rows:[...]}]."""
     man = _manifest()
-    total_issues = 0
+    os_name = env.os_name
+    root = Path(target) if target else _ROOT
+    sections: list[dict] = []
 
     # --- prerequisites ---
     rows = []
@@ -79,114 +103,103 @@ def check(env, *, os_name: str) -> int:
             _row(rows, OK, p["id"], _ver(w))
         else:
             hint = p.get(f"install_{os_name}") or p.get("install_posix") or ""
-            _row(rows, MISS if p.get("required") else WARN, p["id"], f"-> {hint}")
-    total_issues += _section("PREREQUISITES (you install these)", rows)
+            _row(rows, MISS if p.get("required") else WARN, p["id"], "not found", hint)
+    sections.append({"title": "Prerequisites", "subtitle": "you install these", "rows": rows})
 
-    # --- privileges: ~/.claude is user-owned; the ONLY possible sudo trap is npm -g ---
+    # --- privileges (no root/sudo needed anywhere except a system-npm -g) ---
     rows = []
     home = str(Path.home())
-    cdir = str(_ROOT)
-    _row(rows, OK if cdir.startswith(home) else WARN, "~/.claude",
-         f"{cdir} (user home — no root/sudo/admin)")
+    cdir = str(root)
+    _row(rows, OK if cdir.startswith(home) else WARN, ".claude location",
+         f"{cdir}  (user home — no root/sudo/admin)")
     if shutil.which("npm"):
         cp = plat.run(["npm", "root", "-g"], timeout=15)
         gdir = (cp.stdout or "").strip()
         probe = gdir if os.path.isdir(gdir) else os.path.dirname(gdir or "/")
         if probe and os.access(probe, os.W_OK):
-            _row(rows, OK, "npm -g prefix", f"{gdir} (user-writable — no sudo)")
+            _row(rows, OK, "npm -g prefix", f"{gdir}  (user-writable — no sudo)")
         else:
-            _row(rows, WARN, "npm -g prefix",
-                 f"{gdir} NOT user-writable -> `npm install -g` (lean-ctx/tdd-guard) needs sudo. "
-                 "Avoid it: install Node via nvm, OR `npm config set prefix ~/.npm-global` + add ~/.npm-global/bin to PATH")
-    _section("PRIVILEGES (no root/sudo needed anywhere except a system-npm -g)", rows)
+            _row(rows, WARN, "npm -g prefix", f"{gdir}  (system-owned)",
+                 "install Node via nvm, OR: npm config set prefix ~/.npm-global  (+ add ~/.npm-global/bin to PATH)")
+    sections.append({"title": "Privileges", "subtitle": "no root/sudo/admin", "rows": rows})
 
     # --- dependency binaries ---
     rows = []
     for d in man.get("deps", []):
         w = d.get("which")
-        if not w:  # import-only dep (pyyaml) — check import
+        if not w:  # import-only (pyyaml)
             imp = d.get("import")
-            ok = imp and plat.run([env.python.split()[0], "-c", f"import {imp}"], timeout=20).returncode == 0
-            _row(rows, OK if ok else (WARN if d.get("optional") else MISS), d["id"], "" if ok else "(python lib)")
+            ok = bool(imp) and plat.run([env.python.split()[0], "-c", f"import {imp}"], timeout=20).returncode == 0
+            _row(rows, OK if ok else (WARN if d.get("optional") else MISS), d["id"], "python lib")
             continue
         if shutil.which(w):
-            _row(rows, OK, d["id"])
+            _row(rows, OK, d["id"], _ver(w))
         else:
             hint = d.get(f"install_{os_name}") or d.get("install") or ""
             hint = " ".join(hint) if isinstance(hint, list) else str(hint)
-            _row(rows, WARN if d.get("optional") else MISS, d["id"], f"-> {hint}")
-    total_issues += _section("DEPENDENCY BINARIES", rows)
+            _row(rows, WARN if d.get("optional") else MISS, d["id"], "not found", hint)
+    sections.append({"title": "Dependency binaries", "subtitle": "installer auto-installs these", "rows": rows})
 
     # --- MCP servers ---
     rows = []
-    claude_ok, mcp_txt = _claude_list(["mcp", "list"])
-    if not claude_ok:
-        _row(rows, MISS, "claude CLI", "-> install @anthropic-ai/claude-code (can't check MCP roster)")
+    reg, src = _registered_mcps()
+    if not reg and not shutil.which("claude"):
+        _row(rows, MISS, "claude CLI", "not found",
+             "npm install -g @anthropic-ai/claude-code  (needed to register MCP servers)")
     else:
         for s in man.get("mcp_servers", []):
             nm = s["name"]
-            if nm in mcp_txt:
-                _row(rows, OK, nm)
+            if nm in reg:
+                _row(rows, OK, nm, "registered")
             else:
-                add = " ".join(str(x) for x in s["add"])
-                _row(rows, MISS, nm, f"-> {add}")
+                _row(rows, MISS, nm, "not registered", " ".join(str(x) for x in s["add"]))
     for c in man.get("connectors", []):
-        _row(rows, CONN, c["id"], "(claude.ai Connectors UI — not CLI)")
-    total_issues += _section("MCP SERVERS (claude mcp list)", rows)
+        _row(rows, CONN, c["id"], "claude.ai Connectors UI (not CLI)")
+    sections.append({"title": "MCP servers", "subtitle": f"registered · {src or 'claude mcp list'}", "rows": rows})
 
     # --- plugins ---
     rows = []
     claude_ok, pl_txt = _claude_list(["plugin", "list"])
     if claude_ok:
         for pl in man.get("plugins", {}).get("install", []):
-            if pl["id"] in pl_txt:
-                _row(rows, OK, pl["id"])
-            else:
-                _row(rows, WARN, pl["id"], f"-> {' '.join(pl['add'])}")
+            _row(rows, OK if pl["id"] in pl_txt else WARN, pl["id"],
+                 "installed" if pl["id"] in pl_txt else "not installed",
+                 "" if pl["id"] in pl_txt else " ".join(pl["add"]))
         for m in man.get("plugins", {}).get("manual", []):
-            _row(rows, WARN, m["id"], "-> manual (see manifest note)")
+            _row(rows, WARN, m["id"], "manual", m.get("note", "")[:80])
     else:
         _row(rows, WARN, "plugins", "claude CLI absent — cannot check")
-    _section("PLUGINS (claude plugin list)", rows)  # plugins are advisory, not counted as hard issues
+    sections.append({"title": "Plugins", "subtitle": "claude plugin list", "rows": rows})
 
     # --- workflow wiring ---
     rows = []
-    settings = _ROOT / "settings.json"
     try:
-        sj = json.loads(settings.read_text(encoding="utf-8")).get("hooks", {})
+        sj = json.loads((root / "settings.json").read_text(encoding="utf-8")).get("hooks", {})
     except Exception:
         sj = {}
     def _cmds(ev):
         return " ".join(h.get("command", "") for g in sj.get(ev, []) for h in g.get("hooks", []))
-    ups = _cmds("UserPromptSubmit")
-    if "prompt_router/router.py" in ups:
-        _row(rows, OK, "router LIVE", "UserPromptSubmit -> prompt_router/router.py")
-    else:
-        _row(rows, MISS, "router", "-> settings.json UserPromptSubmit must call prompt_router/router.py")
-    n_dispatch = sum(1 for ev in ("SessionStart", "PreToolUse", "PostToolUse", "Stop",
-                                  "SubagentStop", "PreCompact", "SessionEnd") if "dispatch.py" in _cmds(ev))
-    _row(rows, OK if n_dispatch >= 7 else MISS, "dispatch chains", f"{n_dispatch}/7 events -> dispatch.py")
-    _row(rows, OK if (_ROOT / "hooks/prompt_router/router.py").is_file() else MISS,
+    _row(rows, OK if "prompt_router/router.py" in _cmds("UserPromptSubmit") else MISS, "router LIVE",
+         "UserPromptSubmit -> prompt_router/router.py",
+         "" if "prompt_router/router.py" in _cmds("UserPromptSubmit") else "python install.py install  (re-renders settings.json)")
+    n_disp = sum(1 for ev in ("SessionStart", "PreToolUse", "PostToolUse", "Stop",
+                              "SubagentStop", "PreCompact", "SessionEnd") if "dispatch.py" in _cmds(ev))
+    _row(rows, OK if n_disp >= 7 else MISS, "dispatch chains", f"{n_disp}/7 events -> dispatch.py")
+    _row(rows, OK if (root / "hooks/prompt_router/router.py").is_file() else MISS,
          "router file", "hooks/prompt_router/router.py")
-    total_issues += _section("WORKFLOW WIRING", rows)
+    sections.append({"title": "Workflow wiring", "subtitle": "router live + dispatch", "rows": rows})
 
     # --- palette ---
     rows = []
     pal = man.get("palette", {})
-    n_sk = len(list((_ROOT / "skills").glob("*/SKILL.md"))) if (_ROOT / "skills").is_dir() else 0
-    n_cmd = len(list((_ROOT / "commands").glob("*.md"))) if (_ROOT / "commands").is_dir() else 0
+    n_sk = len(list((root / "skills").glob("*/SKILL.md"))) if (root / "skills").is_dir() else 0
+    n_cmd = len(list((root / "commands").glob("*.md"))) if (root / "commands").is_dir() else 0
     _row(rows, OK if n_sk >= pal.get("skill_bodies", 0) else WARN, "skills", f"{n_sk} SKILL.md (want >= {pal.get('skill_bodies')})")
     _row(rows, OK if n_cmd == pal.get("command_files") else WARN, "commands", f"{n_cmd} files (want {pal.get('command_files')})")
-    _section("PALETTE", rows)
+    sections.append({"title": "Palette", "subtitle": "skills + commands", "rows": rows})
 
-    print("\n" + "-" * 60)
-    if total_issues == 0:
-        print("SUMMARY: WORKFLOW ACTIVE — all required checks green. "
-              "[WARN]=optional, [conn]=claude.ai UI.")
-    else:
-        print(f"SUMMARY: {total_issues} required gap(s) [MISS] above — run the fix command on each, "
-              "then re-run `python install.py verify`. (Or `python install.py install` to auto-install.)")
-    return 1 if total_issues else 0
+    hard = sum(1 for s in sections for r in s["rows"] if r["mark"] == MISS)
+    return sections, hard
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -195,7 +208,22 @@ def main(argv: list[str] | None = None) -> int:
     print("=" * 60)
     print(f" ~/.claude WORKFLOW STATUS   os={env.os_name}  python={env.python}")
     print("=" * 60)
-    return check(env, os_name=env.os_name)
+    sections, hard = collect(env)
+    for s in sections:
+        sub = f"  ({s['subtitle']})" if s.get("subtitle") else ""
+        print(f"\n{s['title'].upper()}{sub}")
+        for r in s["rows"]:
+            tail = r["detail"] or ""
+            if r["mark"] in (MISS, WARN) and r["fix"]:
+                tail = (tail + "  -> " + r["fix"]).strip(" ->")
+            print(f"  {_MARK[r['mark']]} {r['name']:20s} {tail}".rstrip())
+    print("\n" + "-" * 60)
+    if hard == 0:
+        print("SUMMARY: WORKFLOW ACTIVE — all required checks green. [WARN]=optional, [conn]=claude.ai UI.")
+    else:
+        print(f"SUMMARY: {hard} required gap(s) [MISS] above — run the fix command on each, then re-run. "
+              "(Or `python install.py install` to auto-install, or `python install.py ui` for the visual installer.)")
+    return 1 if hard else 0
 
 
 if __name__ == "__main__":

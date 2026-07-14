@@ -67,5 +67,6 @@ try {
 
 Write-Host ""
 Say "done."
+Note "VISUAL installer (pick folder, live status, step-by-step):  $PyExe $($PyArgs0 -join ' ') install.py ui"
 Note "check status any time:  $PyExe $($PyArgs0 -join ' ') check.py   (or: install.py verify)"
 Note "claude.ai connectors (higgsfield, penpot) are added in the claude.ai Connectors UI, not the CLI."

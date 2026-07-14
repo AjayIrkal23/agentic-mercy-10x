@@ -11,6 +11,8 @@ Stdlib-only bootstrap (Python >= 3.10). One command, OS auto-detected, idempoten
   python install.py doctor        health + trigger-surface verifier only
   python install.py verify        WORKFLOW TESTER — prereqs/deps/MCP/plugins/wiring
                                   status with a fix command per gap (also: check.py)
+  python install.py ui            VISUAL installer — opens a local web UI to pick the
+                                  .claude folder, see live status, and install step-by-step
   Flags: --ci (skip networked ci_stub steps; CI has no network / no claude CLI)
          --dry-run (print planned actions, mutate nothing)
 
@@ -123,11 +125,14 @@ def main(argv: list[str]) -> int:
     if verb == "verify":
         import verify  # type: ignore
         return verify.main([])
+    if verb == "ui":
+        import ui  # type: ignore
+        return ui.main([])
     if verb == "update":
         return do_update(ci=ci, dry_run=dry_run)
     if verb == "install":
         return do_install(ci=ci, dry_run=dry_run)
-    print(f"unknown verb {verb!r}; use install | update | doctor | verify")
+    print(f"unknown verb {verb!r}; use install | update | doctor | verify | ui")
     return 2
 
 

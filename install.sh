@@ -140,6 +140,7 @@ else
   warn "python3 or install.py missing — run '$TARGET/install.py install' by hand (needs Python >= 3.10)"
 fi
 note "check status any time: ${c_bold}python3 check.py${c_off}  (or: python3 install.py verify)"
+note "prefer a UI? ${c_bold}python3 install.py ui${c_off}  — visual installer: pick the folder, watch each step live"
 
 # --- STEP 3: post-install notes (things the repo deliberately excludes) ----
 say "${c_bold}post-install — finish these yourself${c_off}"

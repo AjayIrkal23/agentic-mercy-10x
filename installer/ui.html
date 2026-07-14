@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Workbench Installer · agentic-mercy</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%2334e0c4'/><path d='M16 7l9 9-9 9-9-9z' fill='%2308131a'/></svg>">
+<style>
+  :root{
+    --bg:#0a0e15; --bg2:#0d121b; --panel:#111825; --panel2:#0f1520; --hair:#1e2836;
+    --ink:#e7eef7; --muted:#8695ab; --faint:#5b6b82;
+    --accent:#34e0c4; --accent2:#5aa0ff; --accent-dim:#12312d;
+    --ok:#46d488; --warn:#e6b24d; --fail:#f0616b; --conn:#b58cf6; --run:#5aa0ff;
+    --mono:ui-monospace,"JetBrains Mono","SFMono-Regular",Menlo,Consolas,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:
+      radial-gradient(900px 500px at 85% -10%, #12313033 0%, transparent 60%),
+      radial-gradient(700px 500px at -10% 10%, #1a355e2e 0%, transparent 55%),
+      var(--bg);
+    color:var(--ink); font-family:var(--sans); line-height:1.5;
+    -webkit-font-smoothing:antialiased; overflow-x:hidden;
+  }
+  body::before{ /* faint dot grid */
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:.5;
+    background-image:radial-gradient(#ffffff0a 1px, transparent 1px);
+    background-size:22px 22px; mask-image:linear-gradient(#000, #0006 60%, transparent);
+  }
+  .wrap{max-width:940px; margin:0 auto; padding:30px 20px 70px}
+  a{color:var(--accent)}
+  code,.mono{font-family:var(--mono)}
+  .reveal{opacity:0; transform:translateY(10px); animation:rise .55s cubic-bezier(.2,.7,.2,1) forwards}
+  @keyframes rise{to{opacity:1; transform:none}}
+  @media (prefers-reduced-motion:reduce){.reveal{animation:none;opacity:1;transform:none}}
+
+  /* header */
+  header{display:flex; align-items:center; gap:16px; margin-bottom:8px}
+  .logo{width:46px;height:46px;border-radius:12px;flex:0 0 auto;position:relative;
+    background:linear-gradient(140deg,var(--accent),var(--accent2));
+    box-shadow:0 0 0 1px #ffffff14, 0 10px 30px -12px var(--accent)}
+  .logo::after{content:"◈";position:absolute;inset:0;display:grid;place-items:center;color:#08131a;font-size:22px;font-weight:900}
+  h1{font-size:clamp(20px,3.4vw,27px);margin:0;letter-spacing:-.01em;font-weight:680}
+  .sub{color:var(--muted);font-size:13.5px;margin-top:2px}
+  .livedot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 0 0 var(--accent);animation:p 2.2s infinite;vertical-align:middle;margin-right:6px}
+  @keyframes p{0%{box-shadow:0 0 0 0 #34e0c455}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+
+  /* env chips */
+  .env{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0 24px}
+  .chip{font-family:var(--mono);font-size:11.5px;padding:5px 10px;border-radius:8px;border:1px solid var(--hair);
+    background:var(--panel2);color:var(--muted);display:flex;align-items:center;gap:7px}
+  .chip .d{width:7px;height:7px;border-radius:50%}
+  .d.on{background:var(--ok)} .d.off{background:var(--fail)}
+
+  .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--hair);
+    border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 20px 50px -30px #000}
+  .card h2{font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);
+    margin:0 0 4px;font-family:var(--mono)}
+  .card .hint{color:var(--muted);font-size:13px;margin:0 0 16px}
+
+  /* target selector */
+  .picker{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+  .picker input,.picker select{flex:1 1 340px;min-width:0;font-family:var(--mono);font-size:13px;
+    background:var(--bg2);border:1px solid var(--hair);color:var(--ink);border-radius:10px;padding:11px 13px}
+  .picker input:focus,.picker select:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px #34e0c422}
+  button{font-family:var(--sans);font-size:13.5px;font-weight:600;border-radius:10px;cursor:pointer;
+    border:1px solid var(--hair);background:var(--panel);color:var(--ink);padding:11px 16px;transition:.15s}
+  button:hover{border-color:var(--accent);color:#fff}
+  button.primary{background:linear-gradient(140deg,var(--accent),var(--accent2));color:#06121a;border:0;font-weight:700}
+  button.primary:hover{filter:brightness(1.08)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  .autobadge{font-family:var(--mono);font-size:11px;color:var(--accent);background:var(--accent-dim);
+    border:1px solid #2a5a52;border-radius:999px;padding:3px 9px;margin-left:8px}
+
+  /* status sections grid */
+  .grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}}
+  .sec{background:var(--panel);border:1px solid var(--hair);border-radius:14px;padding:16px 16px 8px;position:relative;overflow:hidden}
+  .sec::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--faint)}
+  .sec.allok::before{background:var(--ok)} .sec.hasmiss::before{background:var(--fail)} .sec.haswarn::before{background:var(--warn)}
+  .sec h3{margin:0 0 2px;font-size:14px;font-weight:640}
+  .sec .st{color:var(--faint);font-size:11px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px}
+  .rowi{display:grid;grid-template-columns:16px 1fr auto;gap:9px;align-items:baseline;padding:5px 0;border-top:1px dashed var(--hair)}
+  .rowi:first-of-type{border-top:0}
+  .mk{font-size:12px;line-height:1.2;transform:translateY(1px)}
+  .mk.ok{color:var(--ok)} .mk.miss{color:var(--fail)} .mk.warn{color:var(--warn)} .mk.conn{color:var(--conn)}
+  .rn{font-weight:600;font-size:13px} .rd{color:var(--muted);font-size:11.5px;font-family:var(--mono);word-break:break-word}
+  .pill{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 7px;border-radius:999px;white-space:nowrap;align-self:center}
+  .pill.ok{color:var(--ok);background:#0f2a1c;border:1px solid #1f5a3a}
+  .pill.miss{color:var(--fail);background:#2c1417;border:1px solid #5e2b30}
+  .pill.warn{color:var(--warn);background:#2a2211;border:1px solid #5b4a22}
+  .pill.conn{color:var(--conn);background:#20173a;border:1px solid #43356e}
+  .fix{grid-column:2/-1;font-family:var(--mono);font-size:11px;color:var(--accent2);background:var(--bg2);
+    border:1px solid var(--hair);border-radius:7px;padding:6px 9px;margin:4px 0 2px;overflow-x:auto;white-space:pre}
+
+  /* action + progress */
+  .action{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .bar{flex:1 1 240px;height:10px;border-radius:999px;background:var(--bg2);border:1px solid var(--hair);overflow:hidden;position:relative}
+  .bar>i{display:block;height:100%;width:0;border-radius:999px;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .4s}
+  .bar.run>i{background-size:200% 100%;animation:sweep 1.2s linear infinite}
+  @keyframes sweep{to{background-position:200% 0}}
+  .pmsg{font-family:var(--mono);font-size:12px;color:var(--muted)}
+
+  /* live log */
+  #log{margin-top:14px;max-height:300px;overflow:auto;border:1px solid var(--hair);border-radius:12px;background:#080b11}
+  #log:empty{display:none}
+  .logrow{display:grid;grid-template-columns:18px 90px 1fr auto;gap:10px;align-items:baseline;
+    padding:7px 14px;border-top:1px solid #121a26;font-family:var(--mono);font-size:12px;animation:rise .3s}
+  .logrow:first-child{border-top:0}
+  .lk{color:var(--faint);text-transform:uppercase;font-size:10px;letter-spacing:.08em}
+  .ln{color:var(--ink)} .ld{color:var(--muted);font-size:11px;text-align:right;white-space:nowrap}
+  .spin{width:11px;height:11px;border-radius:50%;border:2px solid #ffffff22;border-top-color:var(--run);
+    display:inline-block;animation:sp .7s linear infinite}
+  @keyframes sp{to{transform:rotate(1turn)}}
+
+  /* done banner */
+  #done{display:none;margin-top:16px;border-radius:16px;padding:22px;text-align:center;
+    border:1px solid #1f5a3a;background:linear-gradient(180deg,#0f2a1c,#0c1a14)}
+  #done.show{display:block;animation:rise .5s}
+  #done.fail{border-color:#5e2b30;background:linear-gradient(180deg,#2c1417,#160c0e)}
+  #done h2{color:var(--ok);font-size:20px;margin:0 0 6px;letter-spacing:.02em}
+  #done.fail h2{color:var(--fail)}
+  #done p{color:var(--muted);margin:0;font-size:13.5px}
+
+  footer{color:var(--faint);font-family:var(--mono);font-size:11px;margin-top:26px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .muted{color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="reveal">
+    <div class="logo"></div>
+    <div>
+      <h1>Workbench Installer</h1>
+      <div class="sub"><span class="livedot"></span>agentic-mercy · the ~/.claude workflow · Ubuntu &amp; Windows · no root needed</div>
+    </div>
+  </header>
+
+  <div class="env" id="env"></div>
+
+  <!-- 1. install location -->
+  <div class="card reveal" style="animation-delay:.05s">
+    <h2>1 · Install location</h2>
+    <p class="hint">Auto-detected your global <code>.claude</code> folder. Pick a different one if you keep Claude elsewhere, then Continue.</p>
+    <div class="picker">
+      <select id="cands" title="detected .claude folders"></select>
+      <input id="path" spellcheck="false" placeholder="/home/you/.claude">
+      <button id="browse" title="native folder picker">📁 Browse</button>
+      <button id="cont" class="primary">Continue →</button>
+    </div>
+    <div id="pathmsg" class="hint" style="margin:10px 0 0"></div>
+  </div>
+
+  <!-- 2. preflight -->
+  <div class="card reveal" style="animation-delay:.1s">
+    <h2>2 · Preflight — is everything valid?</h2>
+    <p class="hint">Live status of every part of your workflow. <span class="muted" id="recheckhint"></span>
+      <button id="recheck" style="padding:6px 12px;font-size:12px;margin-left:6px">↻ Re-check</button></p>
+    <div class="grid" id="sections"></div>
+  </div>
+
+  <!-- 3. install -->
+  <div class="card reveal" style="animation-delay:.15s">
+    <h2>3 · Install everything</h2>
+    <p class="hint">Installs deps → registers all MCP servers → plugins → post-steps, into the selected folder. Idempotent — anything already present is skipped. <span class="muted">settings.json is never overwritten if it exists.</span></p>
+    <div class="action">
+      <button id="install" class="primary">▶ Install / repair</button>
+      <div class="bar" id="bar"><i></i></div>
+      <div class="pmsg" id="pmsg">idle</div>
+    </div>
+    <div id="log"></div>
+    <div id="done"><h2>◈ WORKFLOW ACTIVE</h2><p id="donemsg"></p></div>
+  </div>
+
+  <footer>
+    <span>agentic-mercy · visual installer</span>
+    <span id="foot">stdlib · localhost · offline</span>
+  </footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const api = (u, o) => fetch(u, o).then(r => r.json());
+const PILL = {ok:"OK", miss:"MISSING", warn:"WARN", conn:"UI"};
+const MK   = {ok:"●", miss:"✕", warn:"▲", conn:"◇"};
+let polling = null;
+
+function chip(name, on){ return `<div class="chip"><span class="d ${on?'on':'off'}"></span>${name}</div>`; }
+
+async function loadStatus(){
+  let s;
+  try { s = await api("/api/status"); } catch(e){ $("#recheckhint").textContent="server not reachable"; return; }
+  if (s.error){ $("#recheckhint").textContent = s.error; return; }
+  // env chips
+  const e = s.env;
+  $("#env").innerHTML =
+    chip("os "+e.os,true)+chip("python "+(e.python||""),true)+chip("node",e.node&&e.node!=="node"?true:!!e.node)
+    +chip("git",e.git)+chip("claude",e.claude)+chip("uv",e.uv)+chip("npm",e.npm);
+  // path selector
+  const sel = $("#cands");
+  sel.innerHTML = (s.candidates||[]).map(p=>`<option ${p===s.target?"selected":""}>${p}</option>`).join("")
+                  || `<option>${s.target}</option>`;
+  if (document.activeElement !== $("#path")) $("#path").value = s.target;
+  // sections
+  $("#sections").innerHTML = (s.sections||[]).map(renderSection).join("");
+  $("#recheckhint").textContent = s.hard===0 ? "all required checks green ✓" : (s.hard+" required gap(s) — see red items");
+  return s;
+}
+
+function renderSection(sec){
+  const marks = sec.rows.map(r=>r.mark);
+  const cls = marks.includes("miss") ? "hasmiss" : (marks.includes("warn") ? "haswarn" : "allok");
+  const rows = sec.rows.map(r=>{
+    const fix = (r.fix && (r.mark==="miss"||r.mark==="warn")) ? `<div class="fix">${esc(r.fix)}</div>` : "";
+    return `<div class="rowi"><span class="mk ${r.mark}">${MK[r.mark]}</span>
+      <span><span class="rn">${esc(r.name)}</span> ${r.detail?`<span class="rd">${esc(r.detail)}</span>`:""}</span>
+      <span class="pill ${r.mark}">${PILL[r.mark]}</span>${fix}</div>`;
+  }).join("");
+  return `<div class="sec ${cls}"><h3>${esc(sec.title)}</h3><div class="st">${esc(sec.subtitle||"")}</div>${rows}</div>`;
+}
+function esc(t){ return String(t).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+
+// --- location selector ---
+$("#cands").addEventListener("change", e => { $("#path").value = e.target.value; });
+$("#browse").addEventListener("click", async () => {
+  $("#pathmsg").textContent = "opening native picker…";
+  const r = await api("/api/browse");
+  if (r.path){ $("#path").value = r.path; $("#pathmsg").textContent = "selected: "+r.path; }
+  else { $("#pathmsg").textContent = r.error || "cancelled"; }
+});
+$("#cont").addEventListener("click", async () => {
+  const path = $("#path").value.trim();
+  const r = await api("/api/target", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({path})});
+  $("#pathmsg").textContent = r.ok ? ("target set → "+r.target+"  · re-running preflight…") : ("✕ "+(r.error||"invalid"));
+  if (r.ok) await loadStatus();
+});
+$("#recheck").addEventListener("click", loadStatus);
+
+// --- install ---
+$("#install").addEventListener("click", async () => {
+  $("#install").disabled = true; $("#done").className=""; $("#log").innerHTML="";
+  $("#bar").classList.add("run"); $("#bar").querySelector("i").style.width="8%";
+  $("#pmsg").textContent = "starting…";
+  await api("/api/install", {method:"POST"});
+  if (polling) clearInterval(polling);
+  polling = setInterval(pollProgress, 600);
+});
+
+async function pollProgress(){
+  let j; try{ j = await api("/api/progress"); }catch(e){ return; }
+  const steps = j.steps||[];
+  $("#log").innerHTML = steps.map(logrow).join("") + (j.running?spinRow():"");
+  $("#log").scrollTop = $("#log").scrollHeight;
+  const done = steps.filter(s=>s.status!=="run").length;
+  $("#bar").querySelector("i").style.width = (j.done?100:Math.min(95, 10+done*4))+"%";
+  $("#pmsg").textContent = j.running ? (steps.length+" steps · installing…") : (j.done?"done":"…");
+  if (j.done){
+    clearInterval(polling); polling=null;
+    $("#bar").classList.remove("run");
+    $("#install").disabled=false;
+    const s = await loadStatus();
+    const dn = $("#done"); const bad = (s && s.hard>0) || j.ok===false;
+    dn.className = "show" + (bad?" fail":"");
+    dn.querySelector("h2").textContent = bad ? "◈ FINISHED WITH GAPS" : "◈ WORKFLOW ACTIVE";
+    $("#donemsg").textContent = bad
+      ? "Some items still need attention (see the red rows above). Fix them and click Install again."
+      : "Everything is installed and wired. You're ready — start a new Claude Code session in any repo.";
+  }
+}
+function logrow(s){
+  const mk = s.status==="ok"?`<span class="mk ok">✓</span>`:s.status==="warn"?`<span class="mk warn">▲</span>`:`<span class="mk miss">✕</span>`;
+  return `<div class="logrow">${mk}<span class="lk">${esc(s.kind)}</span><span class="ln">${esc(s.name)}</span><span class="ld">${esc(s.detail).slice(0,52)}</span></div>`;
+}
+function spinRow(){ return `<div class="logrow"><span class="spin"></span><span class="lk">…</span><span class="ln muted">working…</span><span class="ld"></span></div>`; }
+
+loadStatus();
+</script>
+</body>
+</html>

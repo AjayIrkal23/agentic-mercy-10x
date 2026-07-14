@@ -58,6 +58,18 @@ powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\.claude\install.ps1
 #   (or:)  py -3 $env:USERPROFILE\.claude\install.py install
 ```
 
+## Prefer a visual installer?
+
+```bash
+python install.py ui            # or:  python install-ui.py   (Windows: py -3 install-ui.py)
+```
+Opens a local web page (127.0.0.1, stdlib only — no Node/Electron) that **auto-detects
+your global `.claude`**, lets you **Browse** to a different folder and Continue, shows a
+**live preflight** (prerequisites · privileges · deps · MCP servers · plugins · wiring),
+then installs **everything step-by-step** with each step turning green/amber/red as it
+runs — ending in a **WORKFLOW ACTIVE** banner. Same engine as the CLI; nothing extra to
+install; identical on Ubuntu and Windows.
+
 ## Then verify (any time)
 
 ```bash
