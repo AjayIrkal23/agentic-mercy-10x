@@ -216,6 +216,12 @@
       "args": [],
       "command": "jdocmunch-mcp"
     },
+    "lean-ctx": {
+      "args": [
+        "mcp"
+      ],
+      "command": "lean-ctx"
+    },
     "markdownify": {
       "args": [
         "-y",

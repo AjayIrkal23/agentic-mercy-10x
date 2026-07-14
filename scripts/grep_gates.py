@@ -96,6 +96,23 @@ def _scan_files() -> list[Path]:
     return out
 
 
+def _git_ignored(paths: list[Path]) -> set[Path]:
+    """Resolved paths that git ignores (generated/runtime artifacts). One batched
+    ``git check-ignore``; fail-open to empty so the gate still runs without git."""
+    if not paths:
+        return set()
+    try:
+        import subprocess
+        rel = "\n".join(str(p.relative_to(ROOT)) for p in paths)
+        cp = subprocess.run(
+            ["git", "-C", str(ROOT), "check-ignore", "--stdin"],
+            input=rel, capture_output=True, text=True, timeout=15,
+        )
+        return {(ROOT / ln.strip()).resolve() for ln in cp.stdout.splitlines() if ln.strip()}
+    except Exception:
+        return set()
+
+
 def run_gates() -> tuple[list[str], list[str]]:
     """Return (failures, passes) as human-readable lines."""
     failures: list[str] = []
@@ -136,13 +153,17 @@ def run_gates() -> tuple[list[str], list[str]]:
     else:
         passes.append("G2/G3 no machine-absolute home/drive literals")
 
-    # G4: no new .sh under hooks/
-    stray = []
-    for p in HOOKS.rglob("*.sh"):
-        if any(part in _EXCLUDE_DIR_PARTS for part in p.parts):
-            continue
-        if p.name not in _LEGACY_SH_GRANDFATHER:
-            stray.append(str(p.relative_to(ROOT)))
+    # G4: no new .sh under hooks/. Only COMMITTABLE .sh count — gitignored,
+    # binary-generated runtime shims (e.g. the lean-ctx hook wrappers, which the
+    # lean-ctx MCP regenerates every session and are never committed) are exempt,
+    # so they never appear in a fresh checkout / CI and are not a regression.
+    stray_paths = [
+        p for p in HOOKS.rglob("*.sh")
+        if not any(part in _EXCLUDE_DIR_PARTS for part in p.parts)
+        and p.name not in _LEGACY_SH_GRANDFATHER
+    ]
+    ignored = _git_ignored(stray_paths)
+    stray = [str(p.relative_to(ROOT)) for p in stray_paths if p.resolve() not in ignored]
     if stray:
         failures.append("G4 new .sh under hooks/ (not in grandfather set):\n    " + "\n    ".join(stray))
     else:
