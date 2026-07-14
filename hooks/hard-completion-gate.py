@@ -284,8 +284,9 @@ def gate4_santa(cid: str, code_writes: int) -> tuple[bool, str, str]:
     detail = (
         f"{code_writes} code file(s) written. "
         "Santa Method adversarial review not dispatched. "
-        "Fix: dispatch a gsd-code-reviewer agent (Agent tool, subagent_type \"gsd-code-reviewer\") "
-        "to run the BREAKER + SIMPLIFIER passes on the diff before completing."
+        "Fix: run /santa-review (or dispatch the santa-reviewer agent — Agent tool, "
+        "subagent_type \"santa-reviewer\") to run the BREAKER + SIMPLIFIER + VERIFIER "
+        "passes on the diff and confirm real bugs before completing."
     )
     return False, "Gate 4 (santa)", detail
 

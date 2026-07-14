@@ -6,6 +6,7 @@ Agents live in `~/.claude/agents/`. GSD workflows spawn via `$HOME/.claude/agent
 
 | Intent | Agent | Paired skill |
 |--------|-------|--------------|
+| **Adversarial bug-hunt review (Santa Method)** | **`santa-reviewer`** (Opus) — BREAKER + SIMPLIFIER + VERIFIER; `/santa-review` | `santa-review` skill; satisfies Gate 4 (writes `.santa.json`) |
 | Pre-merge PR review | `code-reviewer` (Task) — Superpowers plugin: `plugins/.../superpowers/.../agents/code-reviewer.md` | Santa gate writes `.santa.json` |
 | GSD phase code review | `gsd-code-reviewer` | `gsd-code-review` skill |
 | Deep quality audit | `thermo-nuclear-code-quality-review` | Plugin rubric |

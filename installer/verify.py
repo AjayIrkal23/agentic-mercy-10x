@@ -88,6 +88,14 @@ def _row(rows, mark, name, detail="", fix=""):
     rows.append({"mark": mark, "name": name, "detail": detail, "fix": fix})
 
 
+def _present(root: Path, pat: str) -> bool:
+    """True if a path (glob or literal) exists under root — used to detect local
+    installs (e.g. GSD's engine dir + materialized gsd-* agents/skills)."""
+    if any(c in pat for c in "*?["):
+        return any(root.glob(pat))
+    return (root / pat).exists()
+
+
 def collect(env, target: Path | None = None) -> tuple[list, int]:
     """Return (sections, hard_gap_count). sections = [{title, subtitle, rows:[...]}]."""
     man = _manifest()
@@ -165,11 +173,24 @@ def collect(env, target: Path | None = None) -> tuple[list, int]:
             _row(rows, OK if pl["id"] in pl_txt else WARN, pl["id"],
                  "installed" if pl["id"] in pl_txt else "not installed",
                  "" if pl["id"] in pl_txt else " ".join(pl["add"]))
-        for m in man.get("plugins", {}).get("manual", []):
-            _row(rows, WARN, m["id"], "manual", m.get("note", "")[:80])
     else:
-        _row(rows, WARN, "plugins", "claude CLI absent — cannot check")
-    sections.append({"title": "Plugins", "subtitle": "claude plugin list", "rows": rows})
+        _row(rows, WARN, "marketplace plugins", "claude CLI absent — cannot check")
+    # "manual" installs are LOCAL (a directory + materialized agents/skills), not
+    # marketplace plugins — detect them on disk so a present one shows OK, not WARN.
+    for m in man.get("plugins", {}).get("manual", []):
+        found = any(_present(root, p) for p in m.get("detect_paths", []))
+        ver = ""
+        vf = m.get("version_file")
+        if found and vf and (root / vf).is_file():
+            try:
+                ver = "v" + (root / vf).read_text(encoding="utf-8").strip()
+            except Exception:
+                ver = ""
+        if found:
+            _row(rows, OK, m["id"], (ver + " installed (local)").strip())
+        else:
+            _row(rows, WARN, m["id"], "not installed", m.get("note", "")[:90])
+    sections.append({"title": "Plugins", "subtitle": "marketplace + local", "rows": rows})
 
     # --- workflow wiring ---
     rows = []

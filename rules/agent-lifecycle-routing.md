@@ -17,7 +17,7 @@ See also: [`plan-exec-unified-stack.md`](plan-exec-unified-stack.md), [`skill-li
 | **2–3 Code** | `fullstack-skills-reminder` (first Write + session manifest), `skill_router` (path-ranked + cross_cutting), `ui-ux-stack-orchestrator` (six-skill UI) | All **28 FE / 27 BE** slugs in `fullstack-skills-reminder.py`; manifest batches pending skills on later writes |
 | **4 Dead code** | `post-write-aggregator` → `desloppify-cleanup` @8 writes | `dead-code-and-change-audit` — **your changes only** for deletes |
 | **5 Lint/security** | `security-scan-gate`, Semgrep via Shell | `owasp-security`, `security-and-hardening`, `fix-lint-format` |
-| **6 Review** | `santa-method-writer` (Task code-reviewer), stop re-verify | `code-review-and-quality`, Superpowers review skills |
+| **6 Review** | `santa-reviewer` agent (Santa Method — `/santa-review`), `santa-method-writer` (flag), stop re-verify | `santa-review`, `code-review-and-quality`, Superpowers review skills |
 | **7 Docs** | `post-write-aggregator` → `doc-update-enforcer`, `blocking-doc-enforcer`, Gate 2 (repo-aware) | `update-docs`, `project-reference-linkage` |
 
 ## Frontend mandatory skills (28)

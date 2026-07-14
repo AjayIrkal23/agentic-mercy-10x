@@ -9,8 +9,8 @@ regression is caught at install/update time, not mid-session:
   interpreters         the settings TEMPLATE is fully tokenized (no bare
                        python3/usr-bin-node/bash/.sh) — the Windows-runnable bar
   render-equivalence   render(template) == live settings.json (byte-identical)
-  palette-skills       218 SKILL.md under skills/ (194 bodies + 24 aliases)
-  palette-commands     20 command files in commands/
+  palette-skills       219 SKILL.md under skills/ (195 bodies + 24 aliases)
+  palette-commands     21 command files in commands/
   command-resolution   all 139 historic /invoke names resolve (file or invoke_compat)
   aliases              24 alias skills, each resolving to an existing canonical
   R9/R10               validate_skills.py green (floor guard + upstream-intactness)
@@ -94,7 +94,7 @@ def _count_skill_mds() -> int:
 def _check_palette(rows):
     manifest = json.loads((_ROOT / "installer" / "manifest.json").read_text(encoding="utf-8"))
     want = manifest.get("palette", {})
-    want_sk = want.get("skill_names", 218)
+    want_sk = want.get("skill_names", 219)
     n_sk = _count_skill_mds()
     # The gstack clone (skills/gstack/, gitignored, upstream) contributes exactly
     # one depth-2 SKILL.md — the router. Before `gstack-upgrade`/the installer
@@ -108,7 +108,7 @@ def _check_palette(rows):
     else:
         _row(rows, "palette-skills", FAIL, f"{n_sk} SKILL.md (want {want_sk}, gstack={'yes' if gstack_present else 'no'})")
     cmds = list((_ROOT / "commands").glob("*.md"))
-    _row(rows, "palette-commands", PASS if len(cmds) == want.get("command_files", 20) else FAIL, f"{len(cmds)} command files (want {want.get('command_files')})")
+    _row(rows, "palette-commands", PASS if len(cmds) == want.get("command_files", 21) else FAIL, f"{len(cmds)} command files (want {want.get('command_files')})")
 
 
 def resolve_historic_commands(names, cmd_dir: Path, cmap: dict) -> list[str]:

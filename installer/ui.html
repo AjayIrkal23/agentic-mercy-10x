@@ -241,8 +241,14 @@ $("#cont").addEventListener("click", async () => {
 $("#recheck").addEventListener("click", loadStatus);
 
 // --- install ---
+// Lock the target selector while an install runs: the server writes a
+// process-global CLAUDE_CONFIG_DIR from the install thread, so changing the
+// target mid-install could register into the wrong .claude folder.
+const TARGET_CTRLS = ["#cands", "#path", "#browse", "#cont"];
+function lockTarget(on){ TARGET_CTRLS.forEach(s => { const e=$(s); if(e) e.disabled = on; }); }
+
 $("#install").addEventListener("click", async () => {
-  $("#install").disabled = true; $("#done").className=""; $("#log").innerHTML="";
+  $("#install").disabled = true; lockTarget(true); $("#done").className=""; $("#log").innerHTML="";
   $("#bar").classList.add("run"); $("#bar").querySelector("i").style.width="8%";
   $("#pmsg").textContent = "starting…";
   await api("/api/install", {method:"POST"});
@@ -261,7 +267,7 @@ async function pollProgress(){
   if (j.done){
     clearInterval(polling); polling=null;
     $("#bar").classList.remove("run");
-    $("#install").disabled=false;
+    $("#install").disabled=false; lockTarget(false);
     const s = await loadStatus();
     const dn = $("#done"); const bad = (s && s.hard>0) || j.ok===false;
     dn.className = "show" + (bad?" fail":"");

@@ -110,11 +110,14 @@ def run(
     timeout: float | None = None,
     env: Mapping[str, str] | None = None,
     text: bool = True,
+    stdin_devnull: bool = False,
 ) -> subprocess.CompletedProcess:
     """subprocess.run that never raises — returns a CompletedProcess.
 
     On timeout/OSError a synthetic CompletedProcess with returncode 124/127 is
-    returned so callers can stay fail-open.
+    returned so callers can stay fail-open. Pass ``stdin_devnull=True`` for a
+    possibly-interactive child (e.g. an ``npx`` installer) so it gets EOF instead
+    of blocking on a prompt — the timeout then bounds any residual wait.
     """
     try:
         return subprocess.run(  # noqa: S603 - trusted internal command lists
@@ -125,6 +128,7 @@ def run(
             capture_output=True,
             text=text,
             check=False,
+            stdin=subprocess.DEVNULL if stdin_devnull else None,
         )
     except subprocess.TimeoutExpired as exc:
         return subprocess.CompletedProcess(cmd, 124, exc.stdout or "", exc.stderr or "")

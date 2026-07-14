@@ -116,15 +116,14 @@ else
   note "skipped ast-grep-mcp"
 fi
 
-# get-shit-done (GSD) — the gsd-* command + agent system.
-# Canonical distribution is uncertain (npm 'get-shit-done-cc' / a GSD installer);
-# not auto-cloned to avoid fetching the wrong source. Install manually:
+# get-shit-done (GSD) — the gsd-* agent + skill system (its /gsd:* commands ship
+# AS skills). Auto-installed best-effort by install.py (STEP 2.5) via the exact
+# package `npx get-shit-done-cc` when absent; skipped when already present.
 if [ -d "$TARGET/get-shit-done" ]; then
-  ok "get-shit-done (GSD) already present"
+  ok "get-shit-done (GSD) already present — install.py will leave it untouched"
 else
-  warn "get-shit-done (GSD) not present — install it manually"
-  note "GSD ships the gsd-* skills/agents. Best-effort: 'npx get-shit-done-cc' or the"
-  note "GSD installer, then '/gsd-update'. Replace this with the exact command once known."
+  note "get-shit-done (GSD) not present — install.py (below) will auto-install it via 'npx -y get-shit-done-cc@latest'"
+  note "if that step WARNs (interactive/offline), run 'npx get-shit-done-cc@latest' yourself, then '/gsd-update'."
 fi
 
 # --- STEP 2.5: cross-platform workbench install (deps + MCP + plugins + settings) ----
@@ -153,9 +152,10 @@ cat <<'NOTES'
        Plugins: superpowers, ponytail, andrej-karpathy-skills, claude-mermaid
      Check what's active — or what a fresh box is still missing — any time:
        python3 check.py            # or: python3 install.py verify
-     GSD (get-shit-done) stays MANUAL (uncertain distribution) — install best-effort,
-     then run /gsd-update. claude.ai CONNECTORS (higgsfield, penpot) are added in the
-     claude.ai Connectors UI, not the CLI. Prereqs + all commands: PREREQUISITES.md.
+     GSD (get-shit-done) is AUTO-INSTALLED best-effort by install.py via
+     `npx -y get-shit-done-cc@latest` (skipped if already present); if that WARNs,
+     run it yourself then /gsd-update. claude.ai CONNECTORS (higgsfield, penpot) are
+     added in the claude.ai Connectors UI, not the CLI. Prereqs + all commands: PREREQUISITES.md.
 
   3) SECRETS  are never in this repo:
        .credentials.json, tokens, API keys, and ~/.claude.json stay on YOUR

@@ -15,6 +15,7 @@ STATE_DIR = Path(__file__).resolve().parent / ".state"
 
 SANTA_SUBAGENTS = frozenset(
     {
+        "santa-reviewer",   # the dedicated Santa Method agent (agents/santa-reviewer.md)
         "code-reviewer",
         "gsd-code-reviewer",
         "thermo-nuclear-code-quality-review",

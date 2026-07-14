@@ -70,7 +70,7 @@
       {"id": "claude-mermaid", "add": ["claude", "plugin", "install", "claude-mermaid@claude-mermaid"]}
     ],
     "manual": [
-      {"id": "get-shit-done", "note": "GSD (gsd-* commands/agents). Distribution uncertain — install manually (best-effort `npx get-shit-done-cc` or the GSD installer), then run /gsd-update."}
+      {"id": "get-shit-done", "detect_paths": ["get-shit-done/VERSION", "agents/gsd-*.md", "skills/gsd-*"], "version_file": "get-shit-done/VERSION", "install_cmd": ["npx", "-y", "get-shit-done-cc@latest"], "install_timeout": 600, "note": "GSD engine + gsd-* agents/skills (its /gsd:* command surface ships AS skills, so 0 files in commands/ is correct). Auto-installed best-effort via `npx get-shit-done-cc` when absent (skipped if already present); if it needs interaction, run `npx get-shit-done-cc@latest` yourself, then /gsd-update. Package name is the exact constant get-shit-done-cc (beware typosquats)."}
     ]
   },
 
@@ -96,10 +96,10 @@
   ],
 
   "palette": {
-    "skill_names": 218,
-    "skill_bodies": 194,
+    "skill_names": 219,
+    "skill_bodies": 195,
     "aliases": 24,
-    "command_files": 20,
+    "command_files": 21,
     "historic_command_names": 139
   },
 

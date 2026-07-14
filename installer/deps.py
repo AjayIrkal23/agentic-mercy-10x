@@ -166,50 +166,86 @@ def check_prereqs(env) -> list[tuple[str, str]]:
     return results
 
 
+def _present(root: Path, pat: str) -> bool:
+    """True if a path (glob or literal) exists under root — detects local installs
+    (e.g. GSD's engine dir + materialized gsd-* agents/skills) for idempotency."""
+    if any(c in pat for c in "*?["):
+        return any(root.glob(pat))
+    return (root / pat).exists()
+
+
 def install_plugins(env, *, ci: bool = False, dry_run: bool = False) -> list[tuple[str, str]]:
-    """Add plugin marketplaces then install the workbench plugins (idempotent via
-    `claude plugin ... list`). Fail-open: a bad name WARNs, never crashes."""
+    """Add plugin marketplaces + install the workbench plugins (via the claude
+    CLI), THEN install any local/manual packages that ship their own installer
+    (e.g. GSD via `npx get-shit-done-cc`). Idempotent: an already-present local
+    install is left untouched. Fail-open: a bad step WARNs, never crashes."""
     manifest = _load_manifest()
     plugins = manifest.get("plugins", {})
-    if not env.claude_cli:
-        return [("plugins", "SKIP(no-claude-cli)")]
-    if ci:
-        return [("plugins", "SKIP(ci-stub)")]
     results: list[tuple[str, str]] = []
     tokens = _exec_tokens(env)
+    target = Path(env.real_dir or str(plat.claude_dir()))
 
-    listed = ""
-    lm = plat.run(["claude", "plugin", "marketplace", "list"], timeout=30)
-    if lm.returncode == 0:
-        listed = lm.stdout or ""
-    for mk in plugins.get("marketplaces", []):
-        mid = mk["id"]
-        if mid in listed:
-            results.append((f"mkt:{mid}", "PRESENT"))
-            continue
-        if dry_run:
-            results.append((f"mkt:{mid}", f"WOULD-ADD: {' '.join(mk['add'][-1:])}"))
-            continue
-        cp = plat.run(_sub(mk["add"], tokens), timeout=90)
-        results.append((f"mkt:{mid}", "ADDED" if cp.returncode == 0 else f"WARN(rc={cp.returncode})"))
+    # --- marketplace + CLI-installed plugins (need the claude CLI) ---
+    if not env.claude_cli:
+        results.append(("marketplace-plugins", "SKIP(no-claude-cli)"))
+    elif ci:
+        results.append(("marketplace-plugins", "SKIP(ci-stub)"))
+    else:
+        listed = ""
+        lm = plat.run(["claude", "plugin", "marketplace", "list"], timeout=30)
+        if lm.returncode == 0:
+            listed = lm.stdout or ""
+        for mk in plugins.get("marketplaces", []):
+            mid = mk["id"]
+            if mid in listed:
+                results.append((f"mkt:{mid}", "PRESENT"))
+                continue
+            if dry_run:
+                results.append((f"mkt:{mid}", f"WOULD-ADD: {' '.join(mk['add'][-1:])}"))
+                continue
+            cp = plat.run(_sub(mk["add"], tokens), timeout=90)
+            results.append((f"mkt:{mid}", "ADDED" if cp.returncode == 0 else f"WARN(rc={cp.returncode})"))
 
-    plisted = ""
-    lp = plat.run(["claude", "plugin", "list"], timeout=30)
-    if lp.returncode == 0:
-        plisted = lp.stdout or ""
-    for pl in plugins.get("install", []):
-        pid = pl["id"]
-        if pid in plisted:
-            results.append((f"plugin:{pid}", "PRESENT"))
-            continue
-        if dry_run:
-            results.append((f"plugin:{pid}", f"WOULD-INSTALL: {pl['add'][-1]}"))
-            continue
-        cp = plat.run(_sub(pl["add"], tokens), timeout=180)
-        results.append((f"plugin:{pid}", "INSTALLED" if cp.returncode == 0 else f"WARN(rc={cp.returncode})"))
+        plisted = ""
+        lp = plat.run(["claude", "plugin", "list"], timeout=30)
+        if lp.returncode == 0:
+            plisted = lp.stdout or ""
+        for pl in plugins.get("install", []):
+            pid = pl["id"]
+            if pid in plisted:
+                results.append((f"plugin:{pid}", "PRESENT"))
+                continue
+            if dry_run:
+                results.append((f"plugin:{pid}", f"WOULD-INSTALL: {pl['add'][-1]}"))
+                continue
+            cp = plat.run(_sub(pl["add"], tokens), timeout=180)
+            results.append((f"plugin:{pid}", "INSTALLED" if cp.returncode == 0 else f"WARN(rc={cp.returncode})"))
 
+    # --- local/manual installs (own installer, e.g. GSD via npx) — need node, NOT the claude CLI ---
     for man in plugins.get("manual", []):
-        results.append((f"manual:{man['id']}", f"MANUAL -> {man.get('note','')[:70]}"))
+        mid = man["id"]
+        if any(_present(target, p) for p in man.get("detect_paths", [])):
+            results.append((f"local:{mid}", "PRESENT (already installed)"))
+            continue
+        cmd = man.get("install_cmd")
+        if not cmd:
+            results.append((f"manual:{mid}", f"MANUAL -> {man.get('note', '')[:70]}"))
+            continue
+        if ci:
+            results.append((f"local:{mid}", "SKIP(ci-stub)"))
+            continue
+        if not env.node:
+            results.append((f"local:{mid}", f"SKIP(needs node/npm) -> {' '.join(cmd)}"))
+            continue
+        if dry_run:
+            results.append((f"local:{mid}", f"WOULD-INSTALL: {' '.join(cmd)}"))
+            continue
+        # possibly-interactive third-party installer: close stdin + bound the wait.
+        cp = plat.run(_sub(cmd, tokens), timeout=int(man.get("install_timeout", 420)),
+                      stdin_devnull=True)
+        results.append((f"local:{mid}", "INSTALLED"
+                        if cp.returncode == 0
+                        else f"WARN(rc={cp.returncode}) — run manually: {' '.join(cmd)}"))
     return results
 
 

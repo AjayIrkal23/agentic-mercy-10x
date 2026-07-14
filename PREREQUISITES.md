@@ -83,9 +83,12 @@ gap. Exit 0 = everything green.
 
 - **claude.ai connectors** — `higgsfield` and `penpot` are OAuth connectors: add
   them in the **claude.ai → Connectors UI**, not via the CLI.
-- **GSD (get-shit-done)** — the `gsd-*` command/agent suite. Distribution is
-  upstream-uncertain; install best-effort (`npx get-shit-done-cc` or the GSD
-  installer), then run `/gsd-update`.
+- **GSD (get-shit-done)** — the `gsd-*` agent + skill suite (its `/gsd:*` commands
+  ship as skills). The installer **auto-installs it best-effort** via
+  `npx -y get-shit-done-cc@latest` when absent (skipped if already present, so it
+  never disturbs an existing install). If that step WARNs (the upstream installer
+  wants interaction, or you're offline), run `npx get-shit-done-cc@latest` yourself,
+  then `/gsd-update`. Node/npm is the only requirement.
 - **API keys / secrets** — never shipped. Export `GITHUB_TOKEN` etc. in your shell
   profile; `~/.claude.json` (per-machine) holds your MCP + credential config.
 
