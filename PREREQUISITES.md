@@ -7,6 +7,28 @@ everything it can — `uv`, `pipx`, `semgrep`, `lean-ctx`, `tdd-guard`,
 so **you install these four first**, then run the installer. `python check.py`
 (or `install.py verify`) will always tell you exactly what's still missing.
 
+## No root / sudo / Administrator needed
+
+`~/.claude` is your **user home** — `/home/<you>/.claude` (Ubuntu/macOS) or
+`C:\Users\<you>\.claude` (Windows) — **not** `/root`, `Program Files`, or any
+system directory. The installer writes only to user-owned locations:
+
+- **Ubuntu / macOS:** `~/.claude`, `~/.claude.json`, `~/.local` (uv/pipx/uv-tools), your npm prefix (`~/.npm-global` or nvm)
+- **Windows:** `%USERPROFILE%\.claude`, `%APPDATA%\npm` (npm -g), `%USERPROFILE%\.local` (uv/pipx)
+
+So **`install.sh` / `install.ps1` / `install.py` need no sudo and no Administrator.**
+(`powershell -ExecutionPolicy Bypass -File install.ps1` runs unelevated — `Bypass`
+is per-process, not a system change.)
+
+**The one caveat — `npm install -g` (lean-ctx, tdd-guard):**
+- **Ubuntu / macOS:** needs sudo *only* if Node was installed system-wide (`apt install nodejs`, prefix `/usr`). Avoid it: install Node via **nvm** (user prefix, recommended below), or run `npm config set prefix ~/.npm-global` once and add `~/.npm-global/bin` to `PATH`.
+- **Windows:** `npm -g` goes to `%APPDATA%\npm` (user) — **never** needs Administrator.
+
+The only Windows UAC prompts come from the **prereq installers** (`winget install
+Python/Node/Git` machine-wide) — the base-tool step, not the workbench installer.
+`python check.py` shows a **PRIVILEGES** line confirming both `~/.claude` and your
+`npm -g` prefix are user-writable.
+
 ## Required (4)
 
 | Tool | Why | Ubuntu / macOS | Windows |

@@ -18,6 +18,7 @@ Run:  python install.py verify        or:  python check.py
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -80,6 +81,24 @@ def check(env, *, os_name: str) -> int:
             hint = p.get(f"install_{os_name}") or p.get("install_posix") or ""
             _row(rows, MISS if p.get("required") else WARN, p["id"], f"-> {hint}")
     total_issues += _section("PREREQUISITES (you install these)", rows)
+
+    # --- privileges: ~/.claude is user-owned; the ONLY possible sudo trap is npm -g ---
+    rows = []
+    home = str(Path.home())
+    cdir = str(_ROOT)
+    _row(rows, OK if cdir.startswith(home) else WARN, "~/.claude",
+         f"{cdir} (user home — no root/sudo/admin)")
+    if shutil.which("npm"):
+        cp = plat.run(["npm", "root", "-g"], timeout=15)
+        gdir = (cp.stdout or "").strip()
+        probe = gdir if os.path.isdir(gdir) else os.path.dirname(gdir or "/")
+        if probe and os.access(probe, os.W_OK):
+            _row(rows, OK, "npm -g prefix", f"{gdir} (user-writable — no sudo)")
+        else:
+            _row(rows, WARN, "npm -g prefix",
+                 f"{gdir} NOT user-writable -> `npm install -g` (lean-ctx/tdd-guard) needs sudo. "
+                 "Avoid it: install Node via nvm, OR `npm config set prefix ~/.npm-global` + add ~/.npm-global/bin to PATH")
+    _section("PRIVILEGES (no root/sudo needed anywhere except a system-npm -g)", rows)
 
     # --- dependency binaries ---
     rows = []
