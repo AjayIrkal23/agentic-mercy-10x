@@ -518,6 +518,8 @@ flowchart TD
 
 **One command**, on Ubuntu/macOS **or** Windows. `install.py` is a stdlib-only bootstrap (Python ≥ 3.10), OS auto-detected through `hooks/lib/platform.py`, idempotent, and non-destructive.
 
+> **First, install 4 base tools** — Python ≥ 3.10, Node LTS, Git, Claude CLI. See **[PREREQUISITES.md](PREREQUISITES.md)** for the per-OS commands. `install.py` auto-installs *everything else* (uv/pipx/semgrep/lean-ctx/tdd-guard/jcode/jdoc/graphify + **all MCP servers** + **plugins**) and reports any prereq still missing.
+
 **Ubuntu / macOS**
 
 ```bash
@@ -527,13 +529,15 @@ git clone https://github.com/AjayIrkal23/agentic-mercy-10x ~/.claude && python3 
 **Windows (PowerShell)**
 
 ```powershell
-git clone https://github.com/AjayIrkal23/agentic-mercy-10x $env:USERPROFILE\.claude ; py -3 $env:USERPROFILE\.claude\install.py
+git clone https://github.com/AjayIrkal23/agentic-mercy-10x $env:USERPROFILE\.claude
+powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\.claude\install.ps1   # or: py -3 ...\.claude\install.py
 ```
 
-`install.py` runs, in order: **detect** OS/python/node/git · idempotent **deps** · register the **MCP servers** · **materialize** skills (copy or NTFS junction, never a symlink) · **render** `settings.json` from its tracked `settings.template.json` (plus optional `settings.user.json` overrides) · **build and validate** the skills catalog (trigger-floor guard + upstream-intactness) · run **doctor**.
+`install.py` runs, in order: **detect** OS/python/node/git/uv/npm · **check prerequisites** (reports any you must install by hand) · idempotent **deps** · register **all MCP servers** · install **plugins** · **materialize** skills (copy or NTFS junction, never a symlink) · **render** `settings.json` from its tracked `settings.template.json` (plus optional `settings.user.json` overrides) · **build and validate** the skills catalog (trigger-floor guard + upstream-intactness) · run **doctor**.
 
 ```bash
-python install.py doctor     # health + trigger-surface + model-routing verifier
+python install.py verify     # WORKFLOW TESTER: prereqs/deps/MCP/plugins/wiring status + a fix per gap  (= python check.py)
+python install.py doctor     # config health + trigger-surface + model-routing verifier
 python install.py update     # git pull --ff-only · deps · re-render · rebuild · doctor
 ```
 

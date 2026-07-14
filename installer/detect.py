@@ -63,6 +63,9 @@ class Env:
     claude_cli: str | None
     tokens: dict = field(default_factory=dict)  # RENDER tokens (CLAUDE_DIR may be ${HOME}/.claude)
     real_dir: str = ""                            # concrete ~/.claude path for subprocess commands
+    npm: str | None = None                        # npm path (or None) — lean-ctx/tdd-guard/npx MCPs
+    uv: str | None = None                         # uv path (or None) — semgrep/jcode/jdoc + uvx fetch (POSIX)
+    pipx: str | None = None                       # pipx path (or None) — Windows installer for the above
 
 
 def detect() -> Env:
@@ -85,13 +88,17 @@ def detect() -> Env:
         claude_cli=claude_cli,
         tokens=tokens,
         real_dir=str(plat.claude_dir()),
+        npm=shutil.which("npm"),
+        uv=shutil.which("uv"),
+        pipx=shutil.which("pipx"),
     )
 
 
 def _fmt(env: Env) -> str:
     return (
         f"os={env.os_name} python={env.python!r} node={env.node!r} "
-        f"git={'yes' if env.git else 'MISSING'} claude={'yes' if env.claude_cli else 'MISSING'}"
+        f"git={'yes' if env.git else 'MISSING'} claude={'yes' if env.claude_cli else 'MISSING'} "
+        f"uv={'yes' if env.uv else 'no'} npm={'yes' if env.npm else 'no'} pipx={'yes' if env.pipx else 'no'}"
     )
 
 

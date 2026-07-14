@@ -9,6 +9,8 @@ Stdlib-only bootstrap (Python >= 3.10). One command, OS auto-detected, idempoten
   python install.py update        git pull --ff-only -> idempotent deps ->
                                   conditional re-render -> rebuild catalog -> doctor
   python install.py doctor        health + trigger-surface verifier only
+  python install.py verify        WORKFLOW TESTER — prereqs/deps/MCP/plugins/wiring
+                                  status with a fix command per gap (also: check.py)
   Flags: --ci (skip networked ci_stub steps; CI has no network / no claude CLI)
          --dry-run (print planned actions, mutate nothing)
 
@@ -63,12 +65,19 @@ def do_install(*, ci: bool, dry_run: bool) -> int:
 
     env = detect()
     print(f"detected: {env.os_name} python={env.python!r} node={env.node!r} "
-          f"claude-cli={'yes' if env.claude_cli else 'no'}")
-    if not env.git:
-        print("  WARN: git not found — update flow unavailable")
+          f"claude-cli={'yes' if env.claude_cli else 'no'} "
+          f"uv={'yes' if env.uv else 'no'} npm={'yes' if env.npm else 'no'}")
+
+    prereqs = deps.check_prereqs(env)
+    _print_rows("prerequisites (install these yourself)", prereqs)
+    missing_req = [n for n, s in prereqs if s.startswith("MISSING") and "optional" not in s]
+    if missing_req:
+        print(f"  !! MISSING required prereqs: {', '.join(missing_req)} — install them (commands above), "
+              "then re-run. Steps that need them will WARN below.")
 
     _print_rows("dependencies", deps.install_deps(env, ci=ci, dry_run=dry_run))
     _print_rows("mcp servers", deps.register_mcps(env, ci=ci, dry_run=dry_run))
+    _print_rows("plugins", deps.install_plugins(env, ci=ci, dry_run=dry_run))
     _print_rows("skill links", links.materialize(dry_run=dry_run))
     name, status = _render_settings(env, dry_run)
     print(f"== settings ==\n  {name:24s} {status}")
@@ -111,11 +120,14 @@ def main(argv: list[str]) -> int:
     verb = verbs[0] if verbs else "install"
     if verb == "doctor":
         return do_doctor(ci=ci)
+    if verb == "verify":
+        import verify  # type: ignore
+        return verify.main([])
     if verb == "update":
         return do_update(ci=ci, dry_run=dry_run)
     if verb == "install":
         return do_install(ci=ci, dry_run=dry_run)
-    print(f"unknown verb {verb!r}; use install | update | doctor")
+    print(f"unknown verb {verb!r}; use install | update | doctor | verify")
     return 2
 
 

@@ -149,12 +149,78 @@ def run_post_steps(env, *, ci: bool = False, dry_run: bool = False) -> list[tupl
     return results
 
 
+def check_prereqs(env) -> list[tuple[str, str]]:
+    """Report REQUIRED prerequisites that the installer does NOT auto-install
+    (python3/node/git/claude). A MISSING required prereq blocks a full setup —
+    the user must install it (per-OS command included) and re-run. Never mutates."""
+    manifest = _load_manifest()
+    results: list[tuple[str, str]] = []
+    for p in manifest.get("prereqs", []):
+        pid = p["id"]
+        if shutil.which(p.get("which", pid)):
+            results.append((pid, "PRESENT"))
+            continue
+        hint = p.get(f"install_{env.os_name}") or p.get("install_posix") or "see README prereqs"
+        tag = "MISSING" if p.get("required") else "MISSING(optional)"
+        results.append((pid, f"{tag} -> {hint}"))
+    return results
+
+
+def install_plugins(env, *, ci: bool = False, dry_run: bool = False) -> list[tuple[str, str]]:
+    """Add plugin marketplaces then install the workbench plugins (idempotent via
+    `claude plugin ... list`). Fail-open: a bad name WARNs, never crashes."""
+    manifest = _load_manifest()
+    plugins = manifest.get("plugins", {})
+    if not env.claude_cli:
+        return [("plugins", "SKIP(no-claude-cli)")]
+    if ci:
+        return [("plugins", "SKIP(ci-stub)")]
+    results: list[tuple[str, str]] = []
+    tokens = _exec_tokens(env)
+
+    listed = ""
+    lm = plat.run(["claude", "plugin", "marketplace", "list"], timeout=30)
+    if lm.returncode == 0:
+        listed = lm.stdout or ""
+    for mk in plugins.get("marketplaces", []):
+        mid = mk["id"]
+        if mid in listed:
+            results.append((f"mkt:{mid}", "PRESENT"))
+            continue
+        if dry_run:
+            results.append((f"mkt:{mid}", f"WOULD-ADD: {' '.join(mk['add'][-1:])}"))
+            continue
+        cp = plat.run(_sub(mk["add"], tokens), timeout=90)
+        results.append((f"mkt:{mid}", "ADDED" if cp.returncode == 0 else f"WARN(rc={cp.returncode})"))
+
+    plisted = ""
+    lp = plat.run(["claude", "plugin", "list"], timeout=30)
+    if lp.returncode == 0:
+        plisted = lp.stdout or ""
+    for pl in plugins.get("install", []):
+        pid = pl["id"]
+        if pid in plisted:
+            results.append((f"plugin:{pid}", "PRESENT"))
+            continue
+        if dry_run:
+            results.append((f"plugin:{pid}", f"WOULD-INSTALL: {pl['add'][-1]}"))
+            continue
+        cp = plat.run(_sub(pl["add"], tokens), timeout=180)
+        results.append((f"plugin:{pid}", "INSTALLED" if cp.returncode == 0 else f"WARN(rc={cp.returncode})"))
+
+    for man in plugins.get("manual", []):
+        results.append((f"manual:{man['id']}", f"MANUAL -> {man.get('note','')[:70]}"))
+    return results
+
+
 if __name__ == "__main__":
     from detect import detect  # type: ignore
 
     e = detect()
-    for label, rows in [("deps", install_deps(e, dry_run=True)),
+    for label, rows in [("prereqs", check_prereqs(e)),
+                        ("deps", install_deps(e, dry_run=True)),
                         ("mcp", register_mcps(e, dry_run=True)),
+                        ("plugins", install_plugins(e, dry_run=True)),
                         ("post", run_post_steps(e, dry_run=True))]:
         print(f"== {label} ==")
         for name, status in rows:

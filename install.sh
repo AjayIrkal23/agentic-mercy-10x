@@ -127,49 +127,34 @@ else
   note "GSD installer, then '/gsd-update'. Replace this with the exact command once known."
 fi
 
-# --- STEP 2.5: code/doc intelligence stack (claude-native MCP servers) ------
-say "code/doc intelligence stack (graphify + jdocmunch — claude-native)"
-if [ -f "$TARGET/scripts/install-graphify.sh" ] && ask "install/refresh graphify (dependency-graph MCP, claude-owned venv)?"; then
-  bash "$TARGET/scripts/install-graphify.sh" || warn "graphify install had issues — re-run scripts/install-graphify.sh"
+# --- STEP 2.5: cross-platform workbench install (deps + MCP + plugins + settings) ----
+# The heavy lifting is the SAME on Ubuntu/macOS and Windows: install.py reads
+# installer/manifest.json and (idempotently) checks prerequisites, installs the
+# dependency binaries (uv/lean-ctx/tdd-guard/semgrep/jcode/jdoc/graphify), registers
+# ALL MCP servers, installs the plugins, renders settings.json, and runs doctor.
+say "running the cross-platform installer -> python3 install.py install"
+if require python3 && [ -f "$TARGET/install.py" ]; then
+  ( cd "$TARGET" && python3 install.py install ) \
+    || warn "install.py reported issues — read its summary, then run 'python3 install.py verify'"
 else
-  note "skipped graphify — run scripts/install-graphify.sh later"
+  warn "python3 or install.py missing — run '$TARGET/install.py install' by hand (needs Python >= 3.10)"
 fi
-if [ -f "$TARGET/scripts/install-jdocmunch.sh" ] && ask "install/refresh jdocmunch (docs-index MCP)?"; then
-  bash "$TARGET/scripts/install-jdocmunch.sh" --no-index || warn "jdocmunch install had issues — re-run scripts/install-jdocmunch.sh"
-else
-  note "skipped jdocmunch — run scripts/install-jdocmunch.sh later"
-fi
-note "jcodemunch stays a separate external tool — install jcodemunch-mcp yourself (uv/pipx)."
+note "check status any time: ${c_bold}python3 check.py${c_off}  (or: python3 install.py verify)"
 
 # --- STEP 3: post-install notes (things the repo deliberately excludes) ----
 say "${c_bold}post-install — finish these yourself${c_off}"
 
 cat <<'NOTES'
 
-  1) PLUGINS  (re-installable; manifests are per-machine and NOT in the repo)
-     Add the marketplaces, then install the plugins:
-
-       claude plugin marketplace add anthropics/claude-plugins-official
-       claude plugin marketplace add veelenga/claude-mermaid
-       claude plugin marketplace add obra/superpowers-marketplace
-       claude plugin marketplace add forrestchang/andrej-karpathy-skills
-       claude plugin marketplace add DietrichGebert/ponytail
-
-     Plugins used by this workspace (install the ones you want):
-       superpowers, ponytail, andrej-karpathy-skills, claude-mermaid,
-       frontend-design, context7, supabase, firecrawl, playwright,
-       clickhouse, gopls-lsp, typescript-lsp, claude-session-driver,
-       double-shot-latte, elements-of-style, superpowers-lab
-     e.g.:  claude plugin install superpowers@superpowers-marketplace
-
-  2) MCP SERVERS  (live in ~/.claude.json, which is NOT in this repo)
-     The hooks/agents expect these servers configured on your machine:
-       jcodemunch, graphify, jdocmunch, lean-ctx, memory, sequential-thinking, context7
-     Also referenced in settings.json mcpServers (edit/remove as you like):
-       ast-grep, semgrep, playwright, browser-tools-mcp, fetch, markdownify, github
-     graphify + jdocmunch are wired by STEP 2.5 above (scripts/install-graphify.sh,
-     scripts/install-jdocmunch.sh — claude-native, no cursor coupling). jcodemunch is
-     a separate external tool (jcodemunch-mcp). Configure your own creds — none shipped.
+  1) PLUGINS + MCP SERVERS are installed AUTOMATICALLY by install.py (STEP 2.5 above):
+       MCP:     jcodemunch, jdocmunch, graphify, lean-ctx, memory, sequential-thinking,
+                context7, fetch, playwright, browser-tools-mcp, markdownify
+       Plugins: superpowers, ponytail, andrej-karpathy-skills, claude-mermaid
+     Check what's active — or what a fresh box is still missing — any time:
+       python3 check.py            # or: python3 install.py verify
+     GSD (get-shit-done) stays MANUAL (uncertain distribution) — install best-effort,
+     then run /gsd-update. claude.ai CONNECTORS (higgsfield, penpot) are added in the
+     claude.ai Connectors UI, not the CLI. Prereqs + all commands: PREREQUISITES.md.
 
   3) SECRETS  are never in this repo:
        .credentials.json, tokens, API keys, and ~/.claude.json stay on YOUR
