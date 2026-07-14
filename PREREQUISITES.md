@@ -1,11 +1,13 @@
 # Prerequisites — install these BEFORE running the installer
 
-The installer (`install.py`, driven by `installer/manifest.json`) auto-installs
-everything it can — `uv`, `pipx`, `semgrep`, `lean-ctx`, `tdd-guard`,
-`jcodemunch-mcp`, `jdocmunch-mcp`, `graphify`, **all MCP servers**, and the
-**plugins**. But a few base tools can't be reliably auto-installed cross-platform,
-so **you install these four first**, then run the installer. `python check.py`
-(or `install.py verify`) will always tell you exactly what's still missing.
+The installer (one automatic, visual, self-healing command — driven by
+`installer/manifest.json`) auto-installs and auto-registers everything it can —
+`uv`, `pipx`, `semgrep`, `lean-ctx`, `tdd-guard`, `jcodemunch-mcp`,
+`jdocmunch-mcp`, `graphify`, **all MCP servers**, and the **plugins** — then
+repairs and re-checks itself until every health check is green. But a few base
+tools can't be reliably auto-installed cross-platform, so **you install these
+four first**, then run the one command. The installer's live status panel (and a
+read-only `python check.py`) always tells you exactly what's still missing.
 
 ## No root / sudo / Administrator needed
 
@@ -35,62 +37,61 @@ Python/Node/Git` machine-wide) — the base-tool step, not the workbench install
 |---|---|---|---|
 | **Python ≥ 3.10** | The installer is Python; hooks run on it | `sudo apt install python3 python3-pip` · `brew install python@3.12` | `winget install Python.Python.3.12` (ships the `py -3` launcher) |
 | **Node.js LTS (+ npm)** | `lean-ctx`, `tdd-guard`, and 7 npx-launched MCP servers | nvm: `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash && nvm install --lts` · or `apt`/`brew` | `winget install OpenJS.NodeJS.LTS` · or nvm-windows |
-| **Git** | Repo clone + `install.py update` + hook git calls | `sudo apt install git` · `brew install git` | `winget install Git.Git` |
+| **Git** | Repo clone + line-ending self-repair + hook git calls | `sudo apt install git` · `brew install git` | `winget install Git.Git` |
 | **Claude Code CLI** | Registers MCP servers + installs plugins | `npm install -g @anthropic-ai/claude-code` | `npm install -g @anthropic-ai/claude-code` |
 
 > `uv` and `pipx` are **auto-installed** by the installer (uv via the official
 > script, pipx via `pip`). If `uv` isn't on `PATH` right after, reopen your shell.
 
-## Then install
+## Then install — one automatic command
+
+**Clone anywhere and run one line.** The installer auto-detects your `~/.claude`,
+moves the clone into it (preserving your data), opens the visual installer, and
+**installs + self-repairs in a loop until 100%** — no folder picker, no flags,
+nothing to click.
 
 **Ubuntu / macOS**
 ```bash
-git clone https://github.com/AjayIrkal23/agentic-mercy-10x ~/.claude   # or clone elsewhere
-~/.claude/install.sh            # copies workspace + runs install.py
-#   (or run the cross-platform core directly:)
-python3 ~/.claude/install.py install
+git clone https://github.com/AjayIrkal23/agentic-mercy-10x ~/agentic-mercy
+~/agentic-mercy/install.sh          # = python3 ~/agentic-mercy/install.py  ·  (cloning into ~/.claude works too)
 ```
 
 **Windows** (PowerShell)
 ```powershell
-git clone https://github.com/AjayIrkal23/agentic-mercy-10x $env:USERPROFILE\.claude
-powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\.claude\install.ps1
-#   (or:)  py -3 $env:USERPROFILE\.claude\install.py install
+git clone https://github.com/AjayIrkal23/agentic-mercy-10x $env:USERPROFILE\agentic-mercy
+powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\agentic-mercy\install.ps1   # or: py -3 ...\agentic-mercy\install-ui.py
 ```
 
-## Prefer a visual installer?
+`install.py`, `install-ui.py`, `install.sh`, and `install.ps1` are all the **same
+one automatic installer** — there is no CLI install path and nothing to configure.
+It opens a local web page (127.0.0.1, stdlib only — no Node/Electron) that
+**auto-runs** the whole install: a live panel shows prerequisites · privileges ·
+deps · MCP servers · plugins · wiring turning green as each step and repair round
+completes, ending in a **WORKFLOW ACTIVE — 100%** banner.
+
+## Check status any time (optional)
 
 ```bash
-python install.py ui            # or:  python install-ui.py   (Windows: py -3 install-ui.py)
+python check.py
 ```
-Opens a local web page (127.0.0.1, stdlib only — no Node/Electron) that **auto-detects
-your global `.claude`**, lets you **Browse** to a different folder and Continue, shows a
-**live preflight** (prerequisites · privileges · deps · MCP servers · plugins · wiring),
-then installs **everything step-by-step** with each step turning green/amber/red as it
-runs — ending in a **WORKFLOW ACTIVE** banner. Same engine as the CLI; nothing extra to
-install; identical on Ubuntu and Windows.
+The installer's own panel already shows this live, but `check.py` gives a headless
+report — **PREREQUISITES · DEPENDENCY BINARIES · MCP SERVERS · PLUGINS · WORKFLOW
+WIRING (router LIVE) · PALETTE**, with an exact fix command on every gap. Exit 0 =
+everything green.
 
-## Then verify (any time)
-
-```bash
-python check.py                 # or: python install.py verify
-```
-It reports **PREREQUISITES · DEPENDENCY BINARIES · MCP SERVERS · PLUGINS ·
-WORKFLOW WIRING (router LIVE) · PALETTE**, with an exact fix command on every
-gap. Exit 0 = everything green.
-
-## Manual / UI steps the CLI can't do
+## The only things the installer can't do for you
 
 - **claude.ai connectors** — `higgsfield` and `penpot` are OAuth connectors: add
-  them in the **claude.ai → Connectors UI**, not via the CLI.
-- **GSD (get-shit-done)** — the `gsd-*` agent + skill suite (its `/gsd:*` commands
-  ship as skills). The installer **auto-installs it best-effort** via
-  `npx -y get-shit-done-cc@latest` when absent (skipped if already present, so it
-  never disturbs an existing install). If that step WARNs (the upstream installer
-  wants interaction, or you're offline), run `npx get-shit-done-cc@latest` yourself,
-  then `/gsd-update`. Node/npm is the only requirement.
+  them in the **claude.ai → Connectors UI**, not via any CLI.
 - **API keys / secrets** — never shipped. Export `GITHUB_TOKEN` etc. in your shell
   profile; `~/.claude.json` (per-machine) holds your MCP + credential config.
+
+> **Everything else is automatic**, including MCP-server + plugin registration
+> (on Windows the `claude` `.cmd` shim is run through the shell so it actually
+> completes) and GSD (`get-shit-done`) via `npx -y get-shit-done-cc@latest`.
+> Anything that needs the `claude` CLI or the network but can't reach it shows as
+> a non-blocking **WARN** — it never gates the "100%" success and self-completes on
+> the next launch once the prerequisite is in place.
 
 ## Optional (only if you use them)
 

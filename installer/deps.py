@@ -136,7 +136,14 @@ def run_post_steps(env, *, ci: bool = False, dry_run: bool = False) -> list[tupl
     for step in manifest.get("post_steps", []):
         sid = step["id"]
         cmd = _sub(step["cmd"], _exec_tokens(env))
-        target = Path(cmd[1]) if len(cmd) > 1 else None
+        # The script path is the FIRST '.py' arg — NOT cmd[1]. On Windows the
+        # {PYTHON} token expands to a multi-word launcher ('py -3'), so _sub emits
+        # ['py','-3','<...>/x.py',...] and cmd[1] is '-3', not the script. Reading
+        # cmd[1] there false-reported every post-step as MISSING(script)/SKIP even
+        # though the scripts exist. Scan for the '.py' element so it is correct on
+        # every OS regardless of how many tokens {PYTHON} expands to.
+        script = next((c for c in cmd if str(c).endswith(".py")), None)
+        target = Path(script) if script else None
         if target and not target.exists():
             results.append((sid, "SKIP(script-absent)" if step.get("optional") else "MISSING(script)"))
             continue

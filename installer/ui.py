@@ -34,14 +34,15 @@ for _p in (str(_ROOT / "installer"), str(_ROOT / "hooks")):
         sys.path.insert(0, _p)
 
 import detect as _detect   # type: ignore  # noqa: E402
-import deps as _deps       # type: ignore  # noqa: E402
 import verify as _verify   # type: ignore  # noqa: E402
+import selfheal as _selfheal  # type: ignore  # noqa: E402
 from lib import platform as plat  # type: ignore  # noqa: E402
 
 UI_HTML = _ROOT / "installer" / "ui.html"
 
 _LOCK = threading.Lock()
-_JOB: dict = {"running": False, "done": False, "ok": None, "steps": []}
+_JOB: dict = {"running": False, "done": False, "ok": None, "success": None,
+              "rounds": 0, "steps": []}
 _STATE: dict = {"target": str(plat.claude_dir())}
 
 
@@ -63,70 +64,29 @@ def _append(kind: str, name: str, status_str: str) -> None:
         })
 
 
-def _candidate_paths() -> list:
-    out, seen = [], set()
-    for p in (os.environ.get("CLAUDE_CONFIG_DIR"),
-              str(Path("~/.claude").expanduser()),
-              str(_ROOT),
-              str(Path.home() / ".claude")):
-        if p and p not in seen and Path(p).is_dir():
-            seen.add(p)
-            out.append(p)
-    return out
-
-
 def _run_install() -> None:
+    """Run the fully-automatic self-heal loop (install -> repair -> re-check until
+    0 doctor FAILs). Streams every step into _JOB for the live UI."""
     with _LOCK:
         if _JOB["running"]:
             return
-        _JOB.update(running=True, done=False, ok=None, steps=[])
+        _JOB.update(running=True, done=False, ok=None, success=None, rounds=0, steps=[])
     try:
         os.environ["CLAUDE_CONFIG_DIR"] = _STATE["target"]
-        env = _detect.detect()
-        for n, s in _deps.check_prereqs(env):
-            _append("prereq", n, s)
-        for n, s in _deps.install_deps(env):
-            _append("dep", n, s)
-        for n, s in _deps.register_mcps(env):
-            _append("mcp", n, s)
-        for n, s in _deps.install_plugins(env):
-            _append("plugin", n, s)
-        st = Path(_STATE["target"]) / "settings.json"
-        if not st.exists():
-            try:
-                import render  # type: ignore
-                plat.atomic_write(st, render.render(subs=env.tokens))
-                _append("settings", "settings.json", "INSTALLED")
-            except Exception as exc:  # noqa: BLE001
-                _append("settings", "settings.json", f"WARN({exc})")
-        else:
-            _append("settings", "settings.json", "PRESENT (kept — not overwritten)")
-        for n, s in _deps.run_post_steps(env):
-            _append("post", n, s)
+        res = _selfheal.self_heal(Path(_STATE["target"]),
+                                  emit=lambda k, n, s: _append(k, n, s))
         with _LOCK:
             _JOB["ok"] = True
+            _JOB["success"] = bool(res.get("success"))
+            _JOB["rounds"] = int(res.get("rounds", 0))
     except Exception as exc:  # noqa: BLE001
         _append("error", "install", f"FAIL({exc})")
         with _LOCK:
             _JOB["ok"] = False
+            _JOB["success"] = False
     finally:
         with _LOCK:
             _JOB.update(running=False, done=True)
-
-
-def _browse() -> dict:
-    """Native folder picker in an isolated subprocess (no tkinter threading issues).
-    Fails gracefully to a hint when tkinter / a display is unavailable."""
-    code = (
-        "import tkinter, tkinter.filedialog as fd\n"
-        "r = tkinter.Tk(); r.withdraw()\n"
-        "try:\n r.attributes('-topmost', True)\nexcept Exception:\n pass\n"
-        "print(fd.askdirectory(title='Select your .claude folder') or '')\n"
-    )
-    cp = plat.run([sys.executable, "-c", code], timeout=180)
-    if cp.returncode == 0:
-        return {"path": (cp.stdout or "").strip()}
-    return {"error": "no native folder picker here (tkinter/display unavailable) — type the path instead"}
 
 
 def _status_payload() -> dict:
@@ -138,7 +98,6 @@ def _status_payload() -> dict:
                 "git": bool(env.git), "claude": bool(env.claude_cli),
                 "uv": bool(env.uv), "npm": bool(env.npm)},
         "target": _STATE["target"],
-        "candidates": _candidate_paths(),
         "sections": sections,
         "hard": hard,
     }
@@ -178,28 +137,13 @@ class _Handler(BaseHTTPRequestHandler):
         elif p == "/api/progress":
             with _LOCK:
                 self._json(dict(_JOB))
-        elif p == "/api/browse":
-            self._json(_browse())
         else:
             self._json({"error": "not found"}, 404)
 
     def do_POST(self):  # noqa: N802
         p = self.path.split("?")[0]
-        n = int(self.headers.get("Content-Length") or 0)
-        raw = self.rfile.read(n) if n else b"{}"
-        try:
-            data = json.loads(raw or b"{}")
-        except Exception:  # noqa: BLE001
-            data = {}
-        if p == "/api/target":
-            path = str(data.get("path", "")).strip()
-            cand = Path(path).expanduser() if path else None
-            if cand and cand.is_dir():
-                _STATE["target"] = str(cand)
-                self._json({"ok": True, "target": _STATE["target"]})
-            else:
-                self._json({"ok": False, "error": "that folder does not exist"}, 400)
-        elif p == "/api/install":
+        if p == "/api/install":
+            # idempotent re-run trigger; the loop self-guards against double-start.
             threading.Thread(target=_run_install, daemon=True).start()
             self._json({"started": True})
         else:
@@ -216,8 +160,11 @@ def main(argv=None) -> int:
     url = f"http://{host}:{port}/"
     print("\n  ┌───────────────────────────────────────────────┐")
     print(f"  │  Visual installer:  {url:<26}│")
-    print("  │  Opening your browser…  (Ctrl+C here to stop)  │")
+    print("  │  Installing automatically…  (Ctrl+C to stop)   │")
     print("  └───────────────────────────────────────────────┘\n")
+    # Fully automatic: kick off the self-heal loop on boot so the user does
+    # nothing — the browser just watches it run to 100%.
+    threading.Thread(target=_run_install, daemon=True).start()
     try:
         webbrowser.open(url)
     except Exception:  # noqa: BLE001

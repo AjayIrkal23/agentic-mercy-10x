@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""install-ui.py — launch the VISUAL installer (one command, any OS).
+"""install-ui.py — the ONE installer. Fully automatic, visual, zero user action.
 
     python install-ui.py          # Ubuntu / macOS
     py -3 install-ui.py           # Windows
 
-Opens a local web UI (127.0.0.1) to auto-detect / pick your .claude folder,
-show live workflow status, and install everything step-by-step. Stdlib only —
-no Node, no Electron, no extra installs. Equivalent to `python install.py ui`.
+Auto-detects your global ``~/.claude``, auto-relocates the clone into it (replacing
+bundle files, preserving your runtime data), then opens a local web UI that installs
+everything and **repairs + re-checks in a loop until every check is green** — you
+don't click a thing. Stdlib only; no Node, no Electron.
 """
 from __future__ import annotations
 
@@ -14,8 +15,10 @@ import sys
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(_ROOT / "installer"))
+for _p in (str(_ROOT / "installer"), str(_ROOT / "hooks")):
+    if _p not in sys.path:
+        sys.path.insert(0, _p)
 
 if __name__ == "__main__":
-    import ui  # type: ignore
-    raise SystemExit(ui.main(sys.argv[1:]))
+    import bootstrap  # type: ignore
+    raise SystemExit(bootstrap.main(sys.argv[1:]))

@@ -516,36 +516,36 @@ flowchart TD
 
 ## 🚀 Install
 
-**One command**, on Ubuntu/macOS **or** Windows. `install.py` is a stdlib-only bootstrap (Python ≥ 3.10), OS auto-detected through `hooks/lib/platform.py`, idempotent, and non-destructive.
+**One command. Zero interaction. It installs itself to 100%.** The installer is stdlib-only (Python ≥ 3.10), OS auto-detected through `hooks/lib/platform.py`, and **fully automatic** — you run one line and it does everything else: finds your global `~/.claude`, moves the clone into it, installs every dependency, and then **repairs and re-checks itself in a loop until every health check is green.** No CLI flags, no folder picker, no manual steps.
 
-> **First, install 4 base tools** — Python ≥ 3.10, Node LTS, Git, Claude CLI. See **[PREREQUISITES.md](PREREQUISITES.md)** for the per-OS commands. `install.py` auto-installs *everything else* (uv/pipx/semgrep/lean-ctx/tdd-guard/jcode/jdoc/graphify + **all MCP servers** + **plugins**) and reports any prereq still missing.
+> **First, install 4 base tools** — Python ≥ 3.10, Node LTS, Git, Claude CLI. See **[PREREQUISITES.md](PREREQUISITES.md)** for the per-OS commands. The installer auto-installs and auto-registers *everything else* (uv/pipx/semgrep/lean-ctx/tdd-guard/jcode/jdoc/graphify + **all MCP servers** + **plugins**) and reports any base tool still missing.
+
+**Clone anywhere, then run one command** — it relocates into `~/.claude` for you.
 
 **Ubuntu / macOS**
 
 ```bash
-git clone https://github.com/AjayIrkal23/agentic-mercy-10x ~/.claude && python3 ~/.claude/install.py
+git clone https://github.com/AjayIrkal23/agentic-mercy-10x ~/agentic-mercy && ~/agentic-mercy/install.sh
+#   (equivalently: python3 ~/agentic-mercy/install.py  ·  or clone straight into ~/.claude — it detects that too)
 ```
 
 **Windows (PowerShell)**
 
 ```powershell
-git clone https://github.com/AjayIrkal23/agentic-mercy-10x $env:USERPROFILE\.claude
-powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\.claude\install.ps1   # or: py -3 ...\.claude\install.py
+git clone https://github.com/AjayIrkal23/agentic-mercy-10x $env:USERPROFILE\agentic-mercy
+powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\agentic-mercy\install.ps1   # or: py -3 ...\agentic-mercy\install-ui.py
 ```
 
-`install.py` runs, in order: **detect** OS/python/node/git/uv/npm · **check prerequisites** (reports any you must install by hand) · idempotent **deps** · register **all MCP servers** · install **plugins** · **materialize** skills (copy or NTFS junction, never a symlink) · **render** `settings.json` from its tracked `settings.template.json` (plus optional `settings.user.json` overrides) · **build and validate** the skills catalog (trigger-floor guard + upstream-intactness) · run **doctor**.
+That single command, fully automatically and in order:
 
-```bash
-python install.py ui         # VISUAL installer — pick the folder, live status, step-by-step  (= python install-ui.py)
-python install.py verify     # WORKFLOW TESTER: prereqs/deps/MCP/plugins/wiring status + a fix per gap  (= python check.py)
-python install.py doctor     # config health + trigger-surface + model-routing verifier
-python install.py update     # git pull --ff-only · deps · re-render · rebuild · doctor
-```
+1. **Auto-detects** your canonical `~/.claude` (honours `$CLAUDE_CONFIG_DIR`).
+2. **Relocates the clone into `~/.claude`** — merge-copy that replaces workbench files but **preserves your runtime** (`projects/`, `memory/`, `state/`, `settings.user.json`) and never touches `.git`. If a Windows clone mangled line endings, it restores the pristine committed bytes from git first.
+3. **Opens the visual installer** (127.0.0.1, stdlib only — no Node/Electron) and **auto-starts** on load. No button to click.
+4. **Installs + wires everything**: deps · registers **all MCP servers** · installs **plugins** · renders `settings.json` from `settings.template.json` (+ optional `settings.user.json`) · builds & validates the skills catalog.
+5. **Self-heals in a loop** — after each pass it runs the 13-check doctor, auto-repairs any failure (line-ending drift, catalog, settings), and re-checks — **repeating until 0 FAIL**, then shows a **WORKFLOW ACTIVE — 100%** banner.
 
 > [!TIP]
-> **Prefer a UI?** `python install.py ui` opens a local web page (127.0.0.1, stdlib only — no Node/Electron) that **auto-detects your global `.claude`**, lets you **Browse** to another folder and Continue, shows a **live preflight** (prerequisites · privileges · deps · MCP servers · plugins · wiring), then installs **everything step-by-step** — each step turning green/amber/red as it runs — ending in a **WORKFLOW ACTIVE** banner. Same engine as the CLI, identical on Ubuntu and Windows.
-
-Flags: `--dry-run` (print planned actions, mutate nothing) · `--ci` (skip networked steps). Every path resolves through `hooks/lib/platform.py` — **no hardcoded usernames or drive letters**, and there are **zero `.sh` hooks** — so it works for any user on either OS.
+> **It's the same one command everywhere.** `install.py`, `install-ui.py`, `install.sh`, and `install.ps1` are all thin launchers of the one automatic visual installer — there is deliberately **no CLI install path and nothing to configure**. Every path resolves through `hooks/lib/platform.py` (no hardcoded usernames or drive letters, zero `.sh` hooks), so it works for any user on Ubuntu or Windows. A read-only `python check.py` reports live status any time.
 
 > [!TIP]
 > Want a lighter footprint? Everything is à-la-carte. Prune `settings.json` and any dispatcher links you don't want — the system fails *open* where it matters, so removing a gate degrades gracefully instead of breaking.
@@ -592,20 +592,12 @@ By design, the repo excludes anything that is a secret, a session artifact, pers
 - **Sessions & personal data** — `projects/`, `history.jsonl`, `sessions/`, `file-history/`, `todos/`, shell snapshots, and per-machine state.
 - **Re-installable externals** — the plugin cache/marketplaces, `skills/gstack/`, `ast-grep-mcp/`, and the GSD (`get-shit-done/`) system. The installer and notes fetch these.
 
-After install, finish the setup:
+The installer fetches and registers these **automatically** — MCP servers (`jcodemunch`, `jdocmunch`, `graphify`, `lean-ctx`, `memory`, `sequential-thinking`, `context7`, and the rest), the plugin marketplaces + plugins, and the code-intelligence engines. On Windows it runs the `claude` `.cmd` shim through the shell so registration actually completes. **The only things left to you** are the ones no installer can do for you:
 
-1. **Plugins** — add the marketplaces (`anthropics/claude-plugins-official`, `veelenga/claude-mermaid`, `obra/superpowers-marketplace`, `forrestchang/andrej-karpathy-skills`, `DietrichGebert/ponytail`) and `claude plugin install` the ones you want.
-2. **MCP servers** — the hooks expect `jcodemunch`, `graphify`, `lean-ctx`, `memory`, `sequential-thinking`, and `context7` configured in your own `~/.claude.json`. Trim what you don't use.
-3. **Code-intelligence engines (recommended)** — the symbol and docs indexes come from [jCodeMunch](https://j.gravelle.us/jCodeMunch/descriptions.php). Install via uv, then register:
+- **claude.ai connectors** (`higgsfield`, `penpot`) — OAuth connectors added in the **claude.ai → Connectors UI**, not by any CLI.
+- **Secrets** — export your own tokens (`GITHUB_TOKEN`, etc.) in your shell profile; nothing is shipped, and `~/.claude.json` (per-machine) holds your credential config.
 
-   ```bash
-   uv tool install jcodemunch-mcp && uv tool install jdocmunch-mcp   # Windows: pipx install <name>
-   claude mcp add --scope user jcodemunch jcodemunch-mcp
-   claude mcp add --scope user jdocmunch jdocmunch-mcp               # or run scripts/install-jdocmunch.sh
-   ```
-
-   The installer prints the same guidance if either engine is missing; everything else works without them.
-4. **Secrets** — export your own tokens; nothing is shipped.
+Anything that needs the `claude` CLI or the network but can't reach it (offline box, CLI not yet installed) shows as a non-blocking **WARN** in the installer — it never gates the "100%" success, and self-completes the next time you launch it with the prerequisite in place.
 
 ---
 

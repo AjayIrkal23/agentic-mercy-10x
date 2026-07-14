@@ -133,6 +133,27 @@ def run(
     except subprocess.TimeoutExpired as exc:
         return subprocess.CompletedProcess(cmd, 124, exc.stdout or "", exc.stderr or "")
     except (OSError, ValueError) as exc:
+        # Windows: a .cmd/.bat shim (the npm-installed `claude` CLI, `npx`, …) can't
+        # be launched directly by CreateProcess — it raises OSError (WinError 193/2),
+        # which is exactly the rc=127 seen for every `claude mcp add`/`claude plugin`.
+        # Retry through the shell so cmd.exe resolves the shim. POSIX is untouched.
+        if IS_WINDOWS:
+            try:
+                return subprocess.run(  # noqa: S602 - trusted internal command list
+                    subprocess.list2cmdline(list(cmd)),
+                    shell=True,
+                    cwd=str(cwd) if cwd is not None else None,
+                    timeout=timeout,
+                    env=dict(env) if env is not None else None,
+                    capture_output=True,
+                    text=text,
+                    check=False,
+                    stdin=subprocess.DEVNULL if stdin_devnull else None,
+                )
+            except subprocess.TimeoutExpired as exc2:
+                return subprocess.CompletedProcess(cmd, 124, exc2.stdout or "", exc2.stderr or "")
+            except (OSError, ValueError):
+                pass
         return subprocess.CompletedProcess(cmd, 127, "", str(exc))
 
 

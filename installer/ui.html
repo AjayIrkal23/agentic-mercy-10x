@@ -142,38 +142,23 @@
 
   <div class="env" id="env"></div>
 
-  <!-- 1. install location -->
+  <!-- automatic install -->
   <div class="card reveal" style="animation-delay:.05s">
-    <h2>1 · Install location</h2>
-    <p class="hint">Auto-detected your global <code>.claude</code> folder. Pick a different one if you keep Claude elsewhere, then Continue.</p>
-    <div class="picker">
-      <select id="cands" title="detected .claude folders"></select>
-      <input id="path" spellcheck="false" placeholder="/home/you/.claude">
-      <button id="browse" title="native folder picker">📁 Browse</button>
-      <button id="cont" class="primary">Continue →</button>
-    </div>
-    <div id="pathmsg" class="hint" style="margin:10px 0 0"></div>
-  </div>
-
-  <!-- 2. preflight -->
-  <div class="card reveal" style="animation-delay:.1s">
-    <h2>2 · Preflight — is everything valid?</h2>
-    <p class="hint">Live status of every part of your workflow. <span class="muted" id="recheckhint"></span>
-      <button id="recheck" style="padding:6px 12px;font-size:12px;margin-left:6px">↻ Re-check</button></p>
-    <div class="grid" id="sections"></div>
-  </div>
-
-  <!-- 3. install -->
-  <div class="card reveal" style="animation-delay:.15s">
-    <h2>3 · Install everything</h2>
-    <p class="hint">Installs deps → registers all MCP servers → plugins → post-steps, into the selected folder. Idempotent — anything already present is skipped. <span class="muted">settings.json is never overwritten if it exists.</span></p>
+    <h2>Installing automatically <span class="autobadge">no action needed</span></h2>
+    <p class="hint">Target <code id="tgt">~/.claude</code> — auto-detected &amp; relocated. This installs deps → MCP servers → plugins → post-steps, then <b>repairs and re-checks in a loop until every check is green</b>. You don't click anything.</p>
     <div class="action">
-      <button id="install" class="primary">▶ Install / repair</button>
-      <div class="bar" id="bar"><i></i></div>
-      <div class="pmsg" id="pmsg">idle</div>
+      <div class="bar run" id="bar"><i></i></div>
+      <div class="pmsg" id="pmsg">starting…</div>
     </div>
     <div id="log"></div>
     <div id="done"><h2>◈ WORKFLOW ACTIVE</h2><p id="donemsg"></p></div>
+  </div>
+
+  <!-- live preflight -->
+  <div class="card reveal" style="animation-delay:.1s">
+    <h2>Live status</h2>
+    <p class="hint">Every part of your workflow, refreshed automatically. <span class="muted" id="recheckhint"></span></p>
+    <div class="grid" id="sections"></div>
   </div>
 
   <footer>
@@ -187,27 +172,21 @@ const $ = s => document.querySelector(s);
 const api = (u, o) => fetch(u, o).then(r => r.json());
 const PILL = {ok:"OK", miss:"MISSING", warn:"WARN", conn:"UI"};
 const MK   = {ok:"●", miss:"✕", warn:"▲", conn:"◇"};
-let polling = null;
 
 function chip(name, on){ return `<div class="chip"><span class="d ${on?'on':'off'}"></span>${name}</div>`; }
+function esc(t){ return String(t).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 
 async function loadStatus(){
   let s;
   try { s = await api("/api/status"); } catch(e){ $("#recheckhint").textContent="server not reachable"; return; }
   if (s.error){ $("#recheckhint").textContent = s.error; return; }
-  // env chips
   const e = s.env;
   $("#env").innerHTML =
     chip("os "+e.os,true)+chip("python "+(e.python||""),true)+chip("node",e.node&&e.node!=="node"?true:!!e.node)
     +chip("git",e.git)+chip("claude",e.claude)+chip("uv",e.uv)+chip("npm",e.npm);
-  // path selector
-  const sel = $("#cands");
-  sel.innerHTML = (s.candidates||[]).map(p=>`<option ${p===s.target?"selected":""}>${p}</option>`).join("")
-                  || `<option>${s.target}</option>`;
-  if (document.activeElement !== $("#path")) $("#path").value = s.target;
-  // sections
+  if (s.target) $("#tgt").textContent = s.target;
   $("#sections").innerHTML = (s.sections||[]).map(renderSection).join("");
-  $("#recheckhint").textContent = s.hard===0 ? "all required checks green ✓" : (s.hard+" required gap(s) — see red items");
+  $("#recheckhint").textContent = s.hard===0 ? "all required checks green ✓" : (s.hard+" required gap(s) — auto-repairing…");
   return s;
 }
 
@@ -222,39 +201,15 @@ function renderSection(sec){
   }).join("");
   return `<div class="sec ${cls}"><h3>${esc(sec.title)}</h3><div class="st">${esc(sec.subtitle||"")}</div>${rows}</div>`;
 }
-function esc(t){ return String(t).replace(/[&<>]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
 
-// --- location selector ---
-$("#cands").addEventListener("change", e => { $("#path").value = e.target.value; });
-$("#browse").addEventListener("click", async () => {
-  $("#pathmsg").textContent = "opening native picker…";
-  const r = await api("/api/browse");
-  if (r.path){ $("#path").value = r.path; $("#pathmsg").textContent = "selected: "+r.path; }
-  else { $("#pathmsg").textContent = r.error || "cancelled"; }
-});
-$("#cont").addEventListener("click", async () => {
-  const path = $("#path").value.trim();
-  const r = await api("/api/target", {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({path})});
-  $("#pathmsg").textContent = r.ok ? ("target set → "+r.target+"  · re-running preflight…") : ("✕ "+(r.error||"invalid"));
-  if (r.ok) await loadStatus();
-});
-$("#recheck").addEventListener("click", loadStatus);
-
-// --- install ---
-// Lock the target selector while an install runs: the server writes a
-// process-global CLAUDE_CONFIG_DIR from the install thread, so changing the
-// target mid-install could register into the wrong .claude folder.
-const TARGET_CTRLS = ["#cands", "#path", "#browse", "#cont"];
-function lockTarget(on){ TARGET_CTRLS.forEach(s => { const e=$(s); if(e) e.disabled = on; }); }
-
-$("#install").addEventListener("click", async () => {
-  $("#install").disabled = true; lockTarget(true); $("#done").className=""; $("#log").innerHTML="";
-  $("#bar").classList.add("run"); $("#bar").querySelector("i").style.width="8%";
-  $("#pmsg").textContent = "starting…";
-  await api("/api/install", {method:"POST"});
-  if (polling) clearInterval(polling);
-  polling = setInterval(pollProgress, 600);
-});
+// --- fully automatic: the server auto-starts the loop on boot; we just watch. ---
+let polling = null, statusTimer = null;
+function logrow(s){
+  if (s.kind==="round")  return `<div class="logrow"><span class="mk warn">↻</span><span class="lk">round</span><span class="ln">${esc(s.name)}</span><span class="ld">${esc(s.detail)}</span></div>`;
+  const mk = s.status==="ok"?`<span class="mk ok">✓</span>`:s.status==="warn"?`<span class="mk warn">▲</span>`:`<span class="mk miss">✕</span>`;
+  return `<div class="logrow">${mk}<span class="lk">${esc(s.kind)}</span><span class="ln">${esc(s.name)}</span><span class="ld">${esc(s.detail).slice(0,52)}</span></div>`;
+}
+function spinRow(){ return `<div class="logrow"><span class="spin"></span><span class="lk">…</span><span class="ln muted">working…</span><span class="ld"></span></div>`; }
 
 async function pollProgress(){
   let j; try{ j = await api("/api/progress"); }catch(e){ return; }
@@ -262,28 +217,31 @@ async function pollProgress(){
   $("#log").innerHTML = steps.map(logrow).join("") + (j.running?spinRow():"");
   $("#log").scrollTop = $("#log").scrollHeight;
   const done = steps.filter(s=>s.status!=="run").length;
-  $("#bar").querySelector("i").style.width = (j.done?100:Math.min(95, 10+done*4))+"%";
-  $("#pmsg").textContent = j.running ? (steps.length+" steps · installing…") : (j.done?"done":"…");
+  $("#bar").querySelector("i").style.width = (j.done?100:Math.min(95, 8+done*3))+"%";
+  const rnd = j.rounds ? ("round "+j.rounds+" · ") : "";
+  $("#pmsg").textContent = j.running ? (rnd+steps.length+" steps · repairing to 100%…") : (j.done?"done":"starting…");
   if (j.done){
     clearInterval(polling); polling=null;
     $("#bar").classList.remove("run");
-    $("#install").disabled=false; lockTarget(false);
     const s = await loadStatus();
-    const dn = $("#done"); const bad = (s && s.hard>0) || j.ok===false;
+    const bad = (j.success===false) || (s && s.hard>0);
+    const dn = $("#done");
     dn.className = "show" + (bad?" fail":"");
-    dn.querySelector("h2").textContent = bad ? "◈ FINISHED WITH GAPS" : "◈ WORKFLOW ACTIVE";
+    dn.querySelector("h2").textContent = bad ? "◈ FINISHED WITH GAPS" : "◈ WORKFLOW ACTIVE — 100%";
     $("#donemsg").textContent = bad
-      ? "Some items still need attention (see the red rows above). Fix them and click Install again."
-      : "Everything is installed and wired. You're ready — start a new Claude Code session in any repo.";
+      ? "A few items need a prerequisite that couldn't be auto-installed (e.g. the claude CLI / network for MCP registration). Everything else is wired — install the prereq and it self-completes on next launch."
+      : ("Everything installed, repaired and verified in "+(j.rounds||1)+" round(s). Start a new Claude Code session in any repo — you're ready.");
   }
 }
-function logrow(s){
-  const mk = s.status==="ok"?`<span class="mk ok">✓</span>`:s.status==="warn"?`<span class="mk warn">▲</span>`:`<span class="mk miss">✕</span>`;
-  return `<div class="logrow">${mk}<span class="lk">${esc(s.kind)}</span><span class="ln">${esc(s.name)}</span><span class="ld">${esc(s.detail).slice(0,52)}</span></div>`;
-}
-function spinRow(){ return `<div class="logrow"><span class="spin"></span><span class="lk">…</span><span class="ln muted">working…</span><span class="ld"></span></div>`; }
 
-loadStatus();
+// The server already launched the loop at boot. Belt-and-suspenders: ask it to
+// start (idempotent — the loop self-guards), then poll. No button, no click.
+(async function auto(){
+  await loadStatus();
+  try { await api("/api/install", {method:"POST"}); } catch(e){}
+  polling = setInterval(pollProgress, 600);
+  statusTimer = setInterval(loadStatus, 4000);
+})();
 </script>
 </body>
 </html>

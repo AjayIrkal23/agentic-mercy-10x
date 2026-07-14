@@ -27,6 +27,12 @@ fails soft (returns a safe default) so an importing hook can stay fail-open.
 
 ## Gotchas / fragile spots
 
+- `platform.run` has a **Windows-only shell fallback**: when a direct
+  `subprocess.run` raises `OSError` (a `.cmd`/`.bat` shim like the npm-installed
+  `claude` CLI or `npx` can't be exec'd by CreateProcess — the classic `rc=127`),
+  it retries once via `shell=True` + `list2cmdline`. This is what makes the
+  installer's `claude mcp add` / `claude plugin` steps actually run on Windows.
+  POSIX is untouched.
 - `repo_context.py` is the SINGLE source of active-repo truth (Spec B
   active-repo-only mandate) — do not add a second walk-up-`.git` implementation.
 - `git_remote_identity` is a behavioural twin of the private copy inside
