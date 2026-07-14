@@ -125,8 +125,10 @@ NOT normally rebuild anything by hand. Act only if a guard prints
 
 ## Enforcement layer (so this isn't just advice)
 
-- `codebase-intel-router.py` (UserPromptSubmit) injects a task-specific directive
-  the first time each task-type appears in a session.
+- The **prompt router** (`prompt_router/router.py`, the live UserPromptSubmit handler)
+  injects task-specific intel directives (SUBSTRATE + SKILLS + ROUTING) each prompt; it
+  consumes the entire `trigger-floor.json`, so it is a provable superset of the retired
+  legacy injectors.
 - `jcodemunch-enforce.py pre-tool-use` gates blind source reads — native
   Read/Grep/Glob **and** lean-ctx `ctx_read`/`ctx_search`/`ctx_multi_read` on
   source files — in **every phase** (planning/audit/debug/coding, not just after

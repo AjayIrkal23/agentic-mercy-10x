@@ -5,12 +5,12 @@ Holds BOTH UserPromptSubmit stacks and atomically swaps the ``UserPromptSubmit``
 section of ``settings.json`` between them, one command, no other edits
 (Charter §2 — 30-day one-flip revert):
 
-  --snapshot   read the CURRENT settings.json UserPromptSubmit block and freeze
-               it VERBATIM to hooks/legacy-prompt-stack.json (the legacy stack).
-  --router     replace UserPromptSubmit with the router stack
+  --router     install the router UserPromptSubmit stack
                (prompt_router/router.py + lean-ctx hook observe).
-  --legacy     restore UserPromptSubmit from legacy-prompt-stack.json (byte-identical).
   --status     print which stack is currently installed.
+
+  RETIRED 2026-07-14: --snapshot / --legacy (UPS flip-back) are gone — the legacy
+  injector stack was deleted. Full recovery is via git (pre-100x / pre-legacy-retirement).
 
 Safety:
   * ``--settings <path>`` targets an alternate file (used by tests + dry runs);
@@ -79,17 +79,10 @@ def _atomic_write_json(path: Path, data: dict) -> None:
 
 
 def snapshot(settings: Path) -> int:
-    data = _load_json(settings)
-    ups = data.get("hooks", {}).get("UserPromptSubmit", [])
-    payload = {
-        "_about": "Verbatim freeze of the legacy UserPromptSubmit stack for flip-router --legacy revert (Charter §2, 30-day window).",
-        "captured_from": str(settings),
-        "user_prompt_submit": ups,
-    }
-    _atomic_write_json(_LEGACY_SNAPSHOT, payload)
-    n = sum(len(b.get("hooks", [])) for b in ups)
-    print(f"snapshot: froze {n} legacy UserPromptSubmit hooks -> {_LEGACY_SNAPSHOT.name}")
-    return 0
+    print("RETIRED 2026-07-14: the legacy UserPromptSubmit stack was deleted; there "
+          "is nothing to snapshot. Recovery is via git: `git checkout pre-100x` or "
+          "`git checkout pre-legacy-retirement`.", file=sys.stderr)
+    return 1
 
 
 def _current_mode(settings: Path) -> str:
@@ -105,31 +98,20 @@ def _current_mode(settings: Path) -> str:
 
 def to_router(settings: Path, dry_run: bool) -> int:
     data = _load_json(settings)
-    if not _LEGACY_SNAPSHOT.exists():
-        snapshot(settings)  # never flip without a revert point
     data.setdefault("hooks", {})["UserPromptSubmit"] = _router_block()
     if dry_run:
         print(json.dumps(data["hooks"]["UserPromptSubmit"], indent=2))
         return 0
     _atomic_write_json(settings, data)
-    print("flipped -> ROUTER stack (1 process). Revert: flip-router.py --legacy")
+    print("flipped -> ROUTER stack (1 process). Revert via git: pre-legacy-retirement / pre-100x.")
     return 0
 
 
 def to_legacy(settings: Path, dry_run: bool) -> int:
-    if not _LEGACY_SNAPSHOT.exists():
-        print("ERROR: no legacy-prompt-stack.json snapshot — run --snapshot first", file=sys.stderr)
-        return 1
-    snap = _load_json(_LEGACY_SNAPSHOT)
-    ups = snap.get("user_prompt_submit", [])
-    data = _load_json(settings)
-    data.setdefault("hooks", {})["UserPromptSubmit"] = ups
-    if dry_run:
-        print(json.dumps(ups, indent=2))
-        return 0
-    _atomic_write_json(settings, data)
-    print("flipped -> LEGACY stack (byte-identical restore).")
-    return 0
+    print("RETIRED 2026-07-14: the legacy UserPromptSubmit stack has been deleted; "
+          "flip-back is gone. Full recovery is via git: `git checkout pre-100x` "
+          "(whole overhaul) or `pre-legacy-retirement` (this cleanup).", file=sys.stderr)
+    return 1
 
 
 def main(argv: list[str]) -> int:

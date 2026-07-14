@@ -47,10 +47,12 @@ Only hook logic and hook config belong here — no skill bodies, no app code.
   (classify/select consume the entire `trigger-floor.json`). Verify the live wiring
   in **settings.json**, NOT these dispatch comments (that stale claim caused a real
   agent error on 2026-07-14).
-- The legacy prompt-stack + aggregator links (the prompt-reminder injector, the
-  session-start and post-write aggregators, `model-router.py`, the 3 index guards)
-  are still wired during the retention window but retire in P7-T4 — do not cite
-  them as the architecture; the architecture is `dispatch.py` + the router.
+- The legacy prompt-stack (UPS injectors: `model-router.py`, `autonomous-skill-router.py`,
+  `sequential-thinking-mandate.py`, the delegate wrappers, etc.) was **fully retired and
+  deleted 2026-07-14** (v2.4.0). The router + `dispatch.py` are the whole architecture;
+  recover the old stack only via git (`pre-100x` / `pre-legacy-retirement`). The
+  session-start/post-write aggregators + the 3 index guards remain LIVE — they were never
+  part of the UPS injector stack.
 - Dispatcher and every link **fail open** — a crashing link logs to telemetry and
   the chain continues; never let a link raise past its own try/except.
 

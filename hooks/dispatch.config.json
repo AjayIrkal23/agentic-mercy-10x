@@ -25,20 +25,7 @@
       {"id": "gsd-session-state",       "type": "exec",     "cmd": ["{NODE}", "{HOOKS}/gsd-session-state.js"], "timeout_ms": 10000, "priority": 2, "enabled": true, "_reg": 8, "_port": "P6-T2: bash launcher ported to js (parity-verified); bash original kept for 30-day flip-back only"},
       {"id": "gsd-check-update",        "type": "advisory", "cmd": ["{NODE}", "{HOOKS}/gsd-check-update-launcher.js"], "timeout_ms": 5000, "priority": 2, "enabled": true, "_new": "P6-T4: ACTIVATE gsd-check-update on a 7-day TTL (launcher gates the npm-hitting worker); surfaces update/stale-hook advisory. GSD-managed files untouched."}
     ],
-    "user-prompt-submit": [
-      {"id": "tdd-guard-launcher-ups",  "type": "advisory", "cmd": ["{PY}", "{HOOKS}/tdd_guard_launcher.py"], "timeout_ms": 20000, "priority": 0, "enabled": true, "_reg": 9, "_router_set": "legacy", "_port": "P6-T2: bash launcher ported to py (byte-parity); flip-back restores the bash original from legacy-settings-hooks.json"},
-      {"id": "invoke-suite-manifest",   "type": "advisory", "cmd": ["{PY}", "{HOOKS}/invoke-suite-manifest.py"], "timeout_ms": 15000, "priority": 0, "enabled": true, "_reg": 10, "_router_set": "legacy"},
-      {"id": "model-router",            "type": "advisory", "cmd": ["{PY}", "{HOOKS}/model-router.py"], "timeout_ms": 10000, "priority": 0, "enabled": true, "_reg": 11, "_router_set": "legacy", "_note": "RETAINED + registered until P7-T5 (legacy prompt stack, 30-day window). Do NOT attic."},
-      {"id": "fullstack-before-submit", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/fullstack-skills-reminder.py", "before-submit"], "timeout_ms": 8000, "priority": 0, "enabled": true, "_reg": 12, "_router_set": "legacy"},
-      {"id": "autonomous-skill-router", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/autonomous-skill-router.py"], "timeout_ms": 15000, "priority": 0, "enabled": true, "_reg": 13, "_router_set": "legacy"},
-      {"id": "uiux-before-submit",      "type": "advisory", "cmd": ["{PY}", "{HOOKS}/ui-ux-stack-orchestrator.py", "before-submit"], "timeout_ms": 30000, "priority": 0, "enabled": true, "_reg": 14, "_router_set": "legacy"},
-      {"id": "token-stack-prompt",      "type": "advisory", "cmd": ["{PY}", "{HOOKS}/token-stack-prompt-reminder.py"], "timeout_ms": 20000, "priority": 0, "enabled": true, "_reg": 15, "_router_set": "legacy"},
-      {"id": "leanctx-observe-ups",     "type": "exec",     "cmd": ["lean-ctx", "hook", "observe"], "timeout_ms": 5000, "priority": 2, "enabled": true, "_reg": 16},
-      {"id": "discovery-skills",        "type": "advisory", "cmd": ["{PY}", "{HOOKS}/discovery-skills-reminder.py", "prompt"], "timeout_ms": 5000, "priority": 1, "enabled": true, "_reg": 17, "_router_set": "legacy", "_port": "P6-T2: bash launcher ported to py (byte-identical stdout); bash original NOT deleted (legacy member, retires P7-T4)"},
-      {"id": "sequential-thinking",     "type": "advisory", "cmd": ["{PY}", "{HOOKS}/sequential-thinking-mandate.py"], "timeout_ms": 8000, "priority": 0, "enabled": true, "_reg": 18, "_router_set": "legacy"},
-      {"id": "router-shadow",           "type": "exec",     "cmd": ["{PY}", "{HOOKS}/prompt_router/router.py", "--shadow"], "timeout_ms": 20000, "priority": 0, "enabled": true, "_new": "HANDOFF P1-T8: shadow-log the router's would-be injection; starts the >=10-real-session zero-miss clock. Emits nothing.", "_router_set": "both"},
-      {"id": "index-tick",              "type": "exec",     "cmd": ["{PY}", "{HOOKS}/index-lifecycle.py", "tick"], "timeout_ms": 5000, "priority": 0, "enabled": true, "_new": "HANDOFF P3-T4: T-check on prompt turns (Spec B 2.2)."}
-    ],
+    "user-prompt-submit": [],
     "pre-tool-use": [
       {"id": "dangerous-bash-gate",     "type": "gate",     "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/dangerous-bash-gate.py"], "timeout_ms": 5000, "enabled": true, "_reg": 27, "_order": "DANGER FIRST"},
       {"id": "first-write-skill-gate",  "type": "gate",     "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/first-write-skill-gate.py"], "timeout_ms": 5000, "enabled": true, "_reg": 22},

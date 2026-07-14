@@ -9,15 +9,12 @@ Everything else in settings.json (env, permissions, mcpServers, model, …) is
 preserved byte-for-byte by round-tripping the parsed JSON and touching only the
 ``hooks`` key.
 
-  --snapshot   freeze the CURRENT settings.json hooks block VERBATIM to
-               hooks/legacy-settings-hooks.json (the revert point + the parity
-               harness's legacy-inventory source).
-  --dispatch   replace the hooks block with the 8 dispatcher entries
-               (snapshots first if no snapshot exists — never flip without a
-               revert point).
-  --legacy     restore the hooks block from legacy-settings-hooks.json
-               (byte-identical 65-registration restore).
+  --dispatch   install the 8-dispatcher hooks block (one dispatch.py <event>).
   --status     print which block is currently installed.
+
+  RETIRED 2026-07-14: --snapshot / --legacy (the legacy 65-registration flip-back)
+  are gone — the legacy hook set was deleted. Full recovery is via git:
+  ``git checkout pre-100x`` (whole overhaul) or ``pre-legacy-retirement`` (cleanup).
 
 Safety: ``--settings <path>`` targets an alternate file; ``--dry-run`` prints
 without writing; every write is atomic (temp + os.replace) and re-parsed to
@@ -106,19 +103,10 @@ def _atomic_write_json(path: Path, data: dict) -> None:
 
 
 def snapshot(settings: Path) -> int:
-    data = _load_json(settings)
-    hooks = data.get("hooks", {})
-    payload = {
-        "_about": "Verbatim freeze of the legacy 65-registration hooks block for "
-                  "flip-dispatch.py --legacy revert (Charter §2/§3, 30-day window). "
-                  "Also the parity harness's legacy-inventory source (P4-T2).",
-        "captured_from": str(settings),
-        "hooks": hooks,
-    }
-    _atomic_write_json(_LEGACY_SNAPSHOT, payload)
-    n = sum(len(g.get("hooks", [])) for arr in hooks.values() for g in arr)
-    print(f"snapshot: froze {n} legacy hook registrations -> {_LEGACY_SNAPSHOT.name}")
-    return 0
+    print("RETIRED 2026-07-14: legacy hook-block snapshot is gone (the legacy hook "
+          "set was deleted). Recovery is via git: `git checkout pre-100x` or "
+          "`git checkout pre-legacy-retirement`.", file=sys.stderr)
+    return 1
 
 
 def _current_mode(settings: Path) -> str:
@@ -137,33 +125,22 @@ def _current_mode(settings: Path) -> str:
 
 def to_dispatch(settings: Path, dry_run: bool) -> int:
     data = _load_json(settings)
-    if not _LEGACY_SNAPSHOT.exists():
-        snapshot(settings)  # never flip without a revert point
     data.setdefault("hooks", {})
     data["hooks"] = _dispatch_block()
     if dry_run:
         print(json.dumps(data["hooks"], indent=2))
         return 0
     _atomic_write_json(settings, data)
-    print("flipped -> DISPATCH block (8 entries). Revert: flip-dispatch.py --legacy")
+    print("flipped -> DISPATCH block (8 entries). Revert via git: pre-legacy-retirement / pre-100x.")
     return 0
 
 
 def to_legacy(settings: Path, dry_run: bool) -> int:
-    if not _LEGACY_SNAPSHOT.exists():
-        print("ERROR: no legacy-settings-hooks.json snapshot — run --snapshot first", file=sys.stderr)
-        return 1
-    snap = _load_json(_LEGACY_SNAPSHOT)
-    hooks = snap.get("hooks", {})
-    data = _load_json(settings)
-    data.setdefault("hooks", {})
-    data["hooks"] = hooks
-    if dry_run:
-        print(json.dumps(hooks, indent=2))
-        return 0
-    _atomic_write_json(settings, data)
-    print("flipped -> LEGACY block (byte-identical 65-registration restore).")
-    return 0
+    print("RETIRED 2026-07-14: the legacy 65-registration flip-back is gone — the "
+          "legacy hook set has been deleted. Full recovery is via git: "
+          "`git checkout pre-100x` (whole overhaul) or `pre-legacy-retirement` "
+          "(this cleanup).", file=sys.stderr)
+    return 1
 
 
 def main(argv: list[str]) -> int:

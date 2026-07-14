@@ -39,13 +39,11 @@ _SYSPLATFORM_EXEMPT = {
     (HOOKS / "lib" / "__init__.py").resolve(),
 }
 
-# .sh files under hooks/ that predate the overhaul and are retained ONLY as the
-# 30-day flip-back path (legacy-settings-hooks.json restores them byte-identically
-# via flip-dispatch.py --legacy). They retire with the legacy stack in P7-T4/T5.
+# .sh files under hooks/ that predate the overhaul, kept as bash-port originals.
 # The LIVE dispatch chain no longer invokes any of them (all repointed to .py/.js
-# ports in P6-T2). No NEW .sh may join this list.
+# ports in P6-T2). Flip-back was retired 2026-07-14 (git is the recovery path);
+# discovery-skills-reminder.sh was deleted with the legacy UPS stack. No NEW .sh here.
 _LEGACY_SH_GRANDFATHER = {
-    "discovery-skills-reminder.sh",
     "gsd-phase-boundary.sh",
     "gsd-session-state.sh",
     "gsd-validate-commit.sh",

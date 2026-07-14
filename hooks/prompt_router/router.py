@@ -207,30 +207,13 @@ def _builtin_items(profile, ctx: dict) -> list[dict]:
     return items
 
 
-def _delegate_items(profile, ctx: dict) -> list[dict]:
-    """S3: import delegate modules (P1-T4) when present; each wraps an original
-    injector hook. Merged into the built-in set (delegate wins by id). Fail-open."""
-    try:
-        from prompt_router import modules as _mods  # noqa: PLC0415
-    except Exception:  # noqa: BLE001
-        return []
-    collect = getattr(_mods, "collect", None)
-    if not callable(collect):
-        return []
-    try:
-        out = collect(profile, ctx)
-        return out if isinstance(out, list) else []
-    except Exception:  # noqa: BLE001 - a delegate crash must not break routing
-        return []
-
-
 def _gather_items(profile, ctx: dict) -> list[dict]:
-    builtin = _builtin_items(profile, ctx)
-    delegated = _delegate_items(profile, ctx)
-    # delegate items first so they WIN on id collision; dedup preserves first
+    # Built-in item builders ONLY. The S3 delegate wrappers (which imported the
+    # legacy injector hooks) were retired 2026-07-14 with the legacy UPS stack;
+    # the floor-driven built-ins are — and always were — the operational path.
     merged: list[dict] = []
     seen: set[str] = set()
-    for it in delegated + builtin:
+    for it in _builtin_items(profile, ctx):
         iid = it.get("id")
         if iid and iid in seen:
             continue
