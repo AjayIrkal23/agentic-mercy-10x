@@ -1,18 +1,18 @@
 {
   "_meta": {
     "purpose": "Charter v3 §2 verbatim trigger floor — removals forbidden, additions allowed.",
-    "generated": "2026-07-12T00:15:03",
+    "generated": "2026-07-14T21:49:50",
     "generator": "build-trigger-floor.py",
-    "checksum": "c2ab0c2f52419f6bf1a86a5bdbdcbf0009bd44ff1874e7e738f4b3166abd39d4",
-    "entry_count": 1973,
+    "checksum": "30660e46118cd7d95c1afd3491692697be82ed734001ecf6eee985ea2730c392",
+    "entry_count": 2009,
     "source_counts": {
       "skill_router.config.rules": 28,
       "skill_router.builtins": 24,
-      "autonomous.category_keywords": 1082,
+      "autonomous.category_keywords": 1115,
       "ui.keywords": 419,
       "graphify.arch+explore": 247,
       "fullstack.segments": 11,
-      "command_names": 140
+      "command_names": 143
     }
   },
   "entries": [
@@ -4319,6 +4319,237 @@
       "value": "data driven test",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.TEST",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "refactor",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "refactoring",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "refactor this",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "restructure",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "restructure this",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "extract function",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "extract method",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "extract component",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "extract module",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "extract interface",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "rename symbol",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "rename this",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "safe rename",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "split this file",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "split the file",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "break up this",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "break this up",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "modularize",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "reorganize",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "decouple",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "untangle",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "deduplicate",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "dedupe",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "de-duplicate",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "reduce coupling",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "move this function",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "move this type",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "inline this",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "pull this out",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "behavior-preserving",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "behavior preserving refactor",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "clean up the structure",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "improve the structure",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REFACTOR",
       "weight": 1.0
     },
     {
@@ -14078,6 +14309,20 @@
     },
     {
       "kind": "command_name",
+      "value": "invoke-refactor",
+      "source_file": "commands/",
+      "source_key": "invoke-refactor",
+      "weight": 1.0
+    },
+    {
+      "kind": "command_name",
+      "value": "invoke-review",
+      "source_file": "commands/",
+      "source_key": "invoke-review",
+      "weight": 1.0
+    },
+    {
+      "kind": "command_name",
       "value": "invoke-security",
       "source_file": "commands/",
       "source_key": "invoke-security",
@@ -14319,6 +14564,13 @@
       "value": "invoke-status",
       "source_file": "commands/",
       "source_key": "invoke-status",
+      "weight": 1.0
+    },
+    {
+      "kind": "command_name",
+      "value": "invoke-test",
+      "source_file": "commands/",
+      "source_key": "invoke-test",
       "weight": 1.0
     },
     {

@@ -56,7 +56,7 @@ The system stands on six promises. Each one is enforced by code, not vibes:
 
 - **🎯 Never-miss routing.** One smart router reads your intent once and hands the work the exact skills and specialists it needs — backed by **1,973 protected triggers**, a deduped session manifest, and a priority budget so nothing routable is ever silently dropped.
 - **🧰 218 curated skills.** Standards, testing, security, forensics, and design craft — with **128 upstream packs provenance-locked and hash-verified** at install, so vendored skills update cleanly and never drift.
-- **🎼 A ten-act specialist corps.** Auditor, architect, planner, engineer, debugger, designer, cleaner, doc-writer, verifier, and security sentinel — composed on demand through **one parametric `/invoke` command**.
+- **🎼 A thirteen-act specialist corps.** Auditor, architect, planner, test-author, engineer, refactorer, debugger, designer, cleaner, adversarial reviewer (Santa Method), doc-writer, verifier, and security sentinel — composed on demand through **one parametric `/invoke` command**.
 - **🧠 Self-healing codebase intelligence.** The workspace auto-indexes the repo you're in — symbols, dependencies, docs — with **zero background daemons**. The agent never works blind.
 - **💸 Model cost autopilot.** The right model per task: **Sonnet by default, Opus only where it earns its keep.** One policy file decides.
 - **🛡️ Safety-railed end to end.** Atomic hooks that fail open, session telemetry, one-command rollback, and a manifested archive of everything the workspace keeps.
@@ -163,7 +163,7 @@ Every skill in the workspace exists to give a developer one of eight superpowers
 
 | Skill / agent | What it 10x's |
 |---|---|
-| Ten-act specialist corps + parametric `/invoke` | Audit · spec · plan · implement · debug · design · clean · docs · verify · security — composed on demand |
+| Thirteen-act specialist corps + parametric `/invoke` | Audit · spec · plan · test · implement · refactor · debug · design · clean · review · docs · verify · security — composed on demand |
 | `forensic-hotspot-finder` · `forensic-change-coupling` | Which files cause the most bugs; what quietly changes together |
 | `forensic-complexity-trends` · `forensic-debt-quantification` | Is quality trending up? What does the debt cost in **dollars**? |
 
@@ -185,7 +185,7 @@ Type `/invoke audit spec plan impl design` and a **whole cross-functional team w
 <img src="assets/invoke-team.webp" alt="One /invoke command igniting a chain of specialist agents — audit, spec, plan, implement, design, clean, docs, verify — also auto-triggered by keywords" width="100%">
 </div>
 
-<sub align="center"><i>One parametric /invoke composes the ten-act specialist corps. Twenty command files back it; a plain-English prompt triggers the matching chain automatically.</i></sub>
+<sub align="center"><i>One parametric /invoke composes the thirteen-act specialist corps. Twenty-four command files back it; a plain-English prompt triggers the matching chain automatically.</i></sub>
 
 <br/>
 
@@ -212,7 +212,7 @@ flowchart LR
     classDef a3 fill:#22C55E,stroke:#15803D,color:#052e16
 ```
 
-Compose the acts freely: `/invoke audit spec plan impl clean` runs the whole spine; `/invoke debug` runs one act. Twenty command files back the surface, and any command name resolves through the invoke translator.
+Compose the acts freely: `/invoke audit spec plan test impl refactor review clean` runs the whole spine; `/invoke debug` runs one act. Twenty-four command files back the surface, and any command name resolves through the invoke translator.
 
 #### The specialist corps
 
@@ -493,7 +493,7 @@ flowchart TD
     L1["🧭 <b>DOCTRINE</b> — CLAUDE.md + rules/<br/><i>always-in-context operating rules</i>"]:::l1
     L2["🎨 <b>CRAFT</b> — 218 skills<br/><i>how to do the work well</i>"]:::l2
     L3["🛡️ <b>ENFORCEMENT</b> — 8 dispatchers · isolated links<br/><i>makes the doctrine real at write-time</i>"]:::l3
-    L4["🤖 <b>SPECIALISTS</b> — 10-act corps<br/><i>one expert per act</i>"]:::l4
+    L4["🤖 <b>SPECIALISTS</b> — 13-act corps<br/><i>one expert per act</i>"]:::l4
     L5["🎼 <b>ORCHESTRATION</b> — parametric /invoke<br/><i>composes specialists into the 3-act flow</i>"]:::l5
     L1 --> L2 --> L3 --> L4 --> L5
 
@@ -509,7 +509,7 @@ flowchart TD
 | **1 · Doctrine** | `CLAUDE.md`, `rules/` | Always-in-context operating rules — model routing, skill protocol, TDD/dox/codebase-intel doctrine. |
 | **2 · Craft** | `skills/` | 218 skills the agent invokes to *do the work well* (standards, testing, security, design, forensics). |
 | **3 · Enforcement** | `hooks/` | 8 event dispatchers wiring isolated links — skill injection, index guards, write gates, model guards, stop-gates. |
-| **4 · Specialists** | `agents/` | A ten-act specialist corps plus a UI/UX designer and GSD/Figma/Vercel helpers. |
+| **4 · Specialists** | `agents/` | A thirteen-act specialist corps plus a UI/UX designer and GSD/Figma/Vercel helpers. |
 | **5 · Orchestration** | `commands/` | 20 `/invoke` files composing the specialists into the 3-act flow. |
 
 ---

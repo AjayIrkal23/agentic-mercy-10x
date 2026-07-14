@@ -35,7 +35,7 @@ def test_manifest_valid_json_and_shape():
     assert isinstance(m["deps"], list) and m["deps"]
     assert isinstance(m["mcp_servers"], list)
     assert m["palette"]["skill_names"] == 219
-    assert m["palette"]["command_files"] == 21
+    assert m["palette"]["command_files"] == 24
     assert m["palette"]["historic_command_names"] == 139
 
 

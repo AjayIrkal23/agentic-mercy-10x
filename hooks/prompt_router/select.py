@@ -37,6 +37,8 @@ _AGENT_FOR = {
     "AUDIT": "audit-specialist", "SPEC": "spec-architect",
     "PLAN": "planning-director", "IMPLEMENT": "implementation-engineer",
     "CLEANUP": "deadcode-reaper", "SECURITY": "security-sentinel",
+    "REVIEW": "santa-reviewer", "TEST": "test-author",
+    "REFACTOR": "refactor-specialist",
 }
 
 

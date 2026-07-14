@@ -24,10 +24,11 @@ _FLOOR_PATH = _HOOKS / "trigger-floor.json"
 ACT_MAP = {
     "AUDIT": "audit", "SPEC": "spec", "PLAN": "plan", "IMPLEMENT": "impl",
     "DESIGN": "design", "DEBUG": "debug", "CLEANUP": "clean", "SECURITY": "security",
+    "REVIEW": "review", "TEST": "test", "REFACTOR": "refactor",
 }
 # priority order for emitting acts (mirrors autonomous category_priority)
 _ACT_PRIORITY = ["DEBUG", "SECURITY", "SHIP", "SPEC", "PLAN", "AUDIT",
-                 "IMPLEMENT", "DESIGN", "CLEANUP", "REVIEW", "QA", "TEST",
+                 "IMPLEMENT", "REFACTOR", "DESIGN", "CLEANUP", "REVIEW", "QA", "TEST",
                  "RESUME", "LARGE", "MEDIUM", "SMALL", "TRIVIAL"]
 
 # exact-match acknowledgement allowlist — the ONLY trivial fast-exit (Charter §1;

@@ -44,10 +44,13 @@ ACTS: dict[str, dict] = {
     "audit":   {"cat": "AUDIT",     "agent": "audit-specialist",        "artifact": "AUDIT-{date}.md",   "role": "tech-debt / forensic / architecture audit"},
     "spec":    {"cat": "SPEC",      "agent": "spec-architect",          "artifact": "SPEC-{slug}.md",    "role": "build-ready spec + contracts"},
     "plan":    {"cat": "PLAN",      "agent": "planning-director",       "artifact": "plan-{date}-{slug}.md", "role": "phased execution plan"},
+    "test":    {"cat": "TEST",      "agent": "test-author",             "artifact": "TEST-REPORT.md",    "role": "author failing tests first (TDD red)"},
     "impl":    {"cat": "IMPLEMENT", "agent": "implementation-engineer", "artifact": "IMPL-REPORT.md",    "role": "implement the plan (RUNS ON OPUS)"},
+    "refactor":{"cat": "REFACTOR",  "agent": "refactor-specialist",     "artifact": "REFACTOR-REPORT.md","role": "behavior-preserving refactor (test-guarded)"},
     "debug":   {"cat": "DEBUG",     "agent": "debug-detective",         "artifact": "ROOTCAUSE.md",      "role": "root-cause an unknown failure"},
     "design":  {"cat": "DESIGN",    "agent": "frontend-uiux-designer",  "artifact": "DESIGN-REPORT.md",  "role": "UI/UX design + polish (opus)"},
     "clean":   {"cat": "CLEANUP",   "agent": "deadcode-reaper",         "artifact": "REAP-REPORT.md",    "role": "dead-code reap (code-mutating)"},
+    "review":  {"cat": "REVIEW",    "agent": "santa-reviewer",          "artifact": "SANTA-REVIEW.md",   "role": "Santa Method adversarial review (opus)"},
     "docs":    {"cat": None,        "agent": "docs-sync-agent",         "artifact": "DOCS-SYNC-REPORT.md","role": "sync docs to the change"},
     "verify":  {"cat": None,        "agent": "qa-verifier",             "artifact": "VERIFY-REPORT.md",  "role": "verify behavior end-to-end"},
     "security":{"cat": "SECURITY",  "agent": "security-sentinel",       "artifact": "SECURITY-REPORT.md","role": "security review / hardening"},
@@ -98,7 +101,7 @@ def render_parametric(cfg: dict, model_policy: dict) -> str:
     fallback_block = "\n".join(fb)
     closers = ", ".join(cfg.get("orchestration", {}).get("closers_chain", []))
     return f"""---
-description: Parametric orchestrator — `/invoke <acts...> [-- task]` runs one specialist per act (intel once, cumulative artifacts, closers once). Acts audit spec plan impl debug design clean docs verify security.
+description: Parametric orchestrator — `/invoke <acts...> [-- task]` runs one specialist per act (intel once, cumulative artifacts, closers once). Acts {' '.join(CANON_ORDER)}.
 ---
 {BANNER}
 

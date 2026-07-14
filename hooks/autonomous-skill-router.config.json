@@ -266,12 +266,17 @@
     "mr review"
    ],
    "local_skills": [
+    "santa-review",
     "code-review-and-quality"
    ],
    "superpowers_skills": [
     "requesting-code-review"
    ],
-   "ceremony": "light"
+   "ceremony": "light",
+   "agent": "santa-reviewer",
+   "artifact": "SANTA-REVIEW.md",
+   "checkpoint": false,
+   "closers": true
   },
   "SHIP": {
    "keywords": [
@@ -615,12 +620,68 @@
     "data driven test"
    ],
    "local_skills": [
-    "tdd"
+    "tdd",
+    "test-driven-development",
+    "golang-testing",
+    "webapp-testing"
    ],
    "superpowers_skills": [
     "test-driven-development"
    ],
-   "ceremony": "standard"
+   "ceremony": "standard",
+   "agent": "test-author",
+   "artifact": "TEST-REPORT.md",
+   "checkpoint": false,
+   "closers": false
+  },
+  "REFACTOR": {
+   "keywords": [
+    "refactor",
+    "refactoring",
+    "refactor this",
+    "restructure",
+    "restructure this",
+    "extract function",
+    "extract method",
+    "extract component",
+    "extract module",
+    "extract interface",
+    "rename symbol",
+    "rename this",
+    "safe rename",
+    "split this file",
+    "split the file",
+    "break up this",
+    "break this up",
+    "modularize",
+    "reorganize",
+    "decouple",
+    "untangle",
+    "deduplicate",
+    "dedupe",
+    "de-duplicate",
+    "reduce coupling",
+    "move this function",
+    "move this type",
+    "inline this",
+    "pull this out",
+    "behavior-preserving",
+    "behavior preserving refactor",
+    "clean up the structure",
+    "improve the structure"
+   ],
+   "local_skills": [
+    "code-simplification",
+    "improve-codebase-architecture",
+    "dead-code-and-change-audit",
+    "golang-patterns"
+   ],
+   "superpowers_skills": [],
+   "ceremony": "standard",
+   "agent": "refactor-specialist",
+   "artifact": "REFACTOR-REPORT.md",
+   "checkpoint": false,
+   "closers": false
   },
   "SECURITY": {
    "keywords": [
@@ -1469,6 +1530,7 @@
   "PLAN",
   "AUDIT",
   "IMPLEMENT",
+  "REFACTOR",
   "DESIGN",
   "CLEANUP",
   "REVIEW",
@@ -1486,6 +1548,7 @@
   "auto_dispatch_threshold": 1,
   "closers_chain": [
    "deadcode-reaper",
+   "santa-reviewer",
    "docs-sync-agent",
    "qa-verifier"
   ],

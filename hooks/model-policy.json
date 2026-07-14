@@ -25,8 +25,9 @@
     "min_risk": 2
   },
   "invoke_categories": {
-    "_comment": "Per-/invoke-category model pin. Replaces categories.<CAT>.model in autonomous-skill-router.config.json as the source of truth; gen-invoke-commands.py reads THIS (wired in P5).",
-    "IMPLEMENT": "opus"
+    "_comment": "Per-/invoke-category model pin. Replaces categories.<CAT>.model in autonomous-skill-router.config.json as the source of truth; gen-invoke-commands.py reads THIS (wired in P5). REVIEW=opus: the Santa Method adversarial review runs on Opus by design (its bug-catching depth is the point).",
+    "IMPLEMENT": "opus",
+    "REVIEW": "opus"
   },
   "override_phrases": {
     "_comment": "Explicit user phrases in the prompt that force a model for that turn.",
