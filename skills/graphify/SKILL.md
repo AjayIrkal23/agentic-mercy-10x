@@ -62,25 +62,19 @@ Turn a folder into **`graphify-out/graph.json`**, **`GRAPH_REPORT.md`**, **`grap
    - Run **detect**; if corpus is huge (upstream thresholds: **`total_words` > 2M OR `total_files` > 200**), warn and ask for a subfolder scope.
    - Run the upstream pipeline (**structural extraction** → **semantic** where needed → **merge** → **build/cluster** → **report** → **`to_html`**), or CLI equivalents such as **`graphify <path>`** / **`graphify <path> --update`** after the initial build.
 
-## Interpreter / Cursor agent shells
+## Interpreter / portable launch
 
-On some setups `PYTHONEXECUTABLE` points at the editor bundle and breaks `venv`/`pipx` Python shebangs. Use:
+`hooks/graphify_launcher.py` is the portable, fail-open launcher (it replaced the old `graphify-runner.sh`, 2026-07-14). It discovers the serve interpreter and never takes the MCP offline on a missing graph. Manual checks:
 
 ```bash
-"$HOME/.claude/hooks/graphify-runner.sh" -m graphify --help
-"$HOME/.claude/hooks/graphify-runner.sh" -m graphify.serve
+graphify --help
+python3 "$HOME/.claude/hooks/graphify_launcher.py"   # starts graphify.serve for the OPEN repo
 ```
 
-Adjust **`GRAPHIFY_VENV`** (~/.local/share/cursor-graphify-venv) or **`GRAPHIFY_SITE_PACKAGES`** / **`GRAPHIFY_PYTHON`** env vars consumed by **`graphify-runner.sh`** only if your install path differs.
+Adjust **`GRAPHIFY_VENV`** (default `~/.local/share/claude-graphify-venv`) or **`GRAPHIFY_SITE_PACKAGES`** / **`GRAPHIFY_PYTHON`** only if your install path differs.
 ## MCP server
 
-After **`graph.json` exists**, you can expose query tools via:
-
-```bash
-"$HOME/.claude/hooks/graphify-runner.sh" -m graphify.serve graphify-out/graph.json
-```
-
-The server exits if **`graph.json` is missing or invalid** — build the graph first, then restart Cursor/MCP.
+The graphify MCP server is registered in `~/.claude.json` (command: `hooks/graphify_launcher.py`) and comes up automatically. It serves the OPEN repo's `graphify-out/graph.json`, validated to belong to that repo by git-remote identity (a foreign/ancestor-repo graph is refused). If no graph exists it comes up empty (`graph_stats` reports "not built") instead of failing — build with `graphify update <root>`, then reconnect the MCP.
 
 ## Help-only guard
 

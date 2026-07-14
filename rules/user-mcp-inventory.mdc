@@ -16,7 +16,7 @@ Canonical config: **`~/.claude.json`**. Deep routing: **`~/.claude/skills/mcp-us
 | **`browser-tools-mcp`** | Needed console/network lens | Duplicate playwright run | Pair with judgement |
 | **`playwright`** | Browser automation/UI proof | Fetch-only pages | `@playwright/mcp` via npx |
 | **`markdownify`** | Convert → markdown ingestion | Out of conversion scope | Respect path env if set |
-| **`graphify`** | Graph MCP queries live | **`graph.json` absent** | Use `graphify-runner.sh` CLI |
+| **`graphify`** | Architecture/dependency graph queries (`query_graph`, `god_nodes`, `get_neighbors`, `shortest_path`, `graph_stats`) — MCP via `hooks/graphify_launcher.py` | **`graph.json` absent** (build: `graphify update <root>`) | Claude-native venv `~/.local/share/claude-graphify-venv`. Repo-identity + freshness validated by `graphify-enforce.py`. Fallback: `graphify query "<q>"` / read `graphify-out/GRAPH_REPORT.md` |
 | **`jcodemunch`** | Code intelligence queries (symbols, references, outlines, blast radius) | File < 50 lines | Configured in `~/.claude.json` |
 | **`jdocmunch`** | Docs intelligence — section-level search/read of md/rst/adoc sets (`search_sections`, `get_toc`, `get_section`) | Single tiny config file | Configured in `~/.claude.json` (added 2026-07-11). Index at `~/.doc-index/local/`; SessionStart guard + post-write auto-reindex. One-click reinstall: `~/.claude/scripts/install-jdocmunch.sh` |
 | **`figma`** | Figma design file access and component data | No Figma URLs | Configured in `~/.claude.json` |
@@ -28,6 +28,8 @@ Canonical config: **`~/.claude.json`**. Deep routing: **`~/.claude/skills/mcp-us
 Browser triage: **`fetch`** → **`playwright`** → **`browser-tools-mcp`** (pick one purposeful stack).
 
 Code search triage: **`jcodemunch`** (symbols/refs) → **`ast-grep`** (structural patterns) → **`grep`** (literal strings).
+
+Intel routing: **`intel-router.py`** (UserPromptSubmit) picks ONE surface per prompt — **`jcodemunch`** (code structure) · **`graphify`** (architecture/deps) · **`jdocmunch`** (docs) — then each surface's read-gate (`jcodemunch-enforce`, `graphify-enforce`, `jdocmunch-enforce`) enforces its own reads. All three kept fresh by `index-lifecycle.py` (active repo, event-driven).
 
 Security triage: **`semgrep`** (SAST rules) → manual review (business logic).
 

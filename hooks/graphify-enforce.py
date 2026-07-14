@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
-"""graphify-enforce.py — Nudge graphify MCP usage for architecture/dependency work.
+"""graphify-enforce.py — Nudge graphify usage for architecture/dependency work.
 
 Modes (sys.argv[1]):
   prompt-submit   → UserPromptSubmit: keyword-triggered graphify reminder
   pre-tool-use    → PreToolUse on Agent|Bash: nudge before broad exploration
+
+The reminder names the reachable graphify MCP tools AND a CLI/file fallback
+(`graphify query`, GRAPH_REPORT.md), so it stays actionable whether or not the
+graphify MCP server is connected this session. It also flags a STALE graph
+(older than the latest commit) with a one-line rebuild directive — the
+query-time freshness signal that complements index-lifecycle's rebuild engine.
 """
 
-import json, os, re, sys
+import json
+import os
+import re
+import subprocess
+import sys
 from pathlib import Path
 
 from tool_compat import is_agent_tool, is_shell_tool, tool_name as compat_tool_name
@@ -14,29 +24,6 @@ from tool_compat import is_agent_tool, is_shell_tool, tool_name as compat_tool_n
 HOOKS_DIR = Path(__file__).parent
 CONFIG_PATH = HOOKS_DIR / "graphify-enforce.config.json"
 STATE_DIR = HOOKS_DIR / ".state"
-
-GRAPHIFY_REMINDER = (
-    "[Graphify] Architecture graph is available. Use graphify MCP tools BEFORE broad exploration or Explore agents:\n"
-    "  - mcp__graphify__query_graph \"<question>\" — search dependency graph (natural language)\n"
-    "  - mcp__graphify__get_neighbors \"<node>\" — who imports/depends on a module\n"
-    "  - mcp__graphify__god_nodes — find hotspots (most-connected files)\n"
-    "  - mcp__graphify__shortest_path \"<A>\" \"<B>\" — trace dependency path\n"
-    "  - mcp__graphify__get_community <id> — modules that cluster together\n"
-    "  - mcp__graphify__graph_stats — overall graph statistics\n"
-    "Graphify gives you the dependency/architecture map in ONE call vs dozens of grep/Read. Use it."
-)
-
-AGENT_NUDGE = (
-    "[Graphify] Before spawning Explore agents for architecture/dependency questions, "
-    "query mcp__graphify__query_graph or mcp__graphify__god_nodes first — "
-    "the graph has pre-computed dependency and community data that answers most "
-    "structural questions in a single call."
-)
-
-BASH_NUDGE = (
-    "[Graphify] This looks like a broad codebase search. Consider mcp__graphify__query_graph "
-    "or mcp__graphify__get_neighbors instead — the graph has pre-indexed dependencies."
-)
 
 
 def _load_config():
@@ -69,9 +56,55 @@ def _save_state(cid: str, state: dict):
     _state_path(cid).write_text(json.dumps(state))
 
 
-def _graph_exists() -> bool:
-    cwd = os.environ.get("CURSOR_PROJECT_DIR", os.environ.get("CLAUDE_PROJECT_DIR", os.getcwd()))
-    return (Path(cwd) / "graphify-out" / "graph.json").exists()
+# --------------------------------------------------------------------------- #
+# Graph resolution + freshness (open-repo scoped, git-root aware)
+# --------------------------------------------------------------------------- #
+def _graph_root_and_path() -> tuple[Path | None, Path | None]:
+    """Return (repo_root, graph.json) for the OPEN repo, walking up to the git
+    root so a subdir cwd still resolves the repo-root graph. ``graph`` is None
+    when the repo has no built graph. Fail-open."""
+    cwd = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    root = None
+    try:
+        from lib.repo_context import git_root
+        root = git_root(cwd)
+    except Exception:
+        root = None
+    if root is None:
+        root = Path(cwd)
+    g = Path(root) / "graphify-out" / "graph.json"
+    return (Path(root), g if g.is_file() else None)
+
+
+def _graph_stale(root: Path, graph: Path) -> bool:
+    """Cheap staleness hint: graph older than the latest git commit. Fail-open → False.
+
+    Complements index-lifecycle (which rebuilds on working-tree writes); this
+    catches the 'committed since the graph was built' case at query time."""
+    try:
+        cp = subprocess.run(
+            ["git", "-C", str(root), "log", "-1", "--format=%ct"],
+            capture_output=True, text=True, timeout=3,
+        )
+        if cp.returncode != 0:
+            return False
+        last_commit = int((cp.stdout or "0").strip() or "0")
+        return graph.stat().st_mtime < last_commit
+    except Exception:
+        return False
+
+
+def _reminder(root: Path, graph: Path, *, compact: bool = False) -> str:
+    lines = ["[Graphify] Architecture/dependency graph is available for this repo."]
+    if _graph_stale(root, graph):
+        lines.append(f"  ⚠️ Graph looks STALE (older than the latest commit) — refresh: `graphify update {root}`")
+    lines.append("  Use graphify BEFORE broad exploration / Explore agents:")
+    lines.append('    MCP: mcp__graphify__query_graph "<q>" · get_neighbors "<node>" · god_nodes · shortest_path "<A>" "<B>" · graph_stats')
+    lines.append("    Fallback if graphify MCP tools are not listed this session:")
+    lines.append(f'      `graphify query "<q>"` · read {root}/graphify-out/GRAPH_REPORT.md')
+    if not compact:
+        lines.append("  One graph call answers most structural questions vs dozens of grep/Read.")
+    return "\n".join(lines)
 
 
 def _has_keywords(text: str, keywords: list[str]) -> bool:
@@ -99,7 +132,8 @@ def handle_prompt_submit():
         json.dump({"continue": True}, sys.stdout)
         return
 
-    if not _graph_exists():
+    root, graph = _graph_root_and_path()
+    if graph is None:
         json.dump({"continue": True}, sys.stdout)
         return
 
@@ -132,7 +166,7 @@ def handle_prompt_submit():
             state["match_count"] = 0
             state["remind_count"] += 1
             _save_state(session_id, state)
-            _emit(GRAPHIFY_REMINDER, "UserPromptSubmit")
+            _emit(_reminder(root, graph), "UserPromptSubmit")
             return
 
         _save_state(session_id, state)
@@ -147,7 +181,8 @@ def handle_pre_tool_use():
         json.dump({"continue": True}, sys.stdout)
         return
 
-    if not _graph_exists():
+    root, graph = _graph_root_and_path()
+    if graph is None:
         json.dump({"continue": True}, sys.stdout)
         return
 
@@ -164,7 +199,7 @@ def handle_pre_tool_use():
         all_keywords = config["arch_keywords"] + config["explore_keywords"]
 
         if subagent_type in ("Explore", "explore") or _has_keywords(combined, all_keywords):
-            _emit(AGENT_NUDGE, "PreToolUse")
+            _emit(_reminder(root, graph, compact=True), "PreToolUse")
             return
 
     elif is_shell_tool(tool_name):
@@ -195,7 +230,7 @@ def handle_pre_tool_use():
         if any(re.search(p, command) for p in broad_patterns):
             config = _load_config()
             if _has_keywords(command, config.get("explore_keywords", [])):
-                _emit(BASH_NUDGE, "PreToolUse")
+                _emit(_reminder(root, graph, compact=True), "PreToolUse")
                 return
 
     json.dump({"continue": True}, sys.stdout)

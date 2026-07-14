@@ -134,8 +134,18 @@ NOT normally rebuild anything by hand. Act only if a guard prints
   One jcodemunch call unlocks all subsequent reads; the gate fails open after a
   small block budget so you are never stuck. Non-code (md/config/env/`~/.claude`)
   is always exempt.
-- `graphify-enforce.py pre-tool-use` nudges before Explore agents / broad Bash
-  searches.
+- `graphify-enforce.py pre-tool-use` surfaces the reachable graphify tools (plus
+  a `graphify query` / `GRAPH_REPORT.md` fallback and a stale-graph rebuild
+  directive) before Explore agents / broad Bash searches. The served graph is
+  validated to belong to the open repo (git-remote identity; a foreign/ancestor
+  graph is refused), and runs claude-native (`~/.local/share/claude-graphify-venv`).
+- `jdocmunch-enforce.py pre-tool-use` steers whole-file reads of indexed docs
+  (`.md`/`.rst`/`.adoc`) to the jDocMunch section tools (`search_sections` /
+  `get_toc` / `get_section`) when the repo has a `~/.doc-index` index.
+- `intel-router.py` (UserPromptSubmit) classifies each prompt into ONE surface —
+  jcodemunch (code structure) / graphify (architecture-deps) / jdocmunch (docs) —
+  availability-aware, the decision layer over the three read gates. All three are
+  kept fresh by `index-lifecycle.py` (active repo, event-driven).
 
 Deep playbook: skill `codebase-intel-first` (and `jcodemunch-token-saver`,
 `graphify`).

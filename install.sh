@@ -127,6 +127,20 @@ else
   note "GSD installer, then '/gsd-update'. Replace this with the exact command once known."
 fi
 
+# --- STEP 2.5: code/doc intelligence stack (claude-native MCP servers) ------
+say "code/doc intelligence stack (graphify + jdocmunch — claude-native)"
+if [ -f "$TARGET/scripts/install-graphify.sh" ] && ask "install/refresh graphify (dependency-graph MCP, claude-owned venv)?"; then
+  bash "$TARGET/scripts/install-graphify.sh" || warn "graphify install had issues — re-run scripts/install-graphify.sh"
+else
+  note "skipped graphify — run scripts/install-graphify.sh later"
+fi
+if [ -f "$TARGET/scripts/install-jdocmunch.sh" ] && ask "install/refresh jdocmunch (docs-index MCP)?"; then
+  bash "$TARGET/scripts/install-jdocmunch.sh" --no-index || warn "jdocmunch install had issues — re-run scripts/install-jdocmunch.sh"
+else
+  note "skipped jdocmunch — run scripts/install-jdocmunch.sh later"
+fi
+note "jcodemunch stays a separate external tool — install jcodemunch-mcp yourself (uv/pipx)."
+
 # --- STEP 3: post-install notes (things the repo deliberately excludes) ----
 say "${c_bold}post-install — finish these yourself${c_off}"
 
@@ -150,11 +164,12 @@ cat <<'NOTES'
 
   2) MCP SERVERS  (live in ~/.claude.json, which is NOT in this repo)
      The hooks/agents expect these servers configured on your machine:
-       jcodemunch, graphify, lean-ctx, memory, sequential-thinking, context7
+       jcodemunch, graphify, jdocmunch, lean-ctx, memory, sequential-thinking, context7
      Also referenced in settings.json mcpServers (edit/remove as you like):
        ast-grep, semgrep, playwright, browser-tools-mcp, fetch, markdownify, github
-     jcodemunch + graphify are external tools you install separately; the rest
-     are npx/uv launched. Configure your own credentials — none are shipped.
+     graphify + jdocmunch are wired by STEP 2.5 above (scripts/install-graphify.sh,
+     scripts/install-jdocmunch.sh — claude-native, no cursor coupling). jcodemunch is
+     a separate external tool (jcodemunch-mcp). Configure your own creds — none shipped.
 
   3) SECRETS  are never in this repo:
        .credentials.json, tokens, API keys, and ~/.claude.json stay on YOUR
@@ -162,7 +177,8 @@ cat <<'NOTES'
        export them in your shell profile.
 
   4) OPTIONAL TOOLS the workflow leans on: bun, gh, ripgrep, semgrep, uv,
-     golangci-lint (Go TDD), jcodemunch + graphify watch daemons.
+     golangci-lint (Go TDD). Index freshness is event-driven (index-lifecycle.py,
+     active-repo only) — no watch daemons.
 
 NOTES
 

@@ -1,0 +1,6 @@
+{
+  "_about": "Config for jdocmunch-enforce.py — the doc-set routing advisory (jcode-parity for docs). Steers whole-file reads of indexed documentation to jDocMunch section tools. Advisory + fail-open + throttled.",
+  "doc_exts": [".md", ".mdx", ".markdown", ".rst", ".adoc"],
+  "skip_names": ["CLAUDE.md", "AGENTS.md"],
+  "max_reminders_per_session": 6
+}

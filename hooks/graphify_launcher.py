@@ -11,13 +11,13 @@ Two problems those had, fixed here:
      ``graphify.serve`` with no graph so the MCP comes up and reports
      "not built" (``graph_stats``) instead of a connection failure.
   2. **Not portable.** The old runner hardcoded ``/usr/bin/python3.13`` and a
-     Cursor-era venv. This one discovers the serve interpreter (the graphify
+     shared external venv. This one discovers the serve interpreter (the graphify
      venv that has both ``graphify`` and ``mcp`` importable) and works on
      Windows and Ubuntu (all OS branching via lib/platform.py).
 
 ``graphify.serve`` is a module (there is no ``graphify serve`` CLI subcommand)
 and needs the ``mcp`` package, so it runs under the graphify *serve venv*
-(``~/.local/share/cursor-graphify-venv`` by default; override with
+(``~/.local/share/claude-graphify-venv`` by default; override with
 ``GRAPHIFY_VENV`` / ``GRAPHIFY_PYTHON`` + ``GRAPHIFY_SITE_PACKAGES``), NOT the
 uv-tool CLI interpreter (which lacks ``mcp``).
 
@@ -41,8 +41,18 @@ except Exception:  # pragma: no cover - launcher must never hard-crash on import
     _plat = None
     _IS_WINDOWS = os.name == "nt"  # platform.py owns OS detection; this is a fallback
 
+try:
+    # Shared git-identity helpers — validate a resolved graph belongs to the
+    # OPEN repo (same git root) the way jcodemunch keys its index on the remote.
+    from lib.repo_context import git_root as _git_root, git_remote_identity as _git_ident
+except Exception:  # fail-open: validation degrades to a no-op if unavailable
+    _git_root = None
+    _git_ident = None
+
 HOME = Path.home()
-DEFAULT_VENV = HOME / ".local" / "share" / "cursor-graphify-venv"
+# Claude-owned serve venv (relocated off the old shared external venv, 2026-07-14).
+# Created by scripts/install-graphify.sh; override with GRAPHIFY_VENV.
+DEFAULT_VENV = HOME / ".local" / "share" / "claude-graphify-venv"
 
 
 # --------------------------------------------------------------------------- #
@@ -58,7 +68,7 @@ def _serve_command(graph: str | None) -> tuple[list[str], dict]:
 
     Resolution order for the interpreter:
       1. GRAPHIFY_PYTHON (+ optional GRAPHIFY_SITE_PACKAGES on PYTHONPATH),
-      2. the graphify serve venv (GRAPHIFY_VENV or ~/.local/share/cursor-graphify-venv)
+      2. the graphify serve venv (GRAPHIFY_VENV or ~/.local/share/claude-graphify-venv)
          used via its own bin/python (no PYTHONPATH juggling),
       3. last resort: this launcher's own interpreter (may lack graphify/mcp —
          serve then errors gracefully, still no exit-1-on-missing-graph).
@@ -107,8 +117,8 @@ def _resolve_graph(argv: list[str]) -> str | None:
     env_graph = os.environ.get("GRAPHIFY_GRAPH")
     if env_graph and Path(env_graph).is_file():
         return env_graph
-    # 3) workspace env vars (Claude/Cursor set these).
-    for var in ("CLAUDE_PROJECT_DIR", "CURSOR_PROJECT_DIR", "WORKSPACE_FOLDER_PATHS"):
+    # 3) workspace env vars (Claude sets these).
+    for var in ("CLAUDE_PROJECT_DIR", "WORKSPACE_FOLDER_PATHS"):
         val = os.environ.get(var)
         if not val:
             continue
@@ -123,16 +133,35 @@ def _resolve_graph(argv: list[str]) -> str | None:
             g = _graph_from_dir(Path(cand))
             if g is not None:
                 return str(g)
-    # 4) walk up from CWD to the nearest graphify-out/graph.json.
+    # 4) walk up from CWD to the nearest graphify-out/graph.json — but only serve
+    #    it if it belongs to the OPEN repo (same git root). A graph found in an
+    #    ANCESTOR / foreign git repo is REFUSED (jcode-grade identity guard):
+    #    serving an empty "not built" graph is safer than a wrong repo's graph.
     try:
-        cur = Path(os.getcwd()).resolve()
+        cwd = Path(os.getcwd()).resolve()
     except OSError:
-        cur = None
+        cwd = None
+    open_root = _git_root(cwd) if (_git_root is not None and cwd is not None) else None
+    cur = cwd
     for _ in range(40):
         if cur is None:
             break
         g = _graph_from_dir(cur)
         if g is not None:
+            # If cwd is in a git repo, the graph's dir must share that git root.
+            # (cwd not in a git repo -> can't validate -> serve, best-effort.)
+            if open_root is not None and _git_root is not None:
+                graph_root = _git_root(cur)
+                if graph_root != open_root:  # None (non-git ancestor) counts as foreign
+                    ident = _git_ident(open_root) if _git_ident is not None else None
+                    sys.stderr.write(
+                        f"[graphify] refusing foreign graph {g}: belongs to "
+                        f"{graph_root or cur}, but the open repo is {open_root}"
+                        + (f" ({ident})" if ident else "")
+                        + f" — serving an empty graph; build one with "
+                        f"`graphify update {open_root}`.\n"
+                    )
+                    return None
             return str(g)
         if cur.parent == cur:
             break
@@ -161,9 +190,15 @@ def _placeholder_graph() -> str | None:
 
 
 def main() -> int:
-    incoming = sys.argv[1:]
-    graph = _resolve_graph(incoming) or _placeholder_graph()
-    argv, env = _serve_command(graph)
+    try:
+        incoming = sys.argv[1:]
+        graph = _resolve_graph(incoming) or _placeholder_graph()
+        argv, env = _serve_command(graph)
+    except Exception:  # total fail-open: launch prep must never crash the MCP
+        try:
+            argv, env = _serve_command(_placeholder_graph())
+        except Exception:
+            return 0
 
     # Become the serve process so the MCP client's stdio talks to it directly.
     if not _IS_WINDOWS:

@@ -50,11 +50,9 @@ _LEGACY_SH_GRANDFATHER = {
     "gsd-session-state.sh",
     "gsd-validate-commit.sh",
     "tdd-guard-launcher.sh",
-    # graphify-runner.sh is replaced by graphify_launcher.py in the LIVE hook +
-    # settings.json MCP path, but ~/.claude.json still points its graphify MCP
-    # at this file. It is retained until the installer's `claude mcp add
-    # --scope user` swap rewrites ~/.claude.json (P6-T5 / P7). No new .sh here.
-    "graphify-runner.sh",
+    # graphify-runner.sh retired 2026-07-14 (tri-tool rework): the LIVE hook,
+    # settings.json, AND ~/.claude.json all now point graphify's MCP at
+    # graphify_launcher.py, and the .sh file is deleted. Entry removed.
 }
 
 _EXCLUDE_DIR_PARTS = {

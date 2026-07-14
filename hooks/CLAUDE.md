@@ -34,8 +34,9 @@ Only hook logic and hook config belong here — no skill bodies, no app code.
 | `trigger-floor.json` / `build-trigger-floor.py` | Verbatim superset of all 4 legacy taxonomies + 139 command names; `--check` = CI floor guard |
 | `model-policy.json` | Single model-routing truth (sonnet default / opus UI+heavy / fable explicit) — consumed by `opus-guard.py`, `workflow-model-guard.py`, `gen-invoke-commands.py` |
 | `index-lifecycle.py` / `.config.json` | Active-repo-only, event-driven index freshness (journal → detached single-shot builder); zero daemons |
-| `lib/platform.py`, `lib/hook_telemetry.py`, `lib/repo_context.py` | Shared foundation: interpreter/token resolution, per-link telemetry, active-repo detection |
+| `lib/platform.py`, `lib/hook_telemetry.py`, `lib/repo_context.py` | Shared foundation: interpreter/token resolution, per-link telemetry, active-repo detection + git-remote identity helpers (`git_root`, `git_remote_identity`, `sanitize_name`) |
 | `jdocmunch-index-guard.py` / `.config.json` / `jdocmunch-reindex-hook.py` | Doc-index twin of the jcodemunch guard; run via the dispatch session-start / post-tool-use chains |
+| `intel-router.py`, `graphify_launcher.py`, `graphify-enforce.py`, `jdocmunch-enforce.py` | Tri-tool code/doc intelligence (2026-07-14): `intel-router.py` (user-prompt-submit) picks ONE of jcode/graphify/jdoc per prompt; `graphify_launcher.py` = claude-native graphify MCP launcher (off the cursor venv, repo-identity validated, fail-open); `graphify-enforce`/`jdocmunch-enforce` = per-surface pre-tool-use advisories |
 
 ## Gotchas / fragile spots
 

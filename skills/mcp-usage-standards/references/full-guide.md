@@ -47,8 +47,7 @@ Upstream docs worth bookmarking:
 ### `graphify`
 
 - **Use:** after **`graphify-out/graph.json`** exists (`graphify` CLI / runner).
-- **Avoid:** MCP start when graph missing — `graphify-runner.sh -m graphify.serve …` exits; build graph then restart MCP/client.
-- **Runner:** `$HOME/.claude/hooks/graphify-runner.sh`.
+- **Launcher:** `$HOME/.claude/hooks/graphify_launcher.py` (fail-open; comes up empty on a missing graph instead of exiting). Build with `graphify update <root>`, then reconnect the MCP.
 
 ## Priority ladder (reuse)
 
