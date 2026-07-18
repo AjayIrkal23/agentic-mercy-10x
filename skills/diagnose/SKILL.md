@@ -32,6 +32,17 @@ triggers:
   intents: []
 alias_of: debug-investigation
 provenance: self
+keywords:
+- diagnose
+- hard bug
+- performance regression
+- root cause
+- why is it slow
+- intermittent failure
+intents:
+- DEBUG
+surfaces:
+- general
 ---
 
 # diagnose

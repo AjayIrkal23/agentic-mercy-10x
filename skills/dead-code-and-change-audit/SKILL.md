@@ -1,10 +1,6 @@
 ---
 name: dead-code-and-change-audit
-description: Always-on code hygiene skill that runs on every task and every code change to detect dead
-  code, stale references, orphaned logic, unused imports, unused files, broken linkages, and partial refactors.
-  Enforces continuous cleanup so no dead code is left behind. Audit code changes for stale references,
-  unused code, and partial refactors Use to audit code changes for dead code, stale references, orphaned
-  logic, and partial refactors.
+description: "ALWAYS invoke on every task and every code change — always-on code hygiene that detects dead code, stale references, orphaned logic, unused imports, unused files, broken linkages, and partial refactors. Enforces continuous cleanup so no dead code is left behind. MUST use to audit code changes for dead code, stale references, orphaned logic, and partial refactors."
 disable-model-invocation: false
 schema: 1
 category: review

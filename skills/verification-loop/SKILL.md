@@ -1,6 +1,6 @@
 ---
 name: verification-loop
-description: A comprehensive verification system for Claude Code sessions.
+description: "MUST use before claiming any work complete, fixed, or passing — a comprehensive verification system for Claude Code sessions."
 schema: 1
 category: general
 surfaces:

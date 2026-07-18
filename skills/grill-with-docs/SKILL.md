@@ -1,8 +1,6 @@
 ---
 name: grill-with-docs
-description: Grilling session that challenges your plan against the existing domain model, sharpens terminology,
-  and updates documentation (CONTEXT.md, ADRs) inline as decisions crystallise. Use when user wants to
-  stress-test a plan against their project's language and documented decisions.
+description: "ALWAYS invoke when the user wants to stress-test a plan against their project's language and documented decisions — a grilling session that challenges your plan against the existing domain model, sharpens terminology, and updates documentation (CONTEXT.md, ADRs) inline as decisions crystallise."
 schema: 1
 category: docs
 surfaces:
@@ -42,6 +40,24 @@ triggers:
   paths: []
   intents:
   - docs
+keywords:
+- grill
+- grill me
+- stress-test
+- stress test
+- challenge the plan
+- challenge this plan
+- domain model
+- ubiquitous language
+- sharpen terminology
+- context.md
+- adr
+intents:
+- PLAN
+- SPEC
+- REVIEW
+surfaces:
+- docs
 ---
 <what-to-do>
 

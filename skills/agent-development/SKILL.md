@@ -1,7 +1,6 @@
 ---
 name: agent-development
-description: Use when creating or revising reusable agent definitions, trigger text, or system prompts
-  for autonomous helpers.
+description: "ALWAYS invoke when creating or revising reusable agent definitions, trigger text, or system prompts for autonomous helpers."
 disable-model-invocation: true
 schema: 1
 category: general

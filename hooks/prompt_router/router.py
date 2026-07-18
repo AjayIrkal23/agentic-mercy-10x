@@ -96,6 +96,37 @@ def _doc_index_exists(repo) -> bool:
         return False
 
 
+
+def _skill_excerpt(name: str, max_chars: int = 4500) -> str:
+    """First section of a skill body (frontmatter stripped), for deep injection."""
+    try:
+        p = Path.home() / ".claude" / "skills" / name / "SKILL.md"
+        raw = p.read_text(encoding="utf-8", errors="replace")
+        if raw.startswith("---"):
+            end = raw.find("\n---", 3)
+            if end != -1:
+                raw = raw[end + 4:]
+        raw = raw.strip()
+        return raw[:max_chars] + ("\n…(truncated — full body: Skill tool)" if len(raw) > max_chars else "")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _ui_stack_block(payload: dict) -> str:
+    """Bridge to ui-ux-stack-orchestrator.handle_before_submit — the rich UI
+    stack block (impeccable auto-context, taste dials, designer-agent mandate)
+    that was unreachable dead code since the 2026-07-12 router flip."""
+    try:
+        import importlib.util
+        mod_path = _HOOKS / "ui-ux-stack-orchestrator.py"
+        spec = importlib.util.spec_from_file_location("uiux_orch", mod_path)
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        out = mod.handle_before_submit(payload, mod._load_config())
+        return (out or {}).get("additionalContext") or ""
+    except Exception:  # noqa: BLE001
+        return ""
+
 def _builtin_items(profile, ctx: dict) -> list[dict]:
     items: list[dict] = []
     repo = ctx.get("repo")
@@ -167,24 +198,62 @@ def _builtin_items(profile, ctx: dict) -> list[dict]:
     # (the priority budget trims only if it ever exceeds 24k, which is rare). The
     # win is dedup + priority ordering, never shrinkage.
     ranked = _select.rank_skills(profile, top_n=int(cfg.get("max_skill_pushes", 40)))
-    labels = ["MUST-READ", "SHOULD-READ", "REFERENCE"]
+    meta = _select.index_meta()
+    deep_n = int(cfg.get("deep_push_top_n", 8))
+    top_intent = max(profile.intents, key=profile.intents.get) if profile.intents else "GEN"
+    must_read: list[str] = []
     for i, (name, score) in enumerate(ranked):
-        label = labels[min(i, len(labels) - 1)] if i < 2 else "REFERENCE"
-        items.append({
-            "id": f"skill:{name}", "tier": 2, "section": "SKILLS",
-            "text": f"- {name} ({label})",
-            "score": round(score, 2),
-        })
+        label = "MUST-READ" if i < 2 else ("SHOULD-READ" if i < deep_n else "REFERENCE")
+        m = meta.get(name) or {}
+        if i < deep_n:
+            desc = (m.get("description") or "").strip().replace("\n", " ")[:220]
+            # intent-salted id: a MUST/SHOULD block re-fires when the dominant
+            # intent changes (2026-07-18 delivery fix — was once-per-session ever)
+            items.append({
+                "id": f"skill:{name}:{top_intent}", "tier": 2, "section": "SKILLS",
+                "text": f"- **{name}** ({label}) — {desc}\n  ACTION: invoke Skill(\"{name}\") before the related work.",
+                "score": round(score, 2),
+            })
+            if i < 2:
+                must_read.append(name)
+        else:
+            items.append({
+                "id": f"skill:{name}", "tier": 2, "section": "SKILLS",
+                "text": f"- {name} ({label})",
+                "score": round(score, 2),
+            })
+
+    # deep injection: confident intent -> inline top skill bodies (max 3) so no
+    # invocation round-trip is needed (2026-07-18; budget authorized by user)
+    deep_injected: list[str] = []
+    if profile.intents and max(profile.intents.values()) >= threshold:
+        for name, score in ranked[:3]:
+            if score < 3.0:
+                continue
+            body = _skill_excerpt(name, int(cfg.get("deep_inject_chars", 4500)))
+            if body:
+                deep_injected.append(name)
+                items.append({
+                    "id": f"deep:{name}", "tier": 1, "section": "SKILLS",
+                    "text": f"[inlined skill: {name}]\n{body}",
+                })
+    ctx["_must_read"] = [n for n in must_read if n not in deep_injected]
 
     # ---- UI-stack lightweight suggestion (single ui_keyword hit is enough; the
     #      EXPENSIVE stack dump is what gets gated, not the suggestion — P1-T6) ----
     if profile.is_ui:
-        items.append({
-            "id": "route:ui", "tier": 2, "section": "ROUTING",
-            "text": ("UI/UX signal: use the craft stack (impeccable / taste-skill / "
-                     "ui-ux-pro-max / huashu-design / frontend-ui-engineering) and source "
-                     "every raster/video/3D/audio asset from Higgsfield (no placeholders/stock)."),
-        })
+        ui_block = _ui_stack_block(ctx.get("payload") or {})
+        if ui_block:
+            # no id on purpose: the orchestrator's own state does full-once/short-after;
+            # manifest dedup must not kill the re-fires (2026-07-18 revive)
+            items.append({"tier": 1, "section": "ROUTING", "text": ui_block})
+        else:
+            items.append({
+                "id": "route:ui", "tier": 2, "section": "ROUTING",
+                "text": ("UI/UX signal: use the craft stack (impeccable / taste-skill / "
+                         "ui-ux-pro-max / huashu-design / frontend-ui-engineering) and source "
+                         "every raster/video/3D/audio asset from Higgsfield (no placeholders/stock)."),
+            })
 
     # ---- tier 3: routing (suggest vs dispatch) + model advice ----
     for d in _select.dispatch_tiers(profile, threshold=threshold):
@@ -348,6 +417,7 @@ def run(argv: list[str]) -> int:
 
     # live: commit manifest + emit
     _manifest.commit(sid, emitted_ids, included)
+    _record_pushed_skills(sid, ctx, included, profile)
     if _tel is not None:
         _tel.record("UserPromptSubmit", "prompt_router.live", chars_out=len(body), **telem)
     if body:
@@ -356,6 +426,27 @@ def run(argv: list[str]) -> int:
         _emit_empty()
     return 0
 
+
+
+
+def _record_pushed_skills(sid: str, ctx: dict, included: list, profile) -> None:
+    """Enforcement bridge (2026-07-18): MUST-READ pushes that actually got
+    emitted are recorded for invoke-suite-gate (source=router, enforce=hard).
+    Deep-injected skills are excluded — their content was delivered inline."""
+    try:
+        must = [n for n in (ctx.get("_must_read") or [])
+                if any((it.get("id") or "").startswith(f"skill:{n}") for it in included)]
+        if not must:
+            return
+        tel_dir = _HOOKS / ".telemetry"
+        tel_dir.mkdir(parents=True, exist_ok=True)
+        safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in (sid or "unknown"))
+        rec = {"ts": time.strftime("%Y-%m-%dT%H:%M:%S"), "skills": must,
+               "categories": sorted(profile.intents or []), "source": "router", "enforce": "hard"}
+        with open(tel_dir / f"{safe}.pushed-skills.jsonl", "a", encoding="utf-8") as f:
+            f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+    except Exception:  # noqa: BLE001
+        pass
 
 def _run_stop(payload: dict, sid: str) -> int:
     """--stop stub: effectiveness record + flush hook home (filled by P4-T9/P4).

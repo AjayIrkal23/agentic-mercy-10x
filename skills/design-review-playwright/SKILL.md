@@ -1,6 +1,6 @@
 ---
 name: design-review-playwright
-description: Live visual QA against design specs using Playwright screenshots (adapted from GStack /design-review)
+description: "ALWAYS invoke for live visual QA against design specs using Playwright screenshots (adapted from GStack /design-review)."
 schema: 1
 category: review
 surfaces:

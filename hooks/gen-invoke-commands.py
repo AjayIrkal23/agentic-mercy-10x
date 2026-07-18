@@ -45,14 +45,14 @@ ACTS: dict[str, dict] = {
     "spec":    {"cat": "SPEC",      "agent": "spec-architect",          "artifact": "SPEC-{slug}.md",    "role": "build-ready spec + contracts"},
     "plan":    {"cat": "PLAN",      "agent": "planning-director",       "artifact": "plan-{date}-{slug}.md", "role": "phased execution plan"},
     "test":    {"cat": "TEST",      "agent": "test-author",             "artifact": "TEST-REPORT.md",    "role": "author failing tests first (TDD red)"},
-    "impl":    {"cat": "IMPLEMENT", "agent": "implementation-engineer", "artifact": "IMPL-REPORT.md",    "role": "implement the plan (RUNS ON OPUS)"},
+    "impl":    {"cat": "IMPLEMENT", "agent": "implementation-engineer", "artifact": "IMPL-REPORT.md",    "role": "implement the plan (fable; surface-routed FE/BE/integrator)"},
     "refactor":{"cat": "REFACTOR",  "agent": "refactor-specialist",     "artifact": "REFACTOR-REPORT.md","role": "behavior-preserving refactor (test-guarded)"},
     "debug":   {"cat": "DEBUG",     "agent": "debug-detective",         "artifact": "ROOTCAUSE.md",      "role": "root-cause an unknown failure"},
     "design":  {"cat": "DESIGN",    "agent": "frontend-uiux-designer",  "artifact": "DESIGN-REPORT.md",  "role": "UI/UX design + polish (opus)"},
     "clean":   {"cat": "CLEANUP",   "agent": "deadcode-reaper",         "artifact": "REAP-REPORT.md",    "role": "dead-code reap (code-mutating)"},
     "review":  {"cat": "REVIEW",    "agent": "santa-reviewer",          "artifact": "SANTA-REVIEW.md",   "role": "Santa Method adversarial review (opus)"},
-    "docs":    {"cat": None,        "agent": "docs-sync-agent",         "artifact": "DOCS-SYNC-REPORT.md","role": "sync docs to the change"},
-    "verify":  {"cat": None,        "agent": "qa-verifier",             "artifact": "VERIFY-REPORT.md",  "role": "verify behavior end-to-end"},
+    "docs":    {"cat": "DOCS",        "agent": "docs-sync-agent",         "artifact": "DOCS-SYNC-REPORT.md","role": "sync docs to the change"},
+    "verify":  {"cat": "VERIFY",        "agent": "qa-verifier",             "artifact": "VERIFY-REPORT.md",  "role": "verify behavior end-to-end"},
     "security":{"cat": "SECURITY",  "agent": "security-sentinel",       "artifact": "SECURITY-REPORT.md","role": "security review / hardening"},
 }
 CANON_ORDER = list(ACTS.keys())
@@ -73,8 +73,8 @@ def act_model(act: str, model_policy: dict) -> str:
     inv = model_policy.get("invoke_categories", {})
     if cat and cat in inv:
         return inv[cat]
-    if act in ("design", "impl"):  # UI/impl agents opus-pinned by opus-guard regardless
-        return "opus"
+    if act in ("design", "impl"):  # pinned agents resolved by opus-guard; fable since 2026-07-18
+        return "fable"
     return "sonnet"
 
 
@@ -132,7 +132,7 @@ For each requested act, spawn its agent (Agent tool, `subagent_type` = the agent
 description prefix `[<model>] ` from the table and `model:"<model>"`, passing the BRIEF + **every
 prior artifact**. Wait for the act's artifact before the next act.
 
-- **`impl` RUNS ON OPUS (mandatory)** — `implementation-engineer` gets `[opus]` + `model:"opus"`
+- **`impl` RUNS ON FABLE (user directive 2026-07-18)** — surface routing: FE-only -> `frontend-implementor-specialist`, BE-only -> `backend-implementor-specialist` (contract-first, emits `IMPL-REPORT-BE.md ## CONTRACT`), mixed -> BE then FE then `integrator-specialist` (parity + E2E evidence), general/infra -> `implementation-engineer`. All get `[fable]` + `model:"fable"` (opus-guard pins)
   (model-policy `invoke_categories.IMPLEMENT`). When PLAN already ran, its plan artifact is the
   implementation input and the `requires: plan` note is satisfied — do not re-ask.
 - **`design`** dispatches `frontend-uiux-designer` (opus); assets come from Higgsfield
@@ -179,7 +179,7 @@ description: Full-stack flow — spec then plan then implement. Equivalent to `/
 {BANNER}
 
 Run `/invoke spec plan impl -- $ARGS` (SPEC -> PLAN -> IMPLEMENT with cumulative artifacts; the
-implement act RUNS ON OPUS).
+implement act runs on Fable with FE/BE/integrator surface routing).
 """
 
 

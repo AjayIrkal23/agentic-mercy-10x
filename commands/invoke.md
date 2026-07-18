@@ -10,18 +10,18 @@ Acts always run in this canonical order regardless of how they are typed:
 
 | act | specialist agent | artifact | model | role |
 |-----|------------------|----------|-------|------|
-| `audit` | audit-specialist | `AUDIT-{date}.md` | sonnet | tech-debt / forensic / architecture audit |
-| `spec` | spec-architect | `SPEC-{slug}.md` | sonnet | build-ready spec + contracts |
-| `plan` | planning-director | `plan-{date}-{slug}.md` | sonnet | phased execution plan |
+| `audit` | audit-specialist | `AUDIT-{date}.md` | fable | tech-debt / forensic / architecture audit |
+| `spec` | spec-architect | `SPEC-{slug}.md` | fable | build-ready spec + contracts |
+| `plan` | planning-director | `plan-{date}-{slug}.md` | fable | phased execution plan |
 | `test` | test-author | `TEST-REPORT.md` | sonnet | author failing tests first (TDD red) |
-| `impl` | implementation-engineer | `IMPL-REPORT.md` | opus | implement the plan (RUNS ON OPUS) |
+| `impl` | implementation-engineer | `IMPL-REPORT.md` | fable | implement the plan (fable; surface-routed FE/BE/integrator) |
 | `refactor` | refactor-specialist | `REFACTOR-REPORT.md` | sonnet | behavior-preserving refactor (test-guarded) |
-| `debug` | debug-detective | `ROOTCAUSE.md` | sonnet | root-cause an unknown failure |
-| `design` | frontend-uiux-designer | `DESIGN-REPORT.md` | opus | UI/UX design + polish (opus) |
+| `debug` | debug-detective | `ROOTCAUSE.md` | fable | root-cause an unknown failure |
+| `design` | frontend-uiux-designer | `DESIGN-REPORT.md` | fable | UI/UX design + polish (opus) |
 | `clean` | deadcode-reaper | `REAP-REPORT.md` | sonnet | dead-code reap (code-mutating) |
-| `review` | santa-reviewer | `SANTA-REVIEW.md` | opus | Santa Method adversarial review (opus) |
-| `docs` | docs-sync-agent | `DOCS-SYNC-REPORT.md` | sonnet | sync docs to the change |
-| `verify` | qa-verifier | `VERIFY-REPORT.md` | sonnet | verify behavior end-to-end |
+| `review` | santa-reviewer | `SANTA-REVIEW.md` | fable | Santa Method adversarial review (opus) |
+| `docs` | docs-sync-agent | `DOCS-SYNC-REPORT.md` | fable | sync docs to the change |
+| `verify` | qa-verifier | `VERIFY-REPORT.md` | fable | verify behavior end-to-end |
 | `security` | security-sentinel | `SECURITY-REPORT.md` | sonnet | security review / hardening |
 
 An unknown token is reported ("valid acts: …") and the flow proceeds with the recognized acts.
@@ -42,7 +42,7 @@ For each requested act, spawn its agent (Agent tool, `subagent_type` = the agent
 description prefix `[<model>] ` from the table and `model:"<model>"`, passing the BRIEF + **every
 prior artifact**. Wait for the act's artifact before the next act.
 
-- **`impl` RUNS ON OPUS (mandatory)** — `implementation-engineer` gets `[opus]` + `model:"opus"`
+- **`impl` RUNS ON FABLE (user directive 2026-07-18)** — surface routing: FE-only -> `frontend-implementor-specialist`, BE-only -> `backend-implementor-specialist` (contract-first, emits `IMPL-REPORT-BE.md ## CONTRACT`), mixed -> BE then FE then `integrator-specialist` (parity + E2E evidence), general/infra -> `implementation-engineer`. All get `[fable]` + `model:"fable"` (opus-guard pins)
   (model-policy `invoke_categories.IMPLEMENT`). When PLAN already ran, its plan artifact is the
   implementation input and the `requires: plan` note is satisfied — do not re-ask.
 - **`design`** dispatches `frontend-uiux-designer` (opus); assets come from Higgsfield
@@ -61,12 +61,7 @@ executing every act sequentially. Never silently drop an act.
 <details><summary><code>audit</code> fallback roster</summary>
 
   - `tech-debt-audit`
-  - `forensic-hotspot-finder`
-  - `forensic-change-coupling`
-  - `forensic-complexity-trends`
-  - `forensic-debt-quantification`
   - `dead-code-and-change-audit`
-  - `improve-codebase-architecture`
   - `code-review-and-quality`
   - `architect-system-design`
   - `codebase-start-point-guide`
@@ -74,24 +69,29 @@ executing every act sequentially. Never silently drop an act.
   - `project-structure-map`
   - `mcp-usage-standards`
   - `iterative-retrieval`
+  - `codebase-intel-first`
+  - `graphify`
+  - `performance-optimization`
 </details>
 <details><summary><code>spec</code> fallback roster</summary>
 
   - `spec-driven-development`
   - `architect-system-design`
-  - `api-and-interface-design`
   - `planning-and-task-breakdown`
   - `codebase-start-point-guide`
   - `project-reference-linkage`
   - `project-structure-map`
   - `mcp-usage-standards`
   - `iterative-retrieval`
+  - `to-prd`
+  - `grill-with-docs`
+  - `idea-refine`
+  - `codebase-intel-first`
 </details>
 <details><summary><code>plan</code> fallback roster</summary>
 
   - `plan-mode-gate`
   - `workflow-orchestrator`
-  - `plan-exec-stack-guide`
   - `architect-system-design`
   - `api-and-interface-design`
   - `planning-and-task-breakdown`
@@ -101,10 +101,13 @@ executing every act sequentially. Never silently drop an act.
   - `project-reference-linkage`
   - `project-structure-map`
   - `mcp-usage-standards`
+  - `to-issues`
+  - `grill-with-docs`
+  - `codebase-intel-first`
+  - `graphify`
 </details>
 <details><summary><code>test</code> fallback roster</summary>
 
-  - `tdd`
   - `test-driven-development`
   - `golang-testing`
   - `webapp-testing`
@@ -114,7 +117,6 @@ executing every act sequentially. Never silently drop an act.
   - `architect-system-design`
   - `api-contract-standards`
   - `source-driven-development`
-  - `incremental-implementation`
   - `domain-scaffold-patterns`
   - `scaffold-standards`
   - `project-structure-map`
@@ -137,7 +139,6 @@ executing every act sequentially. Never silently drop an act.
   - `golang-testing`
   - `postgres-patterns`
   - `security-and-hardening`
-  - `api-and-interface-design`
   - `eval-harness`
   - `frontend-standards-always-follow`
   - `frontend-structure-standards`
@@ -152,19 +153,19 @@ executing every act sequentially. Never silently drop an act.
   - `webapp-testing`
   - `browser-testing-with-devtools`
   - `design-extract`
+  - `code-execution-standard`
+  - `update-docs`
 </details>
 <details><summary><code>refactor</code> fallback roster</summary>
 
   - `code-simplification`
-  - `improve-codebase-architecture`
   - `dead-code-and-change-audit`
   - `golang-patterns`
+  - `tech-debt-audit`
 </details>
 <details><summary><code>debug</code> fallback roster</summary>
 
-  - `diagnose`
   - `debug-investigation`
-  - `debugging-and-error-recovery`
   - `doubt-driven-development`
 </details>
 <details><summary><code>design</code> fallback roster</summary>
@@ -184,20 +185,36 @@ executing every act sequentially. Never silently drop an act.
   - `frontend-standards-always-follow`
   - `react-hooks-patterns`
   - `vite-react-best-practices`
+  - `prototype`
   - `higgsfield-generate`
+  - `shadcn`
 </details>
 <details><summary><code>clean</code> fallback roster</summary>
 
   - `dead-code-and-change-audit`
   - `code-simplification`
   - `fix-lint-format`
-  - `improve-codebase-architecture`
   - `deprecation-and-migration`
+  - `update-docs`
+  - `tech-debt-audit`
 </details>
 <details><summary><code>review</code> fallback roster</summary>
 
   - `santa-review`
   - `code-review-and-quality`
+  - `triage`
+</details>
+<details><summary><code>docs</code> fallback roster</summary>
+
+  - `update-docs`
+  - `dox-doc-tree`
+  - `project-reference-linkage`
+</details>
+<details><summary><code>verify</code> fallback roster</summary>
+
+  - `verification-loop`
+  - `webapp-testing`
+  - `eval-harness`
 </details>
 <details><summary><code>security</code> fallback roster</summary>
 

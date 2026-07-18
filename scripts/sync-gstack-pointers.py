@@ -80,6 +80,18 @@ def sync() -> int:
             if cur != new:
                 sk.write_text(new, encoding="utf-8")
                 converted += 1
+    # materialize sections/ dir symlinks into the clone as real copies (zero-symlinks
+    # probe; Windows-safe). Regenerated on every sync so upstream updates propagate.
+    import shutil
+    for n in twins:
+        sec = sl.SKILLS_DIR / n / "sections"
+        if sec.is_symlink():
+            target = Path(os.readlink(sec))
+            sec.unlink()
+            if target.is_dir():
+                shutil.copytree(target, sec)
+                print(f"  materialized sections/: {n}")
+
     remaining = sum(1 for n in twins if (sl.SKILLS_DIR / n / "SKILL.md").is_symlink())
     print(f"gstack pointers: {len(twins)} twins, {converted} (re)generated, "
           f"{remaining} symlinks remaining")

@@ -1,7 +1,6 @@
 ---
 name: scaffold-standards
-description: Use when scaffolding a new backend or full-stack domain, a route/controller/service/schema
-  skeleton, or a standard list and CRUD feature structure.
+description: "ALWAYS invoke when scaffolding a new backend or full-stack domain, a route/controller/service/schema skeleton, or a standard list and CRUD feature structure."
 disable-model-invocation: false
 schema: 1
 category: backend

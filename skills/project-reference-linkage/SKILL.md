@@ -1,8 +1,6 @@
 ---
 name: project-reference-linkage
-description: Global project navigation and linkage standards. Use this to understand the directory structure
-  and cross-module relationships across components, feature hooks, frontend API layers, controllers, routes,
-  schemas, and store slices.
+description: "ALWAYS invoke to understand the directory structure and cross-module relationships across components, feature hooks, frontend API layers, controllers, routes, schemas, and store slices — global project navigation and linkage standards."
 disable-model-invocation: false
 schema: 1
 category: general

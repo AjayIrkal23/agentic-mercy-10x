@@ -1,6 +1,6 @@
 ---
 name: canary-playwright
-description: Post-deploy canary monitoring using Playwright MCP (adapted from GStack /canary)
+description: "ALWAYS invoke for post-deploy canary monitoring using Playwright MCP (adapted from GStack /canary)."
 schema: 1
 category: general
 surfaces:

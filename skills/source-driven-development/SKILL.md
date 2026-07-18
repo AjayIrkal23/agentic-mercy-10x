@@ -1,8 +1,6 @@
 ---
 name: source-driven-development
-description: Grounds every implementation decision in official documentation. Use when you want authoritative,
-  source-cited code free from outdated patterns. Use when building with any framework or library where
-  correctness matters.
+description: "MUST use to ground every implementation decision in official documentation. ALWAYS invoke when building with any framework or library where correctness matters, or when you want authoritative, source-cited code free from outdated patterns."
 disable-model-invocation: false
 schema: 1
 category: general

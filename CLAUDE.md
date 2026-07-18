@@ -7,18 +7,18 @@ These rules are always in context for every Claude Code session.
 Every `Agent` call's `description` field **MUST** start with `[sonnet] `, `[opus] `, or `[fable] ` (literal brackets + a space). This applies to *all* agent types, including `Explore`, `Plan`, `general-purpose`, and GSD/figma/vercel agents.
 
 **Sonnet is the default — reach for `[opus]` rarely; reach for `[fable]` only when the user explicitly asks.** `[opus]` is reserved for **only two** cases:
-1. **UI/UX work** — visual/design/frontend-polish subagent tasks (`frontend-uiux-designer` → always `[opus]`).
+1. **UI/UX work** — visual/design/frontend-polish subagent tasks (`frontend-uiux-designer` → pinned **`[fable]`** since 2026-07-18).
 2. **Genuinely HEAVY + complex** work — large novel system/architecture design across many modules; a big novel build of many interdependent new files with no pattern to copy; deep unknown-root-cause debugging spanning many independent subsystems; cross-surface synthesis that must hold FE+BE+infra together at once.
 
-**`[fable]` is NEVER automatic.** Use it ONLY when the user explicitly says "use fable" (globally or per-task). It is a user-driven override, not a heuristic.
+**`[fable]` is the standing pin for specialist agents** (user directive 2026-07-18: "use fable for everything"): the implementor/design/integrator specialists and all substantive `/invoke` acts run Fable via `model-policy.json` pins. For ad-hoc `general-purpose` subagents doing substantive work, prefer `[fable]`; cheap searches stay `[sonnet]`.
 
 **Do NOT use `[opus]`/`[fable]` for medium, small, or even "a bit complex" tasks.** The following are **always `[sonnet]`**: searches/exploration (`Explore`, `claude-code-guide`), single-to-several-file edits, refactors, pattern replication, bug fixes where the locus is known, lint/tests, doc updates, focused code review, and any task that is merely moderately complex. When unsure → `[sonnet]`.
 
 **Dynamic per-task overrides (user-driven).** When the user says "use opus for this task" / "use fable for this" / "use sonnet", honor it on that turn's Agent calls: write the matching label AND set `model:"opus"|"fable"|"sonnet"`. The user's explicit word wins over the default for that task. For multiple subagents in one turn, apply the user's choice to each.
 
-**Standing carve-out — `/invoke-impl` implements on Opus.** The IMPLEMENT suite (`/invoke-impl`, `/invoke-implementation`, and any parametric `/invoke <acts>` run whose act list contains `impl` — retired `*impl*` combo names resolve via the router translator) runs its implementation on Opus by user directive: implementation subagents get `[opus]` + `model:"opus"`; if the main loop is not on Opus, delegate the implementation to an Opus subagent. Read-only helpers (search/lint/docs) stay Sonnet. Source of truth: `invoke_categories.IMPLEMENT:"opus"` in `hooks/model-policy.json` (the single config that owns every model pin — sonnet default / opus UI+heavy / fable explicit-only), rendered into each generated implement command by `gen-invoke-commands.py`. See [[invoke-impl-opus]] (`rules/invoke-impl-opus.md`).
+**Standing directive — Fable-first specialists (2026-07-18).** The IMPLEMENT suite and all substantive `/invoke` acts (impl, review, audit, spec, plan, debug, design, docs, verify) run on **Fable**: specialist subagents get `[fable]` + `model:"fable"`. IMPLEMENT also surface-routes: FE→`frontend-implementor-specialist`, BE→`backend-implementor-specialist` (contract-first), mixed→BE→FE→`integrator-specialist`, general→`implementation-engineer`. Source of truth: `agent_pins.fable` + `invoke_categories` in `hooks/model-policy.json`, rendered by `gen-invoke-commands.py`. See [[invoke-impl-opus]] (`rules/invoke-impl-opus.md`, retitled Fable-first).
 
-- `Explore` and `claude-code-guide` → always `[sonnet]`. `frontend-uiux-designer` → always `[opus]`. `implementation-engineer` → always `[opus]` (the /invoke-impl carve-out made agent-shaped; opus-guard pins it).
+- `Explore` and `claude-code-guide` → always `[sonnet]`. `frontend-uiux-designer`, `implementation-engineer`, `backend-implementor-specialist`, `frontend-implementor-specialist`, `integrator-specialist` → pinned `[fable]` (opus-guard enforces).
 - Example (heavy): `Agent(subagent_type="general-purpose", description="[opus] Design the multi-service event pipeline end-to-end", prompt="…")`.
 - Example (normal): `Agent(subagent_type="Explore", description="[sonnet] Map loco process data flow", prompt="…")`.
 - Example (user said "use fable"): `Agent(subagent_type="general-purpose", description="[fable] …", model="fable", prompt="…")`.
@@ -152,6 +152,8 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
 - [`scripts/`](scripts/CLAUDE.md)
 - [`shell-snapshots/`](shell-snapshots/CLAUDE.md)
 - [`state/`](state/CLAUDE.md)
+- [`teams/`](teams/CLAUDE.md)
+  - [`teams/session-99a224a0/`](teams/session-99a224a0/CLAUDE.md)
 - [`telemetry/`](telemetry/CLAUDE.md)
 - [`templates/`](templates/CLAUDE.md)
 - [`tests/`](tests/CLAUDE.md)

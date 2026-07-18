@@ -1,7 +1,6 @@
 ---
 name: debug-investigation
-description: Use when the cause of a bug, regression, crash, or unexpected behavior is unknown and evidence
-  is needed before proposing a fix.
+description: "ALWAYS invoke when the cause of a bug, regression, crash, or unexpected behavior is unknown and evidence is needed before proposing a fix."
 disable-model-invocation: false
 schema: 1
 category: debug

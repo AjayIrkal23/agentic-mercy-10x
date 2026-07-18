@@ -1,6 +1,6 @@
 ---
 name: qa-playwright
-description: Systematic QA testing loop using Playwright MCP (adapted from GStack /qa)
+description: "ALWAYS invoke for a systematic QA testing loop using Playwright MCP (adapted from GStack /qa)."
 schema: 1
 category: general
 surfaces:

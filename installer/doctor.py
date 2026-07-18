@@ -135,12 +135,15 @@ def _check_command_resolution(rows):
 
 
 def _check_model_routing(rows):
-    # 1. IMPLEMENT suite pins Opus (the /invoke-impl carve-out; single source of truth).
+    # 1. IMPLEMENT suite pins Fable (user directive 2026-07-18: fable for everything).
     try:
         policy = json.loads((_HOOKS / "model-policy.json").read_text(encoding="utf-8"))
         impl = (policy.get("invoke_categories") or {}).get("IMPLEMENT")
         default = policy.get("default")
-        ok = impl == "opus" and default == "sonnet"
+        fable_pins = set((policy.get("agent_pins") or {}).get("fable") or [])
+        need = {"implementation-engineer", "backend-implementor-specialist",
+                "frontend-implementor-specialist", "integrator-specialist"}
+        ok = impl == "fable" and default == "sonnet" and need <= fable_pins
         _row(rows, "model-routing", PASS if ok else FAIL, f"IMPLEMENT={impl} default={default}")
     except Exception as exc:  # noqa: BLE001
         _row(rows, "model-routing", FAIL, f"model-policy.json: {type(exc).__name__}: {exc}")

@@ -48,7 +48,7 @@ TDD_INIT_GUARD = HOOK_DIR / "tdd-guard-init-guard.py"
 DOX_GUARD = HOOK_DIR / "dox-tree-guard.py"
 ROUTING_MD = HOME / ".claude" / "rules/agent-lifecycle-routing.md"
 PLUGINS_ROOT = HOME / ".claude" / "plugins"
-MAX_AGGREGATED_CHARS = 4200
+MAX_AGGREGATED_CHARS = 60000
 
 
 def _cleanup_stale_state() -> None:
@@ -265,6 +265,40 @@ def _prior_gate_override_context(workspace: Path) -> str:
     return ""
 
 
+
+
+def _core_skill_digests() -> str:
+    """Always-active core skill set (2026-07-18): inject real skill content at
+    session start instead of name whispers. Config: hooks/core-skill-set.json."""
+    try:
+        cfg = json.loads((HOOK_DIR / "core-skill-set.json").read_text(encoding="utf-8"))
+    except Exception:
+        return ""
+    idx = {}
+    try:
+        idx = json.loads((HOOK_DIR / "skills-index.json").read_text(encoding="utf-8")).get("skills") or {}
+    except Exception:
+        pass
+    out = ["[Always-active core skills]"]
+    for ent in cfg.get("always", []):
+        name = ent.get("skill") or ""
+        sk = Path.home() / ".claude" / "skills" / name / "SKILL.md"
+        if ent.get("mode") == "full" and sk.is_file():
+            try:
+                raw = sk.read_text(encoding="utf-8", errors="replace")
+                if raw.startswith("---"):
+                    end = raw.find("\n---", 3)
+                    if end != -1:
+                        raw = raw[end + 4:]
+                raw = raw.strip()[: int(ent.get("max_chars", 5000))]
+                out.append(f"### skill: {name}\n{raw}")
+            except OSError:
+                continue
+        else:
+            desc = ((idx.get(name) or {}).get("description") or "").strip()
+            out.append(f"- {name} (on demand via Skill tool) — {desc[:180]}")
+    return "\n\n".join(out) if len(out) > 1 else ""
+
 def main() -> int:
     _cleanup_stale_state()
 
@@ -322,6 +356,10 @@ def main() -> int:
     if ROUTING_MD.is_file():
         route_ctx = f"Lifecycle routing: `{ROUTING_MD.resolve()}`"
         aggregated = _merge_additional_context(aggregated, route_ctx)
+
+    core_ctx = _core_skill_digests()
+    if core_ctx.strip():
+        aggregated = _merge_additional_context(aggregated, core_ctx)
 
     sp_ctx = _superpowers_session_context()
     if sp_ctx.strip():

@@ -115,15 +115,18 @@ def _flag_precedence() -> list[str]:
     return list(_DEFAULT_FLAG_PRECEDENCE)
 
 
-def _agent_sets() -> tuple[list[str], list[str]]:
-    """(sonnet_agents, opus_agents) as lowercased JS-set members, fail-open to literals."""
+def _agent_sets() -> tuple[list[str], list[str], list[str]]:
+    """(sonnet, opus, fable) agent lists as lowercased JS-set members, fail-open to
+    literals. 2026-07-18: an EMPTY opus list in policy is respected (fable directive)."""
     pins = _load_policy().get("agent_pins")
     pins = pins if isinstance(pins, dict) else {}
     opus = pins.get("opus")
     sonnet = pins.get("sonnet")
-    opus_list = [str(a).lower() for a in opus] if isinstance(opus, list) and opus else list(_DEFAULT_OPUS_AGENTS)
-    sonnet_list = [str(a).lower() for a in sonnet] if isinstance(sonnet, list) and sonnet else list(_DEFAULT_SONNET_AGENTS)
-    return sonnet_list, opus_list
+    fable = pins.get("fable")
+    opus_list = [str(a).lower() for a in opus] if isinstance(opus, list) else list(_DEFAULT_OPUS_AGENTS)
+    sonnet_list = [str(a).lower() for a in sonnet] if isinstance(sonnet, list) else list(_DEFAULT_SONNET_AGENTS)
+    fable_list = [str(a).lower() for a in fable] if isinstance(fable, list) else []
+    return sonnet_list, opus_list, fable_list
 
 
 def _allow_unchanged() -> int:
@@ -200,13 +203,15 @@ def _meta_end_index(script: str) -> int | None:
 
 def _build_wrapper(forced: str | None) -> str:
     forced_js = f"'{forced}'" if forced else "null"
-    sonnet_agents, opus_agents = _agent_sets()
+    sonnet_agents, opus_agents, fable_agents = _agent_sets()
+    fable_js = json.dumps(fable_agents)
     opus_js = json.dumps(opus_agents)
     sonnet_js = json.dumps(sonnet_agents)
     return (
         "\n/* injected by workflow-model-guard: default subagents to sonnet */\n"
         "const __wfOrigAgent = agent;\n"
         "const __wfForce = " + forced_js + ";\n"
+        "const __wfFableAgents = new Set(" + fable_js + ");\n"
         "const __wfOpusAgents = new Set(" + opus_js + ");\n"
         "const __wfSonnetAgents = new Set(" + sonnet_js + ");\n"
         "const __wfAgent = (p, opts, ...rest) => {\n"
@@ -220,7 +225,8 @@ def _build_wrapper(forced: str | None) -> str:
         "  if (__wfForce) { o.model = __wfForce; return __wfOrigAgent(p, o, ...rest); }\n"
         "  if (!o.model) {\n"
         "    const at = (o.agentType || '').toLowerCase();\n"
-        "    if (__wfOpusAgents.has(at)) o.model = 'opus';\n"
+        "    if (__wfFableAgents.has(at)) o.model = 'fable';\n"
+        "    else if (__wfOpusAgents.has(at)) o.model = 'opus';\n"
         "    else if (__wfSonnetAgents.has(at)) o.model = 'sonnet';\n"
         "    else o.model = 'sonnet';\n"
         "  }\n"

@@ -1,91 +1,828 @@
 {
-  "_about": "The ONE ordered chain map for dispatch.py (P4-T1, Charter §3). Every legacy settings.json hook is a LINK here (still its own file, run as a subprocess). Registered once per event in settings.json after the P4-T7 cutover. Link types: gate|mutator|advisory|exec. tools = regex on tool_name (replaces the 19 PreToolUse matchers). enabled toggles a link off without deleting it. priority 0 = mandatory-trigger advisory (never budget-dropped); higher = droppable only when gates already blew the wall budget. timeout_ms is per-link.",
-  "_router_mode": "router",
-  "_router_mode_note": "LIVE: settings.json routes UserPromptSubmit to prompt_router/router.py directly (user-directed early flip 2026-07-12, commit c865377). This dispatch user-prompt-submit chain is NO LONGER invoked on prompts — retained only for flip-back via scripts/flip-dispatch.py --legacy. The router is a provable superset (classify/select consume the entire trigger-floor.json).",
-  "budgets": {
-    "session-start":     {"ms": 2500, "chars": 3500},
-    "user-prompt-submit":{"ms": 1500, "chars": 24000},
-    "pre-tool-use":      {"ms": 2000, "chars": 4000},
-    "post-tool-use":     {"ms": 1500, "chars": 4000},
-    "stop":              {"ms": 2500, "chars": 4000},
-    "subagent-stop":     {"ms": 1000, "chars": 2000},
-    "pre-compact":       {"ms": 800,  "chars": 2000},
-    "session-end":       {"ms": 1000, "chars": 0}
+ "_about": "The ONE ordered chain map for dispatch.py (P4-T1, Charter §3). Every legacy settings.json hook is a LINK here (still its own file, run as a subprocess). Registered once per event in settings.json after the P4-T7 cutover. Link types: gate|mutator|advisory|exec. tools = regex on tool_name (replaces the 19 PreToolUse matchers). enabled toggles a link off without deleting it. priority 0 = mandatory-trigger advisory (never budget-dropped); higher = droppable only when gates already blew the wall budget. timeout_ms is per-link.",
+ "_router_mode": "router",
+ "_router_mode_note": "LIVE: settings.json routes UserPromptSubmit to prompt_router/router.py directly (user-directed early flip 2026-07-12, commit c865377). This dispatch user-prompt-submit chain is NO LONGER invoked on prompts — retained only for flip-back via scripts/flip-dispatch.py --legacy. The router is a provable superset (classify/select consume the entire trigger-floor.json).",
+ "budgets": {
+  "session-start": {
+   "ms": 2500,
+   "chars": 60000,
+   "_raised": "2026-07-18: was 3500 — smaller than one skill body; user authorized 60-70k"
   },
-  "chains": {
-    "session-start": [
-      {"id": "state-cleanup",           "type": "exec",     "cmd": ["{PY}", "{HOOKS}/tools/state-cleanup.py"], "timeout_ms": 5000, "priority": 0, "enabled": true, "_new": "P4-T1: 14d telemetry + 24h state purge"},
-      {"id": "tdd-guard-launcher",      "type": "advisory", "cmd": ["{PY}", "{HOOKS}/tdd_guard_launcher.py"], "timeout_ms": 20000, "priority": 0, "enabled": true, "_reg": 1, "_port": "P6-T2: bash launcher ported to py (parity-verified); bash original kept for 30-day flip-back only"},
-      {"id": "ponytail-session",        "type": "advisory", "cmd": ["{PY}", "{HOOKS}/ponytail-caveman-guard.py", "session-start"], "timeout_ms": 5000, "priority": 1, "enabled": true, "_reg": 2},
-      {"id": "session-start-aggregator","type": "advisory", "cmd": ["{PY}", "{HOOKS}/session-start-aggregator.py"], "timeout_ms": 45000, "priority": 0, "enabled": true, "_reg": 3, "_note": "kept WHOLE (Charter §3: own file); carries index-lifecycle session-start + MCP-roster/superpowers merge internally"},
-      {"id": "memory-bootstrap-guard",  "type": "advisory", "cmd": ["{PY}", "{HOOKS}/memory-bootstrap-guard.py"], "timeout_ms": 12000, "priority": 1, "enabled": true, "_reg": 4},
-      {"id": "memory-load-on-start",    "type": "advisory", "cmd": ["{PY}", "{HOOKS}/memory-load-on-start.py"], "timeout_ms": 10000, "priority": 1, "enabled": true, "_reg": 5},
-      {"id": "session-lifecycle-start", "type": "exec",     "cmd": ["{PY}", "{HOOKS}/session-lifecycle.py", "session-start"], "timeout_ms": 10000, "priority": 1, "enabled": true, "_reg": 6},
-      {"id": "leanctx-observe-start",   "type": "exec",     "cmd": ["lean-ctx", "hook", "observe"], "timeout_ms": 5000, "priority": 2, "enabled": true, "_reg": 7},
-      {"id": "gsd-session-state",       "type": "exec",     "cmd": ["{NODE}", "{HOOKS}/gsd-session-state.js"], "timeout_ms": 10000, "priority": 2, "enabled": true, "_reg": 8, "_port": "P6-T2: bash launcher ported to js (parity-verified); bash original kept for 30-day flip-back only"},
-      {"id": "gsd-check-update",        "type": "advisory", "cmd": ["{NODE}", "{HOOKS}/gsd-check-update-launcher.js"], "timeout_ms": 5000, "priority": 2, "enabled": true, "_new": "P6-T4: ACTIVATE gsd-check-update on a 7-day TTL (launcher gates the npm-hitting worker); surfaces update/stale-hook advisory. GSD-managed files untouched."}
-    ],
-    "user-prompt-submit": [],
-    "pre-tool-use": [
-      {"id": "dangerous-bash-gate",     "type": "gate",     "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/dangerous-bash-gate.py"], "timeout_ms": 5000, "enabled": true, "_reg": 27, "_order": "DANGER FIRST"},
-      {"id": "first-write-skill-gate",  "type": "gate",     "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/first-write-skill-gate.py"], "timeout_ms": 5000, "enabled": true, "_reg": 22},
-      {"id": "gateguard-write-gate",    "type": "gate",     "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/gateguard-write-gate.py"], "timeout_ms": 8000, "enabled": true, "_reg": 23},
-      {"id": "gsd-prompt-guard",        "type": "gate",     "tools": "Write|Edit|MultiEdit", "cmd": ["{NODE}", "{HOOKS}/gsd-prompt-guard.js"], "timeout_ms": 5000, "enabled": true, "_reg": 24},
-      {"id": "gsd-workflow-guard",      "type": "gate",     "tools": "Write|Edit|MultiEdit", "cmd": ["{NODE}", "{HOOKS}/gsd-workflow-guard.js"], "timeout_ms": 5000, "enabled": true, "_reg": 25},
-      {"id": "dox-write-gate-write",    "type": "gate",     "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/dox-write-gate.py"], "timeout_ms": 6000, "enabled": true, "_reg": 26},
-      {"id": "dox-write-gate-bash",     "type": "gate",     "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/dox-write-gate.py"], "timeout_ms": 6000, "enabled": true, "_reg": 28},
-      {"id": "bash-write-gate",         "type": "gate",     "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/bash-write-gate.py"], "timeout_ms": 6000, "enabled": true, "_reg": 29},
-      {"id": "gsd-validate-commit",     "type": "gate",     "tools": "Bash", "cmd": ["{NODE}", "{HOOKS}/gsd-validate-commit.js"], "timeout_ms": 5000, "enabled": true, "_reg": 32, "_port": "P6-T2: bash launcher ported to js gate (deny/exit-2 parity); bash original kept for 30-day flip-back"},
-      {"id": "blocking-doc-enforcer",   "type": "gate",     "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/blocking-doc-enforcer.py"], "timeout_ms": 5000, "enabled": true, "_reg": 33},
-      {"id": "jcm-gate-read",           "type": "gate",     "tools": "Read|Grep|Glob", "cmd": ["{PY}", "{HOOKS}/jcodemunch-enforce.py", "pre-tool-use"], "timeout_ms": 5000, "enabled": true, "_reg": 34},
-      {"id": "jcm-gate-leanctx",        "type": "gate",     "tools": "mcp__lean-ctx__ctx_read|mcp__lean-ctx__ctx_search|mcp__lean-ctx__ctx_multi_read", "cmd": ["{PY}", "{HOOKS}/jcodemunch-enforce.py", "pre-tool-use"], "timeout_ms": 3000, "enabled": true, "_reg": 37},
-      {"id": "jdoc-doc-steer",          "type": "advisory", "tools": "Read|mcp__lean-ctx__ctx_read", "cmd": ["{PY}", "{HOOKS}/jdocmunch-enforce.py", "pre-tool-use"], "timeout_ms": 4000, "enabled": true, "_new": "2026-07-14 tri-tool: doc-set read advisory (jcode-parity for docs); steers whole-file .md/.rst/.adoc reads to jDocMunch section tools when the repo has a ~/.doc-index index."},
-      {"id": "tdd-guard-launcher-pre",  "type": "gate",     "tools": "Write|Edit|MultiEdit|TodoWrite", "cmd": ["{PY}", "{HOOKS}/tdd_guard_launcher.py"], "timeout_ms": 60000, "enabled": true, "_reg": 20, "_note": "warn-mode; advisory in practice. Ported to tdd_guard_launcher.py in P6-T2 (parity-verified); bash original kept for 30-day flip-back."},
-      {"id": "graphify-enforce",        "type": "advisory", "tools": "Task|Agent|Bash", "cmd": ["{PY}", "{HOOKS}/graphify-enforce.py", "pre-tool-use"], "timeout_ms": 5000, "priority": 0, "enabled": true, "_reg": 21},
-      {"id": "opus-guard",              "type": "mutator",  "tools": "Agent", "cmd": ["{PY}", "{HOOKS}/opus-guard.py"], "timeout_ms": 5000, "enabled": true, "_reg": 35},
-      {"id": "workflow-model-guard",    "type": "mutator",  "tools": "Workflow", "cmd": ["{PY}", "{HOOKS}/workflow-model-guard.py"], "timeout_ms": 5000, "enabled": true, "_reg": 36},
-      {"id": "leanctx-rewrite",         "type": "mutator",  "tools": "Bash", "cmd": ["lean-ctx", "hook", "rewrite"], "timeout_ms": 5000, "enabled": true, "_reg": 30},
-      {"id": "leanctx-redirect",        "type": "mutator",  "tools": "Bash", "cmd": ["lean-ctx", "hook", "redirect"], "timeout_ms": 5000, "enabled": true, "_reg": 31},
-      {"id": "ponytail-pretool",        "type": "advisory", "tools": ".*", "cmd": ["{PY}", "{HOOKS}/ponytail-caveman-guard.py", "pre-tool-use"], "timeout_ms": 5000, "priority": 2, "enabled": true, "_reg": 19, "_note": "deny-all DEFUSED to advisory in P4-T8 (Charter §7 brick-risk removal). Run as advisory here so any residual deny is not enforced."}
-    ],
-    "post-tool-use": [
-      {"id": "skill-invocation-tracker","type": "exec",     "tools": "Skill", "cmd": ["{PY}", "{HOOKS}/skill-invocation-tracker.py"], "timeout_ms": 5000, "enabled": true, "_reg": 38},
-      {"id": "ponytail-post-skill",     "type": "exec",     "tools": "Skill", "cmd": ["{PY}", "{HOOKS}/ponytail-caveman-guard.py", "post-skill"], "timeout_ms": 5000, "enabled": true, "_reg": 39},
-      {"id": "fullstack-post",          "type": "advisory", "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/fullstack-skills-reminder.py", "post-tool-use"], "timeout_ms": 10000, "priority": 0, "enabled": true, "_reg": 40},
-      {"id": "codex-capture",           "type": "exec",     "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/codex-capture.py"], "timeout_ms": 5000, "enabled": true, "_reg": 41, "_note": "KEEP separate exec (Charter §3, P4-T6 — not folded)."},
-      {"id": "post-write-aggregator",   "type": "advisory", "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/post-write-aggregator.py"], "timeout_ms": 12000, "priority": 0, "enabled": true, "_reg": 42, "_note": "kept WHOLE; carries index-lifecycle post-write + dox scaffold + doc-enforcer chain internally"},
-      {"id": "uiux-post",               "type": "advisory", "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/ui-ux-stack-orchestrator.py", "post-tool-use"], "timeout_ms": 15000, "priority": 1, "enabled": true, "_reg": 43},
-      {"id": "gsd-phase-boundary",      "type": "exec",     "tools": "Write|Edit|MultiEdit", "cmd": ["{NODE}", "{HOOKS}/gsd-phase-boundary.js"], "timeout_ms": 5000, "enabled": true, "_reg": 44, "_port": "P6-T2: bash launcher ported to js (parity-verified); bash original kept for 30-day flip-back only"},
-      {"id": "desloppify-cleanup",      "type": "advisory", "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/desloppify-cleanup.py"], "timeout_ms": 10000, "priority": 1, "enabled": true, "_reg": 45},
-      {"id": "santa-method-writer",     "type": "exec",     "tools": "Task|Agent", "cmd": ["{PY}", "{HOOKS}/santa-method-writer.py"], "timeout_ms": 5000, "enabled": true, "_reg": 46},
-      {"id": "security-semgrep-tracker","type": "exec",     "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/security-semgrep-tracker.py", "post-tool-use"], "timeout_ms": 5000, "enabled": true, "_reg": 47},
-      {"id": "leanctx-observe-post",    "type": "exec",     "tools": "Bash", "cmd": ["lean-ctx", "hook", "observe"], "timeout_ms": 5000, "enabled": true, "_reg": 48},
-      {"id": "gsd-context-monitor",     "type": "exec",     "tools": "Bash|Write|Edit|MultiEdit|Task|Agent", "cmd": ["{NODE}", "{HOOKS}/gsd-context-monitor.js"], "timeout_ms": 10000, "enabled": true, "_reg": 49},
-      {"id": "gsd-read-injection",      "type": "gate",     "tools": "Read", "cmd": ["{NODE}", "{HOOKS}/gsd-read-injection-scanner.js"], "timeout_ms": 5000, "enabled": true, "_reg": 50},
-      {"id": "jcm-mcp-used",            "type": "exec",     "tools": "mcp__jcodemunch__.*", "cmd": ["{PY}", "{HOOKS}/jcodemunch-enforce.py", "mcp-used"], "timeout_ms": 3000, "enabled": true, "_reg": 51}
-    ],
-    "stop": [
-      {"id": "hard-completion-gate",    "type": "gate",     "cmd": ["{PY}", "{HOOKS}/hard-completion-gate.py"], "timeout_ms": 15000, "enabled": true, "_reg": 52},
-      {"id": "invoke-suite-gate",       "type": "gate",     "cmd": ["{PY}", "{HOOKS}/invoke-suite-gate.py"], "timeout_ms": 15000, "enabled": true, "_reg": 59, "_note": "second Stop gate link (Charter §3 — NOT absorbed into hard-completion-gate)."},
-      {"id": "index-flush",             "type": "exec",     "cmd": ["{PY}", "{HOOKS}/index-lifecycle.py", "flush"], "timeout_ms": 5000, "enabled": true, "_new": "HANDOFF P3-T4: drain pending write journal at Stop (Spec B 2.5)."},
-      {"id": "fullstack-stop",          "type": "advisory", "cmd": ["{PY}", "{HOOKS}/fullstack-skills-reminder.py", "stop"], "timeout_ms": 15000, "priority": 0, "enabled": true, "_reg": 53},
-      {"id": "session-memory-writer",   "type": "exec",     "cmd": ["{PY}", "{HOOKS}/session-memory-writer.py"], "timeout_ms": 12000, "enabled": true, "_reg": 54},
-      {"id": "session-learning-extractor","type": "exec",   "cmd": ["{PY}", "{HOOKS}/session-learning-extractor.py"], "timeout_ms": 15000, "enabled": true, "_reg": 55},
-      {"id": "session-lifecycle-stop",  "type": "exec",     "cmd": ["{PY}", "{HOOKS}/session-lifecycle.py", "stop"], "timeout_ms": 10000, "enabled": true, "_reg": 56},
-      {"id": "leanctx-observe-stop",    "type": "exec",     "cmd": ["lean-ctx", "hook", "observe"], "timeout_ms": 5000, "enabled": true, "_reg": 57},
-      {"id": "weekly-retro-trigger",    "type": "exec",     "cmd": ["{PY}", "{HOOKS}/weekly-retro-trigger.py", "stop"], "timeout_ms": 5000, "enabled": true, "_reg": 58, "_note": "P4-T9 scheduler: fires effectiveness report + weight updater when >7d stale."}
-    ],
-    "subagent-stop": [
-      {"id": "santa-subagent",          "type": "exec",     "cmd": ["{PY}", "{HOOKS}/santa-method-writer.py", "subagent-stop"], "timeout_ms": 5000, "enabled": true, "_reg": 60},
-      {"id": "session-lifecycle-subagent","type": "exec",   "cmd": ["{PY}", "{HOOKS}/session-lifecycle.py", "subagent-stop"], "timeout_ms": 8000, "enabled": true, "_reg": 61}
-    ],
-    "pre-compact": [
-      {"id": "leanctx-observe-precompact","type": "exec",   "cmd": ["lean-ctx", "hook", "observe"], "timeout_ms": 5000, "enabled": true, "_reg": 62},
-      {"id": "session-lifecycle-precompact","type": "exec", "cmd": ["{PY}", "{HOOKS}/session-lifecycle.py", "pre-compact"], "timeout_ms": 8000, "enabled": true, "_reg": 63}
-    ],
-    "session-end": [
-      {"id": "leanctx-observe-sessionend","type": "exec",   "cmd": ["lean-ctx", "hook", "observe"], "timeout_ms": 5000, "enabled": true, "_reg": 64},
-      {"id": "index-session-end",       "type": "exec",     "cmd": ["{PY}", "{HOOKS}/index-lifecycle.py", "session-end"], "timeout_ms": 10000, "enabled": true, "_reg": 65, "_swap": "REPLACES watch-daemon-session-end.py (HANDOFF P3-T2). That file only forwarded to this exact command; deregistered + atticked in P4-T7."}
-    ]
+  "user-prompt-submit": {
+   "ms": 1500,
+   "chars": 24000
+  },
+  "pre-tool-use": {
+   "ms": 2000,
+   "chars": 4000
+  },
+  "post-tool-use": {
+   "ms": 1500,
+   "chars": 4000
+  },
+  "stop": {
+   "ms": 2500,
+   "chars": 4000
+  },
+  "subagent-stop": {
+   "ms": 1000,
+   "chars": 2000
+  },
+  "pre-compact": {
+   "ms": 800,
+   "chars": 2000
+  },
+  "session-end": {
+   "ms": 1000,
+   "chars": 0
   }
+ },
+ "chains": {
+  "session-start": [
+   {
+    "id": "state-cleanup",
+    "type": "exec",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/tools/state-cleanup.py"
+    ],
+    "timeout_ms": 5000,
+    "priority": 0,
+    "enabled": true,
+    "_new": "P4-T1: 14d telemetry + 24h state purge"
+   },
+   {
+    "id": "tdd-guard-launcher",
+    "type": "advisory",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/tdd_guard_launcher.py"
+    ],
+    "timeout_ms": 20000,
+    "priority": 0,
+    "enabled": true,
+    "_reg": 1,
+    "_port": "P6-T2: bash launcher ported to py (parity-verified); bash original kept for 30-day flip-back only"
+   },
+   {
+    "id": "ponytail-session",
+    "type": "advisory",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/ponytail-caveman-guard.py",
+     "session-start"
+    ],
+    "timeout_ms": 5000,
+    "priority": 1,
+    "enabled": true,
+    "_reg": 2
+   },
+   {
+    "id": "session-start-aggregator",
+    "type": "advisory",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/session-start-aggregator.py"
+    ],
+    "timeout_ms": 45000,
+    "priority": 0,
+    "enabled": true,
+    "_reg": 3,
+    "_note": "kept WHOLE (Charter §3: own file); carries index-lifecycle session-start + MCP-roster/superpowers merge internally"
+   },
+   {
+    "id": "memory-bootstrap-guard",
+    "type": "advisory",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/memory-bootstrap-guard.py"
+    ],
+    "timeout_ms": 12000,
+    "priority": 1,
+    "enabled": true,
+    "_reg": 4
+   },
+   {
+    "id": "memory-load-on-start",
+    "type": "advisory",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/memory-load-on-start.py"
+    ],
+    "timeout_ms": 10000,
+    "priority": 1,
+    "enabled": true,
+    "_reg": 5
+   },
+   {
+    "id": "session-lifecycle-start",
+    "type": "exec",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/session-lifecycle.py",
+     "session-start"
+    ],
+    "timeout_ms": 10000,
+    "priority": 1,
+    "enabled": true,
+    "_reg": 6
+   },
+   {
+    "id": "leanctx-observe-start",
+    "type": "exec",
+    "cmd": [
+     "lean-ctx",
+     "hook",
+     "observe"
+    ],
+    "timeout_ms": 5000,
+    "priority": 2,
+    "enabled": false,
+    "_reg": 7,
+    "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
+   },
+   {
+    "id": "gsd-session-state",
+    "type": "exec",
+    "cmd": [
+     "{NODE}",
+     "{HOOKS}/gsd-session-state.js"
+    ],
+    "timeout_ms": 10000,
+    "priority": 2,
+    "enabled": true,
+    "_reg": 8,
+    "_port": "P6-T2: bash launcher ported to js (parity-verified); bash original kept for 30-day flip-back only"
+   },
+   {
+    "id": "gsd-check-update",
+    "type": "advisory",
+    "cmd": [
+     "{NODE}",
+     "{HOOKS}/gsd-check-update-launcher.js"
+    ],
+    "timeout_ms": 5000,
+    "priority": 2,
+    "enabled": true,
+    "_new": "P6-T4: ACTIVATE gsd-check-update on a 7-day TTL (launcher gates the npm-hitting worker); surfaces update/stale-hook advisory. GSD-managed files untouched."
+   },
+   {
+    "id": "skills-index-guard",
+    "type": "exec",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/build-skills-index.py",
+     "--hook"
+    ],
+    "timeout_ms": 10000,
+    "priority": 2,
+    "enabled": true,
+    "_new": "2026-07-18: rebuild skills-index.json when any SKILL.md is newer (mtime no-op otherwise); fixes silently-stale ranked-routing catalog"
+   }
+  ],
+  "user-prompt-submit": [],
+  "pre-tool-use": [
+   {
+    "id": "dangerous-bash-gate",
+    "type": "gate",
+    "tools": "Bash",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/dangerous-bash-gate.py"
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 27,
+    "_order": "DANGER FIRST"
+   },
+   {
+    "id": "first-write-skill-gate",
+    "type": "gate",
+    "tools": "Write|Edit|MultiEdit",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/first-write-skill-gate.py"
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 22
+   },
+   {
+    "id": "gateguard-write-gate",
+    "type": "gate",
+    "tools": "Write|Edit|MultiEdit",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/gateguard-write-gate.py"
+    ],
+    "timeout_ms": 8000,
+    "enabled": true,
+    "_reg": 23
+   },
+   {
+    "id": "gsd-prompt-guard",
+    "type": "gate",
+    "tools": "Write|Edit|MultiEdit",
+    "cmd": [
+     "/bin/sh",
+     "-c",
+     "[ -d .planning ] && exec {NODE} {HOOKS}/gsd-prompt-guard.js || printf \"{}\""
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 24,
+    "_gated": "2026-07-18: fast-exit unless repo has .planning/ (was: node spawn on every call in non-GSD repos)"
+   },
+   {
+    "id": "gsd-workflow-guard",
+    "type": "gate",
+    "tools": "Write|Edit|MultiEdit",
+    "cmd": [
+     "/bin/sh",
+     "-c",
+     "[ -d .planning ] && exec {NODE} {HOOKS}/gsd-workflow-guard.js || printf \"{}\""
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 25,
+    "_gated": "2026-07-18: fast-exit unless repo has .planning/ (was: node spawn on every call in non-GSD repos)"
+   },
+   {
+    "id": "dox-write-gate-write",
+    "type": "gate",
+    "tools": "Write|Edit|MultiEdit",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/dox-write-gate.py"
+    ],
+    "timeout_ms": 6000,
+    "enabled": true,
+    "_reg": 26
+   },
+   {
+    "id": "dox-write-gate-bash",
+    "type": "gate",
+    "tools": "Bash",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/dox-write-gate.py"
+    ],
+    "timeout_ms": 6000,
+    "enabled": true,
+    "_reg": 28
+   },
+   {
+    "id": "bash-write-gate",
+    "type": "gate",
+    "tools": "Bash",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/bash-write-gate.py"
+    ],
+    "timeout_ms": 6000,
+    "enabled": true,
+    "_reg": 29
+   },
+   {
+    "id": "gsd-validate-commit",
+    "type": "gate",
+    "tools": "Bash",
+    "cmd": [
+     "/bin/sh",
+     "-c",
+     "[ -d .planning ] && exec {NODE} {HOOKS}/gsd-validate-commit.js || printf \"{}\""
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 32,
+    "_port": "P6-T2: bash launcher ported to js gate (deny/exit-2 parity); bash original kept for 30-day flip-back",
+    "_gated": "2026-07-18: fast-exit unless repo has .planning/ (was: node spawn on every call in non-GSD repos)"
+   },
+   {
+    "id": "blocking-doc-enforcer",
+    "type": "gate",
+    "tools": "Bash",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/blocking-doc-enforcer.py"
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 33
+   },
+   {
+    "id": "jcm-gate-read",
+    "type": "gate",
+    "tools": "Read|Grep|Glob",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/jcodemunch-enforce.py",
+     "pre-tool-use"
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 34
+   },
+   {
+    "id": "jcm-gate-leanctx",
+    "type": "gate",
+    "tools": "mcp__lean-ctx__ctx_read|mcp__lean-ctx__ctx_search|mcp__lean-ctx__ctx_multi_read",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/jcodemunch-enforce.py",
+     "pre-tool-use"
+    ],
+    "timeout_ms": 3000,
+    "enabled": true,
+    "_reg": 37
+   },
+   {
+    "id": "jdoc-doc-steer",
+    "type": "advisory",
+    "tools": "Read|mcp__lean-ctx__ctx_read",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/jdocmunch-enforce.py",
+     "pre-tool-use"
+    ],
+    "timeout_ms": 4000,
+    "enabled": true,
+    "_new": "2026-07-14 tri-tool: doc-set read advisory (jcode-parity for docs); steers whole-file .md/.rst/.adoc reads to jDocMunch section tools when the repo has a ~/.doc-index index."
+   },
+   {
+    "id": "tdd-guard-launcher-pre",
+    "type": "gate",
+    "tools": "Write|Edit|MultiEdit|TodoWrite",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/tdd_guard_launcher.py"
+    ],
+    "timeout_ms": 60000,
+    "enabled": true,
+    "_reg": 20,
+    "_note": "warn-mode; advisory in practice. Ported to tdd_guard_launcher.py in P6-T2 (parity-verified); bash original kept for 30-day flip-back."
+   },
+   {
+    "id": "graphify-enforce",
+    "type": "advisory",
+    "tools": "Task|Agent|Bash",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/graphify-enforce.py",
+     "pre-tool-use"
+    ],
+    "timeout_ms": 5000,
+    "priority": 0,
+    "enabled": true,
+    "_reg": 21
+   },
+   {
+    "id": "opus-guard",
+    "type": "mutator",
+    "tools": "Agent",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/opus-guard.py"
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 35
+   },
+   {
+    "id": "workflow-model-guard",
+    "type": "mutator",
+    "tools": "Workflow",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/workflow-model-guard.py"
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 36
+   },
+   {
+    "id": "leanctx-rewrite",
+    "type": "mutator",
+    "tools": "Bash",
+    "cmd": [
+     "lean-ctx",
+     "hook",
+     "rewrite"
+    ],
+    "timeout_ms": 5000,
+    "enabled": false,
+    "_reg": 30,
+    "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
+   },
+   {
+    "id": "leanctx-redirect",
+    "type": "mutator",
+    "tools": "Bash",
+    "cmd": [
+     "lean-ctx",
+     "hook",
+     "redirect"
+    ],
+    "timeout_ms": 5000,
+    "enabled": false,
+    "_reg": 31,
+    "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
+   },
+   {
+    "id": "ponytail-pretool",
+    "type": "advisory",
+    "tools": ".*",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/ponytail-caveman-guard.py",
+     "pre-tool-use"
+    ],
+    "timeout_ms": 5000,
+    "priority": 2,
+    "enabled": false,
+    "_reg": 19,
+    "_note": "deny-all DEFUSED to advisory in P4-T8 (Charter §7 brick-risk removal). Run as advisory here so any residual deny is not enforced.",
+    "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
+   }
+  ],
+  "post-tool-use": [
+   {
+    "id": "skill-invocation-tracker",
+    "type": "exec",
+    "tools": "Skill|Read",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/skill-invocation-tracker.py"
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 38
+   },
+   {
+    "id": "ponytail-post-skill",
+    "type": "exec",
+    "tools": "Skill",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/ponytail-caveman-guard.py",
+     "post-skill"
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 39
+   },
+   {
+    "id": "fullstack-post",
+    "type": "advisory",
+    "tools": "Write|Edit|MultiEdit",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/fullstack-skills-reminder.py",
+     "post-tool-use"
+    ],
+    "timeout_ms": 10000,
+    "priority": 0,
+    "enabled": true,
+    "_reg": 40
+   },
+   {
+    "id": "codex-capture",
+    "type": "exec",
+    "tools": "Write|Edit|MultiEdit",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/codex-capture.py"
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 41,
+    "_note": "KEEP separate exec (Charter §3, P4-T6 — not folded)."
+   },
+   {
+    "id": "post-write-aggregator",
+    "type": "advisory",
+    "tools": "Write|Edit|MultiEdit",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/post-write-aggregator.py"
+    ],
+    "timeout_ms": 12000,
+    "priority": 0,
+    "enabled": true,
+    "_reg": 42,
+    "_note": "kept WHOLE; carries index-lifecycle post-write + dox scaffold + doc-enforcer chain internally"
+   },
+   {
+    "id": "uiux-post",
+    "type": "advisory",
+    "tools": "Write|Edit|MultiEdit",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/ui-ux-stack-orchestrator.py",
+     "post-tool-use"
+    ],
+    "timeout_ms": 15000,
+    "priority": 1,
+    "enabled": true,
+    "_reg": 43
+   },
+   {
+    "id": "gsd-phase-boundary",
+    "type": "exec",
+    "tools": "Write|Edit|MultiEdit",
+    "cmd": [
+     "/bin/sh",
+     "-c",
+     "[ -d .planning ] && exec {NODE} {HOOKS}/gsd-phase-boundary.js || printf \"{}\""
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 44,
+    "_port": "P6-T2: bash launcher ported to js (parity-verified); bash original kept for 30-day flip-back only",
+    "_gated": "2026-07-18: fast-exit unless repo has .planning/ (was: node spawn on every call in non-GSD repos)"
+   },
+   {
+    "id": "desloppify-cleanup",
+    "type": "advisory",
+    "tools": "Write|Edit|MultiEdit",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/desloppify-cleanup.py"
+    ],
+    "timeout_ms": 10000,
+    "priority": 1,
+    "enabled": true,
+    "_reg": 45
+   },
+   {
+    "id": "santa-method-writer",
+    "type": "exec",
+    "tools": "Task|Agent",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/santa-method-writer.py"
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 46
+   },
+   {
+    "id": "security-semgrep-tracker",
+    "type": "exec",
+    "tools": "Bash",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/security-semgrep-tracker.py",
+     "post-tool-use"
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 47
+   },
+   {
+    "id": "leanctx-observe-post",
+    "type": "exec",
+    "tools": "Bash",
+    "cmd": [
+     "lean-ctx",
+     "hook",
+     "observe"
+    ],
+    "timeout_ms": 5000,
+    "enabled": false,
+    "_reg": 48,
+    "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
+   },
+   {
+    "id": "gsd-context-monitor",
+    "type": "exec",
+    "tools": "Bash|Write|Edit|MultiEdit|Task|Agent",
+    "cmd": [
+     "/bin/sh",
+     "-c",
+     "[ -d .planning ] && exec {NODE} {HOOKS}/gsd-context-monitor.js || printf \"{}\""
+    ],
+    "timeout_ms": 10000,
+    "enabled": true,
+    "_reg": 49,
+    "_gated": "2026-07-18: fast-exit unless repo has .planning/ (was: node spawn on every call in non-GSD repos)"
+   },
+   {
+    "id": "gsd-read-injection",
+    "type": "gate",
+    "tools": "Read",
+    "cmd": [
+     "{NODE}",
+     "{HOOKS}/gsd-read-injection-scanner.js"
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 50
+   },
+   {
+    "id": "jcm-mcp-used",
+    "type": "exec",
+    "tools": "mcp__jcodemunch__.*",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/jcodemunch-enforce.py",
+     "mcp-used"
+    ],
+    "timeout_ms": 3000,
+    "enabled": true,
+    "_reg": 51
+   }
+  ],
+  "stop": [
+   {
+    "id": "hard-completion-gate",
+    "type": "gate",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/hard-completion-gate.py"
+    ],
+    "timeout_ms": 15000,
+    "enabled": true,
+    "_reg": 52
+   },
+   {
+    "id": "invoke-suite-gate",
+    "type": "gate",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/invoke-suite-gate.py"
+    ],
+    "timeout_ms": 15000,
+    "enabled": true,
+    "_reg": 59,
+    "_note": "second Stop gate link (Charter §3 — NOT absorbed into hard-completion-gate)."
+   },
+   {
+    "id": "index-flush",
+    "type": "exec",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/index-lifecycle.py",
+     "flush"
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_new": "HANDOFF P3-T4: drain pending write journal at Stop (Spec B 2.5)."
+   },
+   {
+    "id": "fullstack-stop",
+    "type": "advisory",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/fullstack-skills-reminder.py",
+     "stop"
+    ],
+    "timeout_ms": 15000,
+    "priority": 0,
+    "enabled": true,
+    "_reg": 53
+   },
+   {
+    "id": "session-memory-writer",
+    "type": "exec",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/session-memory-writer.py"
+    ],
+    "timeout_ms": 12000,
+    "enabled": true,
+    "_reg": 54
+   },
+   {
+    "id": "session-learning-extractor",
+    "type": "exec",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/session-learning-extractor.py"
+    ],
+    "timeout_ms": 15000,
+    "enabled": true,
+    "_reg": 55
+   },
+   {
+    "id": "session-lifecycle-stop",
+    "type": "exec",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/session-lifecycle.py",
+     "stop"
+    ],
+    "timeout_ms": 10000,
+    "enabled": true,
+    "_reg": 56
+   },
+   {
+    "id": "leanctx-observe-stop",
+    "type": "exec",
+    "cmd": [
+     "lean-ctx",
+     "hook",
+     "observe"
+    ],
+    "timeout_ms": 5000,
+    "enabled": false,
+    "_reg": 57,
+    "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
+   },
+   {
+    "id": "weekly-retro-trigger",
+    "type": "exec",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/weekly-retro-trigger.py",
+     "stop"
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 58,
+    "_note": "P4-T9 scheduler: fires effectiveness report + weight updater when >7d stale."
+   }
+  ],
+  "subagent-stop": [
+   {
+    "id": "santa-subagent",
+    "type": "exec",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/santa-method-writer.py",
+     "subagent-stop"
+    ],
+    "timeout_ms": 5000,
+    "enabled": true,
+    "_reg": 60
+   },
+   {
+    "id": "session-lifecycle-subagent",
+    "type": "exec",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/session-lifecycle.py",
+     "subagent-stop"
+    ],
+    "timeout_ms": 8000,
+    "enabled": true,
+    "_reg": 61
+   }
+  ],
+  "pre-compact": [
+   {
+    "id": "leanctx-observe-precompact",
+    "type": "exec",
+    "cmd": [
+     "lean-ctx",
+     "hook",
+     "observe"
+    ],
+    "timeout_ms": 5000,
+    "enabled": false,
+    "_reg": 62,
+    "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
+   },
+   {
+    "id": "session-lifecycle-precompact",
+    "type": "exec",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/session-lifecycle.py",
+     "pre-compact"
+    ],
+    "timeout_ms": 8000,
+    "enabled": true,
+    "_reg": 63
+   }
+  ],
+  "session-end": [
+   {
+    "id": "leanctx-observe-sessionend",
+    "type": "exec",
+    "cmd": [
+     "lean-ctx",
+     "hook",
+     "observe"
+    ],
+    "timeout_ms": 5000,
+    "enabled": false,
+    "_reg": 64,
+    "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
+   },
+   {
+    "id": "index-session-end",
+    "type": "exec",
+    "cmd": [
+     "{PY}",
+     "{HOOKS}/index-lifecycle.py",
+     "session-end"
+    ],
+    "timeout_ms": 10000,
+    "enabled": true,
+    "_reg": 65,
+    "_swap": "REPLACES watch-daemon-session-end.py (HANDOFF P3-T2). That file only forwarded to this exact command; deregistered + atticked in P4-T7."
+   }
+  ]
+ }
 }

@@ -79,17 +79,23 @@ def test_default_is_sonnet():
     assert ui["description"] == "[sonnet] do a thing"
 
 
-def test_agent_pin_opus_beats_sonnet_label():
-    # frontend-uiux-designer is pinned opus even with a [sonnet] label.
+def test_agent_pin_fable_beats_sonnet_label():
+    # frontend-uiux-designer is pinned fable (2026-07-18 directive) even with a [sonnet] label.
     out = run_agent({"description": "[sonnet] polish UI", "subagent_type": "frontend-uiux-designer"})
     ui = resolved(out)
-    assert ui["model"] == "opus"
-    assert ui["description"] == "[opus] polish UI"
+    assert ui["model"] == "fable"
+    assert ui["description"] == "[fable] polish UI"
 
 
-def test_agent_pin_opus_implementation_engineer():
+def test_agent_pin_fable_implementation_engineer():
     out = run_agent({"description": "[sonnet] build feature", "subagent_type": "implementation-engineer"})
-    assert resolved(out)["model"] == "opus"
+    assert resolved(out)["model"] == "fable"
+
+
+def test_agent_pin_fable_new_specialists():
+    for at in ("backend-implementor-specialist", "frontend-implementor-specialist", "integrator-specialist"):
+        out = run_agent({"description": "[sonnet] work", "subagent_type": at})
+        assert resolved(out)["model"] == "fable", at
 
 
 def test_agent_pin_sonnet_beats_opus_label():
@@ -112,10 +118,10 @@ def test_label_prefix_used_when_no_pin_or_model():
 
 
 def test_noop_when_already_correct():
-    # opus agent + [opus] label + model opus -> nothing to change -> allow unchanged.
+    # fable agent + [fable] label + model fable -> nothing to change -> allow unchanged.
     out = run_agent({
-        "description": "[opus] polish",
-        "model": "opus",
+        "description": "[fable] polish",
+        "model": "fable",
         "subagent_type": "frontend-uiux-designer",
     })
     assert out == {}
@@ -205,9 +211,10 @@ def test_policy_actually_loaded_from_disk():
     # sanity: the real policy file parses and pins match the shipped literals.
     mod = _load_module()
     mod._POLICY_CACHE = None
-    sonnet_set, opus_set = mod._agent_sets()
-    assert "frontend-uiux-designer" in opus_set
-    assert "implementation-engineer" in opus_set
+    sonnet_set, opus_set, fable_set = mod._agent_sets()
+    assert "frontend-uiux-designer" in fable_set
+    assert "implementation-engineer" in fable_set
+    assert "backend-implementor-specialist" in fable_set
     assert "explore" in sonnet_set
     assert mod._default_model() == "sonnet"
 

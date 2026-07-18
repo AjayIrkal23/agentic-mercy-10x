@@ -1,7 +1,6 @@
 ---
 name: api-contract-standards
-description: Use when backend response envelopes, list metadata, error shapes, versioning, or the separation
-  between table, card, and summary contracts are being defined or reviewed.
+description: "ALWAYS invoke when backend response envelopes, list metadata, error shapes, versioning, or the separation between table, card, and summary contracts are being defined or reviewed."
 disable-model-invocation: false
 schema: 1
 category: general

@@ -1,14 +1,14 @@
 {
   "_meta": {
     "purpose": "Charter v3 §2 verbatim trigger floor — removals forbidden, additions allowed.",
-    "generated": "2026-07-18T01:41:10",
+    "generated": "2026-07-18T16:06:13",
     "generator": "build-trigger-floor.py",
-    "checksum": "30660e46118cd7d95c1afd3491692697be82ed734001ecf6eee985ea2730c392",
-    "entry_count": 2009,
+    "checksum": "ec9c8ca67f4b7e73e6a3f5fe46da5f0a6c7c52e1be7b95848e31b7c8fc6ed072",
+    "entry_count": 2059,
     "source_counts": {
-      "skill_router.config.rules": 28,
+      "skill_router.config.rules": 29,
       "skill_router.builtins": 24,
-      "autonomous.category_keywords": 1115,
+      "autonomous.category_keywords": 1164,
       "ui.keywords": 419,
       "graphify.arch+explore": 247,
       "fullstack.segments": 11,
@@ -30,7 +30,6 @@
         },
         "skills": [
           "frontend-response-handling",
-          "frontend-api-standards",
           "frontend-server-data-patterns",
           "owasp-security"
         ]
@@ -151,8 +150,7 @@
         },
         "skills": [
           "webapp-testing",
-          "browser-testing-with-devtools",
-          "tdd",
+          "test-driven-development",
           "frontend-standards-always-follow"
         ]
       },
@@ -245,7 +243,7 @@
           ]
         },
         "skills": [
-          "security-and-hardening",
+          "owasp-security",
           "frontend-standards-always-follow",
           "frontend-response-handling"
         ]
@@ -267,7 +265,8 @@
         "skills": [
           "frontend-standards-always-follow",
           "react-hooks-patterns",
-          "tailwind-design-system"
+          "tailwind-design-system",
+          "shadcn"
         ]
       },
       "source_file": "skill_router.config.json",
@@ -323,7 +322,7 @@
         },
         "skills": [
           "golang-testing",
-          "tdd",
+          "test-driven-development",
           "backend-standards-always-follow"
         ]
       },
@@ -448,7 +447,7 @@
           ]
         },
         "skills": [
-          "tdd",
+          "test-driven-development",
           "backend-standards-always-follow",
           "backend-performance-standards"
         ]
@@ -470,7 +469,7 @@
           ]
         },
         "skills": [
-          "security-and-hardening",
+          "owasp-security",
           "backend-standards-always-follow",
           "backend-error-handling"
         ]
@@ -552,9 +551,7 @@
           ]
         },
         "skills": [
-          "forensic-hotspot-finder",
-          "forensic-complexity-trends",
-          "forensic-debt-quantification",
+          "tech-debt-audit",
           "backend-performance-standards"
         ]
       },
@@ -630,6 +627,29 @@
     {
       "kind": "path_route",
       "value": {
+        "id": "ci_files",
+        "match": {
+          "path_contains_any": [
+            ".github/workflows",
+            "dockerfile",
+            ".gitlab-ci",
+            ".circleci",
+            "jenkinsfile"
+          ]
+        },
+        "skills": [
+          "ci-cd-and-automation",
+          "shipping-and-launch"
+        ],
+        "_new": "2026-07-18"
+      },
+      "source_file": "skill_router.config.json",
+      "source_key": "ci_files",
+      "weight": 1.0
+    },
+    {
+      "kind": "path_route",
+      "value": {
         "id": "be_security_audit",
         "match": {
           "filename_contains_any": [
@@ -670,7 +690,10 @@
           "project-reference-linkage",
           "project-structure-map",
           "mcp-usage-standards",
-          "iterative-retrieval"
+          "iterative-retrieval",
+          "codebase-intel-first",
+          "dox-doc-tree",
+          "graphify"
         ]
       },
       "source_file": "skill_router.config.json",
@@ -683,7 +706,8 @@
         "group": "verification",
         "skills": [
           "verification-loop",
-          "eval-harness"
+          "eval-harness",
+          "update-docs"
         ]
       },
       "source_file": "skill_router.config.json",
@@ -2294,6 +2318,27 @@
     {
       "kind": "act_keyword",
       "value": "mr review",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REVIEW",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "triage",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REVIEW",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "triage issues",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.REVIEW",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "triage the backlog",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.REVIEW",
       "weight": 1.0
@@ -6164,6 +6209,104 @@
     },
     {
       "kind": "act_keyword",
+      "value": "break into issues",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.PLAN",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "break this into issues",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.PLAN",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "create issues",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.PLAN",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "create tickets",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.PLAN",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "tickets",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.PLAN",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "to issues",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.PLAN",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "grill",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.PLAN",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "grill me",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.PLAN",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "stress-test the plan",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.PLAN",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "stress test the plan",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.PLAN",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "challenge the plan",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.PLAN",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "refine this idea",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.PLAN",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "refine the idea",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.PLAN",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "ideate",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.PLAN",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
       "value": "refactor across",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.LARGE",
@@ -7837,6 +7980,69 @@
     },
     {
       "kind": "act_keyword",
+      "value": "architecture improvement",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.AUDIT",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "improvement opportunities",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.AUDIT",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "deepening opportunities",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.AUDIT",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "improve the architecture",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.AUDIT",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "performance audit",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.AUDIT",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "web vitals",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.AUDIT",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "bundle size",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.AUDIT",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "slow query",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.AUDIT",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "why is it slow",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.AUDIT",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
       "value": "spec",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.SPEC",
@@ -8111,6 +8317,27 @@
     {
       "kind": "act_keyword",
       "value": "define what we build",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.SPEC",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "to prd",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.SPEC",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "refine this idea",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.SPEC",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "refine the idea",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.SPEC",
       "weight": 1.0
@@ -8512,6 +8739,146 @@
       "value": "remove deprecated",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.CLEANUP",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "sync the docs",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.DOCS",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "update the docs",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.DOCS",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "update docs",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.DOCS",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "docs sync",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.DOCS",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "document the changes",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.DOCS",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "write documentation",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.DOCS",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "changelog",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.DOCS",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "adr",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.DOCS",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "architecture decision record",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.DOCS",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "document release",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.DOCS",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "docs for this",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.DOCS",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "verify it works",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.VERIFY",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "prove it works",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.VERIFY",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "end to end check",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.VERIFY",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "end-to-end verification",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.VERIFY",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "run the acceptance criteria",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.VERIFY",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "uat",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.VERIFY",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "does it actually work",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.VERIFY",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "confirm it works",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.VERIFY",
+      "weight": 1.0
+    },
+    {
+      "kind": "act_keyword",
+      "value": "verify the feature",
+      "source_file": "autonomous-skill-router.config.json",
+      "source_key": "categories.VERIFY",
       "weight": 1.0
     },
     {

@@ -1,7 +1,6 @@
 ---
 name: to-prd
-description: Turn the current conversation context into a PRD and publish it to the project issue tracker.
-  Use when user wants to create a PRD from the current context.
+description: "ALWAYS invoke when the user wants to create a PRD from the current context — turns the current conversation context into a PRD and publishes it to the project issue tracker."
 schema: 1
 category: general
 surfaces:
@@ -28,6 +27,17 @@ triggers:
   paths: []
   intents:
   - general
+keywords:
+- prd
+- product requirements
+- to prd
+- write a prd
+- create a prd
+- publish the prd
+intents:
+- SPEC
+surfaces:
+- general
 ---
 This skill takes the current conversation context and codebase understanding and produces a PRD. Do NOT interview the user — just synthesize what you already know.
 

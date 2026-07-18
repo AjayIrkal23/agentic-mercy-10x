@@ -1,7 +1,6 @@
 ---
 name: service-layer-standards
-description: Use when any backend API, route, controller, schema, service, contract, persistence, auth,
-  validation, worker, queue, integration, or server behavior task is requested.
+description: "ALWAYS invoke when any backend API, route, controller, schema, service, contract, persistence, auth, validation, worker, queue, integration, or server behavior task is requested."
 disable-model-invocation: false
 schema: 1
 category: general

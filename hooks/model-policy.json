@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "_about": "Single source of truth for subagent/workflow/invoke model selection. Consumers (opus-guard.py, workflow-model-guard.py, gen-invoke-commands.py, prompt_router/modules/model_advice.py) each fail OPEN to their own hardcoded defaults if this file is missing or corrupt. Sonnet is the default; Opus is reserved for UI/UX + heavy/complex work + the IMPLEMENT suite; Fable is reachable ONLY via an explicit override phrase, a [fable] label, model:\"fable\", or the fable-only-mode flag.",
+  "_about": "Single source of truth for subagent/workflow/invoke model selection. Consumers (opus-guard.py, workflow-model-guard.py, gen-invoke-commands.py, prompt_router/modules/model_advice.py) each fail OPEN to their own hardcoded defaults if this file is missing or corrupt. Sonnet is the default; Opus is reserved for UI/UX + heavy/complex work + the IMPLEMENT suite; Fable is the standing default for specialist agents + invoke acts (user directive 2026-07-18: \"use fable for everything\"); sonnet remains for cheap search helpers.",
   "model_ids": {
     "sonnet": "claude-sonnet-4-6",
     "opus": "claude-opus-4-8",
@@ -8,9 +8,19 @@
   },
   "default": "sonnet",
   "agent_pins": {
-    "_comment": "subagent_type -> forced model, regardless of intent. Fable never appears here.",
-    "opus": ["frontend-uiux-designer", "implementation-engineer"],
-    "sonnet": ["explore", "claude-code-guide"]
+    "_comment": "subagent_type -> forced model. 2026-07-18 user directive: fable for everything — implementor/design agents pinned fable; explore/guide stay sonnet (cheap searches).",
+    "opus": [],
+    "sonnet": [
+      "explore",
+      "claude-code-guide"
+    ],
+    "fable": [
+      "frontend-uiux-designer",
+      "implementation-engineer",
+      "backend-implementor-specialist",
+      "frontend-implementor-specialist",
+      "integrator-specialist"
+    ]
   },
   "task_matrix": {
     "_comment": "TaskProfile intent -> model (consumed by /invoke categories and the router's model_advice; the Agent-tool opus-guard has no TaskProfile so it skips this step). Anything unlisted -> default (sonnet). Fable never appears here.",
@@ -25,15 +35,34 @@
     "min_risk": 2
   },
   "invoke_categories": {
-    "_comment": "Per-/invoke-category model pin. Replaces categories.<CAT>.model in autonomous-skill-router.config.json as the source of truth; gen-invoke-commands.py reads THIS (wired in P5). REVIEW=opus: the Santa Method adversarial review runs on Opus by design (its bug-catching depth is the point).",
-    "IMPLEMENT": "opus",
-    "REVIEW": "opus"
+    "_comment": "2026-07-18 user directive: fable for everything — all substantive acts run fable.",
+    "IMPLEMENT": "fable",
+    "REVIEW": "fable",
+    "AUDIT": "fable",
+    "SPEC": "fable",
+    "PLAN": "fable",
+    "DEBUG": "fable",
+    "DESIGN": "fable",
+    "DOCS": "fable",
+    "VERIFY": "fable"
   },
   "override_phrases": {
     "_comment": "Explicit user phrases in the prompt that force a model for that turn.",
-    "opus": ["use opus", "on opus", "opus for this"],
-    "sonnet": ["use sonnet", "on sonnet", "cheap mode"],
-    "fable": ["use fable", "on fable", "fable for this"]
+    "opus": [
+      "use opus",
+      "on opus",
+      "opus for this"
+    ],
+    "sonnet": [
+      "use sonnet",
+      "on sonnet",
+      "cheap mode"
+    ],
+    "fable": [
+      "use fable",
+      "on fable",
+      "fable for this"
+    ]
   },
   "session_flags": {
     "_comment": "Flag files under ~/.claude/<dir>/; presence forces that model on every subagent/workflow agent. Precedence sonnet > opus > fable (sonnet is the kill-switch).",
@@ -41,7 +70,11 @@
     "sonnet": "sonnet-only-mode",
     "opus": "opus-only-mode",
     "fable": "fable-only-mode",
-    "precedence": ["sonnet", "opus", "fable"]
+    "precedence": [
+      "sonnet",
+      "opus",
+      "fable"
+    ]
   },
   "main_session_advice": {
     "enabled": true,

@@ -1,8 +1,6 @@
 ---
 name: frontend-structure-standards
-description: Use when frontend work needs decisions about folder layout, module boundaries, file decomposition,
-  or where app-owned frontend types should live. Organize maintainable frontend modules Use to plan frontend
-  component, hook, and module boundaries.
+description: "ALWAYS invoke when frontend work needs decisions about folder layout, module boundaries, file decomposition, or where app-owned frontend types should live. MUST use to plan frontend component, hook, and module boundaries and organize maintainable frontend modules."
 disable-model-invocation: false
 schema: 1
 category: backend

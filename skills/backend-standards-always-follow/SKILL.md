@@ -1,10 +1,6 @@
 ---
 name: backend-standards-always-follow
-description: Use when any backend API, route, controller, schema, service, contract, persistence, auth,
-  validation, worker, queue, integration, server/Fastify behavior, backend bugfix, or implementation is
-  requested. Backend Core Compliance Set member for the always-on backend baseline As part of the Backend
-  Core Compliance Set for any backend/server trigger surface before planning, debugging, implementation,
-  review, delegation, or completion acceptance.
+description: "ALWAYS invoke when any backend API, route, controller, schema, service, contract, persistence, auth, validation, worker, queue, integration, server/Fastify behavior, backend bugfix, or implementation is requested. Backend Core Compliance Set member for the always-on backend baseline — MUST use for any backend/server trigger surface before planning, debugging, implementation, review, delegation, or completion acceptance."
 disable-model-invocation: false
 schema: 1
 category: backend

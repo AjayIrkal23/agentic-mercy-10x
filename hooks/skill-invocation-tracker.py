@@ -67,7 +67,7 @@ def main() -> int:
         or payload.get("toolName")
         or ""
     ).strip()
-    if tool_name != "Skill":
+    if tool_name not in ("Skill", "Read"):
         sys.stdout.write("{}\n")
         return 0
 
@@ -81,7 +81,17 @@ def main() -> int:
         sys.stdout.write("{}\n")
         return 0
 
-    skill_slug = (tool_input.get("skill") or "").strip()
+    if tool_name == "Read":
+        # a Read of ~/.claude/skills/<slug>/SKILL.md counts as consuming the skill
+        import re as _re
+        fp = str(tool_input.get("file_path") or "")
+        m = _re.search(r"/\.claude/skills/([^/]+)/SKILL\.md$", fp.replace("\\", "/"))
+        if not m:
+            sys.stdout.write("{}\n")
+            return 0
+        skill_slug = m.group(1)
+    else:
+        skill_slug = (tool_input.get("skill") or "").strip()
     if not skill_slug:
         sys.stdout.write("{}\n")
         return 0

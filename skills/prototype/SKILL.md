@@ -1,10 +1,6 @@
 ---
 name: prototype
-description: Build a throwaway prototype to flesh out a design before committing to it. Routes between
-  two branches — a runnable terminal app for state/business-logic questions, or several radically different
-  UI variations toggleable from one route. Use when the user wants to prototype, sanity-check a data model
-  or state machine, mock up a UI, explore design options, or says "prototype this", "let me play with
-  it", "try a few designs".
+description: "ALWAYS invoke when the user wants to prototype, sanity-check a data model or state machine, mock up a UI, explore design options, or says \"prototype this\", \"let me play with it\", \"try a few designs\" — builds a throwaway prototype to flesh out a design before committing to it. Routes between two branches: a runnable terminal app for state/business-logic questions, or several radically different UI variations toggleable from one route."
 schema: 1
 category: general
 surfaces:
@@ -54,6 +50,22 @@ triggers:
   paths: []
   intents:
   - general
+keywords:
+- prototype
+- prototype this
+- throwaway prototype
+- mock up
+- mockup
+- ui variations
+- try a few designs
+- let me play with it
+- sanity-check the data model
+- spike
+intents:
+- DESIGN
+- SPEC
+surfaces:
+- frontend
 ---
 # Prototype
 

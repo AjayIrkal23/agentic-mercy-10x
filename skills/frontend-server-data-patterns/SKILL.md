@@ -1,8 +1,6 @@
 ---
 name: frontend-server-data-patterns
-description: Use when building or changing API-backed tables, lists, search screens, or frontend query-state
-  flows with server-driven filtering, sorting, and pagination. Model API-backed frontend query state Use
-  to define query-state and async UI behavior for a server-backed screen.
+description: "ALWAYS invoke when building or changing API-backed tables, lists, search screens, or frontend query-state flows with server-driven filtering, sorting, and pagination. MUST use to model API-backed frontend query state and define query-state and async UI behavior for a server-backed screen."
 disable-model-invocation: false
 schema: 1
 category: frontend

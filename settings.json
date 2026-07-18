@@ -1,278 +1,267 @@
 {
-  "skillListingBudgetFraction": 0.1,
-  "env": {
-    "CLAUDE_CODE_SUBAGENT_EFFORT": "max",
-    "TDD_GUARD_MODEL_VERSION": "claude-sonnet-4-0",
-    "VALIDATION_CLIENT": "sdk"
-  },
-  "permissions": {
-    "deny": [],
-    "defaultMode": "bypassPermissions"
-  },
-  "model": "claude-fable-5[1m]",
-  "hooks": {
-    "PostToolUse": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ${HOME}/.claude/hooks/dispatch.py post-tool-use",
-            "timeout": 30
-          }
-        ]
-      },
-      {
-        "matcher": "(AskUserQuestion|mcp__.*__AskUserQuestion)",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/mercy/.claude/skills/gstack/hosts/claude/hooks/question-log-hook",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/mercy/.local/bin/lean-ctx hook observe"
-          }
-        ]
-      },
-      {
-        "matcher": "Read",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/mercy/.local/bin/lean-ctx hook read-dedup"
-          }
-        ]
-      }
-    ],
-    "PreCompact": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ${HOME}/.claude/hooks/dispatch.py pre-compact",
-            "timeout": 15
-          }
-        ]
-      },
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/mercy/.local/bin/lean-ctx hook observe"
-          }
-        ]
-      }
-    ],
-    "PreToolUse": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ${HOME}/.claude/hooks/dispatch.py pre-tool-use",
-            "timeout": 65
-          }
-        ]
-      },
-      {
-        "matcher": "(AskUserQuestion|mcp__.*__AskUserQuestion)",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/mercy/.claude/skills/gstack/hosts/claude/hooks/question-preference-hook",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "\"/home/mercy/.nvm/versions/node/v24.18.0/bin/node\" \"/home/mercy/.claude/hooks/gsd-read-guard.js\"",
-            "timeout": 5
-          }
-        ]
-      },
-      {
-        "matcher": "Bash|bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/mercy/.local/bin/lean-ctx hook rewrite"
-          }
-        ]
-      },
-      {
-        "matcher": "Read|read|ReadFile|read_file|View|view|Grep|grep|Search|search|ListFiles|list_files|ListDirectory|list_directory|Glob|glob",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/mercy/.local/bin/lean-ctx hook redirect"
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ${HOME}/.claude/hooks/dispatch.py session-end",
-            "timeout": 15
-          }
-        ]
-      },
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/mercy/.local/bin/lean-ctx hook observe"
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ${HOME}/.claude/hooks/dispatch.py session-start",
-            "timeout": 60
-          }
-        ]
-      },
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/mercy/.local/bin/lean-ctx hook observe"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ${HOME}/.claude/hooks/dispatch.py stop",
-            "timeout": 30
-          }
-        ]
-      },
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/mercy/.local/bin/lean-ctx hook observe"
-          }
-        ]
-      }
-    ],
-    "SubagentStop": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ${HOME}/.claude/hooks/dispatch.py subagent-stop",
-            "timeout": 15
-          }
-        ]
-      }
-    ],
-    "UserPromptSubmit": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ${HOME}/.claude/hooks/prompt_router/router.py",
-            "timeout": 20
-          }
-        ]
-      },
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "/home/mercy/.local/bin/lean-ctx hook observe"
-          }
-        ]
-      }
-    ]
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "\"${HOME}/.local/bin/node\" \"${HOME}/.claude/hooks/gsd-statusline.js\""
-  },
+  "agentPushNotifEnabled": true,
+  "autoCompactWindow": 900000,
+  "contextWindow": 1000000,
+  "effortLevel": "xhigh",
   "enabledPlugins": {
     "andrej-karpathy-skills@karpathy-skills": true,
     "claude-mermaid@claude-mermaid": true,
     "claude-session-driver@superpowers-marketplace": true,
     "clickhouse@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
     "double-shot-latte@superpowers-marketplace": true,
     "elements-of-style@superpowers-marketplace": true,
     "firecrawl@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,
     "gopls-lsp@claude-plugins-official": true,
+    "playwright@claude-plugins-official": true,
     "ponytail@ponytail": true,
     "superpowers-lab@superpowers-marketplace": true,
     "superpowers@claude-plugins-official": true,
-    "typescript-lsp@claude-plugins-official": true,
-    "context7@claude-plugins-official": true,
-    "playwright@claude-plugins-official": true
+    "typescript-lsp@claude-plugins-official": true
+  },
+  "env": {
+    "CLAUDE_CODE_SUBAGENT_EFFORT": "max",
+    "TDD_GUARD_MODEL_VERSION": "claude-sonnet-4-0",
+    "VALIDATION_CLIENT": "sdk",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
   "extraKnownMarketplaces": {
     "claude-mermaid": {
       "source": {
-        "source": "github",
-        "repo": "veelenga/claude-mermaid"
+        "repo": "veelenga/claude-mermaid",
+        "source": "github"
       }
     },
     "karpathy-skills": {
       "source": {
-        "source": "github",
-        "repo": "forrestchang/andrej-karpathy-skills"
+        "repo": "forrestchang/andrej-karpathy-skills",
+        "source": "github"
       }
     },
     "ponytail": {
       "source": {
-        "source": "github",
-        "repo": "DietrichGebert/ponytail"
+        "repo": "DietrichGebert/ponytail",
+        "source": "github"
       }
     },
     "superpowers-marketplace": {
+      "autoUpdate": true,
       "source": {
-        "source": "github",
-        "repo": "obra/superpowers-marketplace"
-      },
-      "autoUpdate": true
+        "repo": "obra/superpowers-marketplace",
+        "source": "github"
+      }
     }
   },
-  "effortLevel": "xhigh",
-  "autoCompactWindow": 900000,
-  "skipDangerousModePermissionPrompt": true,
-  "theme": "dark",
-  "agentPushNotifEnabled": true,
-  "contextWindow": 1000000,
+  "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py post-tool-use",
+            "timeout": 30,
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/home/mercy/.claude/skills/gstack/hosts/claude/hooks/question-log-hook",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "(AskUserQuestion|mcp__.*__AskUserQuestion)"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/home/mercy/.local/bin/lean-ctx hook observe",
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/home/mercy/.local/bin/lean-ctx hook read-dedup",
+            "type": "command"
+          }
+        ],
+        "matcher": "Read"
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py pre-compact",
+            "timeout": 15,
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/home/mercy/.local/bin/lean-ctx hook observe",
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py pre-tool-use",
+            "timeout": 65,
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/home/mercy/.claude/skills/gstack/hosts/claude/hooks/question-preference-hook",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "(AskUserQuestion|mcp__.*__AskUserQuestion)"
+      },
+      {
+        "hooks": [
+          {
+            "command": "\"/home/mercy/.nvm/versions/node/v24.18.0/bin/node\" \"/home/mercy/.claude/hooks/gsd-read-guard.js\"",
+            "timeout": 5,
+            "type": "command"
+          }
+        ],
+        "matcher": "Write|Edit"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/home/mercy/.local/bin/lean-ctx hook rewrite",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash|bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/home/mercy/.local/bin/lean-ctx hook redirect",
+            "type": "command"
+          }
+        ],
+        "matcher": "Read|read|ReadFile|read_file|View|view|Grep|grep|Search|search|ListFiles|list_files|ListDirectory|list_directory|Glob|glob"
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py session-end",
+            "timeout": 15,
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/home/mercy/.local/bin/lean-ctx hook observe",
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py session-start",
+            "timeout": 60,
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/home/mercy/.local/bin/lean-ctx hook observe",
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py stop",
+            "timeout": 30,
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/home/mercy/.local/bin/lean-ctx hook observe",
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py subagent-stop",
+            "timeout": 15,
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "python3 ${HOME}/.claude/hooks/prompt_router/router.py",
+            "timeout": 20,
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      },
+      {
+        "hooks": [
+          {
+            "command": "/home/mercy/.local/bin/lean-ctx hook observe",
+            "type": "command"
+          }
+        ],
+        "matcher": ".*"
+      }
+    ]
+  },
   "mcpServers": {
     "ast-grep": {
       "args": [
@@ -374,5 +363,21 @@
       ],
       "command": "npx"
     }
-  }
+  },
+  "model": "claude-fable-5[1m]",
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "deny": [
+      "Read",
+      "Grep",
+      "Glob"
+    ]
+  },
+  "skillListingBudgetFraction": 0.1,
+  "skipDangerousModePermissionPrompt": true,
+  "statusLine": {
+    "command": "\"${HOME}/.local/bin/node\" \"${HOME}/.claude/hooks/gsd-statusline.js\"",
+    "type": "command"
+  },
+  "theme": "dark"
 }

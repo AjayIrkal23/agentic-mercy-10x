@@ -30,6 +30,20 @@ triggers:
   intents: []
 alias_of: tech-debt-audit
 provenance: self
+keywords:
+- deepen the architecture
+- architecture improvement
+- improvement opportunities
+- architecture opportunities
+- improve the architecture
+- deep modules
+- architecture debt
+- structural improvements
+intents:
+- AUDIT
+- REFACTOR
+surfaces:
+- general
 ---
 
 # improve-codebase-architecture

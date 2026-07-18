@@ -1,8 +1,6 @@
 ---
 name: to-issues
-description: Break a plan, spec, or PRD into independently-grabbable issues on the project issue tracker
-  using tracer-bullet vertical slices. Use when user wants to convert a plan into issues, create implementation
-  tickets, or break down work into issues.
+description: "ALWAYS invoke when the user wants to convert a plan into issues, create implementation tickets, or break down work into issues — breaks a plan, spec, or PRD into independently-grabbable issues on the project issue tracker using tracer-bullet vertical slices."
 schema: 1
 category: general
 surfaces:
@@ -37,6 +35,21 @@ triggers:
   paths: []
   intents:
   - general
+keywords:
+- break into issues
+- break this into issues
+- create issues
+- create tickets
+- tickets
+- to issues
+- issue tracker
+- vertical slices
+- tracer bullet
+- implementation tickets
+intents:
+- PLAN
+surfaces:
+- general
 ---
 # To Issues
 

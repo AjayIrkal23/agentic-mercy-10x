@@ -1,7 +1,6 @@
 ---
 name: backend-api-standards
-description: Use when a backend task needs strict list or search endpoint rules for filtering, sorting,
-  pagination, stable response shapes, or query validation.
+description: "ALWAYS invoke when a backend task needs strict list or search endpoint rules for filtering, sorting, pagination, stable response shapes, or query validation."
 disable-model-invocation: false
 schema: 1
 category: backend

@@ -1,8 +1,6 @@
 ---
 name: tool-and-doc-selection
-description: Use when deciding which source of truth to consult among workspace files, local docs, installed
-  docs tools, MCP integrations, or web search. Choose the right source of truth Use to choose the right
-  local or external source for this task.
+description: "ALWAYS invoke when deciding which source of truth to consult among workspace files, local docs, installed docs tools, MCP integrations, or web search. MUST use to choose the right local or external source for this task."
 schema: 1
 category: docs
 surfaces:

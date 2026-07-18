@@ -2,18 +2,34 @@
   "_meta": {
     "purpose": "Ranked-routing catalog (Spec A §5.2). Covers all on-disk skills; schema-v1 front-matter where present, else floor-fallback keywords.",
     "generator": "build-skills-index.py",
-    "skill_count": 218,
-    "checksum": "c553a62fe333f16e77ca607881e8dab87b0259b981cc52c84feb8f7695bebb1d"
+    "skill_count": 237,
+    "checksum": "7035010b5ac4edad89a2f53a5e52ce7371a578887c93beb68533d0ca5ad4bf88"
   },
   "skills": {
+    "_gstack-command": {
+      "name": "_gstack-command",
+      "description": "",
+      "keywords": [
+        "gstack-command"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
     "agent-development": {
       "name": "agent-development",
-      "description": "Use when creating or revising reusable agent definitions, trigger text, or system prompts",
+      "description": "ALWAYS invoke when creating or revising reusable agent definitions, trigger text, or system prompts for autonomous helpers.",
       "keywords": [
         "agent",
         "agent-development",
+        "always",
+        "autonomous",
         "creating",
         "definitions",
+        "helpers",
+        "invoke",
         "prompts",
         "reusable",
         "revising",
@@ -49,21 +65,31 @@
     },
     "api-contract-standards": {
       "name": "api-contract-standards",
-      "description": "Use when backend response envelopes, list metadata, error shapes, versioning, or the separation",
+      "description": "ALWAYS invoke when backend response envelopes, list metadata, error shapes, versioning, or the separation between table, card, and summary contracts are being defined or reviewed.",
       "keywords": [
+        "always",
         "api-contract-standards",
         "backend",
+        "being",
+        "between",
+        "card",
         "contract",
+        "contracts",
+        "defined",
         "envelope",
         "envelopes",
         "error",
+        "invoke",
         "list",
         "metadata",
         "response",
+        "reviewed",
         "separation",
         "shapes",
         "src/schemas",
         "src/types",
+        "summary",
+        "table",
         "versioning"
       ],
       "surfaces": [
@@ -92,14 +118,19 @@
     },
     "architect-system-design": {
       "name": "architect-system-design",
-      "description": "Use when the main task is design, decomposition, interface planning, or implementation planning",
+      "description": "ALWAYS invoke when the main task is design, decomposition, interface planning, or implementation planning — MUST use before code changes begin.",
       "keywords": [
+        "always",
         "architect-system-design",
+        "begin",
+        "changes",
         "decomposition",
         "design",
         "implementation",
         "interface",
+        "invoke",
         "main",
+        "must",
         "planning"
       ],
       "surfaces": [
@@ -112,9 +143,18 @@
     },
     "autoplan": {
       "name": "autoplan",
-      "description": "",
+      "description": "Auto-review pipeline — reads the full CEO, design, eng, and DX review skills from disk and",
       "keywords": [
-        "autoplan"
+        "auto-review",
+        "autoplan",
+        "ceo",
+        "design",
+        "disk",
+        "eng",
+        "full",
+        "pipeline",
+        "reads",
+        "review"
       ],
       "surfaces": [],
       "intents": [],
@@ -124,8 +164,9 @@
     },
     "backend-api-standards": {
       "name": "backend-api-standards",
-      "description": "Use when a backend task needs strict list or search endpoint rules for filtering, sorting,",
+      "description": "ALWAYS invoke when a backend task needs strict list or search endpoint rules for filtering, sorting, pagination, stable response shapes, or query validation.",
       "keywords": [
+        "always",
         "backend",
         "backend-api-standards",
         "contract",
@@ -133,16 +174,22 @@
         "endpoint",
         "envelope",
         "filtering",
+        "invoke",
         "list",
         "needs",
+        "pagination",
+        "query",
         "response",
         "route",
         "router",
         "rules",
         "schema",
         "search",
+        "shapes",
         "sorting",
-        "strict"
+        "stable",
+        "strict",
+        "validation"
       ],
       "surfaces": [
         "backend"
@@ -222,19 +269,23 @@
     },
     "backend-error-handling": {
       "name": "backend-error-handling",
-      "description": "Use when defining backend error taxonomy, centralized handler behavior, safe logging, redaction,",
+      "description": "ALWAYS invoke when defining backend error taxonomy, centralized handler behavior, safe logging, redaction, or client-safe error mapping.",
       "keywords": [
+        "always",
         "auth",
         "backend",
         "backend-error-handling",
         "behavior",
         "centralized",
+        "client-safe",
         "debug",
         "defining",
         "error",
         "guard",
         "handler",
+        "invoke",
         "logging",
+        "mapping",
         "middleware",
         "redaction",
         "safe",
@@ -275,19 +326,25 @@
     },
     "backend-performance-standards": {
       "name": "backend-performance-standards",
-      "description": "Use when reviewing backend query efficiency, file-size pressure, repeated DB work, scaling",
+      "description": "ALWAYS invoke when reviewing backend query efficiency, file-size pressure, repeated DB work, scaling risk, or safe optimization boundaries.",
       "keywords": [
         "_test.ts",
+        "always",
         "backend",
         "backend-performance-standards",
+        "boundaries",
         "cmd",
         "efficiency",
         "file-size",
         "internal",
+        "invoke",
+        "optimization",
         "pressure",
         "query",
         "repeated",
         "reviewing",
+        "risk",
+        "safe",
         "scaling",
         "server",
         "spec",
@@ -318,26 +375,39 @@
     },
     "backend-standards-always-follow": {
       "name": "backend-standards-always-follow",
-      "description": "Use when any backend API, route, controller, schema, service, contract, persistence, auth,",
+      "description": "ALWAYS invoke when any backend API, route, controller, schema, service, contract, persistence, auth, validation, worker, queue, integration, server/Fastify behavior, backend bugfix, or implementation is requested. Backend Core Compliance Set member for the always-on backend baseline — MUST use for any backend/server trigger surface before planning, debugging, implementation, review, delegation, or",
       "keywords": [
         "_test.go",
         "_test.ts",
+        "always",
+        "always-on",
         "api",
         "auth",
         "backend",
         "backend-standards-always-follow",
+        "behavior",
+        "bugfix",
+        "compliance",
         "contract",
         "controller",
+        "core",
         "envelope",
+        "fastify",
         "guard",
+        "implementation",
+        "integration",
         "internal",
         "internal/models",
+        "invoke",
+        "member",
         "middleware",
         "migrate",
         "migration",
         "model",
         "models",
         "persistence",
+        "queue",
+        "requested",
         "response",
         "route",
         "router",
@@ -347,7 +417,9 @@
         "session",
         "spec",
         "sql",
-        "test"
+        "test",
+        "validation",
+        "worker"
       ],
       "surfaces": [
         "backend"
@@ -450,9 +522,15 @@
     },
     "benchmark": {
       "name": "benchmark",
-      "description": "",
+      "description": "Performance regression detection using the browse daemon. (gstack)",
       "keywords": [
-        "benchmark"
+        "benchmark",
+        "browse",
+        "daemon",
+        "detection",
+        "gstack",
+        "performance",
+        "regression"
       ],
       "surfaces": [],
       "intents": [],
@@ -462,9 +540,12 @@
     },
     "benchmark-models": {
       "name": "benchmark-models",
-      "description": "",
+      "description": "Cross-model benchmark for gstack skills. (gstack)",
       "keywords": [
-        "benchmark-models"
+        "benchmark",
+        "benchmark-models",
+        "cross-model",
+        "gstack"
       ],
       "surfaces": [],
       "intents": [],
@@ -474,9 +555,16 @@
     },
     "browse": {
       "name": "browse",
-      "description": "",
+      "description": "Fast headless browser for QA testing and site dogfooding. (gstack)",
       "keywords": [
-        "browse"
+        "browse",
+        "browser",
+        "dogfooding",
+        "fast",
+        "gstack",
+        "headless",
+        "site",
+        "testing"
       ],
       "surfaces": [],
       "intents": [],
@@ -488,40 +576,26 @@
       "name": "browser-testing-with-devtools",
       "description": "Tests in real browsers (alias of webapp-testing).",
       "keywords": [
-        "__tests__",
-        "_test.ts",
-        "_test.tsx",
         "browser-testing-with-devtools",
         "browsers",
         "real",
-        "spec",
-        "test",
         "tests",
         "webapp-testing"
       ],
-      "surfaces": [
-        "frontend"
-      ],
+      "surfaces": [],
       "intents": [],
-      "path_rules": [
-        {
-          "path_contains_any": [
-            ".test.",
-            ".spec.",
-            "__tests__",
-            "_test.ts",
-            "_test.tsx"
-          ]
-        }
-      ],
+      "path_rules": [],
       "weight": 1.0,
       "source": "floor-fallback"
     },
     "canary": {
       "name": "canary",
-      "description": "",
+      "description": "Post-deploy canary monitoring. (gstack)",
       "keywords": [
-        "canary"
+        "canary",
+        "gstack",
+        "monitoring",
+        "post-deploy"
       ],
       "surfaces": [],
       "intents": [],
@@ -531,12 +605,14 @@
     },
     "canary-playwright": {
       "name": "canary-playwright",
-      "description": "Post-deploy canary monitoring using Playwright MCP (adapted from GStack /canary)",
+      "description": "ALWAYS invoke for post-deploy canary monitoring using Playwright MCP (adapted from GStack /canary).",
       "keywords": [
         "adapted",
+        "always",
         "canary",
         "canary-playwright",
         "gstack",
+        "invoke",
         "mcp",
         "monitoring",
         "playwright",
@@ -552,9 +628,14 @@
     },
     "careful": {
       "name": "careful",
-      "description": "",
+      "description": "Safety guardrails for destructive commands. (gstack)",
       "keywords": [
-        "careful"
+        "careful",
+        "commands",
+        "destructive",
+        "gstack",
+        "guardrails",
+        "safety"
       ],
       "surfaces": [],
       "intents": [],
@@ -593,7 +674,12 @@
         "automates",
         "build",
         "ci-cd-and-automation",
+        "circleci",
         "deployment",
+        "dockerfile",
+        "github/workflows",
+        "gitlab-ci",
+        "jenkinsfile",
         "modifying",
         "pipeline",
         "pipelines",
@@ -604,7 +690,17 @@
         "general"
       ],
       "intents": [],
-      "path_rules": [],
+      "path_rules": [
+        {
+          "path_contains_any": [
+            ".github/workflows",
+            "dockerfile",
+            ".gitlab-ci",
+            ".circleci",
+            "jenkinsfile"
+          ]
+        }
+      ],
       "weight": 1.0,
       "source": "floor-fallback"
     },
@@ -631,16 +727,32 @@
     },
     "code-review-and-quality": {
       "name": "code-review-and-quality",
-      "description": "Conducts multi-axis code review. Use before merging any change. Use when reviewing code written",
+      "description": "MUST use before merging any change — conducts multi-axis code review. ALWAYS invoke when reviewing code written by yourself, another agent, or a human, or when you need to assess code quality across multiple dimensions before it enters the main branch.",
       "keywords": [
+        "across",
+        "agent",
+        "always",
+        "another",
+        "assess",
+        "branch",
         "change",
         "code-review-and-quality",
         "conducts",
+        "dimensions",
+        "enters",
+        "human",
+        "invoke",
+        "main",
         "merging",
         "multi-axis",
+        "multiple",
+        "must",
+        "need",
+        "quality",
         "review",
         "reviewing",
-        "written"
+        "written",
+        "yourself"
       ],
       "surfaces": [
         "backend",
@@ -653,19 +765,69 @@
     },
     "code-simplification": {
       "name": "code-simplification",
-      "description": "Simplifies code for clarity. Use when refactoring code for clarity without changing behavior.",
+      "description": "ALWAYS invoke when refactoring code for clarity without changing behavior — simplifies code for clarity. MUST use when code works but is harder to read, maintain, or extend than it should be, or when reviewing code that has accumulated unnecessary complexity.",
       "keywords": [
+        "accumulated",
+        "always",
         "behavior",
         "changing",
         "clarity",
         "code-simplification",
+        "complexity",
+        "extend",
+        "harder",
+        "invoke",
+        "maintain",
+        "must",
+        "read",
         "refactoring",
+        "reviewing",
+        "should",
         "simplifies",
-        "without"
+        "than",
+        "unnecessary",
+        "without",
+        "works"
       ],
       "surfaces": [
         "general"
       ],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "codebase-design": {
+      "name": "codebase-design",
+      "description": "Shared vocabulary for designing deep modules. Use when the user wants to design or improve a module's interface, find deepening opportunities, decide where a seam goes, make code more testable or AI-navigable, or when another skill needs the deep-module vocabulary.",
+      "keywords": [
+        "ai-navigable",
+        "another",
+        "codebase-design",
+        "decide",
+        "deep",
+        "deep-module",
+        "deepening",
+        "design",
+        "designing",
+        "find",
+        "goes",
+        "improve",
+        "interface",
+        "make",
+        "module",
+        "modules",
+        "more",
+        "needs",
+        "opportunities",
+        "seam",
+        "shared",
+        "testable",
+        "vocabulary",
+        "wants",
+        "where"
+      ],
+      "surfaces": [],
       "intents": [],
       "path_rules": [],
       "weight": 1.0,
@@ -716,9 +878,15 @@
     },
     "codex": {
       "name": "codex",
-      "description": "",
+      "description": "OpenAI Codex CLI wrapper — three modes. (gstack)",
       "keywords": [
-        "codex"
+        "cli",
+        "codex",
+        "gstack",
+        "modes",
+        "openai",
+        "three",
+        "wrapper"
       ],
       "surfaces": [],
       "intents": [],
@@ -747,11 +915,31 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "connect-chrome": {
-      "name": "connect-chrome",
+    "composition-patterns": {
+      "name": "composition-patterns",
       "description": "",
       "keywords": [
-        "connect-chrome"
+        "composition-patterns"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "connect-chrome": {
+      "name": "connect-chrome",
+      "description": "Launch GStack Browser — AI-controlled Chromium with the sidebar extension baked in.",
+      "keywords": [
+        "ai-controlled",
+        "baked",
+        "browser",
+        "chromium",
+        "connect-chrome",
+        "extension",
+        "gstack",
+        "launch",
+        "sidebar"
       ],
       "surfaces": [],
       "intents": [],
@@ -761,17 +949,27 @@
     },
     "context-engineering": {
       "name": "context-engineering",
-      "description": "Optimizes agent context setup. Use when starting a new session, when agent output quality",
+      "description": "ALWAYS invoke when starting a new session, when agent output quality degrades, when switching between tasks, or when you need to configure rules files and context for a project — optimizes agent context setup.",
       "keywords": [
         "agent",
+        "always",
+        "between",
+        "configure",
         "context",
         "context-engineering",
+        "degrades",
+        "invoke",
+        "need",
         "optimizes",
         "output",
+        "project",
         "quality",
+        "rules",
         "session",
         "setup",
-        "starting"
+        "starting",
+        "switching",
+        "tasks"
       ],
       "surfaces": [
         "general"
@@ -783,9 +981,16 @@
     },
     "context-restore": {
       "name": "context-restore",
-      "description": "",
+      "description": "Restore working context saved earlier by /context-save. (gstack)",
       "keywords": [
-        "context-restore"
+        "context",
+        "context-restore",
+        "context-save",
+        "earlier",
+        "gstack",
+        "restore",
+        "saved",
+        "working"
       ],
       "surfaces": [],
       "intents": [],
@@ -795,9 +1000,13 @@
     },
     "context-save": {
       "name": "context-save",
-      "description": "",
+      "description": "Save working context. (gstack)",
       "keywords": [
-        "context-save"
+        "context",
+        "context-save",
+        "gstack",
+        "save",
+        "working"
       ],
       "surfaces": [],
       "intents": [],
@@ -807,10 +1016,14 @@
     },
     "cso": {
       "name": "cso",
-      "description": "",
+      "description": "Chief Security Officer mode. (gstack)",
       "keywords": [
         "audit",
+        "chief",
         "cso",
+        "gstack",
+        "mode",
+        "officer",
         "owasp",
         "security"
       ],
@@ -832,18 +1045,36 @@
     },
     "dead-code-and-change-audit": {
       "name": "dead-code-and-change-audit",
-      "description": "Always-on code hygiene skill that runs on every task and every code change to detect dead",
+      "description": "ALWAYS invoke on every task and every code change — always-on code hygiene that detects dead code, stale references, orphaned logic, unused imports, unused files, broken linkages, and partial refactors. Enforces continuous cleanup so no dead code is left behind. MUST use to audit code changes for dead code, stale references, orphaned logic, and partial refactors.",
       "keywords": [
+        "always",
         "always-on",
+        "audit",
+        "behind",
+        "broken",
         "change",
         "claude/hooks",
         "claude/rules",
+        "cleanup",
+        "continuous",
         "dead",
         "dead-code-and-change-audit",
-        "detect",
+        "detects",
+        "enforces",
         "every",
         "hygiene",
-        "runs"
+        "imports",
+        "invoke",
+        "left",
+        "linkages",
+        "logic",
+        "must",
+        "orphaned",
+        "partial",
+        "refactors",
+        "references",
+        "stale",
+        "unused"
       ],
       "surfaces": [
         "backend",
@@ -864,8 +1095,9 @@
     },
     "debug-investigation": {
       "name": "debug-investigation",
-      "description": "Use when the cause of a bug, regression, crash, or unexpected behavior is unknown and evidence",
+      "description": "ALWAYS invoke when the cause of a bug, regression, crash, or unexpected behavior is unknown and evidence is needed before proposing a fix.",
       "keywords": [
+        "always",
         "behavior",
         "bug",
         "cause",
@@ -876,6 +1108,10 @@
         "debug-investigation",
         "error",
         "evidence",
+        "fix",
+        "invoke",
+        "needed",
+        "proposing",
         "regression",
         "trace",
         "unexpected",
@@ -959,9 +1195,17 @@
     },
     "design-consultation": {
       "name": "design-consultation",
-      "description": "",
+      "description": "Design consultation: understands your product, researches the landscape, proposes a complete",
       "keywords": [
-        "design-consultation"
+        "complete",
+        "consultation",
+        "design",
+        "design-consultation",
+        "landscape",
+        "product",
+        "proposes",
+        "researches",
+        "understands"
       ],
       "surfaces": [],
       "intents": [],
@@ -971,8 +1215,9 @@
     },
     "design-extract": {
       "name": "design-extract",
-      "description": "Extract complete design systems from live websites. Use when a reference URL is available to extract tokens, Tailwind config, typography, colors, and component anatomy. Commands: /extract, /grade, /battle, /remix, /pack, /theme-swap, /brand, /pair.",
+      "description": "ALWAYS invoke when a reference URL is available to extract complete design systems from live websites — tokens, Tailwind config, typography, colors, and component anatomy. Commands: /extract, /grade, /battle, /remix, /pack, /theme-swap, /brand, /pair.",
       "keywords": [
+        "always",
         "anatomy",
         "available",
         "battle",
@@ -987,11 +1232,11 @@
         "design-extract",
         "extract",
         "grade",
+        "invoke",
         "layout",
         "live",
         "pack",
         "pages",
-        "pair",
         "reference",
         "remix",
         "systems",
@@ -1022,9 +1267,17 @@
     },
     "design-html": {
       "name": "design-html",
-      "description": "",
+      "description": "Design finalization: generates production-quality Pretext-native HTML/CSS. (gstack)",
       "keywords": [
-        "design-html"
+        "css",
+        "design",
+        "design-html",
+        "finalization",
+        "generates",
+        "gstack",
+        "html",
+        "pretext-native",
+        "production-quality"
       ],
       "surfaces": [],
       "intents": [],
@@ -1034,9 +1287,19 @@
     },
     "design-review": {
       "name": "design-review",
-      "description": "",
+      "description": "Designer''s eye QA: finds visual inconsistency, spacing issues, hierarchy problems, AI slop",
       "keywords": [
-        "design-review"
+        "design-review",
+        "designer",
+        "eye",
+        "finds",
+        "hierarchy",
+        "inconsistency",
+        "issues",
+        "problems",
+        "slop",
+        "spacing",
+        "visual"
       ],
       "surfaces": [],
       "intents": [],
@@ -1046,14 +1309,16 @@
     },
     "design-review-playwright": {
       "name": "design-review-playwright",
-      "description": "Live visual QA against design specs using Playwright screenshots (adapted from GStack /design-review)",
+      "description": "ALWAYS invoke for live visual QA against design specs using Playwright screenshots (adapted from GStack /design-review).",
       "keywords": [
         "adapted",
         "against",
+        "always",
         "design",
         "design-review",
         "design-review-playwright",
         "gstack",
+        "invoke",
         "live",
         "playwright",
         "screenshots",
@@ -1071,9 +1336,19 @@
     },
     "design-shotgun": {
       "name": "design-shotgun",
-      "description": "",
+      "description": "Design shotgun: generate multiple AI design variants, open a comparison board, collect structured",
       "keywords": [
-        "design-shotgun"
+        "board",
+        "collect",
+        "comparison",
+        "design",
+        "design-shotgun",
+        "generate",
+        "multiple",
+        "open",
+        "shotgun",
+        "structured",
+        "variants"
       ],
       "surfaces": [],
       "intents": [],
@@ -1083,9 +1358,14 @@
     },
     "devex-review": {
       "name": "devex-review",
-      "description": "",
+      "description": "Live developer experience audit. (gstack)",
       "keywords": [
-        "devex-review"
+        "audit",
+        "developer",
+        "devex-review",
+        "experience",
+        "gstack",
+        "live"
       ],
       "surfaces": [],
       "intents": [],
@@ -1097,15 +1377,35 @@
       "name": "diagnose",
       "description": "Disciplined diagnosis loop for hard bugs and performance regressions (alias of debug-investigation).",
       "keywords": [
-        "bugs",
-        "debug-investigation",
         "diagnose",
-        "diagnosis",
-        "disciplined",
-        "hard",
-        "loop",
-        "performance",
-        "regressions"
+        "hard bug",
+        "intermittent failure",
+        "performance regression",
+        "root cause",
+        "why is it slow"
+      ],
+      "surfaces": [
+        "general"
+      ],
+      "intents": [
+        "DEBUG"
+      ],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "front-matter"
+    },
+    "diagram": {
+      "name": "diagram",
+      "description": "Turn an English description (or mermaid source) into a diagram triplet: the source, an editable",
+      "keywords": [
+        "description",
+        "diagram",
+        "editable",
+        "english",
+        "mermaid",
+        "source",
+        "triplet",
+        "turn"
       ],
       "surfaces": [],
       "intents": [],
@@ -1115,9 +1415,18 @@
     },
     "document-generate": {
       "name": "document-generate",
-      "description": "",
+      "description": "Generate missing documentation from scratch for a feature, module, or entire project. (gstack)",
       "keywords": [
-        "document-generate"
+        "document-generate",
+        "documentation",
+        "entire",
+        "feature",
+        "generate",
+        "gstack",
+        "missing",
+        "module",
+        "project",
+        "scratch"
       ],
       "surfaces": [],
       "intents": [],
@@ -1127,9 +1436,13 @@
     },
     "document-release": {
       "name": "document-release",
-      "description": "",
+      "description": "Post-ship documentation update. (gstack)",
       "keywords": [
-        "document-release"
+        "document-release",
+        "documentation",
+        "gstack",
+        "post-ship",
+        "update"
       ],
       "surfaces": [],
       "intents": [],
@@ -1146,6 +1459,71 @@
         "documentation-and-adrs",
         "records",
         "update-docs"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "docx": {
+      "name": "docx",
+      "description": "Use this skill whenever the user wants to create, read, edit, or manipulate Word documents (.docx files) or Word templates (.dotx files). Triggers include: any mention of 'Word doc', 'word document', '.docx', '.dotx', or requests to produce professional documents with formatting like tables of contents, headings, page numbers, or letterheads. Also use when extracting or reorganizing content from .",
+      "keywords": [
+        "contents",
+        "create",
+        "doc",
+        "document",
+        "documents",
+        "docx",
+        "dotx",
+        "edit",
+        "formatting",
+        "headings",
+        "include",
+        "like",
+        "manipulate",
+        "mention",
+        "page",
+        "produce",
+        "professional",
+        "read",
+        "requests",
+        "tables",
+        "templates",
+        "triggers",
+        "wants",
+        "whenever",
+        "word"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "domain-modeling": {
+      "name": "domain-modeling",
+      "description": "Build and sharpen a project's domain model. Use when the user wants to pin down domain terminology or a ubiquitous language, record an architectural decision, or when another skill needs to maintain the domain model.",
+      "keywords": [
+        "another",
+        "architectural",
+        "build",
+        "decision",
+        "domain",
+        "domain-modeling",
+        "down",
+        "language",
+        "maintain",
+        "model",
+        "needs",
+        "pin",
+        "project",
+        "record",
+        "sharpen",
+        "terminology",
+        "ubiquitous",
+        "wants"
       ],
       "surfaces": [],
       "intents": [],
@@ -1191,20 +1569,37 @@
     },
     "doubt-driven-development": {
       "name": "doubt-driven-development",
-      "description": "Subjects every non-trivial decision to a fresh-context adversarial review before it stands.",
+      "description": "MUST use to subject every non-trivial decision to a fresh-context adversarial review before it stands. ALWAYS invoke when correctness matters more than speed, when working in unfamiliar code, when stakes are high (production, security-sensitive logic, irreversible operations), or any time a confident output would be cheaper to verify now than to debug later.",
       "keywords": [
         "adversarial",
+        "always",
+        "correctness",
         "debug",
         "decision",
         "doubt-driven-development",
         "error",
         "every",
         "fresh-context",
+        "high",
+        "invoke",
+        "irreversible",
+        "logic",
+        "matters",
+        "more",
+        "must",
         "non-trivial",
+        "operations",
+        "production",
         "review",
+        "security-sensitive",
+        "speed",
+        "stakes",
         "stands",
-        "subjects",
-        "trace"
+        "subject",
+        "than",
+        "trace",
+        "unfamiliar",
+        "working"
       ],
       "surfaces": [
         "backend",
@@ -1252,16 +1647,21 @@
     },
     "eval-harness": {
       "name": "eval-harness",
-      "description": "Formal evaluation framework for Claude Code sessions implementing eval-driven development",
+      "description": "ALWAYS invoke when evaluating Claude Code sessions — formal evaluation framework implementing eval-driven development (EDD) principles.",
       "keywords": [
+        "always",
         "claude",
         "development",
+        "edd",
         "eval-driven",
         "eval-harness",
+        "evaluating",
         "evaluation",
         "formal",
         "framework",
         "implementing",
+        "invoke",
+        "principles",
         "sessions"
       ],
       "surfaces": [
@@ -1278,9 +1678,10 @@
     },
     "find-skills": {
       "name": "find-skills",
-      "description": "Helps users discover and install agent skills when they ask questions like \"how do I do X\", \"find a skill for X\", \"is there a skill that can...\", or express interest in extending capabilities. This skill should be used when the user is looking for functionality that might exist as an installable skill.",
+      "description": "ALWAYS invoke when users ask questions like \\\"how do I do X\\\", \\\"find a skill for X\\\", \\\"is there a skill that can...\\\", or express interest in extending capabilities — helps discover and install agent skills. MUST use when the user is looking for functionality that might exist as an installable skill.",
       "keywords": [
         "agent",
+        "always",
         "ask",
         "capabilities",
         "discover",
@@ -1295,13 +1696,13 @@
         "install",
         "installable",
         "interest",
+        "invoke",
         "like",
         "looking",
         "might",
+        "must",
         "questions",
-        "should",
         "there",
-        "they",
         "users"
       ],
       "surfaces": [],
@@ -1353,32 +1754,19 @@
       "name": "forensic-complexity-trends",
       "description": "Use when monitoring code quality over time, measuring refactoring impact, tracking if complexity",
       "keywords": [
-        "cmd",
         "complexity",
         "forensic-complexity-trends",
         "impact",
-        "internal",
         "measuring",
         "monitoring",
         "quality",
         "refactoring",
-        "server",
         "time",
         "tracking"
       ],
-      "surfaces": [
-        "backend"
-      ],
+      "surfaces": [],
       "intents": [],
-      "path_rules": [
-        {
-          "path_contains_any": [
-            "internal/",
-            "server/",
-            "cmd/"
-          ]
-        }
-      ],
+      "path_rules": [],
       "weight": 1.0,
       "source": "floor-fallback"
     },
@@ -1387,31 +1775,18 @@
       "description": "Use when justifying technical debt to executives, calculating the cost of quality issues,",
       "keywords": [
         "calculating",
-        "cmd",
         "cost",
         "debt",
         "executives",
         "forensic-debt-quantification",
-        "internal",
         "issues",
         "justifying",
         "quality",
-        "server",
         "technical"
       ],
-      "surfaces": [
-        "backend"
-      ],
+      "surfaces": [],
       "intents": [],
-      "path_rules": [
-        {
-          "path_contains_any": [
-            "internal/",
-            "server/",
-            "cmd/"
-          ]
-        }
-      ],
+      "path_rules": [],
       "weight": 1.0,
       "source": "floor-fallback"
     },
@@ -1420,39 +1795,32 @@
       "description": "Use when planning refactoring priorities, investigating recurring bugs, identifying which",
       "keywords": [
         "bugs",
-        "cmd",
         "forensic-hotspot-finder",
         "identifying",
-        "internal",
         "investigating",
         "planning",
         "priorities",
         "recurring",
         "refactoring",
-        "server",
         "which"
       ],
-      "surfaces": [
-        "backend"
-      ],
+      "surfaces": [],
       "intents": [],
-      "path_rules": [
-        {
-          "path_contains_any": [
-            "internal/",
-            "server/",
-            "cmd/"
-          ]
-        }
-      ],
+      "path_rules": [],
       "weight": 1.0,
       "source": "floor-fallback"
     },
     "freeze": {
       "name": "freeze",
-      "description": "",
+      "description": "Restrict file edits to a specific directory for the session. (gstack)",
       "keywords": [
-        "freeze"
+        "directory",
+        "edits",
+        "freeze",
+        "gstack",
+        "restrict",
+        "session",
+        "specific"
       ],
       "surfaces": [],
       "intents": [],
@@ -1464,10 +1832,6 @@
       "name": "frontend-api-standards",
       "description": "Use when implementing raw fetch calls, SDK wrappers, or query layers that must conform (alias",
       "keywords": [
-        "api",
-        "api-client",
-        "api.js",
-        "api.ts",
         "calls",
         "conform",
         "fetch",
@@ -1480,20 +1844,9 @@
         "sdk",
         "wrappers"
       ],
-      "surfaces": [
-        "frontend"
-      ],
+      "surfaces": [],
       "intents": [],
-      "path_rules": [
-        {
-          "path_contains_any": [
-            "/api/",
-            "/api-client",
-            "api.ts",
-            "api.js"
-          ]
-        }
-      ],
+      "path_rules": [],
       "weight": 1.0,
       "source": "floor-fallback"
     },
@@ -1532,25 +1885,32 @@
     },
     "frontend-response-handling": {
       "name": "frontend-response-handling",
-      "description": "Use when frontend API work needs success parsing, normalized error handling, or backend-driven",
+      "description": "ALWAYS invoke when frontend API work needs success parsing, normalized error handling, or backend-driven list, filter, sort, and pagination behavior.",
       "keywords": [
+        "always",
         "api",
         "api-client",
         "api.js",
         "api.ts",
         "auth",
         "backend-driven",
+        "behavior",
         "error",
+        "filter",
         "frontend",
         "frontend-response-handling",
         "guard",
         "handling",
+        "invoke",
+        "list",
         "login",
         "needs",
         "normalized",
+        "pagination",
         "parsing",
         "protected",
         "session",
+        "sort",
         "success"
       ],
       "surfaces": [
@@ -1581,24 +1941,40 @@
     },
     "frontend-server-data-patterns": {
       "name": "frontend-server-data-patterns",
-      "description": "Use when building or changing API-backed tables, lists, search screens, or frontend query-state",
+      "description": "ALWAYS invoke when building or changing API-backed tables, lists, search screens, or frontend query-state flows with server-driven filtering, sorting, and pagination. MUST use to model API-backed frontend query state and define query-state and async UI behavior for a server-backed screen.",
       "keywords": [
+        "always",
         "api",
         "api-backed",
         "api-client",
         "api.js",
         "api.ts",
+        "async",
+        "behavior",
         "building",
         "changing",
+        "define",
+        "filtering",
+        "flows",
         "frontend",
         "frontend-server-data-patterns",
         "hook",
         "hooks/use",
+        "invoke",
         "lists",
+        "model",
+        "must",
+        "pagination",
+        "query",
         "query-state",
+        "screen",
         "screens",
         "search",
+        "server-backed",
+        "server-driven",
+        "sorting",
         "src/hooks",
+        "state",
         "tables",
         "use-",
         "usehook"
@@ -1635,12 +2011,19 @@
     },
     "frontend-standards-always-follow": {
       "name": "frontend-standards-always-follow",
-      "description": "Use when any web/frontend UI, React, Next.js, Vite, dashboard, component, CSS, client data,",
+      "description": "ALWAYS invoke when any web/frontend UI, React, Next.js, Vite, dashboard, component, CSS, client data, hook, state, styling, browser UX, or frontend performance work is requested. MUST apply this always-on frontend baseline after the matching Build Web Apps plugin skill for any web/frontend task.",
       "keywords": [
         "__tests__",
         "_test.ts",
         "_test.tsx",
+        "always",
+        "always-on",
+        "apply",
+        "apps",
         "auth",
+        "baseline",
+        "browser",
+        "build",
         "client",
         "component",
         "components",
@@ -1653,15 +2036,20 @@
         "guard",
         "hook",
         "hooks/use",
+        "invoke",
         "jsx",
         "login",
+        "matching",
+        "must",
         "next",
         "pages",
+        "performance",
         "postcss",
         "protected",
         "react",
         "reducer",
         "redux",
+        "requested",
         "route.ts",
         "route.tsx",
         "router",
@@ -1674,7 +2062,9 @@
         "src/hooks",
         "src/schemas",
         "src/types",
+        "state",
         "store",
+        "styling",
         "tailwind.config",
         "test",
         "tsconfig",
@@ -1782,19 +2172,30 @@
     },
     "frontend-structure-standards": {
       "name": "frontend-structure-standards",
-      "description": "Use when frontend work needs decisions about folder layout, module boundaries, file decomposition,",
+      "description": "ALWAYS invoke when frontend work needs decisions about folder layout, module boundaries, file decomposition, or where app-owned frontend types should live. MUST use to plan frontend component, hook, and module boundaries and organize maintainable frontend modules.",
       "keywords": [
         "about",
+        "always",
+        "app-owned",
         "boundaries",
+        "component",
         "decisions",
         "decomposition",
         "eslint",
         "folder",
         "frontend",
         "frontend-structure-standards",
+        "hook",
+        "invoke",
         "layout",
+        "live",
+        "maintainable",
         "module",
+        "modules",
+        "must",
         "needs",
+        "organize",
+        "plan",
         "postcss",
         "reducer",
         "redux",
@@ -1804,13 +2205,16 @@
         "routes",
         "routes.ts",
         "selector",
+        "should",
         "slice",
         "src/schemas",
         "src/types",
         "store",
         "tailwind.config",
         "tsconfig",
-        "vite"
+        "types",
+        "vite",
+        "where"
       ],
       "surfaces": [
         "backend",
@@ -1898,14 +2302,26 @@
     },
     "git-workflow-and-versioning": {
       "name": "git-workflow-and-versioning",
-      "description": "Structures git workflow practices. Use when making any code change. Use when committing,",
+      "description": "ALWAYS invoke when making any code change — structures git workflow practices. MUST use when committing, branching, resolving conflicts, or when you need to organize work across multiple parallel streams.",
       "keywords": [
+        "across",
+        "always",
+        "branching",
         "change",
         "committing",
+        "conflicts",
         "git",
         "git-workflow-and-versioning",
+        "invoke",
         "making",
+        "multiple",
+        "must",
+        "need",
+        "organize",
+        "parallel",
         "practices",
+        "resolving",
+        "streams",
         "structures",
         "workflow"
       ],
@@ -1919,15 +2335,27 @@
     },
     "golang-patterns": {
       "name": "golang-patterns",
-      "description": "Use when writing, reviewing, or refactoring Go code to enforce idiomatic patterns, error",
+      "description": "ALWAYS invoke when writing, reviewing, or refactoring Go code to enforce idiomatic patterns, error wrapping, interface design, and concurrency safety. Required for any .go file in a backend service or CLI tool.",
       "keywords": [
+        "always",
+        "backend",
+        "cli",
+        "concurrency",
+        "design",
         "enforce",
         "error",
         "golang-patterns",
         "idiomatic",
+        "interface",
+        "invoke",
         "patterns",
         "refactoring",
+        "required",
         "reviewing",
+        "safety",
+        "service",
+        "tool",
+        "wrapping",
         "writing"
       ],
       "surfaces": [
@@ -1947,15 +2375,24 @@
     },
     "golang-testing": {
       "name": "golang-testing",
-      "description": "Use when writing or reviewing Go test files, adding table-driven tests, benchmarks, fuzz",
+      "description": "ALWAYS invoke when writing or reviewing Go test files, adding table-driven tests, benchmarks, fuzz targets, or reviewing test coverage in a Go service. MUST apply before any `_test.go` file is created or modified.",
       "keywords": [
         "_test.go",
         "adding",
+        "always",
+        "apply",
         "benchmarks",
+        "coverage",
+        "created",
         "fuzz",
         "golang-testing",
+        "invoke",
+        "modified",
+        "must",
         "reviewing",
+        "service",
         "table-driven",
+        "targets",
         "test",
         "tests",
         "writing"
@@ -1977,20 +2414,35 @@
     },
     "graphify": {
       "name": "graphify",
-      "description": "Build or use a graphify knowledge graph (graphify-out/) for codebase and architecture questions.",
+      "description": "ALWAYS invoke for any question about a codebase, its architecture, file relationships, or project content — especially when graphify-out/ exists, where the question MUST be treated as a graphify query first. Turns any input (code, docs, papers, images, videos) into a persistent knowledge graph with god nodes, community detection, and query/path/explain tools.",
       "keywords": [
+        "about",
+        "always",
         "architecture",
-        "build",
         "codebase",
-        "graph",
+        "content",
+        "docs",
+        "especially",
+        "exists",
+        "first",
         "graphify",
         "graphify-out",
-        "knowledge",
-        "questions"
+        "images",
+        "input",
+        "invoke",
+        "must",
+        "papers",
+        "persistent",
+        "project",
+        "query",
+        "question",
+        "relationships",
+        "treated",
+        "turns",
+        "videos",
+        "where"
       ],
-      "surfaces": [
-        "codebase"
-      ],
+      "surfaces": [],
       "intents": [],
       "path_rules": [],
       "weight": 1.0,
@@ -1998,27 +2450,31 @@
     },
     "grill-with-docs": {
       "name": "grill-with-docs",
-      "description": "Grilling session that challenges your plan against the existing domain model, sharpens terminology,",
+      "description": "ALWAYS invoke when the user wants to stress-test a plan against their project's language and documented decisions — a grilling session that challenges your plan against the existing domain model, sharpens terminology, and updates documentation (CONTEXT.md, ADRs) inline as decisions crystallise.",
       "keywords": [
-        "against",
-        "challenges",
-        "domain",
-        "existing",
-        "grill-with-docs",
-        "grilling",
-        "model",
-        "plan",
-        "session",
-        "sharpens",
-        "terminology"
+        "adr",
+        "challenge the plan",
+        "challenge this plan",
+        "context.md",
+        "domain model",
+        "grill",
+        "grill me",
+        "sharpen terminology",
+        "stress test",
+        "stress-test",
+        "ubiquitous language"
       ],
       "surfaces": [
         "docs"
       ],
-      "intents": [],
+      "intents": [
+        "PLAN",
+        "REVIEW",
+        "SPEC"
+      ],
       "path_rules": [],
       "weight": 1.0,
-      "source": "floor-fallback"
+      "source": "front-matter"
     },
     "gsd-add-tests": {
       "name": "gsd-add-tests",
@@ -3346,11 +3802,29 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
+    "gstack": {
+      "name": "gstack",
+      "description": "Router for the gstack skill suite. (gstack)",
+      "keywords": [
+        "gstack",
+        "router",
+        "suite"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
     "gstack-upgrade": {
       "name": "gstack-upgrade",
-      "description": "",
+      "description": "Upgrade gstack to the latest version.",
       "keywords": [
-        "gstack-upgrade"
+        "gstack",
+        "gstack-upgrade",
+        "latest",
+        "upgrade",
+        "version"
       ],
       "surfaces": [],
       "intents": [],
@@ -3360,9 +3834,18 @@
     },
     "guard": {
       "name": "guard",
-      "description": "",
+      "description": "Full safety mode: destructive command warnings + directory-scoped edits. (gstack)",
       "keywords": [
-        "guard"
+        "command",
+        "destructive",
+        "directory-scoped",
+        "edits",
+        "full",
+        "gstack",
+        "guard",
+        "mode",
+        "safety",
+        "warnings"
       ],
       "surfaces": [],
       "intents": [],
@@ -3372,9 +3855,12 @@
     },
     "health": {
       "name": "health",
-      "description": "",
+      "description": "Code quality dashboard. (gstack)",
       "keywords": [
-        "health"
+        "dashboard",
+        "gstack",
+        "health",
+        "quality"
       ],
       "surfaces": [],
       "intents": [],
@@ -3444,14 +3930,16 @@
     },
     "huashu-design": {
       "name": "huashu-design",
-      "description": "花叔Design——用HTML做高保真原型、幻灯片、动画、可视化与专家评审，需求模糊时给设计方向。触发词：做原型、PPT、幻灯片、动画、设计风格、评审、做个HTML页面、UI mockup、导出MP4/GIF、做个好看的。生产级Web App/需后端的系统不适用。",
+      "description": "必须调用（ALWAYS invoke）当命中触发词：做原型、PPT、幻灯片、动画、设计风格、评审、做个HTML页面、UI mockup、导出MP4/GIF、做个好看的。花叔Design——用HTML做高保真原型、幻灯片、动画、可视化与专家评审，需求模糊时给设计方向。生产级Web App/需后端的系统不适用。",
       "keywords": [
+        "always",
         "app",
         "components",
         "design",
         "gif",
         "html",
         "huashu-design",
+        "invoke",
         "layout",
         "mockup",
         "mp4",
@@ -3479,32 +3967,33 @@
     },
     "idea-refine": {
       "name": "idea-refine",
-      "description": "Refines ideas iteratively. Refine ideas through structured divergent and convergent thinking.",
+      "description": "ALWAYS invoke when the user says \\\"idea-refine\\\" or \\\"ideate\\\" — refines ideas through structured divergent and convergent thinking.",
       "keywords": [
         "convergent",
         "divergent",
-        "idea-refine",
-        "ideas",
-        "iteratively",
-        "refine",
-        "refines",
-        "structured",
-        "thinking",
-        "through"
+        "ideate",
+        "refine ideas",
+        "refine the idea",
+        "refine this idea",
+        "shape this idea"
       ],
       "surfaces": [
         "general"
       ],
-      "intents": [],
+      "intents": [
+        "PLAN",
+        "SPEC"
+      ],
       "path_rules": [],
       "weight": 1.0,
-      "source": "floor-fallback"
+      "source": "front-matter"
     },
     "impeccable": {
       "name": "impeccable",
-      "description": "Use when the user wants to design, redesign, shape, critique, audit, polish, clarify, distill, harden, optimize, adapt, animate, colorize, extract, or otherwise improve a frontend interface. Covers websites, landing pages, dashboards, product UI, app shells, components, forms, settings, onboarding, and empty states. Handles UX review, visual hierarchy, information architecture, cognitive load, acc",
+      "description": "ALWAYS invoke when the user wants to design, redesign, shape, critique, audit, polish, clarify, distill, harden, optimize, adapt, animate, colorize, extract, or otherwise improve a frontend interface. Covers websites, landing pages, dashboards, product UI, app shells, components, forms, settings, onboarding, and empty states. Handles UX review, visual hierarchy, information architecture, cognitive",
       "keywords": [
         "adapt",
+        "always",
         "animate",
         "audit",
         "clarify",
@@ -3512,7 +4001,6 @@
         "components",
         "covers",
         "critique",
-        "dashboards",
         "design",
         "distill",
         "extract",
@@ -3521,13 +4009,13 @@
         "impeccable",
         "improve",
         "interface",
+        "invoke",
         "landing",
         "layout",
         "optimize",
         "otherwise",
         "pages",
         "polish",
-        "product",
         "redesign",
         "shape",
         "views",
@@ -3555,21 +4043,25 @@
       "name": "improve-codebase-architecture",
       "description": "Find deepening opportunities in a codebase, informed by the domain language in CONTEXT.md",
       "keywords": [
-        "codebase",
-        "context",
-        "deepening",
-        "domain",
-        "find",
-        "improve-codebase-architecture",
-        "informed",
-        "language",
-        "opportunities"
+        "architecture debt",
+        "architecture improvement",
+        "architecture opportunities",
+        "deep modules",
+        "deepen the architecture",
+        "improve the architecture",
+        "improvement opportunities",
+        "structural improvements"
       ],
-      "surfaces": [],
-      "intents": [],
+      "surfaces": [
+        "general"
+      ],
+      "intents": [
+        "AUDIT",
+        "REFACTOR"
+      ],
       "path_rules": [],
       "weight": 1.0,
-      "source": "floor-fallback"
+      "source": "front-matter"
     },
     "incremental-implementation": {
       "name": "incremental-implementation",
@@ -3589,9 +4081,111 @@
     },
     "investigate": {
       "name": "investigate",
-      "description": "",
+      "description": "Systematic debugging with root cause investigation. (gstack)",
       "keywords": [
-        "investigate"
+        "cause",
+        "debugging",
+        "gstack",
+        "investigate",
+        "investigation",
+        "root",
+        "systematic"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "ios-clean": {
+      "name": "ios-clean",
+      "description": "Remove the DebugBridge SPM package and all #if DEBUG wiring from an iOS app. (gstack)",
+      "keywords": [
+        "app",
+        "debug",
+        "debugbridge",
+        "gstack",
+        "ios",
+        "ios-clean",
+        "package",
+        "remove",
+        "spm",
+        "wiring"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "ios-design-review": {
+      "name": "ios-design-review",
+      "description": "Visual design audit for iOS apps on real hardware. (gstack)",
+      "keywords": [
+        "apps",
+        "audit",
+        "design",
+        "gstack",
+        "hardware",
+        "ios",
+        "ios-design-review",
+        "real",
+        "visual"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "ios-fix": {
+      "name": "ios-fix",
+      "description": "Autonomous iOS bug fixer. (gstack)",
+      "keywords": [
+        "autonomous",
+        "bug",
+        "fixer",
+        "gstack",
+        "ios",
+        "ios-fix"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "ios-qa": {
+      "name": "ios-qa",
+      "description": "Live-device iOS QA for SwiftUI apps. (gstack)",
+      "keywords": [
+        "apps",
+        "gstack",
+        "ios",
+        "ios-qa",
+        "live-device",
+        "swiftui"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "ios-sync": {
+      "name": "ios-sync",
+      "description": "Regenerate the iOS debug bridge against the latest upstream gstack templates. (gstack)",
+      "keywords": [
+        "against",
+        "bridge",
+        "debug",
+        "gstack",
+        "ios",
+        "ios-sync",
+        "latest",
+        "regenerate",
+        "templates",
+        "upstream"
       ],
       "surfaces": [],
       "intents": [],
@@ -3635,9 +4229,13 @@
     },
     "land-and-deploy": {
       "name": "land-and-deploy",
-      "description": "",
+      "description": "Land and deploy workflow. (gstack)",
       "keywords": [
-        "land-and-deploy"
+        "deploy",
+        "gstack",
+        "land",
+        "land-and-deploy",
+        "workflow"
       ],
       "surfaces": [],
       "intents": [],
@@ -3647,9 +4245,15 @@
     },
     "landing-report": {
       "name": "landing-report",
-      "description": "",
+      "description": "Read-only queue dashboard for workspace-aware ship. (gstack)",
       "keywords": [
-        "landing-report"
+        "dashboard",
+        "gstack",
+        "landing-report",
+        "queue",
+        "read-only",
+        "ship",
+        "workspace-aware"
       ],
       "surfaces": [],
       "intents": [],
@@ -3693,9 +4297,12 @@
     },
     "learn": {
       "name": "learn",
-      "description": "",
+      "description": "Manage project learnings.",
       "keywords": [
-        "learn"
+        "learn",
+        "learnings",
+        "manage",
+        "project"
       ],
       "surfaces": [],
       "intents": [],
@@ -3705,9 +4312,51 @@
     },
     "make-pdf": {
       "name": "make-pdf",
-      "description": "",
+      "description": "Turn any markdown file into a publication-quality PDF. (gstack)",
       "keywords": [
-        "make-pdf"
+        "gstack",
+        "make-pdf",
+        "markdown",
+        "pdf",
+        "publication-quality",
+        "turn"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "mcp-builder": {
+      "name": "mcp-builder",
+      "description": "Guide for creating high-quality MCP (Model Context Protocol) servers that enable LLMs to interact with external services through well-designed tools. Use when building MCP servers to integrate external APIs or services, whether in Python (FastMCP) or Node/TypeScript (MCP SDK).",
+      "keywords": [
+        "apis",
+        "building",
+        "context",
+        "creating",
+        "enable",
+        "external",
+        "fastmcp",
+        "guide",
+        "high-quality",
+        "integrate",
+        "interact",
+        "llms",
+        "mcp",
+        "mcp-builder",
+        "model",
+        "node",
+        "protocol",
+        "python",
+        "sdk",
+        "servers",
+        "services",
+        "through",
+        "tools",
+        "typescript",
+        "well-designed",
+        "whether"
       ],
       "surfaces": [],
       "intents": [],
@@ -3717,17 +4366,33 @@
     },
     "mcp-usage-standards": {
       "name": "mcp-usage-standards",
-      "description": "Use when MCP selection, evidence scope, or external verification strategy materially affects",
+      "description": "ALWAYS invoke when MCP selection, evidence scope, or external verification strategy materially affects design, debugging, implementation, or repo analysis. MUST use to choose the right MCP, narrow the evidence scope, keep evidence retrieval disciplined, and avoid unnecessary tool usage.",
       "keywords": [
         "affects",
+        "always",
+        "analysis",
+        "avoid",
+        "choose",
+        "debugging",
+        "design",
+        "disciplined",
         "evidence",
         "external",
+        "implementation",
+        "invoke",
+        "keep",
         "materially",
         "mcp",
         "mcp-usage-standards",
+        "must",
+        "narrow",
+        "repo",
+        "retrieval",
+        "right",
         "scope",
         "selection",
         "strategy",
+        "unnecessary",
         "verification"
       ],
       "surfaces": [
@@ -3774,9 +4439,14 @@
     },
     "office-hours": {
       "name": "office-hours",
-      "description": "",
+      "description": "YC Office Hours — two modes. (gstack)",
       "keywords": [
-        "office-hours"
+        "gstack",
+        "hours",
+        "modes",
+        "office",
+        "office-hours",
+        "two"
       ],
       "surfaces": [],
       "intents": [],
@@ -3786,9 +4456,17 @@
     },
     "open-gstack-browser": {
       "name": "open-gstack-browser",
-      "description": "",
+      "description": "Launch GStack Browser — AI-controlled Chromium with the sidebar extension baked in.",
       "keywords": [
-        "open-gstack-browser"
+        "ai-controlled",
+        "baked",
+        "browser",
+        "chromium",
+        "extension",
+        "gstack",
+        "launch",
+        "open-gstack-browser",
+        "sidebar"
       ],
       "surfaces": [],
       "intents": [],
@@ -3798,21 +4476,39 @@
     },
     "owasp-security": {
       "name": "owasp-security",
-      "description": "Use when reviewing code for security vulnerabilities, implementing authentication/authorization,",
+      "description": "ALWAYS invoke when reviewing code for security vulnerabilities, implementing authentication/authorization, handling user input, or discussing web application security. Covers OWASP Top 10:2025, ASVS 5.0, LLM Top 10 (2025), and Agentic AI security (2026).",
       "keywords": [
+        "agentic",
+        "always",
         "api",
         "api-client",
         "api.js",
         "api.ts",
+        "application",
+        "asvs",
         "audit",
+        "auth",
         "authentication",
         "authorization",
+        "covers",
+        "discussing",
+        "guard",
+        "handling",
         "implementing",
+        "input",
+        "invoke",
+        "llm",
+        "login",
+        "middleware",
         "owasp",
         "owasp-security",
+        "protected",
         "reviewing",
         "security",
-        "vulnerabilities"
+        "session",
+        "top",
+        "vulnerabilities",
+        "web"
       ],
       "surfaces": [
         "backend",
@@ -3829,6 +4525,23 @@
           ]
         },
         {
+          "path_contains_any": [
+            "/auth/",
+            "/login/",
+            "/guard/",
+            "protected",
+            "session"
+          ]
+        },
+        {
+          "filename_contains_any": [
+            "middleware",
+            "auth",
+            "guard",
+            "session"
+          ]
+        },
+        {
           "filename_contains_any": [
             "security",
             "audit",
@@ -3841,9 +4554,50 @@
     },
     "pair-agent": {
       "name": "pair-agent",
-      "description": "",
+      "description": "Pair a remote AI agent with your browser. (gstack)",
       "keywords": [
-        "pair-agent"
+        "agent",
+        "browser",
+        "gstack",
+        "pair",
+        "pair-agent",
+        "remote"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "pdf": {
+      "name": "pdf",
+      "description": "Use this skill whenever the user wants to do anything with PDF files. This includes reading or extracting text/tables from PDFs, combining or merging multiple PDFs into one, splitting PDFs apart, rotating pages, adding watermarks, creating new PDFs, filling PDF forms, encrypting/decrypting PDFs, extracting images, and OCR on scanned PDFs to make them searchable. If the user mentions a .pdf file or",
+      "keywords": [
+        "adding",
+        "anything",
+        "apart",
+        "combining",
+        "creating",
+        "decrypting",
+        "encrypting",
+        "extracting",
+        "filling",
+        "forms",
+        "includes",
+        "merging",
+        "multiple",
+        "one",
+        "pages",
+        "pdf",
+        "pdfs",
+        "reading",
+        "rotating",
+        "splitting",
+        "tables",
+        "text",
+        "wants",
+        "watermarks",
+        "whenever"
       ],
       "surfaces": [],
       "intents": [],
@@ -3873,9 +4627,14 @@
     },
     "plan-ceo-review": {
       "name": "plan-ceo-review",
-      "description": "",
+      "description": "CEO/founder-mode plan review. (gstack)",
       "keywords": [
-        "plan-ceo-review"
+        "ceo",
+        "founder-mode",
+        "gstack",
+        "plan",
+        "plan-ceo-review",
+        "review"
       ],
       "surfaces": [],
       "intents": [],
@@ -3885,9 +4644,18 @@
     },
     "plan-design-review": {
       "name": "plan-design-review",
-      "description": "",
+      "description": "Designer's eye plan review — interactive, like CEO and Eng review. (gstack)",
       "keywords": [
-        "plan-design-review"
+        "ceo",
+        "designer",
+        "eng",
+        "eye",
+        "gstack",
+        "interactive",
+        "like",
+        "plan",
+        "plan-design-review",
+        "review"
       ],
       "surfaces": [],
       "intents": [],
@@ -3897,9 +4665,15 @@
     },
     "plan-devex-review": {
       "name": "plan-devex-review",
-      "description": "",
+      "description": "Interactive developer experience plan review. (gstack)",
       "keywords": [
-        "plan-devex-review"
+        "developer",
+        "experience",
+        "gstack",
+        "interactive",
+        "plan",
+        "plan-devex-review",
+        "review"
       ],
       "surfaces": [],
       "intents": [],
@@ -3909,9 +4683,14 @@
     },
     "plan-eng-review": {
       "name": "plan-eng-review",
-      "description": "",
+      "description": "Eng manager-mode plan review. (gstack)",
       "keywords": [
-        "plan-eng-review"
+        "eng",
+        "gstack",
+        "manager-mode",
+        "plan",
+        "plan-eng-review",
+        "review"
       ],
       "surfaces": [],
       "intents": [],
@@ -3963,9 +4742,16 @@
     },
     "plan-tune": {
       "name": "plan-tune",
-      "description": "",
+      "description": "Self-tuning question sensitivity + developer psychographic for gstack (v1: observational).",
       "keywords": [
-        "plan-tune"
+        "developer",
+        "gstack",
+        "observational",
+        "plan-tune",
+        "psychographic",
+        "question",
+        "self-tuning",
+        "sensitivity"
       ],
       "surfaces": [],
       "intents": [],
@@ -3975,16 +4761,28 @@
     },
     "planning-and-task-breakdown": {
       "name": "planning-and-task-breakdown",
-      "description": "Breaks work into ordered tasks. Use when you have a spec or clear requirements and need to",
+      "description": "ALWAYS invoke when you have a spec or clear requirements and need to break work into ordered, implementable tasks. MUST use when a task feels too large to start, when you need to estimate scope, or when parallel work is possible.",
       "keywords": [
-        "breaks",
+        "always",
+        "break",
         "clear",
+        "estimate",
+        "feels",
+        "implementable",
+        "invoke",
+        "large",
+        "must",
         "need",
         "ordered",
+        "parallel",
         "planning-and-task-breakdown",
+        "possible",
         "requirements",
+        "scope",
         "spec",
-        "tasks"
+        "start",
+        "tasks",
+        "too"
       ],
       "surfaces": [
         "planning"
@@ -4028,17 +4826,69 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
+    "pptx": {
+      "name": "pptx",
+      "description": "Use this skill any time a .pptx or .potx file is involved in any way — as input, output, or both. This includes: creating slide decks, pitch decks, or presentations; reading, parsing, or extracting text from any .pptx or .potx file (even if the extracted content will be used elsewhere, like in an email or summary); editing, modifying, or updating existing presentations; combining or splitting slid",
+      "keywords": [
+        "both",
+        "content",
+        "creating",
+        "decks",
+        "elsewhere",
+        "email",
+        "even",
+        "extracted",
+        "extracting",
+        "includes",
+        "input",
+        "involved",
+        "like",
+        "output",
+        "parsing",
+        "pitch",
+        "potx",
+        "pptx",
+        "presentations",
+        "reading",
+        "slide",
+        "summary",
+        "text",
+        "time",
+        "way"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
     "project-reference-linkage": {
       "name": "project-reference-linkage",
-      "description": "Global project navigation and linkage standards. Use this to understand the directory structure",
+      "description": "ALWAYS invoke to understand the directory structure and cross-module relationships across components, feature hooks, frontend API layers, controllers, routes, schemas, and store slices — global project navigation and linkage standards.",
       "keywords": [
+        "across",
+        "always",
+        "api",
+        "components",
+        "controllers",
+        "cross-module",
         "directory",
+        "feature",
+        "frontend",
         "global",
+        "hooks",
+        "invoke",
+        "layers",
         "linkage",
         "navigation",
         "project",
         "project-reference-linkage",
+        "relationships",
+        "routes",
+        "schemas",
+        "slices",
         "standards",
+        "store",
         "structure",
         "understand"
       ],
@@ -4072,30 +4922,43 @@
     },
     "prototype": {
       "name": "prototype",
-      "description": "Build a throwaway prototype to flesh out a design before committing to it. Routes between",
+      "description": "ALWAYS invoke when the user wants to prototype, sanity-check a data model or state machine, mock up a UI, explore design options, or says \\\"prototype this\\\", \\\"let me play with it\\\", \\\"try a few designs\\\" — builds a throwaway prototype to flesh out a design before committing to it. Routes between two branches: a runnable terminal app for state/business-logic questions, or several radically differe",
       "keywords": [
-        "between",
-        "build",
-        "committing",
-        "design",
-        "flesh",
-        "out",
+        "let me play with it",
+        "mock up",
+        "mockup",
         "prototype",
-        "routes",
-        "throwaway"
+        "prototype this",
+        "sanity-check the data model",
+        "spike",
+        "throwaway prototype",
+        "try a few designs",
+        "ui variations"
       ],
       "surfaces": [
-        "general"
+        "frontend"
       ],
-      "intents": [],
+      "intents": [
+        "DESIGN",
+        "SPEC"
+      ],
       "path_rules": [],
       "weight": 1.0,
-      "source": "floor-fallback"
+      "source": "front-matter"
     },
     "qa": {
       "name": "qa",
-      "description": "",
-      "keywords": [],
+      "description": "Systematically QA test a web application and fix bugs found. (gstack)",
+      "keywords": [
+        "application",
+        "bugs",
+        "fix",
+        "found",
+        "gstack",
+        "systematically",
+        "test",
+        "web"
+      ],
       "surfaces": [],
       "intents": [],
       "path_rules": [],
@@ -4104,9 +4967,12 @@
     },
     "qa-only": {
       "name": "qa-only",
-      "description": "",
+      "description": "Report-only QA testing. (gstack)",
       "keywords": [
-        "qa-only"
+        "gstack",
+        "qa-only",
+        "report-only",
+        "testing"
       ],
       "surfaces": [],
       "intents": [],
@@ -4116,10 +4982,12 @@
     },
     "qa-playwright": {
       "name": "qa-playwright",
-      "description": "Systematic QA testing loop using Playwright MCP (adapted from GStack /qa)",
+      "description": "ALWAYS invoke for a systematic QA testing loop using Playwright MCP (adapted from GStack /qa).",
       "keywords": [
         "adapted",
+        "always",
         "gstack",
+        "invoke",
         "loop",
         "mcp",
         "playwright",
@@ -4137,14 +5005,18 @@
     },
     "react-hooks-patterns": {
       "name": "react-hooks-patterns",
-      "description": "Use when implementing or reviewing React component state, effects, refs, reducers, memoization,",
+      "description": "ALWAYS invoke when implementing or reviewing React component state, effects, refs, reducers, memoization, or custom hook extraction.",
       "keywords": [
+        "always",
         "component",
         "components",
+        "custom",
         "effects",
+        "extraction",
         "hook",
         "hooks/use",
         "implementing",
+        "invoke",
         "jsx",
         "memoization",
         "pages",
@@ -4214,11 +5086,34 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
+    "resolving-merge-conflicts": {
+      "name": "resolving-merge-conflicts",
+      "description": "Use when you need to resolve an in-progress git merge/rebase conflict.",
+      "keywords": [
+        "conflict",
+        "git",
+        "in-progress",
+        "merge",
+        "need",
+        "rebase",
+        "resolve",
+        "resolving-merge-conflicts"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
     "retro": {
       "name": "retro",
-      "description": "",
+      "description": "Weekly engineering retrospective. (gstack)",
       "keywords": [
-        "retro"
+        "engineering",
+        "gstack",
+        "retro",
+        "retrospective",
+        "weekly"
       ],
       "surfaces": [],
       "intents": [],
@@ -4228,8 +5123,10 @@
     },
     "review": {
       "name": "review",
-      "description": "",
+      "description": "Pre-landing PR review. (gstack)",
       "keywords": [
+        "gstack",
+        "pre-landing",
         "review"
       ],
       "surfaces": [],
@@ -4240,18 +5137,34 @@
     },
     "santa-review": {
       "name": "santa-review",
-      "description": "The Santa Method — an adversarial BREAKER + SIMPLIFIER + VERIFIER code review that hunts real",
+      "description": "ALWAYS invoke after any non-trivial code change, before merging, or whenever you want a diff torn apart for real bugs — the Santa Method: an adversarial BREAKER + SIMPLIFIER + VERIFIER code review that hunts real correctness, data-loss, concurrency, and security bugs in a diff, then self-verifies each finding to kill false positives. Preferred entry points are the santa-reviewer agent and the /san",
       "keywords": [
         "adversarial",
+        "always",
+        "apart",
         "breaker",
+        "bugs",
+        "change",
+        "concurrency",
+        "correctness",
+        "data-loss",
+        "diff",
         "hunts",
+        "invoke",
+        "merging",
         "method",
+        "non-trivial",
         "real",
         "review",
         "santa",
         "santa-review",
+        "security",
         "simplifier",
-        "verifier"
+        "then",
+        "torn",
+        "verifier",
+        "want",
+        "whenever"
       ],
       "surfaces": [
         "backend",
@@ -4264,12 +5177,17 @@
     },
     "scaffold-standards": {
       "name": "scaffold-standards",
-      "description": "Use when scaffolding a new backend or full-stack domain, a route/controller/service/schema",
+      "description": "ALWAYS invoke when scaffolding a new backend or full-stack domain, a route/controller/service/schema skeleton, or a standard list and CRUD feature structure.",
       "keywords": [
+        "always",
         "backend",
         "controller",
+        "crud",
         "domain",
+        "feature",
         "full-stack",
+        "invoke",
+        "list",
         "route",
         "route.ts",
         "route.tsx",
@@ -4279,7 +5197,10 @@
         "scaffold-standards",
         "scaffolding",
         "schema",
-        "service"
+        "service",
+        "skeleton",
+        "standard",
+        "structure"
       ],
       "surfaces": [
         "backend",
@@ -4319,9 +5240,14 @@
     },
     "scrape": {
       "name": "scrape",
-      "description": "",
+      "description": "Pull data from a web page. (gstack)",
       "keywords": [
-        "scrape"
+        "data",
+        "gstack",
+        "page",
+        "pull",
+        "scrape",
+        "web"
       ],
       "surfaces": [],
       "intents": [],
@@ -4335,42 +5261,18 @@
       "keywords": [
         "against",
         "audit",
-        "auth",
-        "guard",
         "hardens",
-        "login",
-        "middleware",
         "owasp",
         "owasp-security",
-        "protected",
         "security",
         "security-and-hardening",
-        "session",
         "vulnerabilities"
       ],
       "surfaces": [
-        "backend",
-        "frontend"
+        "backend"
       ],
       "intents": [],
       "path_rules": [
-        {
-          "path_contains_any": [
-            "/auth/",
-            "/login/",
-            "/guard/",
-            "protected",
-            "session"
-          ]
-        },
-        {
-          "filename_contains_any": [
-            "middleware",
-            "auth",
-            "guard",
-            "session"
-          ]
-        },
         {
           "filename_contains_any": [
             "security",
@@ -4384,23 +5286,31 @@
     },
     "service-layer-standards": {
       "name": "service-layer-standards",
-      "description": "Use when any backend API, route, controller, schema, service, contract, persistence, auth,",
+      "description": "ALWAYS invoke when any backend API, route, controller, schema, service, contract, persistence, auth, validation, worker, queue, integration, or server behavior task is requested.",
       "keywords": [
+        "always",
         "api",
         "auth",
         "backend",
+        "behavior",
         "contract",
         "controller",
+        "integration",
         "internal",
         "internal/models",
+        "invoke",
         "model",
         "models",
         "persistence",
+        "queue",
+        "requested",
         "route",
         "schema",
         "server",
         "service",
-        "service-layer-standards"
+        "service-layer-standards",
+        "validation",
+        "worker"
       ],
       "surfaces": [
         "backend",
@@ -4457,8 +5367,17 @@
     },
     "setup-browser-cookies": {
       "name": "setup-browser-cookies",
-      "description": "",
+      "description": "Import cookies from your real Chromium browser into the headless browse session. (gstack)",
       "keywords": [
+        "browse",
+        "browser",
+        "chromium",
+        "cookies",
+        "gstack",
+        "headless",
+        "import",
+        "real",
+        "session",
         "setup-browser-cookies"
       ],
       "surfaces": [],
@@ -4469,8 +5388,12 @@
     },
     "setup-deploy": {
       "name": "setup-deploy",
-      "description": "",
+      "description": "Configure deployment settings for /land-and-deploy.",
       "keywords": [
+        "configure",
+        "deployment",
+        "land-and-deploy",
+        "settings",
         "setup-deploy"
       ],
       "surfaces": [],
@@ -4481,9 +5404,18 @@
     },
     "setup-gbrain": {
       "name": "setup-gbrain",
-      "description": "",
+      "description": "Set up gbrain for this coding agent: install the CLI, initialize a local PGLite or Supabase",
       "keywords": [
-        "setup-gbrain"
+        "agent",
+        "cli",
+        "coding",
+        "gbrain",
+        "initialize",
+        "install",
+        "local",
+        "pglite",
+        "setup-gbrain",
+        "supabase"
       ],
       "surfaces": [],
       "intents": [],
@@ -4506,18 +5438,38 @@
         "styling"
       ],
       "surfaces": [
+        "frontend",
         "general"
       ],
       "intents": [],
-      "path_rules": [],
+      "path_rules": [
+        {
+          "extensions": [
+            ".tsx",
+            ".jsx"
+          ]
+        }
+      ],
       "weight": 1.0,
       "source": "floor-fallback"
     },
     "ship": {
       "name": "ship",
-      "description": "",
+      "description": "Ship workflow: detect + merge base branch, run tests, review diff, bump VERSION, update",
       "keywords": [
-        "ship"
+        "base",
+        "branch",
+        "bump",
+        "detect",
+        "diff",
+        "merge",
+        "review",
+        "run",
+        "ship",
+        "tests",
+        "update",
+        "version",
+        "workflow"
       ],
       "surfaces": [],
       "intents": [],
@@ -4529,7 +5481,12 @@
       "name": "shipping-and-launch",
       "description": "Prepares production launches. Use when preparing to deploy to production. Use when you need",
       "keywords": [
+        "circleci",
         "deploy",
+        "dockerfile",
+        "github/workflows",
+        "gitlab-ci",
+        "jenkinsfile",
         "launches",
         "need",
         "prepares",
@@ -4541,19 +5498,39 @@
         "general"
       ],
       "intents": [],
-      "path_rules": [],
+      "path_rules": [
+        {
+          "path_contains_any": [
+            ".github/workflows",
+            "dockerfile",
+            ".gitlab-ci",
+            ".circleci",
+            "jenkinsfile"
+          ]
+        }
+      ],
       "weight": 1.0,
       "source": "floor-fallback"
     },
     "skill-linkage-story": {
       "name": "skill-linkage-story",
-      "description": "End-to-end story of how Claude Code hooks inject skills from sessionStart through stop — sessionStart,",
+      "description": "ALWAYS invoke when onboarding to this config or debugging missing skill reminders — the end-to-end story of how Claude Code hooks inject skills from sessionStart through stop (sessionStart, beforeSubmit, preToolUse, postToolUse, stop).",
       "keywords": [
+        "always",
+        "beforesubmit",
         "claude",
+        "config",
+        "debugging",
         "end-to-end",
         "hooks",
         "how",
         "inject",
+        "invoke",
+        "missing",
+        "onboarding",
+        "posttooluse",
+        "pretooluse",
+        "reminders",
         "sessionstart",
         "skill-linkage-story",
         "stop",
@@ -4570,9 +5547,19 @@
     },
     "skillify": {
       "name": "skillify",
-      "description": "",
+      "description": "Codify the most recent successful /scrape flow into a permanent browser-skill on disk. (gstack)",
       "keywords": [
-        "skillify"
+        "browser-skill",
+        "codify",
+        "disk",
+        "flow",
+        "gstack",
+        "most",
+        "permanent",
+        "recent",
+        "scrape",
+        "skillify",
+        "successful"
       ],
       "surfaces": [],
       "intents": [],
@@ -4582,17 +5569,30 @@
     },
     "source-driven-development": {
       "name": "source-driven-development",
-      "description": "Grounds every implementation decision in official documentation. Use when you want authoritative,",
+      "description": "MUST use to ground every implementation decision in official documentation. ALWAYS invoke when building with any framework or library where correctness matters, or when you want authoritative, source-cited code free from outdated patterns.",
       "keywords": [
+        "always",
         "authoritative",
+        "building",
+        "correctness",
         "decision",
         "documentation",
         "every",
-        "grounds",
+        "framework",
+        "free",
+        "ground",
         "implementation",
+        "invoke",
+        "library",
+        "matters",
+        "must",
         "official",
+        "outdated",
+        "patterns",
+        "source-cited",
         "source-driven-development",
-        "want"
+        "want",
+        "where"
       ],
       "surfaces": [
         "general"
@@ -4602,6 +5602,26 @@
         "PLAN",
         "SPEC"
       ],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "spec": {
+      "name": "spec",
+      "description": "Turn vague intent into a precise, executable spec in five phases. (gstack)",
+      "keywords": [
+        "executable",
+        "five",
+        "gstack",
+        "intent",
+        "phases",
+        "precise",
+        "spec",
+        "turn",
+        "vague"
+      ],
+      "surfaces": [],
+      "intents": [],
       "path_rules": [],
       "weight": 1.0,
       "source": "floor-fallback"
@@ -4650,8 +5670,17 @@
     },
     "sync-gbrain": {
       "name": "sync-gbrain",
-      "description": "",
+      "description": "Keep gbrain current with this repo's code and refresh agent search guidance in CLAUDE.md.",
       "keywords": [
+        "agent",
+        "claude",
+        "current",
+        "gbrain",
+        "guidance",
+        "keep",
+        "refresh",
+        "repo",
+        "search",
         "sync-gbrain"
       ],
       "surfaces": [],
@@ -4691,14 +5720,14 @@
     },
     "taste-skill": {
       "name": "design-taste-frontend",
-      "description": "Anti-slop frontend skill for landing pages, portfolios, and redesigns. The agent reads the brief, infers the right design direction, and ships interfaces that do not look templated. Real design systems when applicable, audit-first on redesigns, strict pre-flight check.",
+      "description": "ALWAYS invoke for landing pages, portfolios, and redesigns — anti-slop frontend skill. The agent reads the brief, infers the right design direction, and ships interfaces that do not look templated. Real design systems when applicable, audit-first on redesigns, strict pre-flight check.",
       "keywords": [
         "agent",
+        "always",
         "anti-slop",
         "applicable",
         "audit-first",
         "brief",
-        "check",
         "components",
         "design",
         "design-taste-frontend",
@@ -4706,6 +5735,7 @@
         "frontend",
         "infers",
         "interfaces",
+        "invoke",
         "landing",
         "layout",
         "look",
@@ -4744,18 +5774,142 @@
       "name": "tdd",
       "description": "Test-driven development with red-green-refactor loop (alias of test-driven-development).",
       "keywords": [
+        "development",
+        "loop",
+        "red-green-refactor",
+        "tdd",
+        "test-driven",
+        "test-driven-development"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "tdd-auto-init": {
+      "name": "tdd-auto-init",
+      "description": "ALWAYS invoke when setting up TDD enforcement in a new repo, when tdd-guard isn't activating (or is firing where it shouldn't), when adding a test stack (Go/Vitest/Jest/pytest) and wiring its reporter, when a TDD advisory appears, or when pausing/forcing/troubleshooting tdd-guard. Operates and customizes the auto-initialized tdd-guard TDD system — tdd-guard auto-initializes per project (like the j",
+      "keywords": [
+        "activating",
+        "adding",
+        "advisory",
+        "always",
+        "appears",
+        "enforcement",
+        "firing",
+        "forcing",
+        "invoke",
+        "isn",
+        "jest",
+        "pausing",
+        "pytest",
+        "repo",
+        "reporter",
+        "setting",
+        "shouldn",
+        "stack",
+        "tdd",
+        "tdd-auto-init",
+        "tdd-guard",
+        "test",
+        "troubleshooting",
+        "vitest",
+        "where",
+        "wiring"
+      ],
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "tech-debt-audit": {
+      "name": "tech-debt-audit",
+      "description": "ALWAYS invoke when the user asks for a debt audit, codebase health check, architecture review, or code quality assessment of an entire repo — thorough, user-invoked tech debt and architecture audit. Produces TECH_DEBT_AUDIT.md with file-cited findings, severity, effort estimates, and a required \\\"looks bad but is actually fine\\\" section. Does not auto-invoke.",
+      "keywords": [
+        "always",
+        "architecture",
+        "asks",
+        "assessment",
+        "audit",
+        "check",
+        "cmd",
+        "codebase",
+        "debt",
+        "effort",
+        "entire",
+        "estimates",
+        "file-cited",
+        "findings",
+        "health",
+        "internal",
+        "invoke",
+        "looks",
+        "produces",
+        "quality",
+        "repo",
+        "required",
+        "review",
+        "server",
+        "severity",
+        "tech",
+        "tech-debt-audit",
+        "thorough",
+        "user-invoked"
+      ],
+      "surfaces": [
+        "backend",
+        "frontend"
+      ],
+      "intents": [],
+      "path_rules": [
+        {
+          "path_contains_any": [
+            "internal/",
+            "server/",
+            "cmd/"
+          ]
+        }
+      ],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "test-driven-development": {
+      "name": "test-driven-development",
+      "description": "ALWAYS invoke when implementing any logic, fixing any bug, or changing any behavior — drives development with tests. MUST use when you need to prove that code works, when a bug report arrives, or when you're about to modify existing functionality.",
+      "keywords": [
         "__tests__",
         "_test.go",
         "_test.ts",
         "_test.tsx",
+        "about",
+        "always",
+        "arrives",
+        "behavior",
+        "bug",
+        "changing",
         "development",
-        "loop",
-        "red-green-refactor",
+        "drives",
+        "existing",
+        "fixing",
+        "functionality",
+        "implementing",
+        "invoke",
+        "logic",
+        "modify",
+        "must",
+        "need",
+        "prove",
+        "report",
         "spec",
-        "tdd",
         "test",
-        "test-driven",
-        "test-driven-development"
+        "test-driven-development",
+        "tests",
+        "works"
       ],
       "surfaces": [
         "backend",
@@ -4788,136 +5942,78 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "tdd-auto-init": {
-      "name": "tdd-auto-init",
-      "description": "Operate and customize the auto-initialized tdd-guard TDD system. Use when setting up TDD",
-      "keywords": [
-        "auto-initialized",
-        "customize",
-        "operate",
-        "setting",
-        "system",
-        "tdd",
-        "tdd-auto-init",
-        "tdd-guard"
-      ],
-      "surfaces": [
-        "backend",
-        "frontend"
-      ],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "tech-debt-audit": {
-      "name": "tech-debt-audit",
-      "description": "Thorough, user-invoked tech debt and architecture audit of the current codebase. Produces",
-      "keywords": [
-        "architecture",
-        "audit",
-        "codebase",
-        "current",
-        "debt",
-        "produces",
-        "tech",
-        "tech-debt-audit",
-        "thorough",
-        "user-invoked"
-      ],
-      "surfaces": [
-        "backend",
-        "frontend"
-      ],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "test-driven-development": {
-      "name": "test-driven-development",
-      "description": "Drives development with tests. Use when implementing any logic, fixing any bug, or changing",
-      "keywords": [
-        "bug",
-        "changing",
-        "development",
-        "drives",
-        "fixing",
-        "implementing",
-        "logic",
-        "test-driven-development",
-        "tests"
-      ],
-      "surfaces": [
-        "backend",
-        "frontend"
-      ],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
     "to-issues": {
       "name": "to-issues",
-      "description": "Break a plan, spec, or PRD into independently-grabbable issues on the project issue tracker",
+      "description": "ALWAYS invoke when the user wants to convert a plan into issues, create implementation tickets, or break down work into issues — breaks a plan, spec, or PRD into independently-grabbable issues on the project issue tracker using tracer-bullet vertical slices.",
       "keywords": [
-        "break",
-        "independently-grabbable",
-        "issue",
-        "issues",
-        "plan",
-        "prd",
-        "project",
-        "spec",
-        "to-issues",
-        "tracker"
+        "break into issues",
+        "break this into issues",
+        "create issues",
+        "create tickets",
+        "implementation tickets",
+        "issue tracker",
+        "tickets",
+        "to issues",
+        "tracer bullet",
+        "vertical slices"
       ],
       "surfaces": [
         "general"
       ],
-      "intents": [],
+      "intents": [
+        "PLAN"
+      ],
       "path_rules": [],
       "weight": 1.0,
-      "source": "floor-fallback"
+      "source": "front-matter"
     },
     "to-prd": {
       "name": "to-prd",
-      "description": "Turn the current conversation context into a PRD and publish it to the project issue tracker.",
+      "description": "ALWAYS invoke when the user wants to create a PRD from the current context — turns the current conversation context into a PRD and publishes it to the project issue tracker.",
       "keywords": [
-        "context",
-        "conversation",
-        "current",
-        "issue",
+        "create a prd",
         "prd",
-        "project",
-        "publish",
-        "to-prd",
-        "tracker",
-        "turn"
+        "product requirements",
+        "publish the prd",
+        "to prd",
+        "write a prd"
       ],
       "surfaces": [
         "general"
       ],
-      "intents": [],
+      "intents": [
+        "SPEC"
+      ],
       "path_rules": [],
       "weight": 1.0,
-      "source": "floor-fallback"
+      "source": "front-matter"
     },
     "tool-and-doc-selection": {
       "name": "tool-and-doc-selection",
-      "description": "Use when deciding which source of truth to consult among workspace files, local docs, installed",
+      "description": "ALWAYS invoke when deciding which source of truth to consult among workspace files, local docs, installed docs tools, MCP integrations, or web search. MUST use to choose the right local or external source for this task.",
       "keywords": [
+        "always",
         "among",
+        "choose",
         "claude/hooks",
         "claude/rules",
         "consult",
         "deciding",
         "docs",
+        "external",
         "installed",
+        "integrations",
+        "invoke",
         "local",
+        "mcp",
+        "must",
+        "right",
+        "search",
         "source",
         "tool-and-doc-selection",
+        "tools",
         "truth",
+        "web",
         "which",
         "workspace"
       ],
@@ -4940,31 +6036,34 @@
     },
     "triage": {
       "name": "triage",
-      "description": "Triage issues through a state machine driven by triage roles. Use when user wants to create",
+      "description": "ALWAYS invoke when the user wants to create an issue, triage issues, review incoming bugs or feature requests, prepare issues for an AFK agent, or manage issue workflow — triages issues through a state machine driven by triage roles.",
       "keywords": [
-        "create",
-        "driven",
-        "issues",
-        "machine",
-        "roles",
-        "state",
-        "through",
+        "feature requests",
+        "incoming bugs",
+        "issue workflow",
+        "label the issue",
+        "prioritize issues",
         "triage",
-        "wants"
+        "triage issues",
+        "triage the backlog"
       ],
       "surfaces": [
         "general"
       ],
-      "intents": [],
+      "intents": [
+        "PLAN",
+        "REVIEW"
+      ],
       "path_rules": [],
       "weight": 1.0,
-      "source": "floor-fallback"
+      "source": "front-matter"
     },
     "ui-ux-pro-max": {
       "name": "ui-ux-pro-max",
-      "description": "UI/UX design intelligence for web and mobile. Includes 50+ styles, 161 color palettes, 57 font pairings, 161 product types, 99 UX guidelines, and 25 chart types across 10 stacks (React, Next.js, Vue, Svelte, SwiftUI, React Native, Flutter, Tailwind, shadcn/ui, and HTML/CSS). Actions: plan, build, create, design, implement, review, fix, improve, optimize, enhance, refactor, and check UI/UX code. Pr",
+      "description": "ALWAYS invoke for UI/UX design work on web and mobile. UI/UX design intelligence including 50+ styles, 161 color palettes, 57 font pairings, 161 product types, 99 UX guidelines, and 25 chart types across 10 stacks (React, Next.js, Vue, Svelte, SwiftUI, React Native, Flutter, Tailwind, shadcn/ui, and HTML/CSS). Actions: plan, build, create, design, implement, review, fix, improve, optimize, enhance",
       "keywords": [
         "across",
+        "always",
         "chart",
         "color",
         "components",
@@ -4972,8 +6071,9 @@
         "flutter",
         "font",
         "guidelines",
-        "includes",
+        "including",
         "intelligence",
+        "invoke",
         "layout",
         "mobile",
         "native",
@@ -4983,12 +6083,10 @@
         "palettes",
         "product",
         "react",
-        "shadcn",
         "stacks",
         "styles",
         "svelte",
         "swiftui",
-        "tailwind",
         "types",
         "ui-ux-pro-max",
         "views",
@@ -5014,8 +6112,16 @@
     },
     "unfreeze": {
       "name": "unfreeze",
-      "description": "",
+      "description": "Clear the freeze boundary set by /freeze, allowing edits to all directories again. (gstack)",
       "keywords": [
+        "again",
+        "allowing",
+        "boundary",
+        "clear",
+        "directories",
+        "edits",
+        "freeze",
+        "gstack",
         "unfreeze"
       ],
       "surfaces": [],
@@ -5041,23 +6147,38 @@
       "surfaces": [
         "backend"
       ],
-      "intents": [],
+      "intents": [
+        "QA",
+        "REVIEW",
+        "TEST"
+      ],
       "path_rules": [],
       "weight": 1.0,
       "source": "floor-fallback"
     },
     "using-agent-skills": {
       "name": "using-agent-skills",
-      "description": "Discovers and invokes agent skills. Use when starting a session or when you need to discover",
+      "description": "ALWAYS invoke when starting a session or when you need to discover which skill applies to the current task — discovers and invokes agent skills. This is the meta-skill that governs how all other skills are discovered and invoked.",
       "keywords": [
         "agent",
+        "always",
+        "applies",
+        "current",
         "discover",
+        "discovered",
         "discovers",
+        "governs",
+        "how",
+        "invoke",
+        "invoked",
         "invokes",
+        "meta-skill",
         "need",
+        "other",
         "session",
         "starting",
-        "using-agent-skills"
+        "using-agent-skills",
+        "which"
       ],
       "surfaces": [
         "general"
@@ -5069,10 +6190,15 @@
     },
     "verification-loop": {
       "name": "verification-loop",
-      "description": "A comprehensive verification system for Claude Code sessions.",
+      "description": "MUST use before claiming any work complete, fixed, or passing — a comprehensive verification system for Claude Code sessions.",
       "keywords": [
+        "claiming",
         "claude",
+        "complete",
         "comprehensive",
+        "fixed",
+        "must",
+        "passing",
         "sessions",
         "system",
         "verification",
@@ -5092,8 +6218,9 @@
     },
     "vite-react-best-practices": {
       "name": "vite-react-best-practices",
-      "description": "Comprehensive React and Vite SPA performance, architecture, and deployment guidelines. Use this skill when building, reviewing, or refactoring React applications built with Vite (SPA). Covers Vite-specific build configurations, static hosting requirements, and core React performance patterns.",
+      "description": "ALWAYS invoke when building, reviewing, or refactoring React applications built with Vite (SPA). Comprehensive React and Vite SPA performance, architecture, and deployment guidelines — covers Vite-specific build configurations, static hosting requirements, and core React performance patterns.",
       "keywords": [
+        "always",
         "applications",
         "architecture",
         "build",
@@ -5107,6 +6234,7 @@
         "eslint",
         "guidelines",
         "hosting",
+        "invoke",
         "patterns",
         "performance",
         "postcss",
@@ -5140,23 +6268,61 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
+    "web-design-guidelines": {
+      "name": "web-design-guidelines",
+      "description": "Review UI code for Web Interface Guidelines compliance. Use when asked to \"review my UI\", \"check accessibility\", \"audit design\", \"review UX\", or \"check my site against best practices\".",
+      "keywords": [
+        "accessibility",
+        "against",
+        "asked",
+        "audit",
+        "best",
+        "check",
+        "compliance",
+        "design",
+        "guidelines",
+        "interface",
+        "practices",
+        "review",
+        "site",
+        "web",
+        "web-design-guidelines"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
     "webapp-testing": {
       "name": "webapp-testing",
-      "description": "Use when testing a web application end-to-end in a real browser — driving flows, asserting",
+      "description": "ALWAYS invoke when testing a web application end-to-end in a real browser — driving flows, asserting UI, capturing console/network/performance evidence, and verifying visual output with real runtime data.",
       "keywords": [
         "__tests__",
         "_test.ts",
         "_test.tsx",
+        "always",
         "application",
         "asserting",
         "browser",
+        "capturing",
+        "console",
+        "data",
         "driving",
         "end-to-end",
+        "evidence",
         "flows",
+        "invoke",
+        "network",
+        "output",
+        "performance",
         "real",
+        "runtime",
         "spec",
         "test",
         "testing",
+        "verifying",
+        "visual",
         "web",
         "webapp-testing"
       ],
@@ -5181,13 +6347,22 @@
     },
     "workflow-orchestrator": {
       "name": "workflow-orchestrator",
-      "description": "Use when work spans multiple phases, domains, or specialist roles and needs explicit sequencing,",
+      "description": "ALWAYS invoke when work spans multiple phases, domains, or specialist roles and needs explicit sequencing, ownership, and quality gates across Architect, Code, and Debug modes.",
       "keywords": [
+        "across",
+        "always",
+        "architect",
+        "debug",
         "domains",
         "explicit",
+        "gates",
+        "invoke",
+        "modes",
         "multiple",
         "needs",
+        "ownership",
         "phases",
+        "quality",
         "roles",
         "sequencing",
         "spans",
@@ -5197,6 +6372,42 @@
       "surfaces": [
         "general"
       ],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "xlsx": {
+      "name": "xlsx",
+      "description": "Use this skill any time a spreadsheet file is the primary input or output. This means any task where the user wants to: open, read, edit, or fix an existing .xlsx, .xlsm, .xltx, .csv, or .tsv file (e.g., adding columns, computing formulas, formatting, charting, cleaning messy data); create a new spreadsheet from scratch or from other data sources; or convert between tabular file formats. Trigger e",
+      "keywords": [
+        "adding",
+        "charting",
+        "cleaning",
+        "columns",
+        "computing",
+        "csv",
+        "edit",
+        "existing",
+        "fix",
+        "formatting",
+        "formulas",
+        "input",
+        "means",
+        "open",
+        "output",
+        "primary",
+        "read",
+        "spreadsheet",
+        "time",
+        "tsv",
+        "wants",
+        "where",
+        "xlsm",
+        "xlsx",
+        "xltx"
+      ],
+      "surfaces": [],
       "intents": [],
       "path_rules": [],
       "weight": 1.0,

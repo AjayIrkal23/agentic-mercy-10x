@@ -44,13 +44,14 @@ _USER = _ROOT / "settings.user.json"
 _TOKEN_MAP = [
     ("${HOME}/.claude", "{{CLAUDE_DIR}}"),
     ("python3 ", "{{PYTHON}} "),
+    ("${HOME}/.local/bin/node", "{{NODE}}"),
     ("/usr/bin/node", "{{NODE}}"),
 ]
 
 # Default substitution values == the live POSIX literals (equivalence gate).
 _DEFAULT_SUBS = {
     "{{PYTHON}}": "python3",
-    "{{NODE}}": "/usr/bin/node",
+    "{{NODE}}": "${HOME}/.local/bin/node",
     "{{CLAUDE_DIR}}": "${HOME}/.claude",
 }
 

@@ -1,11 +1,6 @@
 ---
 name: tdd-auto-init
-description: Operate and customize the auto-initialized tdd-guard TDD system. Use when setting up TDD
-  enforcement in a new repo, when tdd-guard isn't activating (or is firing where it shouldn't), when adding
-  a test stack (Go/Vitest/Jest/pytest) and wiring its reporter, when a TDD advisory appears, or when pausing/forcing/troubleshooting
-  tdd-guard. tdd-guard auto-initializes per project (like the jcodemunch/graphify index guards), runs
-  in non-blocking WARN mode, and self-maintains its config as files/folders change — this skill is how
-  you drive, scope, and debug that.
+description: "ALWAYS invoke when setting up TDD enforcement in a new repo, when tdd-guard isn't activating (or is firing where it shouldn't), when adding a test stack (Go/Vitest/Jest/pytest) and wiring its reporter, when a TDD advisory appears, or when pausing/forcing/troubleshooting tdd-guard. Operates and customizes the auto-initialized tdd-guard TDD system — tdd-guard auto-initializes per project (like the jcodemunch/graphify index guards), runs in non-blocking WARN mode, and self-maintains its config as files/folders change; this skill is how you drive, scope, and debug that."
 disable-model-invocation: false
 schema: 1
 category: testing

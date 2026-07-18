@@ -146,6 +146,33 @@ def _index_skills(profile, index: dict) -> dict[str, float]:
     return scores
 
 
+_AUTON_CONFIG = _HOOKS / "autonomous-skill-router.config.json"
+
+
+def _category_skills(profile) -> dict[str, float]:
+    """Curated category -> local_skills mapping from the autonomous router config.
+    The legacy autonomous router pushed these directly; the live router only kept
+    the category *keywords* (as floor act_keyword intents), silently orphaning the
+    curated skill lists (e.g. PLAN->idea-refine, DEBUG->diagnose). Restored
+    2026-07-18: each intent hit boosts that category's local_skills so curated
+    skills outrank tokenized-description noise."""
+    scores: dict[str, float] = {}
+    cats = (_load_json(_AUTON_CONFIG).get("categories") or {})
+    for cat, hit_score in (profile.intents or {}).items():
+        meta = cats.get(cat)
+        if not isinstance(meta, dict):
+            continue
+        boost = 1.4 + 0.2 * min(int(hit_score), 3)
+        for sk in meta.get("local_skills") or []:
+            scores[sk] = max(scores.get(sk, 0.0), boost)
+    return scores
+
+
+def index_meta() -> dict:
+    """skills-index metadata (name -> {description, keywords, ...}); {} on error."""
+    return (_load_json(_SKILLS_INDEX).get("skills") or {})
+
+
 def rank_skills(profile, *, top_n: int = 10) -> list[tuple[str, float]]:
     """Return [(skill_name, score)] descending. Index-driven when available,
     else floor-driven. Weights (P4-T9 loop) multiply when present."""
@@ -159,6 +186,9 @@ def rank_skills(profile, *, top_n: int = 10) -> list[tuple[str, float]]:
         scores = _path_route_skills(profile)
         for sk, v in _cross_cutting_skills(profile).items():
             scores[sk] = scores.get(sk, 0.0) + v
+    # curated category->skill lists always blend in (both branches)
+    for sk, v in _category_skills(profile).items():
+        scores[sk] = scores.get(sk, 0.0) + v
 
     weights = _weights()
     for sk in list(scores):

@@ -1,7 +1,6 @@
 ---
 name: frontend-response-handling
-description: Use when frontend API work needs success parsing, normalized error handling, or backend-driven
-  list, filter, sort, and pagination behavior.
+description: "ALWAYS invoke when frontend API work needs success parsing, normalized error handling, or backend-driven list, filter, sort, and pagination behavior."
 disable-model-invocation: false
 schema: 1
 category: frontend

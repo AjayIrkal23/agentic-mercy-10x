@@ -1,7 +1,6 @@
 ---
 name: backend-performance-standards
-description: Use when reviewing backend query efficiency, file-size pressure, repeated DB work, scaling
-  risk, or safe optimization boundaries.
+description: "ALWAYS invoke when reviewing backend query efficiency, file-size pressure, repeated DB work, scaling risk, or safe optimization boundaries."
 disable-model-invocation: false
 schema: 1
 category: backend

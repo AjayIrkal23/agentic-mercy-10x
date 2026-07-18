@@ -1,7 +1,6 @@
 ---
 name: idea-refine
-description: Refines ideas iteratively. Refine ideas through structured divergent and convergent thinking.
-  Use "idea-refine" or "ideate" to trigger.
+description: "ALWAYS invoke when the user says \"idea-refine\" or \"ideate\" — refines ideas through structured divergent and convergent thinking."
 schema: 1
 category: general
 surfaces:
@@ -29,6 +28,19 @@ triggers:
   paths: []
   intents:
   - general
+keywords:
+- refine this idea
+- refine the idea
+- ideate
+- refine ideas
+- divergent
+- convergent
+- shape this idea
+intents:
+- PLAN
+- SPEC
+surfaces:
+- general
 ---
 # Idea Refine
 

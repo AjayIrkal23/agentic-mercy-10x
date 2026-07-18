@@ -1,0 +1,52 @@
+{
+ "_comment": "Always-active core skill set injected at session start (2026-07-18, user-authorized 60-70k budget). full=body digest, pointer=name+description line.",
+ "always": [
+  {
+   "skill": "codebase-intel-first",
+   "mode": "full",
+   "max_chars": 7000
+  },
+  {
+   "skill": "project-reference-linkage",
+   "mode": "full",
+   "max_chars": 7000
+  },
+  {
+   "skill": "project-structure-map",
+   "mode": "full",
+   "max_chars": 2000
+  },
+  {
+   "skill": "iterative-retrieval",
+   "mode": "full",
+   "max_chars": 2000
+  },
+  {
+   "skill": "caveman",
+   "mode": "full",
+   "max_chars": 4000
+  },
+  {
+   "skill": "mcp-usage-standards",
+   "mode": "full",
+   "max_chars": 4500
+  },
+  {
+   "skill": "verification-loop",
+   "mode": "full",
+   "max_chars": 3000
+  },
+  {
+   "skill": "graphify",
+   "mode": "pointer"
+  },
+  {
+   "skill": "dead-code-and-change-audit",
+   "mode": "pointer"
+  },
+  {
+   "skill": "dox-doc-tree",
+   "mode": "pointer"
+  }
+ ]
+}

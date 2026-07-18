@@ -1,7 +1,6 @@
 ---
 name: react-hooks-patterns
-description: Use when implementing or reviewing React component state, effects, refs, reducers, memoization,
-  or custom hook extraction.
+description: "ALWAYS invoke when implementing or reviewing React component state, effects, refs, reducers, memoization, or custom hook extraction."
 disable-model-invocation: false
 schema: 1
 category: frontend

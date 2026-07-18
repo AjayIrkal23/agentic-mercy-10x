@@ -1,7 +1,6 @@
 ---
 name: eval-harness
-description: Formal evaluation framework for Claude Code sessions implementing eval-driven development
-  (EDD) principles
+description: "ALWAYS invoke when evaluating Claude Code sessions — formal evaluation framework implementing eval-driven development (EDD) principles."
 disable-model-invocation: false
 schema: 1
 category: general

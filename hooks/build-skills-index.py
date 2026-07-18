@@ -248,6 +248,15 @@ def _count_on_disk() -> int:
 
 
 def main(argv: list[str]) -> int:
+    if "--hook" in argv:
+        # dispatch-link mode: do the work silently, emit the JSON no-op hooks expect
+        try:
+            if _is_stale():
+                build()
+        except Exception:  # noqa: BLE001
+            pass
+        print("{}")
+        return 0
     if "--check" in argv:
         idx = json.loads(_INDEX_PATH.read_text(encoding="utf-8")) if _INDEX_PATH.exists() else {"skills": {}}
         n_idx = len(idx.get("skills", {}))

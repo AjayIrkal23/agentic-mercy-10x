@@ -1,8 +1,6 @@
 ---
 name: frontend-standards-always-follow
-description: Use when any web/frontend UI, React, Next.js, Vite, dashboard, component, CSS, client data,
-  hook, state, styling, browser UX, or frontend performance work is requested. Apply the always-on frontend
-  baseline Use after the matching Build Web Apps plugin skill for any web/frontend task.
+description: "ALWAYS invoke when any web/frontend UI, React, Next.js, Vite, dashboard, component, CSS, client data, hook, state, styling, browser UX, or frontend performance work is requested. MUST apply this always-on frontend baseline after the matching Build Web Apps plugin skill for any web/frontend task."
 disable-model-invocation: false
 schema: 1
 category: frontend

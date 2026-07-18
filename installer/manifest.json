@@ -1,113 +1,614 @@
 {
-  "_about": "Declarative install manifest for the ~/.claude workbench. install.py + installer/{detect,deps,links,render,doctor,verify}.py read this. Everything is idempotent + fail-visible. {PYTHON}/{NODE}/{CLAUDE_DIR} are substituted from installer/detect.py. `ci_stub:true` steps are SKIPPED under `install.py --ci` (no network in CI; the manifest itself is the contract doctor/verify assert). Sections: prereqs (report-only, user must install) · deps (auto-installed binaries) · mcp_servers (claude mcp add) · plugins (claude plugin) · connectors (claude.ai UI) · post_steps · palette · doctor_probes.",
-  "min_python": "3.10",
-
-  "prereqs": [
-    {"id": "python3", "which": "python3", "min": "3.10", "required": true,
-     "note": "The installer itself is Python. 3.10+.",
-     "install_posix": "sudo apt install python3 python3-pip   # or: brew install python@3.12",
-     "install_windows": "winget install Python.Python.3.12   # ships the 'py -3' launcher"},
-    {"id": "node", "which": "node", "min": "18", "required": true,
-     "note": "npm powers lean-ctx, tdd-guard and 7 npx-launched MCP servers.",
-     "install_posix": "nvm: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash && nvm install --lts   # or apt/brew",
-     "install_windows": "winget install OpenJS.NodeJS.LTS   # or nvm-windows"},
-    {"id": "git", "which": "git", "required": true,
-     "note": "Repo clone + the `install.py update` flow + hook git calls.",
-     "install_posix": "sudo apt install git   # or: brew install git",
-     "install_windows": "winget install Git.Git"},
-    {"id": "claude", "which": "claude", "required": true,
-     "note": "Claude Code CLI — needed to register MCP servers and install plugins.",
-     "install_posix": "npm install -g @anthropic-ai/claude-code",
-     "install_windows": "npm install -g @anthropic-ai/claude-code"}
-  ],
-
-  "deps": [
-    {"id": "uv", "which": "uv",
-     "install_posix": ["sh", "-c", "curl -LsSf https://astral.sh/uv/install.sh | sh"],
-     "install_windows": ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "irm https://astral.sh/uv/install.ps1 | iex"],
-     "note": "Astral uv — installs semgrep/jcodemunch-mcp/jdocmunch-mcp on POSIX and launches the `fetch` MCP (uvx). Auto-installed via the official script; re-open the shell if `uv` isn't on PATH afterwards.", "ci_stub": true},
-    {"id": "pipx", "which": "pipx",
-     "install": ["{PYTHON}", "-m", "pip", "install", "--user", "pipx"],
-     "note": "Windows installer for semgrep/jcodemunch-mcp/jdocmunch-mcp (POSIX uses uv). After install run `pipx ensurepath` once.", "optional": true, "ci_stub": true},
-    {"id": "pyyaml", "import": "yaml", "install": ["{PYTHON}", "-m", "pip", "install", "--quiet", "pyyaml"], "optional": true, "note": "PyYAML powers the skill validator's front-matter parser (R2/R5/R6/R10 fidelity). Runtime hooks are pure stdlib and never import it; skills_lib degrades to a stdlib fallback (no crash) when it is absent, but the doctor's R9/R10 probe needs it for full fidelity."},
-    {"id": "semgrep", "which": "semgrep", "install_posix": ["uv", "tool", "install", "semgrep"], "install_windows": ["pipx", "install", "semgrep"], "ci_stub": true},
-    {"id": "lean-ctx", "which": "lean-ctx", "install": ["npm", "install", "-g", "lean-ctx"], "ci_stub": true, "note": "Context-compression engine: the PreToolUse rewrite/redirect/observe hooks AND the lean-ctx MCP server both call this binary."},
-    {"id": "tdd-guard", "which": "tdd-guard", "install": ["npm", "install", "-g", "tdd-guard"], "ci_stub": true},
-    {"id": "tdd-guard-vitest", "which": "tdd-guard-vitest", "install": ["npm", "install", "-g", "tdd-guard-vitest"], "ci_stub": true, "optional": true},
-    {"id": "tdd-guard-pytest", "which": "tdd-guard-pytest", "install": ["npm", "install", "-g", "tdd-guard-pytest"], "ci_stub": true, "optional": true},
-    {"id": "jcodemunch-mcp", "which": "jcodemunch-mcp", "install_posix": ["uv", "tool", "install", "--upgrade", "jcodemunch-mcp"], "install_windows": ["pipx", "install", "jcodemunch-mcp"], "note": "Code-intelligence MCP engine (PyPI: jcodemunch-mcp). Info + licensing: https://j.gravelle.us/jCodeMunch/descriptions.php", "ci_stub": true, "optional": true},
-    {"id": "jdocmunch-mcp", "which": "jdocmunch-mcp", "install_posix": ["uv", "tool", "install", "--upgrade", "jdocmunch-mcp"], "install_windows": ["pipx", "install", "jdocmunch-mcp"], "note": "Docs-index MCP engine (PyPI: jdocmunch-mcp), jCodeMunch's docs twin. Full wiring + first index: scripts/install-jdocmunch.sh. Info + licensing: https://j.gravelle.us/jCodeMunch/descriptions.php", "ci_stub": true, "optional": true},
-    {"id": "graphify", "which": "graphify", "install_posix": ["scripts/install-graphify.sh", "--no-cli"], "install_windows": ["uv", "tool", "install", "graphifyy"], "note": "Dependency-graph engine (PyPI: graphifyy). POSIX uses scripts/install-graphify.sh (builds the claude-owned serve venv); the MCP is registered below via graphify_launcher.py.", "ci_stub": true, "optional": true}
-  ],
-
-  "mcp_servers": [
-    {"name": "jcodemunch", "add": ["claude", "mcp", "add", "--scope", "user", "jcodemunch", "--", "jcodemunch-mcp"], "ci_stub": true},
-    {"name": "jdocmunch", "add": ["claude", "mcp", "add", "--scope", "user", "jdocmunch", "--", "jdocmunch-mcp"], "ci_stub": true},
-    {"name": "graphify", "add": ["claude", "mcp", "add", "--scope", "user", "graphify", "--", "{PYTHON}", "{CLAUDE_DIR}/hooks/graphify_launcher.py"], "ci_stub": true, "note": "portable python launcher — reconciles the settings.json/~/.claude.json graphify disagreement."},
-    {"name": "lean-ctx", "add": ["claude", "mcp", "add", "--scope", "user", "lean-ctx", "--", "lean-ctx", "mcp"], "ci_stub": true},
-    {"name": "memory", "add": ["claude", "mcp", "add", "--scope", "user", "memory", "--", "npx", "-y", "@modelcontextprotocol/server-memory"], "ci_stub": true},
-    {"name": "sequential-thinking", "add": ["claude", "mcp", "add", "--scope", "user", "sequential-thinking", "--", "npx", "-y", "@modelcontextprotocol/server-sequential-thinking"], "ci_stub": true},
-    {"name": "context7", "add": ["claude", "mcp", "add", "--scope", "user", "context7", "--", "npx", "-y", "@upstash/context7-mcp"], "ci_stub": true},
-    {"name": "fetch", "add": ["claude", "mcp", "add", "--scope", "user", "fetch", "--", "uvx", "mcp-server-fetch"], "ci_stub": true},
-    {"name": "playwright", "add": ["claude", "mcp", "add", "--scope", "user", "playwright", "--", "npx", "-y", "@playwright/mcp@latest"], "ci_stub": true},
-    {"name": "browser-tools-mcp", "add": ["claude", "mcp", "add", "--scope", "user", "browser-tools-mcp", "--", "npx", "-y", "@agentdeskai/browser-tools-mcp@latest"], "ci_stub": true},
-    {"name": "markdownify", "add": ["claude", "mcp", "add", "--scope", "user", "markdownify", "--", "npx", "-y", "mcp-markdownify-server"], "ci_stub": true}
-  ],
-
-  "plugins": {
-    "_about": "claude plugin marketplace add <repo> then claude plugin install <plugin>@<marketplace>. Idempotent (verify.py checks `claude plugin list`). Names are best-effort from the workbench notes; a wrong name WARNs (never crashes).",
-    "marketplaces": [
-      {"id": "claude-plugins-official", "add": ["claude", "plugin", "marketplace", "add", "anthropics/claude-plugins-official"]},
-      {"id": "superpowers-marketplace", "add": ["claude", "plugin", "marketplace", "add", "obra/superpowers-marketplace"]},
-      {"id": "ponytail", "add": ["claude", "plugin", "marketplace", "add", "DietrichGebert/ponytail"]},
-      {"id": "karpathy-skills", "add": ["claude", "plugin", "marketplace", "add", "forrestchang/andrej-karpathy-skills"]},
-      {"id": "claude-mermaid", "add": ["claude", "plugin", "marketplace", "add", "veelenga/claude-mermaid"]}
-    ],
-    "install": [
-      {"id": "superpowers", "add": ["claude", "plugin", "install", "superpowers@superpowers-marketplace"]},
-      {"id": "ponytail", "add": ["claude", "plugin", "install", "ponytail@ponytail"], "note": "Mandatory: the ponytail+caveman gate denies all tools if disabled."},
-      {"id": "andrej-karpathy-skills", "add": ["claude", "plugin", "install", "andrej-karpathy-skills@karpathy-skills"]},
-      {"id": "claude-mermaid", "add": ["claude", "plugin", "install", "claude-mermaid@claude-mermaid"]}
-    ],
-    "manual": [
-      {"id": "get-shit-done", "detect_paths": ["get-shit-done/VERSION", "agents/gsd-*.md", "skills/gsd-*"], "version_file": "get-shit-done/VERSION", "install_cmd": ["npx", "-y", "get-shit-done-cc@latest"], "install_timeout": 600, "note": "GSD engine + gsd-* agents/skills (its /gsd:* command surface ships AS skills, so 0 files in commands/ is correct). Auto-installed best-effort via `npx get-shit-done-cc` when absent (skipped if already present); if it needs interaction, run `npx get-shit-done-cc@latest` yourself, then /gsd-update. Package name is the exact constant get-shit-done-cc (beware typosquats)."}
-    ]
+ "_about": "Declarative install manifest for the ~/.claude workbench. install.py + installer/{detect,deps,links,render,doctor,verify}.py read this. Everything is idempotent + fail-visible. {PYTHON}/{NODE}/{CLAUDE_DIR} are substituted from installer/detect.py. `ci_stub:true` steps are SKIPPED under `install.py --ci` (no network in CI; the manifest itself is the contract doctor/verify assert). Sections: prereqs (report-only, user must install) · deps (auto-installed binaries) · mcp_servers (claude mcp add) · plugins (claude plugin) · connectors (claude.ai UI) · post_steps · palette · doctor_probes.",
+ "min_python": "3.10",
+ "prereqs": [
+  {
+   "id": "python3",
+   "which": "python3",
+   "min": "3.10",
+   "required": true,
+   "note": "The installer itself is Python. 3.10+.",
+   "install_posix": "sudo apt install python3 python3-pip   # or: brew install python@3.12",
+   "install_windows": "winget install Python.Python.3.12   # ships the 'py -3' launcher"
   },
-
-  "connectors": [
-    {"id": "higgsfield", "note": "claude.ai connector (OAuth) — add via the claude.ai Connectors UI, NOT the CLI. Frontend asset-generation engine (image/video/3D/audio)."},
-    {"id": "penpot", "note": "claude.ai connector — add via the claude.ai Connectors UI."}
-  ],
-
-  "externals": [
-    {"id": "gstack", "kind": "git-clone", "path": "skills/gstack", "url": "https://github.com/garrytan/gstack.git", "note": "gstack skill suite (/ship,/qa,/browse,...). Cloned by install.sh on consent; post_steps sync its pointer skills."},
-    {"id": "ast-grep-mcp", "kind": "git-clone", "path": "ast-grep-mcp", "url": "https://github.com/ast-grep/ast-grep-mcp.git", "note": "Powers the optional ast-grep MCP server (settings.json). Run `uv sync` inside after clone."}
-  ],
-
-  "links": [
-    {"_about": "Skill trees that must be MATERIALIZED as real files (never symlinks) so Windows works. links.materialize() is idempotent verify-or-create."}
-  ],
-
-  "post_steps": [
-    {"id": "sync-gstack-pointers", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/scripts/sync-gstack-pointers.py"], "optional": true, "note": "regenerate gstack pointer skills from the clone (trigger parity)."},
-    {"id": "build-skills-index", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/hooks/build-skills-index.py"], "optional": true, "note": "rebuild the ranked skills catalog."},
-    {"id": "build-trigger-floor", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/hooks/build-trigger-floor.py"], "optional": true, "note": "rebuild the never-miss trigger floor."},
-    {"id": "validate-skills", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/scripts/validate_skills.py"], "note": "R1..R10 incl. R9 floor guard + R10 upstream-intactness (fails the install on a broken catalog or an edited locked skill)."}
-  ],
-
-  "palette": {
-    "skill_names": 219,
-    "skill_bodies": 195,
-    "aliases": 24,
-    "command_files": 24,
-    "historic_command_names": 139
+  {
+   "id": "node",
+   "which": "node",
+   "min": "18",
+   "required": true,
+   "note": "npm powers lean-ctx, tdd-guard and 7 npx-launched MCP servers.",
+   "install_posix": "nvm: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash && nvm install --lts   # or apt/brew",
+   "install_windows": "winget install OpenJS.NodeJS.LTS   # or nvm-windows"
   },
-
-  "doctor_probes": {
-    "link_doctor": true,
-    "interpreter_check": true,
-    "mcp_roster": ["jcodemunch", "jdocmunch", "graphify", "lean-ctx", "memory", "sequential-thinking", "context7", "fetch", "playwright", "browser-tools-mcp", "markdownify"],
-    "catalog": ["r9_floor", "r10_provenance", "palette_counts", "zero_symlinks", "command_resolution"],
-    "model_routing": ["workflow_model_guard_args", "invoke_impl_opus"]
+  {
+   "id": "git",
+   "which": "git",
+   "required": true,
+   "note": "Repo clone + the `install.py update` flow + hook git calls.",
+   "install_posix": "sudo apt install git   # or: brew install git",
+   "install_windows": "winget install Git.Git"
+  },
+  {
+   "id": "claude",
+   "which": "claude",
+   "required": true,
+   "note": "Claude Code CLI — needed to register MCP servers and install plugins.",
+   "install_posix": "npm install -g @anthropic-ai/claude-code",
+   "install_windows": "npm install -g @anthropic-ai/claude-code"
   }
+ ],
+ "deps": [
+  {
+   "id": "uv",
+   "which": "uv",
+   "install_posix": [
+    "sh",
+    "-c",
+    "curl -LsSf https://astral.sh/uv/install.sh | sh"
+   ],
+   "install_windows": [
+    "powershell",
+    "-NoProfile",
+    "-ExecutionPolicy",
+    "Bypass",
+    "-Command",
+    "irm https://astral.sh/uv/install.ps1 | iex"
+   ],
+   "note": "Astral uv — installs semgrep/jcodemunch-mcp/jdocmunch-mcp on POSIX and launches the `fetch` MCP (uvx). Auto-installed via the official script; re-open the shell if `uv` isn't on PATH afterwards.",
+   "ci_stub": true
+  },
+  {
+   "id": "pipx",
+   "which": "pipx",
+   "install": [
+    "{PYTHON}",
+    "-m",
+    "pip",
+    "install",
+    "--user",
+    "pipx"
+   ],
+   "note": "Windows installer for semgrep/jcodemunch-mcp/jdocmunch-mcp (POSIX uses uv). After install run `pipx ensurepath` once.",
+   "optional": true,
+   "ci_stub": true
+  },
+  {
+   "id": "pyyaml",
+   "import": "yaml",
+   "install": [
+    "{PYTHON}",
+    "-m",
+    "pip",
+    "install",
+    "--quiet",
+    "pyyaml"
+   ],
+   "optional": true,
+   "note": "PyYAML powers the skill validator's front-matter parser (R2/R5/R6/R10 fidelity). Runtime hooks are pure stdlib and never import it; skills_lib degrades to a stdlib fallback (no crash) when it is absent, but the doctor's R9/R10 probe needs it for full fidelity."
+  },
+  {
+   "id": "semgrep",
+   "which": "semgrep",
+   "install_posix": [
+    "uv",
+    "tool",
+    "install",
+    "semgrep"
+   ],
+   "install_windows": [
+    "pipx",
+    "install",
+    "semgrep"
+   ],
+   "ci_stub": true
+  },
+  {
+   "id": "lean-ctx",
+   "which": "lean-ctx",
+   "install": [
+    "npm",
+    "install",
+    "-g",
+    "lean-ctx"
+   ],
+   "ci_stub": true,
+   "note": "Context-compression engine: the PreToolUse rewrite/redirect/observe hooks AND the lean-ctx MCP server both call this binary."
+  },
+  {
+   "id": "tdd-guard",
+   "which": "tdd-guard",
+   "install": [
+    "npm",
+    "install",
+    "-g",
+    "tdd-guard"
+   ],
+   "ci_stub": true
+  },
+  {
+   "id": "tdd-guard-vitest",
+   "which": "tdd-guard-vitest",
+   "install": [
+    "npm",
+    "install",
+    "-g",
+    "tdd-guard-vitest"
+   ],
+   "ci_stub": true,
+   "optional": true
+  },
+  {
+   "id": "tdd-guard-pytest",
+   "which": "tdd-guard-pytest",
+   "install": [
+    "npm",
+    "install",
+    "-g",
+    "tdd-guard-pytest"
+   ],
+   "ci_stub": true,
+   "optional": true
+  },
+  {
+   "id": "jcodemunch-mcp",
+   "which": "jcodemunch-mcp",
+   "install_posix": [
+    "uv",
+    "tool",
+    "install",
+    "--upgrade",
+    "jcodemunch-mcp"
+   ],
+   "install_windows": [
+    "pipx",
+    "install",
+    "jcodemunch-mcp"
+   ],
+   "note": "Code-intelligence MCP engine (PyPI: jcodemunch-mcp). Info + licensing: https://j.gravelle.us/jCodeMunch/descriptions.php",
+   "ci_stub": true,
+   "optional": true
+  },
+  {
+   "id": "jdocmunch-mcp",
+   "which": "jdocmunch-mcp",
+   "install_posix": [
+    "uv",
+    "tool",
+    "install",
+    "--upgrade",
+    "jdocmunch-mcp"
+   ],
+   "install_windows": [
+    "pipx",
+    "install",
+    "jdocmunch-mcp"
+   ],
+   "note": "Docs-index MCP engine (PyPI: jdocmunch-mcp), jCodeMunch's docs twin. Full wiring + first index: scripts/install-jdocmunch.sh. Info + licensing: https://j.gravelle.us/jCodeMunch/descriptions.php",
+   "ci_stub": true,
+   "optional": true
+  },
+  {
+   "id": "graphify",
+   "which": "graphify",
+   "install_posix": [
+    "scripts/install-graphify.sh",
+    "--no-cli"
+   ],
+   "install_windows": [
+    "uv",
+    "tool",
+    "install",
+    "graphifyy"
+   ],
+   "note": "Dependency-graph engine (PyPI: graphifyy). POSIX uses scripts/install-graphify.sh (builds the claude-owned serve venv); the MCP is registered below via graphify_launcher.py.",
+   "ci_stub": true,
+   "optional": true
+  }
+ ],
+ "mcp_servers": [
+  {
+   "name": "jcodemunch",
+   "add": [
+    "claude",
+    "mcp",
+    "add",
+    "--scope",
+    "user",
+    "jcodemunch",
+    "--",
+    "jcodemunch-mcp"
+   ],
+   "ci_stub": true
+  },
+  {
+   "name": "jdocmunch",
+   "add": [
+    "claude",
+    "mcp",
+    "add",
+    "--scope",
+    "user",
+    "jdocmunch",
+    "--",
+    "jdocmunch-mcp"
+   ],
+   "ci_stub": true
+  },
+  {
+   "name": "graphify",
+   "add": [
+    "claude",
+    "mcp",
+    "add",
+    "--scope",
+    "user",
+    "graphify",
+    "--",
+    "{PYTHON}",
+    "{CLAUDE_DIR}/hooks/graphify_launcher.py"
+   ],
+   "ci_stub": true,
+   "note": "portable python launcher — reconciles the settings.json/~/.claude.json graphify disagreement."
+  },
+  {
+   "name": "lean-ctx",
+   "add": [
+    "claude",
+    "mcp",
+    "add",
+    "--scope",
+    "user",
+    "lean-ctx",
+    "--",
+    "lean-ctx",
+    "mcp"
+   ],
+   "ci_stub": true
+  },
+  {
+   "name": "memory",
+   "add": [
+    "claude",
+    "mcp",
+    "add",
+    "--scope",
+    "user",
+    "memory",
+    "--",
+    "npx",
+    "-y",
+    "@modelcontextprotocol/server-memory"
+   ],
+   "ci_stub": true
+  },
+  {
+   "name": "sequential-thinking",
+   "add": [
+    "claude",
+    "mcp",
+    "add",
+    "--scope",
+    "user",
+    "sequential-thinking",
+    "--",
+    "npx",
+    "-y",
+    "@modelcontextprotocol/server-sequential-thinking"
+   ],
+   "ci_stub": true
+  },
+  {
+   "name": "context7",
+   "add": [
+    "claude",
+    "mcp",
+    "add",
+    "--scope",
+    "user",
+    "context7",
+    "--",
+    "npx",
+    "-y",
+    "@upstash/context7-mcp"
+   ],
+   "ci_stub": true
+  },
+  {
+   "name": "fetch",
+   "add": [
+    "claude",
+    "mcp",
+    "add",
+    "--scope",
+    "user",
+    "fetch",
+    "--",
+    "uvx",
+    "mcp-server-fetch"
+   ],
+   "ci_stub": true
+  },
+  {
+   "name": "playwright",
+   "add": [
+    "claude",
+    "mcp",
+    "add",
+    "--scope",
+    "user",
+    "playwright",
+    "--",
+    "npx",
+    "-y",
+    "@playwright/mcp@latest"
+   ],
+   "ci_stub": true
+  },
+  {
+   "name": "browser-tools-mcp",
+   "add": [
+    "claude",
+    "mcp",
+    "add",
+    "--scope",
+    "user",
+    "browser-tools-mcp",
+    "--",
+    "npx",
+    "-y",
+    "@agentdeskai/browser-tools-mcp@latest"
+   ],
+   "ci_stub": true
+  },
+  {
+   "name": "markdownify",
+   "add": [
+    "claude",
+    "mcp",
+    "add",
+    "--scope",
+    "user",
+    "markdownify",
+    "--",
+    "npx",
+    "-y",
+    "mcp-markdownify-server"
+   ],
+   "ci_stub": true
+  }
+ ],
+ "plugins": {
+  "_about": "claude plugin marketplace add <repo> then claude plugin install <plugin>@<marketplace>. Idempotent (verify.py checks `claude plugin list`). Names are best-effort from the workbench notes; a wrong name WARNs (never crashes).",
+  "marketplaces": [
+   {
+    "id": "claude-plugins-official",
+    "add": [
+     "claude",
+     "plugin",
+     "marketplace",
+     "add",
+     "anthropics/claude-plugins-official"
+    ]
+   },
+   {
+    "id": "superpowers-marketplace",
+    "add": [
+     "claude",
+     "plugin",
+     "marketplace",
+     "add",
+     "obra/superpowers-marketplace"
+    ]
+   },
+   {
+    "id": "ponytail",
+    "add": [
+     "claude",
+     "plugin",
+     "marketplace",
+     "add",
+     "DietrichGebert/ponytail"
+    ]
+   },
+   {
+    "id": "karpathy-skills",
+    "add": [
+     "claude",
+     "plugin",
+     "marketplace",
+     "add",
+     "forrestchang/andrej-karpathy-skills"
+    ]
+   },
+   {
+    "id": "claude-mermaid",
+    "add": [
+     "claude",
+     "plugin",
+     "marketplace",
+     "add",
+     "veelenga/claude-mermaid"
+    ]
+   }
+  ],
+  "install": [
+   {
+    "id": "superpowers",
+    "add": [
+     "claude",
+     "plugin",
+     "install",
+     "superpowers@superpowers-marketplace"
+    ]
+   },
+   {
+    "id": "ponytail",
+    "add": [
+     "claude",
+     "plugin",
+     "install",
+     "ponytail@ponytail"
+    ],
+    "note": "Mandatory: the ponytail+caveman gate denies all tools if disabled."
+   },
+   {
+    "id": "andrej-karpathy-skills",
+    "add": [
+     "claude",
+     "plugin",
+     "install",
+     "andrej-karpathy-skills@karpathy-skills"
+    ]
+   },
+   {
+    "id": "claude-mermaid",
+    "add": [
+     "claude",
+     "plugin",
+     "install",
+     "claude-mermaid@claude-mermaid"
+    ]
+   }
+  ],
+  "manual": [
+   {
+    "id": "get-shit-done",
+    "detect_paths": [
+     "get-shit-done/VERSION",
+     "agents/gsd-*.md",
+     "skills/gsd-*"
+    ],
+    "version_file": "get-shit-done/VERSION",
+    "install_cmd": [
+     "npx",
+     "-y",
+     "get-shit-done-cc@latest"
+    ],
+    "install_timeout": 600,
+    "note": "GSD engine + gsd-* agents/skills (its /gsd:* command surface ships AS skills, so 0 files in commands/ is correct). Auto-installed best-effort via `npx get-shit-done-cc` when absent (skipped if already present); if it needs interaction, run `npx get-shit-done-cc@latest` yourself, then /gsd-update. Package name is the exact constant get-shit-done-cc (beware typosquats)."
+   }
+  ]
+ },
+ "connectors": [
+  {
+   "id": "higgsfield",
+   "note": "claude.ai connector (OAuth) — add via the claude.ai Connectors UI, NOT the CLI. Frontend asset-generation engine (image/video/3D/audio)."
+  },
+  {
+   "id": "penpot",
+   "note": "claude.ai connector — add via the claude.ai Connectors UI."
+  }
+ ],
+ "externals": [
+  {
+   "id": "gstack",
+   "kind": "git-clone",
+   "path": "skills/gstack",
+   "url": "https://github.com/garrytan/gstack.git",
+   "note": "gstack skill suite (/ship,/qa,/browse,...). Cloned by install.sh on consent; post_steps sync its pointer skills."
+  },
+  {
+   "id": "ast-grep-mcp",
+   "kind": "git-clone",
+   "path": "ast-grep-mcp",
+   "url": "https://github.com/ast-grep/ast-grep-mcp.git",
+   "note": "Powers the optional ast-grep MCP server (settings.json). Run `uv sync` inside after clone."
+  }
+ ],
+ "links": [
+  {
+   "_about": "Skill trees that must be MATERIALIZED as real files (never symlinks) so Windows works. links.materialize() is idempotent verify-or-create."
+  }
+ ],
+ "post_steps": [
+  {
+   "id": "sync-gstack-pointers",
+   "cmd": [
+    "{PYTHON}",
+    "{CLAUDE_DIR}/scripts/sync-gstack-pointers.py"
+   ],
+   "optional": true,
+   "note": "regenerate gstack pointer skills from the clone (trigger parity)."
+  },
+  {
+   "id": "build-skills-index",
+   "cmd": [
+    "{PYTHON}",
+    "{CLAUDE_DIR}/hooks/build-skills-index.py"
+   ],
+   "optional": true,
+   "note": "rebuild the ranked skills catalog."
+  },
+  {
+   "id": "build-trigger-floor",
+   "cmd": [
+    "{PYTHON}",
+    "{CLAUDE_DIR}/hooks/build-trigger-floor.py"
+   ],
+   "optional": true,
+   "note": "rebuild the never-miss trigger floor."
+  },
+  {
+   "id": "gen-agent-skill-blocks",
+   "cmd": [
+    "{PYTHON}",
+    "{CLAUDE_DIR}/hooks/gen-agent-skill-blocks.py"
+   ],
+   "optional": true,
+   "note": "sync agent skill-loading blocks from routing config (drift-proof)."
+  },
+  {
+   "id": "gen-invoke-commands",
+   "cmd": [
+    "{PYTHON}",
+    "{CLAUDE_DIR}/hooks/gen-invoke-commands.py"
+   ],
+   "optional": true,
+   "note": "render /invoke command surface from model-policy + categories."
+  },
+  {
+   "id": "validate-skills",
+   "cmd": [
+    "{PYTHON}",
+    "{CLAUDE_DIR}/scripts/validate_skills.py"
+   ],
+   "note": "R1..R10 incl. R9 floor guard + R10 upstream-intactness (fails the install on a broken catalog or an edited locked skill)."
+  }
+ ],
+ "palette": {
+  "skill_names": 237,
+  "skill_bodies": 205,
+  "aliases": 24,
+  "command_files": 24,
+  "historic_command_names": 139,
+  "_updated": "2026-07-18 routing-100x: +10 first-party skills (pocock x3, vercel x2, anthropic x5)"
+ },
+ "doctor_probes": {
+  "link_doctor": true,
+  "interpreter_check": true,
+  "mcp_roster": [
+   "jcodemunch",
+   "jdocmunch",
+   "graphify",
+   "lean-ctx",
+   "memory",
+   "sequential-thinking",
+   "context7",
+   "fetch",
+   "playwright",
+   "browser-tools-mcp",
+   "markdownify"
+  ],
+  "catalog": [
+   "r9_floor",
+   "r10_provenance",
+   "palette_counts",
+   "zero_symlinks",
+   "command_resolution"
+  ],
+  "model_routing": [
+   "workflow_model_guard_args",
+   "invoke_impl_fable"
+  ]
+ }
 }

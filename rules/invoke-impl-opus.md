@@ -1,44 +1,30 @@
-# /invoke-impl → implementation ALWAYS on Opus
+# Model routing — Fable-first specialists (supersedes "/invoke-impl on Opus")
 
-> Always-on. User directive (2026-07-03): the **IMPLEMENT** suite implements on **Opus
-> only**. An explicit, user-authorized carve-out to the sonnet-by-default policy in
-> CLAUDE.md (§ "Agent tool — REQUIRED prefix"). Scope: implementation work only.
+> Always-on. Standing user directive (2026-07-18): **"use fable for everything"** —
+> all substantive specialist work runs on **Fable**. This file superseded the older
+> /invoke-impl-on-Opus carve-out on 2026-07-18 (backup: `.bak-20260718`).
 
 ## Rule
 
-Any run that loads the **IMPLEMENT** act — the `/invoke-impl` and `/invoke-implementation`
-delegators, and any parametric `/invoke <acts…>` whose act list contains `impl` (plus any
-historic `*impl*` combo name, e.g. `/invoke-spec-plan-impl`, which the router's
-`invoke_compat` translator resolves to the equivalent `/invoke` dispatch) — does its
-implementation on **Opus**:
+- **Fable-pinned agents** (via `model-policy.json → agent_pins.fable`, enforced by
+  `opus-guard.py`): `frontend-uiux-designer`, `implementation-engineer`,
+  `backend-implementor-specialist`, `frontend-implementor-specialist`,
+  `integrator-specialist`. A `[sonnet]`/`[opus]` label on these is auto-corrected to
+  `[fable]`.
+- **Fable-pinned /invoke acts** (via `invoke_categories`): IMPLEMENT, REVIEW, AUDIT,
+  SPEC, PLAN, DEBUG, DESIGN, DOCS, VERIFY — rendered into the generated `/invoke`
+  command by `gen-invoke-commands.py`.
+- **Sonnet remains** for cheap read-only helpers: `Explore`, `claude-code-guide`,
+  lint/docs lookups. Don't burn Fable on a file search.
+- **Implementor routing (Option A, 2026-07-18):** IMPLEMENT surface routing sends
+  frontend→`frontend-implementor-specialist`, backend→`backend-implementor-specialist`
+  (contract-first, emits `IMPL-REPORT-BE.md ## CONTRACT`), mixed→BE→FE→
+  `integrator-specialist` (parity diff + E2E evidence), everything else→
+  `implementation-engineer` (general). Source: `autonomous-skill-router.config.json
+  → categories.IMPLEMENT.surface_routing`.
 
-- Spawn every implementation subagent with an `[opus]` description prefix **and**
-  `model:"opus"`. `opus-guard.py` (PreToolUse, Agent matcher) then pins it to Opus.
-- If the main loop is not on Opus, **delegate** the implementation to an Opus subagent
-  rather than writing it inline on a smaller model.
-- Read-only / non-implementation helpers (search, explore, lint, docs) keep their
-  default (Sonnet). Only the implementation itself is forced to Opus.
+## To change
 
-## Enforcement (self-carrying, survives regeneration)
-
-Single source of truth: `~/.claude/hooks/model-policy.json` →
-`invoke_categories.IMPLEMENT: "opus"` (the one config that owns every model pin — see
-CLAUDE.md § "Agent tool — REQUIRED prefix"). `gen-invoke-commands.py` reads that pin
-and renders a `⚠️ RUNS ON OPUS (mandatory)` callout at the top of the IMPLEMENT block
-of the generated parametric `/invoke` command, so the directive is in front of the agent
-every time an `impl` act runs. (`gen-invoke-commands.py` now reads `model-policy.json`
-directly; the `autonomous-skill-router.config.json` `categories.IMPLEMENT.model` is kept
-equal at `opus` for the still-installed legacy router but is no longer the source of truth.)
-
-To change: edit `invoke_categories` in `hooks/model-policy.json` (NOT the generated
-`.md`) and re-run `python3 ~/.claude/hooks/gen-invoke-commands.py`. Setting any
-category's pin there makes the same callout fire for that category.
-
-> Scope note (P5): the command surface is now the parametric `/invoke <acts…>` (20 files),
-> so the IMPLEMENT-on-Opus carve-out covers `/invoke-impl`, `/invoke-implementation`, and
-> any `/invoke` run whose act list contains `impl`; the retired `*impl*` combo names still
-> resolve via the router's `invoke_compat` translator. The Opus pin itself is unchanged —
-> only the command spelling.
-
-Related: `rules/agent-lifecycle-routing.md`, CLAUDE.md model-routing section,
-`hooks/opus-guard.py`, `hooks/workflow-model-guard.py`, memory `skill-router-full-suites`.
+Edit `hooks/model-policy.json` (`agent_pins`, `invoke_categories`) and re-run
+`python3 ~/.claude/hooks/gen-invoke-commands.py`. Session overrides still win:
+`state/sonnet-only-mode` > `opus-only-mode` > `fable-only-mode`.

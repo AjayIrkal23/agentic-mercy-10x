@@ -1,8 +1,6 @@
 ---
 name: golang-patterns
-description: Use when writing, reviewing, or refactoring Go code to enforce idiomatic patterns, error
-  wrapping, interface design, and concurrency safety. Required for any .go file in a backend service or
-  CLI tool.
+description: "ALWAYS invoke when writing, reviewing, or refactoring Go code to enforce idiomatic patterns, error wrapping, interface design, and concurrency safety. Required for any .go file in a backend service or CLI tool."
 disable-model-invocation: false
 schema: 1
 category: general

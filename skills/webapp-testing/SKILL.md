@@ -1,7 +1,6 @@
 ---
 name: webapp-testing
-description: Use when testing a web application end-to-end in a real browser — driving flows, asserting
-  UI, capturing console/network/performance evidence, and verifying visual output with real runtime data.
+description: "ALWAYS invoke when testing a web application end-to-end in a real browser — driving flows, asserting UI, capturing console/network/performance evidence, and verifying visual output with real runtime data."
 disable-model-invocation: false
 schema: 1
 category: testing

@@ -2,7 +2,7 @@
   "_meta": {
     "purpose": "P5-T14 upstream-locked skill provenance + R10 baseline registry",
     "count": 128,
-    "authority": "plans/SKILL-FATE-2026-07-11.md \u00a71",
+    "authority": "plans/SKILL-FATE-2026-07-11.md §1",
     "note": "Locked skills are NEVER edited; router integration is sidecar-only. R10 (validate_skills.py / doctor / CI) re-hashes and FAILS on any local edit."
   },
   "autoplan": {
@@ -119,8 +119,9 @@
     "sourceType": "vendored",
     "updateCommand": "re-vendor from author release",
     "hashBasis": "content-hash",
-    "baselineHash": "d82d71662a4799e6d083cf0f7ce411503a4b0a8260e77549bd04d30d901d492c",
-    "capturedAt": "2026-07-11"
+    "baselineHash": "1e37460792258501b554619b8395b82e7ed363103b6ca34fa1dfac8c8e575283",
+    "capturedAt": "2026-07-18",
+    "rebaselineNote": "2026-07-18 directive-description rewrite (routing 100x); content otherwise upstream"
   },
   "design-html": {
     "family": "gstack-clone",
@@ -182,8 +183,9 @@
     "sourceType": "skills-cli",
     "updateCommand": "npx skills update",
     "hashBasis": "content-hash",
-    "baselineHash": "7d1bbc434b82bd21e6ea60d28a1a770d9e8f821368737ef6c60861dc64ddb218",
-    "capturedAt": "2026-07-11"
+    "baselineHash": "f2b192d9b378f4d743a44386fc7fe25385ff42e653d3a79aa11cb6a162c32a0d",
+    "capturedAt": "2026-07-18",
+    "rebaselineNote": "2026-07-18 directive-description rewrite (routing 100x); content otherwise upstream"
   },
   "freeze": {
     "family": "gstack-clone",
@@ -889,8 +891,9 @@
     "sourceType": "vendored",
     "updateCommand": "re-vendor from author release",
     "hashBasis": "content-hash",
-    "baselineHash": "dc679f5c5d0c5a34c78b4a9cf4288668c68aa858a948e6e47a16c59e2d1f068d",
-    "capturedAt": "2026-07-11"
+    "baselineHash": "c066848929ecc07fba2d7ccc305cc3301f15d596d5f97f9b2cdf6c4aaf7fcd6d",
+    "capturedAt": "2026-07-18",
+    "rebaselineNote": "2026-07-18 directive-description rewrite (routing 100x); content otherwise upstream"
   },
   "impeccable": {
     "family": "vendored-design",
@@ -898,8 +901,9 @@
     "sourceType": "vendored",
     "updateCommand": "re-vendor from author release",
     "hashBasis": "content-hash",
-    "baselineHash": "a35e5a73b2927c958eee834f59bd1ce0470b960a92e050f8e39b8fc510c77d7a",
-    "capturedAt": "2026-07-11"
+    "baselineHash": "78ab6bae826933885edff7111c78cbacf87f4f2906d1ff63e9c1c7c0d2ecc73c",
+    "capturedAt": "2026-07-18",
+    "rebaselineNote": "2026-07-18 directive-description rewrite (routing 100x); content otherwise upstream"
   },
   "investigate": {
     "family": "gstack-clone",
@@ -1133,8 +1137,9 @@
     "sourceType": "vendored",
     "updateCommand": "re-vendor from author release",
     "hashBasis": "content-hash",
-    "baselineHash": "6037d19798d25d885e84e2789a992c27913a274d6ffb11e00c7df1c90541435e",
-    "capturedAt": "2026-07-11"
+    "baselineHash": "296613ec191f5b1b248d4c472185be0e0028646ec13791daab4246e343ad1c3e",
+    "capturedAt": "2026-07-18",
+    "rebaselineNote": "2026-07-18 directive-description rewrite (routing 100x); content otherwise upstream"
   },
   "ui-ux-pro-max": {
     "family": "vendored-design",
@@ -1142,8 +1147,9 @@
     "sourceType": "vendored",
     "updateCommand": "re-vendor from author release",
     "hashBasis": "content-hash",
-    "baselineHash": "767c8da4c0210e52d8a88014409b80eea390a18178761ea7a3d8a776a493efff",
-    "capturedAt": "2026-07-11"
+    "baselineHash": "02ecf1b48c637ba017645c723824e6b1925ff26d17bc5d82d30ba465adf2d70a",
+    "capturedAt": "2026-07-18",
+    "rebaselineNote": "2026-07-18 directive-description rewrite (routing 100x); content otherwise upstream"
   },
   "unfreeze": {
     "family": "gstack-clone",
@@ -1160,7 +1166,8 @@
     "sourceType": "embedded-git",
     "updateCommand": "rename .git-upstream->.git; git pull; rename .git->.git-upstream",
     "hashBasis": "content-hash",
-    "baselineHash": "71797cdda5444f4935aa98cfc56383b6e72da2e270714ecb806a9e901d89898e",
-    "capturedAt": "2026-07-11"
+    "baselineHash": "4995c9cf4854d251d0e9167d0f0e87ff54d9a2252fd9e88fc5274cdd57dc0aa8",
+    "capturedAt": "2026-07-18",
+    "rebaselineNote": "2026-07-18 directive-description rewrite (routing 100x); content otherwise upstream"
   }
 }

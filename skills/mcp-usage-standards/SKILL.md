@@ -1,8 +1,6 @@
 ---
 name: mcp-usage-standards
-description: Use when MCP selection, evidence scope, or external verification strategy materially affects
-  design, debugging, implementation, or repo analysis. Choose the right MCP and keep evidence retrieval
-  disciplined Use to choose the right MCP, narrow the evidence scope, and avoid unnecessary tool usage.
+description: "ALWAYS invoke when MCP selection, evidence scope, or external verification strategy materially affects design, debugging, implementation, or repo analysis. MUST use to choose the right MCP, narrow the evidence scope, keep evidence retrieval disciplined, and avoid unnecessary tool usage."
 disable-model-invocation: false
 schema: 1
 category: general

@@ -1,6 +1,6 @@
 ---
 name: design-extract
-description: Extract complete design systems from live websites. Use when a reference URL is available to extract tokens, Tailwind config, typography, colors, and component anatomy. Commands: /extract, /grade, /battle, /remix, /pack, /theme-swap, /brand, /pair.
+description: "ALWAYS invoke when a reference URL is available to extract complete design systems from live websites — tokens, Tailwind config, typography, colors, and component anatomy. Commands: /extract, /grade, /battle, /remix, /pack, /theme-swap, /brand, /pair."
 ---
 
 # Extract Design Language

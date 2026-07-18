@@ -1,7 +1,6 @@
 ---
 name: backend-error-handling
-description: Use when defining backend error taxonomy, centralized handler behavior, safe logging, redaction,
-  or client-safe error mapping.
+description: "ALWAYS invoke when defining backend error taxonomy, centralized handler behavior, safe logging, redaction, or client-safe error mapping."
 disable-model-invocation: false
 schema: 1
 category: backend

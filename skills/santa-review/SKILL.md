@@ -1,9 +1,6 @@
 ---
 name: santa-review
-description: The Santa Method — an adversarial BREAKER + SIMPLIFIER + VERIFIER code review that hunts real
-  correctness, data-loss, concurrency, and security bugs in a diff, then self-verifies each finding to kill
-  false positives. Use after any non-trivial code change, before merging, or whenever you want a diff torn
-  apart for real bugs. Preferred entry points are the santa-reviewer agent and the /santa-review command.
+description: "ALWAYS invoke after any non-trivial code change, before merging, or whenever you want a diff torn apart for real bugs — the Santa Method: an adversarial BREAKER + SIMPLIFIER + VERIFIER code review that hunts real correctness, data-loss, concurrency, and security bugs in a diff, then self-verifies each finding to kill false positives. Preferred entry points are the santa-reviewer agent and the /santa-review command."
 schema: 1
 category: review
 surfaces:

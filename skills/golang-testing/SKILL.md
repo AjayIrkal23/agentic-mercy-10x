@@ -1,8 +1,6 @@
 ---
 name: golang-testing
-description: Use when writing or reviewing Go test files, adding table-driven tests, benchmarks, fuzz
-  targets, or reviewing test coverage in a Go service. Apply before any `_test.go` file is created or
-  modified.
+description: "ALWAYS invoke when writing or reviewing Go test files, adding table-driven tests, benchmarks, fuzz targets, or reviewing test coverage in a Go service. MUST apply before any `_test.go` file is created or modified."
 disable-model-invocation: false
 schema: 1
 category: testing

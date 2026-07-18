@@ -91,9 +91,9 @@ def _pushed(cid: str):
             continue
         if r.get("enforce", "hard") != "hard":
             continue
-        # ponytail: only EXPLICIT /invoke-* commands hard-gate the turn. Keyword
-        # auto-router pushes are advisory regardless of any stale enforce=hard flag.
-        if r.get("source") != "invoke-cmd":
+        # /invoke-* commands AND router MUST-READ pushes hard-gate the turn
+        # (2026-07-18 enforcement bridge); other sources stay advisory.
+        if r.get("source") not in ("invoke-cmd", "router"):
             continue
         cats = r.get("categories") or []
         out.append((_dt(r.get("ts")), r.get("skills") or [], cats if isinstance(cats, list) else []))

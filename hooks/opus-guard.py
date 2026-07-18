@@ -84,15 +84,19 @@ def _load_policy() -> dict:
     return _POLICY_CACHE
 
 
-def _agent_sets() -> tuple[set[str], set[str]]:
-    """(sonnet_only_agents, opus_only_agents) from policy, fail-open to literals."""
+def _agent_sets() -> tuple[set[str], set[str], set[str]]:
+    """(sonnet_only, opus_only, fable_only) agent sets from policy, fail-open to literals.
+    2026-07-18: empty opus list in policy is RESPECTED (fable-everything directive) —
+    only a missing/invalid list falls back to the literals."""
     pins = _load_policy().get("agent_pins")
     pins = pins if isinstance(pins, dict) else {}
     opus = pins.get("opus")
     sonnet = pins.get("sonnet")
-    opus_set = {str(a).lower() for a in opus} if isinstance(opus, list) and opus else set(_DEFAULT_OPUS_ONLY_AGENTS)
-    sonnet_set = {str(a).lower() for a in sonnet} if isinstance(sonnet, list) and sonnet else set(_DEFAULT_SONNET_ONLY_AGENTS)
-    return sonnet_set, opus_set
+    fable = pins.get("fable")
+    opus_set = {str(a).lower() for a in opus} if isinstance(opus, list) else set(_DEFAULT_OPUS_ONLY_AGENTS)
+    sonnet_set = {str(a).lower() for a in sonnet} if isinstance(sonnet, list) else set(_DEFAULT_SONNET_ONLY_AGENTS)
+    fable_set = {str(a).lower() for a in fable} if isinstance(fable, list) else set()
+    return sonnet_set, opus_set, fable_set
 
 
 def _flag_paths() -> dict[str, Path]:
@@ -142,7 +146,9 @@ def _resolve_required(subagent_type: str, model: str, description: str) -> tuple
         fp = flag_paths.get(mdl)
         if fp is not None and fp.is_file():
             return mdl, f"{mdl}-only-mode active"
-    sonnet_agents, opus_agents = _agent_sets()
+    sonnet_agents, opus_agents, fable_agents = _agent_sets()
+    if subagent_type in fable_agents:
+        return "fable", f"'{subagent_type}' is a pinned fable agent"
     if subagent_type in opus_agents:
         return "opus", f"'{subagent_type}' is a pinned opus agent"
     if subagent_type in sonnet_agents:

@@ -1,7 +1,6 @@
 ---
 name: workflow-orchestrator
-description: Use when work spans multiple phases, domains, or specialist roles and needs explicit sequencing,
-  ownership, and quality gates across Architect, Code, and Debug modes.
+description: "ALWAYS invoke when work spans multiple phases, domains, or specialist roles and needs explicit sequencing, ownership, and quality gates across Architect, Code, and Debug modes."
 disable-model-invocation: false
 schema: 1
 category: general

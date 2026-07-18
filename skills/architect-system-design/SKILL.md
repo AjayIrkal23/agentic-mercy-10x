@@ -1,7 +1,6 @@
 ---
 name: architect-system-design
-description: Use when the main task is design, decomposition, interface planning, or implementation planning
-  before code changes begin.
+description: "ALWAYS invoke when the main task is design, decomposition, interface planning, or implementation planning — MUST use before code changes begin."
 disable-model-invocation: false
 schema: 1
 category: planning

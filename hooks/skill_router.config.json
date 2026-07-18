@@ -1,482 +1,504 @@
 {
-  "_comment": "Smart Skill Router configuration. Path-ranked skills per write; manifest_mode surfaces full FE/BE lists over the session.",
-  "skills_root": "~/.claude/skills",
-  "manifest_mode": true,
-  "max_primary_skills": 3,
-  "max_primary_skills_by_rule": {
-    "fe_ui_design": 6
-  },
-  "frontend_rules": [
-    {
-      "id": "fe_api",
-      "match": {
-        "path_contains_any": [
-          "/api/",
-          "/api-client",
-          "api.ts",
-          "api.js"
-        ]
-      },
-      "skills": [
-        "frontend-response-handling",
-        "frontend-api-standards",
-        "frontend-server-data-patterns",
-        "owasp-security"
-      ]
-    },
-    {
-      "id": "fe_hooks",
-      "match": {
-        "path_contains_any": [
-          "/src/hooks/",
-          "/hooks/use",
-          "use-",
-          "useHook",
-          ".hook."
-        ],
-        "exclude_paths": [
-          ".claude/hooks",
-          "/.claude/hooks"
-        ]
-      },
-      "skills": [
-        "react-hooks-patterns",
-        "frontend-server-data-patterns",
-        "frontend-standards-always-follow"
-      ]
-    },
-    {
-      "id": "fe_store_redux",
-      "match": {
-        "path_contains_any": [
-          "/store/",
-          "slice.",
-          "reducer.",
-          "redux",
-          "selector."
-        ]
-      },
-      "skills": [
-        "frontend-standards-always-follow",
-        "frontend-structure-standards",
-        "react-hooks-patterns"
-      ]
-    },
-    {
-      "id": "fe_routes",
-      "match": {
-        "path_contains_any": [
-          "/routes/",
-          "/router/",
-          "route.tsx",
-          "route.ts",
-          "routes.ts"
-        ],
-        "exclude_paths": [
-          "UDP_PLATFORM/server",
-          "server/internal"
-        ]
-      },
-      "skills": [
-        "frontend-standards-always-follow",
-        "frontend-structure-standards",
-        "scaffold-standards"
-      ]
-    },
-    {
-      "id": "fe_types",
-      "match": {
-        "path_contains_any": [
-          "src/types/",
-          "src/schemas/"
-        ]
-      },
-      "skills": [
-        "api-contract-standards",
-        "frontend-structure-standards",
-        "frontend-standards-always-follow"
-      ]
-    },
-    {
-      "id": "fe_test",
-      "match": {
-        "path_contains_any": [
-          ".test.",
-          ".spec.",
-          "__tests__",
-          "_test.ts",
-          "_test.tsx"
-        ]
-      },
-      "skills": [
-        "webapp-testing",
-        "browser-testing-with-devtools",
-        "tdd",
-        "frontend-standards-always-follow"
-      ]
-    },
-    {
-      "id": "fe_ui_design",
-      "match": {
-        "path_contains_any": [
-          "/components/",
-          "/layout/",
-          "/pages/",
-          "/views/"
-        ]
-      },
-      "skills": [
-        "impeccable",
-        "huashu-design",
-        "ui-ux-pro-max",
-        "taste-skill",
-        "frontend-ui-engineering",
-        "design-extract"
-      ]
-    },
-    {
-      "id": "fe_review",
-      "match": {
-        "path_contains_any": [
-          "/components/",
-          "/pages/",
-          "/views/",
-          ".tsx",
-          ".jsx"
-        ]
-      },
-      "skills": [
-        "frontend-code-review",
-        "frontend-standards-always-follow",
-        "react-hooks-patterns"
-      ]
-    },
-    {
-      "id": "fe_vite_config",
-      "match": {
-        "filename_contains_any": [
-          "vite",
-          "tsconfig",
-          "eslint",
-          "postcss",
-          "tailwind.config"
-        ]
-      },
-      "skills": [
-        "vite-react-best-practices",
-        "frontend-standards-always-follow",
-        "frontend-structure-standards"
-      ]
-    },
-    {
-      "id": "fe_auth",
-      "match": {
-        "path_contains_any": [
-          "/auth/",
-          "/login/",
-          "/guard/",
-          "protected",
-          "session"
-        ]
-      },
-      "skills": [
-        "security-and-hardening",
-        "frontend-standards-always-follow",
-        "frontend-response-handling"
-      ]
-    },
-    {
-      "id": "fe_component_tsx",
-      "match": {
-        "extensions": [
-          ".tsx",
-          ".jsx"
-        ]
-      },
-      "skills": [
-        "frontend-standards-always-follow",
-        "react-hooks-patterns",
-        "tailwind-design-system"
-      ]
-    },
-    {
-      "id": "fe_default",
-      "match": {
-        "catch_all": true
-      },
-      "skills": [
-        "frontend-standards-always-follow",
-        "frontend-structure-standards",
-        "react-hooks-patterns"
-      ]
-    }
-  ],
-  "backend_rules": [
-    {
-      "id": "be_cursor_infra",
-      "match": {
-        "path_contains_any": [
-          ".claude/hooks/",
-          ".claude/rules/",
-          ".claude/hooks/"
-        ]
-      },
-      "skills": [
-        "tool-and-doc-selection",
-        "dead-code-and-change-audit",
-        "debug-investigation"
-      ]
-    },
-    {
-      "id": "be_go_test",
-      "match": {
-        "filename_contains_any": [
-          "_test.go"
-        ]
-      },
-      "skills": [
-        "golang-testing",
-        "tdd",
-        "backend-standards-always-follow"
-      ]
-    },
-    {
-      "id": "be_controller",
-      "match": {
-        "filename_contains_any": [
-          "controller",
-          ".controller."
-        ]
-      },
-      "skills": [
-        "backend-standards-always-follow",
-        "backend-api-standards",
-        "service-layer-standards"
-      ]
-    },
-    {
-      "id": "be_service",
-      "match": {
-        "filename_contains_any": [
-          "service",
-          ".service."
-        ]
-      },
-      "skills": [
-        "service-layer-standards",
-        "backend-standards-always-follow",
-        "backend-error-handling"
-      ]
-    },
-    {
-      "id": "be_schema",
-      "match": {
-        "filename_contains_any": [
-          "schema",
-          ".schema."
-        ]
-      },
-      "skills": [
-        "backend-standards-always-follow",
-        "backend-api-standards",
-        "scaffold-standards"
-      ]
-    },
-    {
-      "id": "be_model",
-      "match": {
-        "filename_contains_any": [
-          "model",
-          ".model."
-        ],
-        "path_contains_any": [
-          "internal/models/",
-          "/models/"
-        ]
-      },
-      "skills": [
-        "backend-standards-always-follow",
-        "domain-scaffold-patterns",
-        "service-layer-standards"
-      ]
-    },
-    {
-      "id": "be_route",
-      "match": {
-        "filename_contains_any": [
-          "route",
-          "router",
-          ".route."
-        ]
-      },
-      "skills": [
-        "backend-standards-always-follow",
-        "backend-api-standards",
-        "scaffold-standards"
-      ]
-    },
-    {
-      "id": "be_test",
-      "match": {
-        "filename_contains_any": [
-          ".test.",
-          ".spec.",
-          "_test.ts"
-        ]
-      },
-      "skills": [
-        "tdd",
-        "backend-standards-always-follow",
-        "backend-performance-standards"
-      ]
-    },
-    {
-      "id": "be_middleware",
-      "match": {
-        "filename_contains_any": [
-          "middleware",
-          "auth",
-          "guard",
-          "session"
-        ]
-      },
-      "skills": [
-        "security-and-hardening",
-        "backend-standards-always-follow",
-        "backend-error-handling"
-      ]
-    },
-    {
-      "id": "be_migration",
-      "match": {
-        "filename_contains_any": [
-          "migration",
-          "migrate",
-          ".sql"
-        ]
-      },
-      "skills": [
-        "postgres-patterns",
-        "backend-standards-always-follow",
-        "deprecation-and-migration"
-      ]
-    },
-    {
-      "id": "be_contract",
-      "match": {
-        "filename_contains_any": [
-          "contract",
-          "response",
-          "envelope"
-        ]
-      },
-      "skills": [
-        "api-contract-standards",
-        "backend-api-standards",
-        "backend-standards-always-follow"
-      ]
-    },
-    {
-      "id": "be_go_file",
-      "match": {
-        "extensions": [
-          ".go"
-        ]
-      },
-      "skills": [
-        "golang-patterns",
-        "backend-standards-always-follow",
-        "service-layer-standards"
-      ]
-    },
-    {
-      "id": "be_review_perf",
-      "match": {
-        "path_contains_any": [
-          "internal/",
-          "server/",
-          "cmd/"
-        ]
-      },
-      "skills": [
-        "forensic-hotspot-finder",
-        "forensic-complexity-trends",
-        "forensic-debt-quantification",
-        "backend-performance-standards"
-      ]
-    },
-    {
-      "id": "be_debug",
-      "match": {
-        "filename_contains_any": [
-          "debug",
-          "trace",
-          "error"
-        ]
-      },
-      "skills": [
-        "debug-investigation",
-        "doubt-driven-development",
-        "backend-error-handling"
-      ]
-    },
-    {
-      "id": "be_review",
-      "match": {
-        "path_contains_any": [
-          "internal/",
-          "server/",
-          "controller",
-          "service"
-        ],
-        "extensions": [".go", ".ts", ".js"]
-      },
-      "skills": [
-        "backend-code-review",
-        "backend-standards-always-follow",
-        "service-layer-standards"
-      ]
-    },
-    {
-      "id": "be_default",
-      "match": {
-        "catch_all": true
-      },
-      "skills": [
-        "backend-standards-always-follow",
-        "service-layer-standards",
-        "backend-api-standards"
-      ]
-    }
-  ],
-  "cross_cutting": {
-    "always": [
-      "dead-code-and-change-audit"
-    ],
-    "first_write_only": [
-      "architect-system-design",
-      "codebase-start-point-guide",
-      "project-reference-linkage",
-      "project-structure-map",
-      "mcp-usage-standards",
-      "iterative-retrieval"
-    ],
-    "verification": [
-      "verification-loop",
-      "eval-harness"
-    ],
-    "debug": [
-      "doubt-driven-development",
-      "debug-investigation"
-    ],
-    "implementation": [
-      "source-driven-development",
-      "doubt-driven-development"
+ "_comment": "Smart Skill Router configuration. Path-ranked skills per write; manifest_mode surfaces full FE/BE lists over the session.",
+ "skills_root": "~/.claude/skills",
+ "manifest_mode": true,
+ "max_primary_skills": 3,
+ "max_primary_skills_by_rule": {
+  "fe_ui_design": 6
+ },
+ "frontend_rules": [
+  {
+   "id": "fe_api",
+   "match": {
+    "path_contains_any": [
+     "/api/",
+     "/api-client",
+     "api.ts",
+     "api.js"
     ]
+   },
+   "skills": [
+    "frontend-response-handling",
+    "frontend-server-data-patterns",
+    "owasp-security"
+   ]
   },
-  "priority_labels": [
-    "MUST-READ",
-    "SHOULD-READ",
-    "REFERENCE"
+  {
+   "id": "fe_hooks",
+   "match": {
+    "path_contains_any": [
+     "/src/hooks/",
+     "/hooks/use",
+     "use-",
+     "useHook",
+     ".hook."
+    ],
+    "exclude_paths": [
+     ".claude/hooks",
+     "/.claude/hooks"
+    ]
+   },
+   "skills": [
+    "react-hooks-patterns",
+    "frontend-server-data-patterns",
+    "frontend-standards-always-follow"
+   ]
+  },
+  {
+   "id": "fe_store_redux",
+   "match": {
+    "path_contains_any": [
+     "/store/",
+     "slice.",
+     "reducer.",
+     "redux",
+     "selector."
+    ]
+   },
+   "skills": [
+    "frontend-standards-always-follow",
+    "frontend-structure-standards",
+    "react-hooks-patterns"
+   ]
+  },
+  {
+   "id": "fe_routes",
+   "match": {
+    "path_contains_any": [
+     "/routes/",
+     "/router/",
+     "route.tsx",
+     "route.ts",
+     "routes.ts"
+    ],
+    "exclude_paths": [
+     "UDP_PLATFORM/server",
+     "server/internal"
+    ]
+   },
+   "skills": [
+    "frontend-standards-always-follow",
+    "frontend-structure-standards",
+    "scaffold-standards"
+   ]
+  },
+  {
+   "id": "fe_types",
+   "match": {
+    "path_contains_any": [
+     "src/types/",
+     "src/schemas/"
+    ]
+   },
+   "skills": [
+    "api-contract-standards",
+    "frontend-structure-standards",
+    "frontend-standards-always-follow"
+   ]
+  },
+  {
+   "id": "fe_test",
+   "match": {
+    "path_contains_any": [
+     ".test.",
+     ".spec.",
+     "__tests__",
+     "_test.ts",
+     "_test.tsx"
+    ]
+   },
+   "skills": [
+    "webapp-testing",
+    "test-driven-development",
+    "frontend-standards-always-follow"
+   ]
+  },
+  {
+   "id": "fe_ui_design",
+   "match": {
+    "path_contains_any": [
+     "/components/",
+     "/layout/",
+     "/pages/",
+     "/views/"
+    ]
+   },
+   "skills": [
+    "impeccable",
+    "huashu-design",
+    "ui-ux-pro-max",
+    "taste-skill",
+    "frontend-ui-engineering",
+    "design-extract"
+   ]
+  },
+  {
+   "id": "fe_review",
+   "match": {
+    "path_contains_any": [
+     "/components/",
+     "/pages/",
+     "/views/",
+     ".tsx",
+     ".jsx"
+    ]
+   },
+   "skills": [
+    "frontend-code-review",
+    "frontend-standards-always-follow",
+    "react-hooks-patterns"
+   ]
+  },
+  {
+   "id": "fe_vite_config",
+   "match": {
+    "filename_contains_any": [
+     "vite",
+     "tsconfig",
+     "eslint",
+     "postcss",
+     "tailwind.config"
+    ]
+   },
+   "skills": [
+    "vite-react-best-practices",
+    "frontend-standards-always-follow",
+    "frontend-structure-standards"
+   ]
+  },
+  {
+   "id": "fe_auth",
+   "match": {
+    "path_contains_any": [
+     "/auth/",
+     "/login/",
+     "/guard/",
+     "protected",
+     "session"
+    ]
+   },
+   "skills": [
+    "owasp-security",
+    "frontend-standards-always-follow",
+    "frontend-response-handling"
+   ]
+  },
+  {
+   "id": "fe_component_tsx",
+   "match": {
+    "extensions": [
+     ".tsx",
+     ".jsx"
+    ]
+   },
+   "skills": [
+    "frontend-standards-always-follow",
+    "react-hooks-patterns",
+    "tailwind-design-system",
+    "shadcn"
+   ]
+  },
+  {
+   "id": "fe_default",
+   "match": {
+    "catch_all": true
+   },
+   "skills": [
+    "frontend-standards-always-follow",
+    "frontend-structure-standards",
+    "react-hooks-patterns"
+   ]
+  }
+ ],
+ "backend_rules": [
+  {
+   "id": "be_cursor_infra",
+   "match": {
+    "path_contains_any": [
+     ".claude/hooks/",
+     ".claude/rules/",
+     ".claude/hooks/"
+    ]
+   },
+   "skills": [
+    "tool-and-doc-selection",
+    "dead-code-and-change-audit",
+    "debug-investigation"
+   ]
+  },
+  {
+   "id": "be_go_test",
+   "match": {
+    "filename_contains_any": [
+     "_test.go"
+    ]
+   },
+   "skills": [
+    "golang-testing",
+    "test-driven-development",
+    "backend-standards-always-follow"
+   ]
+  },
+  {
+   "id": "be_controller",
+   "match": {
+    "filename_contains_any": [
+     "controller",
+     ".controller."
+    ]
+   },
+   "skills": [
+    "backend-standards-always-follow",
+    "backend-api-standards",
+    "service-layer-standards"
+   ]
+  },
+  {
+   "id": "be_service",
+   "match": {
+    "filename_contains_any": [
+     "service",
+     ".service."
+    ]
+   },
+   "skills": [
+    "service-layer-standards",
+    "backend-standards-always-follow",
+    "backend-error-handling"
+   ]
+  },
+  {
+   "id": "be_schema",
+   "match": {
+    "filename_contains_any": [
+     "schema",
+     ".schema."
+    ]
+   },
+   "skills": [
+    "backend-standards-always-follow",
+    "backend-api-standards",
+    "scaffold-standards"
+   ]
+  },
+  {
+   "id": "be_model",
+   "match": {
+    "filename_contains_any": [
+     "model",
+     ".model."
+    ],
+    "path_contains_any": [
+     "internal/models/",
+     "/models/"
+    ]
+   },
+   "skills": [
+    "backend-standards-always-follow",
+    "domain-scaffold-patterns",
+    "service-layer-standards"
+   ]
+  },
+  {
+   "id": "be_route",
+   "match": {
+    "filename_contains_any": [
+     "route",
+     "router",
+     ".route."
+    ]
+   },
+   "skills": [
+    "backend-standards-always-follow",
+    "backend-api-standards",
+    "scaffold-standards"
+   ]
+  },
+  {
+   "id": "be_test",
+   "match": {
+    "filename_contains_any": [
+     ".test.",
+     ".spec.",
+     "_test.ts"
+    ]
+   },
+   "skills": [
+    "test-driven-development",
+    "backend-standards-always-follow",
+    "backend-performance-standards"
+   ]
+  },
+  {
+   "id": "be_middleware",
+   "match": {
+    "filename_contains_any": [
+     "middleware",
+     "auth",
+     "guard",
+     "session"
+    ]
+   },
+   "skills": [
+    "owasp-security",
+    "backend-standards-always-follow",
+    "backend-error-handling"
+   ]
+  },
+  {
+   "id": "be_migration",
+   "match": {
+    "filename_contains_any": [
+     "migration",
+     "migrate",
+     ".sql"
+    ]
+   },
+   "skills": [
+    "postgres-patterns",
+    "backend-standards-always-follow",
+    "deprecation-and-migration"
+   ]
+  },
+  {
+   "id": "be_contract",
+   "match": {
+    "filename_contains_any": [
+     "contract",
+     "response",
+     "envelope"
+    ]
+   },
+   "skills": [
+    "api-contract-standards",
+    "backend-api-standards",
+    "backend-standards-always-follow"
+   ]
+  },
+  {
+   "id": "be_go_file",
+   "match": {
+    "extensions": [
+     ".go"
+    ]
+   },
+   "skills": [
+    "golang-patterns",
+    "backend-standards-always-follow",
+    "service-layer-standards"
+   ]
+  },
+  {
+   "id": "be_review_perf",
+   "match": {
+    "path_contains_any": [
+     "internal/",
+     "server/",
+     "cmd/"
+    ]
+   },
+   "skills": [
+    "tech-debt-audit",
+    "backend-performance-standards"
+   ]
+  },
+  {
+   "id": "be_debug",
+   "match": {
+    "filename_contains_any": [
+     "debug",
+     "trace",
+     "error"
+    ]
+   },
+   "skills": [
+    "debug-investigation",
+    "doubt-driven-development",
+    "backend-error-handling"
+   ]
+  },
+  {
+   "id": "be_review",
+   "match": {
+    "path_contains_any": [
+     "internal/",
+     "server/",
+     "controller",
+     "service"
+    ],
+    "extensions": [
+     ".go",
+     ".ts",
+     ".js"
+    ]
+   },
+   "skills": [
+    "backend-code-review",
+    "backend-standards-always-follow",
+    "service-layer-standards"
+   ]
+  },
+  {
+   "id": "be_default",
+   "match": {
+    "catch_all": true
+   },
+   "skills": [
+    "backend-standards-always-follow",
+    "service-layer-standards",
+    "backend-api-standards"
+   ]
+  },
+  {
+   "id": "ci_files",
+   "match": {
+    "path_contains_any": [
+     ".github/workflows",
+     "dockerfile",
+     ".gitlab-ci",
+     ".circleci",
+     "jenkinsfile"
+    ]
+   },
+   "skills": [
+    "ci-cd-and-automation",
+    "shipping-and-launch"
+   ],
+   "_new": "2026-07-18"
+  }
+ ],
+ "cross_cutting": {
+  "always": [
+   "dead-code-and-change-audit"
+  ],
+  "first_write_only": [
+   "architect-system-design",
+   "codebase-start-point-guide",
+   "project-reference-linkage",
+   "project-structure-map",
+   "mcp-usage-standards",
+   "iterative-retrieval",
+   "codebase-intel-first",
+   "dox-doc-tree",
+   "graphify"
+  ],
+  "verification": [
+   "verification-loop",
+   "eval-harness",
+   "update-docs"
+  ],
+  "debug": [
+   "doubt-driven-development",
+   "debug-investigation"
+  ],
+  "implementation": [
+   "source-driven-development",
+   "doubt-driven-development"
   ]
+ },
+ "priority_labels": [
+  "MUST-READ",
+  "SHOULD-READ",
+  "REFERENCE"
+ ]
 }
