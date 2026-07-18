@@ -135,3 +135,8 @@ graphify-out/
 # trigger-parity harness output (run_fixtures / run_session write per-run jsonl;
 # the real fixtures are _FIXTURES in hooks/tools/trigger-parity-diff.py)
 telemetry/**/*.jsonl
+
+# personal uploads + ephemeral agent inboxes — never publish (repo is public)
+uploads/
+teams/*/inboxes/
+teams/*/config.json

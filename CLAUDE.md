@@ -27,6 +27,20 @@ Every `Agent` call's `description` field **MUST** start with `[sonnet] `, `[opus
 - **`opus-guard.py`** (PreToolUse, `Agent` matcher) PINS the `model` param: `[opus]`/UI-UX agent → `opus`; `[fable]`/`model:fable` → `fable`; everything else → `sonnet`. Auto-corrects a missing/wrong prefix via `updatedInput` (never denies).
 - **`workflow-model-guard.py`** (PreToolUse, `Workflow` matcher) rewrites each inline-workflow `agent()` call so it DEFAULTS to `sonnet` (UI/UX `agentType` → opus) unless the call passes an explicit `model`. This is what stops **workflow** subagents from inheriting the Opus parent (the main historical token burn). Workflows run from `scriptPath`/`name` are advised, not rewritten — pass an explicit `model` to each `agent()` there.
 
+**ALSO REQUIRED — the model must appear in the agent `name`, not just the description.**
+`description` carries the `[opus]`/`[sonnet]`/`[fable]` label (opus-guard rewrites this field).
+`name` is what renders in the agent list / sidebar, and **no hook touches it** — you must write it
+yourself. `name` is validated against `^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`, so brackets and spaces are
+ILLEGAL there: the model goes in as a trailing bare segment.
+
+- Correct: `name="impl-crud-opus"`, `name="spec-ingestion-fable"`, `name="audit-routes-sonnet"`.
+- Wrong: `name="[opus]impl-crud"` (rejected by the regex), `name="impl-crud"` (model missing).
+- Always pass BOTH: `Agent(name="impl-crud-opus", description="[opus] Implement the CRUD page", model="opus", …)`.
+
+Applies to every Agent call — parallel fan-outs, background agents, and single dispatches alike. When a
+session flag (`opus-only-mode` etc.) forces the tier, the `name` suffix and `description` label must both
+reflect the model that will ACTUALLY run, not the one you originally intended.
+
 **Still write the prefix/model yourself** so the choice stays explicit — the hooks are the safety net.
 
 **Session overrides (flag files in `~/.claude/state/`), honored by BOTH hooks:** `touch sonnet-only-mode` forces *every* subagent (and workflow agent) to Sonnet (kill-switch, wins over all else); `touch opus-only-mode` → all Opus; `touch fable-only-mode` → all Fable; `rm` the flag to return to smart routing. User phrases: "all sonnet / cheap mode" → sonnet flag; "all opus" → opus flag; "all fable" → fable flag; "back to normal / smart routing" → remove flags. See [[feedback_subagent_model_routing]].
@@ -145,6 +159,8 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
     - [`hooks/prompt_router/modules/`](hooks/prompt_router/modules/CLAUDE.md)
   - [`hooks/tests/`](hooks/tests/CLAUDE.md)
   - [`hooks/tools/`](hooks/tools/CLAUDE.md)
+- [`image-cache/`](image-cache/CLAUDE.md)
+  - [`image-cache/b86608fd-8906-41f6-8ceb-802b9dbf25f1/`](image-cache/b86608fd-8906-41f6-8ceb-802b9dbf25f1/CLAUDE.md)
 - [`installer/`](installer/CLAUDE.md)
 - [`memory/`](memory/CLAUDE.md)
 - [`plans/`](plans/CLAUDE.md)
@@ -153,12 +169,19 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
 - [`shell-snapshots/`](shell-snapshots/CLAUDE.md)
 - [`state/`](state/CLAUDE.md)
 - [`teams/`](teams/CLAUDE.md)
-  - [`teams/session-99a224a0/`](teams/session-99a224a0/CLAUDE.md)
+  - [`teams/session-3ff4a5fc/`](teams/session-3ff4a5fc/CLAUDE.md)
+    - [`teams/session-3ff4a5fc/inboxes/`](teams/session-3ff4a5fc/inboxes/CLAUDE.md)
+  - [`teams/session-b86608fd/`](teams/session-b86608fd/CLAUDE.md)
+  - [`teams/session-c456ad7d/`](teams/session-c456ad7d/CLAUDE.md)
+    - [`teams/session-c456ad7d/inboxes/`](teams/session-c456ad7d/inboxes/CLAUDE.md)
 - [`telemetry/`](telemetry/CLAUDE.md)
 - [`templates/`](templates/CLAUDE.md)
 - [`tests/`](tests/CLAUDE.md)
   - [`tests/fixtures/`](tests/fixtures/CLAUDE.md)
     - [`tests/fixtures/hook-events/`](tests/fixtures/hook-events/CLAUDE.md)
+- [`uploads/`](uploads/CLAUDE.md)
+  - [`uploads/b86608fd-8906-41f6-8ceb-802b9dbf25f1/`](uploads/b86608fd-8906-41f6-8ceb-802b9dbf25f1/CLAUDE.md)
+  - [`uploads/c456ad7d-af35-47d1-bcfd-1a7539f1261f/`](uploads/c456ad7d-af35-47d1-bcfd-1a7539f1261f/CLAUDE.md)
 <!-- dox:index:end -->
 
 ## Coding Guidelines (Karpathy)
