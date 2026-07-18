@@ -118,6 +118,8 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
 <!-- dox auto-syncs this block from the tree on disk; edit directories, not these lines -->
 - [`assets/`](assets/CLAUDE.md)
 - [`docs/`](docs/CLAUDE.md)
+  - [`docs/audits/`](docs/audits/CLAUDE.md)
+- [`double-shot-latte/`](double-shot-latte/CLAUDE.md)
 - [`get-shit-done/`](get-shit-done/CLAUDE.md)
   - [`get-shit-done/contexts/`](get-shit-done/contexts/CLAUDE.md)
   - [`get-shit-done/references/`](get-shit-done/references/CLAUDE.md)
@@ -143,8 +145,6 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
     - [`hooks/prompt_router/modules/`](hooks/prompt_router/modules/CLAUDE.md)
   - [`hooks/tests/`](hooks/tests/CLAUDE.md)
   - [`hooks/tools/`](hooks/tools/CLAUDE.md)
-- [`image-cache/`](image-cache/CLAUDE.md)
-  - [`image-cache/21641827-2609-4096-a490-74a1aad02940/`](image-cache/21641827-2609-4096-a490-74a1aad02940/CLAUDE.md)
 - [`installer/`](installer/CLAUDE.md)
 - [`memory/`](memory/CLAUDE.md)
 - [`plans/`](plans/CLAUDE.md)
