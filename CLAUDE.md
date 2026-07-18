@@ -27,19 +27,26 @@ Every `Agent` call's `description` field **MUST** start with `[sonnet] `, `[opus
 - **`opus-guard.py`** (PreToolUse, `Agent` matcher) PINS the `model` param: `[opus]`/UI-UX agent → `opus`; `[fable]`/`model:fable` → `fable`; everything else → `sonnet`. Auto-corrects a missing/wrong prefix via `updatedInput` (never denies).
 - **`workflow-model-guard.py`** (PreToolUse, `Workflow` matcher) rewrites each inline-workflow `agent()` call so it DEFAULTS to `sonnet` (UI/UX `agentType` → opus) unless the call passes an explicit `model`. This is what stops **workflow** subagents from inheriting the Opus parent (the main historical token burn). Workflows run from `scriptPath`/`name` are advised, not rewritten — pass an explicit `model` to each `agent()` there.
 
-**ALSO REQUIRED — the model must appear in the agent `name`, not just the description.**
-`description` carries the `[opus]`/`[sonnet]`/`[fable]` label (opus-guard rewrites this field).
-`name` is what renders in the agent list / sidebar, and **no hook touches it** — you must write it
-yourself. `name` is validated against `^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$`, so brackets and spaces are
-ILLEGAL there: the model goes in as a trailing bare segment.
+**ALSO REQUIRED — the model appears in the agent `name`, not just the description.**
+Applies to **every model equally** (`sonnet`, `opus`, `fable`) — this is not an Opus-only rule.
+`description` carries the `[sonnet]`/`[opus]`/`[fable]` label; `name` is what the agent
+list/sidebar renders. **`opus-guard.py` now normalizes BOTH fields**, so the two can never
+disagree with the model that actually runs.
 
-- Correct: `name="impl-crud-opus"`, `name="spec-ingestion-fable"`, `name="audit-routes-sonnet"`.
-- Wrong: `name="[opus]impl-crud"` (rejected by the regex), `name="impl-crud"` (model missing).
-- Always pass BOTH: `Agent(name="impl-crud-opus", description="[opus] Implement the CRUD page", model="opus", …)`.
+`name` is validated against `^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$` — brackets and spaces are
+ILLEGAL there, so the model goes in as a trailing bare segment (the bracketed form is the
+`description`'s job):
 
-Applies to every Agent call — parallel fan-outs, background agents, and single dispatches alike. When a
-session flag (`opus-only-mode` etc.) forces the tier, the `name` suffix and `description` label must both
-reflect the model that will ACTUALLY run, not the one you originally intended.
+- Correct: `name="impl-crud-opus"` + `description="[opus] Implement the CRUD page"`.
+- Correct: `name="map-flow-sonnet"` / `name="spec-ingestion-fable"`.
+- Wrong: `name="[opus]impl-crud"` — rejected by the regex.
+
+Write all three yourself — `Agent(name="impl-crud-opus", description="[opus] Implement the
+CRUD page", model="opus", …)`. The guard is the safety net, not the author: it re-suffixes a
+stale model (`map-flow-fable` → `map-flow-sonnet`), never stacks suffixes, caps at 64 chars,
+and reports the final name in its note — **address `SendMessage` to that normalized name.**
+When a session flag (`sonnet-only-mode`/`opus-only-mode`/`fable-only-mode`) forces the tier,
+both the suffix and the label follow the forced model, not the one you intended.
 
 **Still write the prefix/model yourself** so the choice stays explicit — the hooks are the safety net.
 

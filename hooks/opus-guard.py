@@ -135,6 +135,30 @@ def _allow_unchanged() -> int:
     return 0
 
 
+NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
+MODEL_SUFFIX_RE = re.compile(r"[-_](sonnet|opus|fable|haiku)$", re.I)
+NAME_MAX = 64
+
+
+def _normalize_name(name: str, required: str) -> str | None:
+    """Append the resolved model as a trailing bare segment: impl-crud -> impl-crud-opus.
+
+    `name` is validated by the Agent tool against ^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$, so a
+    bracketed [opus] label is ILLEGAL here (that form belongs in `description`). Returns
+    None when there is nothing to change or the result would be invalid — idempotent, so
+    re-running never stacks suffixes.
+    """
+    if not name:
+        return None
+    base = MODEL_SUFFIX_RE.sub("", name)
+    if len(base) + len(required) + 1 > NAME_MAX:
+        base = base[: NAME_MAX - len(required) - 1].rstrip("-_")
+    candidate = f"{base}-{required}"
+    if candidate == name or not NAME_RE.match(candidate):
+        return None
+    return candidate
+
+
 def _resolve_required(subagent_type: str, model: str, description: str) -> tuple[str, str]:
     """Return (required_model, reason). Resolution order (unchanged from the literals,
     now sourced from model-policy.json with fail-open):
@@ -191,6 +215,12 @@ def main() -> int:
     # ALWAYS pin the model explicitly so an unset model never inherits the Opus parent.
     if model != required:
         updated["model"] = required
+    # Align the agent NAME too — it is what the agent list/sidebar renders, and nothing
+    # else writes it. Bracket labels are invalid in `name`, so the model goes in as a
+    # trailing segment.
+    new_name = _normalize_name(tool_input.get("name", "") or "", required)
+    if new_name:
+        updated["name"] = new_name
 
     if not updated:
         return _allow_unchanged()
@@ -208,6 +238,11 @@ def main() -> int:
         "fable-only-mode). Write the [sonnet]/[opus]/[fable] prefix yourself to keep "
         "routing explicit."
     )
+    if "name" in updated:
+        note += (
+            f" Agent name normalized to '{updated['name']}' so the model is visible in "
+            "the agent list — address SendMessage to THAT name."
+        )
 
     print(json.dumps({
         "hookSpecificOutput": {

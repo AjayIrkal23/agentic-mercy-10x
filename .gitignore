@@ -140,3 +140,4 @@ telemetry/**/*.jsonl
 uploads/
 teams/*/inboxes/
 teams/*/config.json
+hooks/*.bak-*
