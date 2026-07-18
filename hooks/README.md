@@ -51,16 +51,16 @@ but gates and mandatory-trigger advisories are never dropped. The
 (tier-0 gate-adjacent directives first) — the win is dedup + signal quality + one
 subprocess, not raw shrinkage.
 
-## Prompt router + trigger floor (shadow window)
+## Prompt router + trigger floor (router LIVE)
 
-`user-prompt-submit` currently runs the **legacy injector set + `prompt_router/
-router.py --shadow`** in parallel (the 30-day zero-miss shadow window, Charter §2).
+`user-prompt-submit` runs **`prompt_router/router.py` LIVE** (user-directed flip
+2026-07-12; the legacy injector set is retained only for flip-back).
 The router classifies once → ranks skills → priority-orders under the 24k budget →
 dedups via the session manifest. Its trigger surface is a **verbatim superset** of
 all four legacy taxonomies, frozen in **`hooks/trigger-floor.json`** (checksum-
 guarded; `build-trigger-floor.py --check` runs in CI — removals are impossible to
-merge). Cutover to router-only is `scripts/flip-dispatch.py --router`, gated on
-`plans/P1-shadow-parity.md` showing 0 misses over ≥10 real sessions.
+merge). Cutover to router-only happened 2026-07-12 via `scripts/flip-router.py --router`;
+flip back with `scripts/flip-router.py --legacy` if a regression appears.
 
 ## Flip / revert (one command each)
 

@@ -1,19 +1,38 @@
 #!/usr/bin/env node
 // gsd-hook-version: 1.42.3
-// Context Monitor - PostToolUse hook
-// Reads context metrics from the statusline bridge file and injects warnings.
+// Context Monitor - PostToolUse/AfterTool hook (Gemini uses AfterTool)
+// Reads context metrics from the statusline bridge file and injects
+// warnings when context usage is high. This makes the AGENT aware of
+// context limits (the statusline only shows the user).
+//
+// How it works:
+// 1. The statusline hook writes metrics to /tmp/claude-ctx-{session_id}.json
+// 2. This hook reads those metrics after each tool use
+// 3. When remaining context drops below thresholds, it injects a warning
+//    as additionalContext, which the agent sees in its conversation
+//
+// Thresholds:
+//   WARNING  (remaining <= 35%): Agent should wrap up current task
+//   CRITICAL (remaining <= 25%): Agent should stop immediately and save state
+//
+// Debounce: 5 tool uses between warnings to avoid spam
+// Severity escalation bypasses debounce (WARNING -> CRITICAL fires immediately)
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { spawn } = require('child_process');
-const { sessionId, ctxBridgePath, emitPostContext } = require('./lib/gsd-hook-io');
 
-const WARNING_THRESHOLD = 35;
-const CRITICAL_THRESHOLD = 25;
-const STALE_SECONDS = 60;
-const DEBOUNCE_CALLS = 5;
+const WARNING_THRESHOLD = 35;  // remaining_percentage <= 35%
+const CRITICAL_THRESHOLD = 25; // remaining_percentage <= 25%
+const STALE_SECONDS = 60;      // ignore metrics older than 60s
+const DEBOUNCE_CALLS = 5;      // min tool uses between warnings
 
 let input = '';
+// Timeout guard: if stdin doesn't close within 10s (e.g. pipe issues on
+// Windows/Git Bash, or slow Claude Code piping during large outputs),
+// exit silently instead of hanging until Claude Code kills the process
+// and reports "hook error". See #775, #1162.
 const stdinTimeout = setTimeout(() => process.exit(0), 10000);
 process.stdin.setEncoding('utf8');
 process.stdin.on('data', chunk => input += chunk);
@@ -21,33 +40,39 @@ process.stdin.on('end', () => {
   clearTimeout(stdinTimeout);
   try {
     const data = JSON.parse(input);
-    const sid = sessionId(data);
+    const sessionId = data.session_id;
 
-    if (!sid) {
+    if (!sessionId) {
       process.exit(0);
     }
 
-    if (/[/\\]|\.\./.test(sid)) {
+    // Reject session IDs that contain path traversal sequences or path separators.
+    // session_id is used to construct file paths in /tmp — an unsanitized value
+    // could escape the temp directory and read or write arbitrary files.
+    if (/[/\\]|\.\./.test(sessionId)) {
       process.exit(0);
     }
 
+    // Check if context warnings are disabled via config.
+    // Quick sentinel check: skip config read entirely for non-GSD projects (#P2.5).
     const cwd = data.cwd || process.cwd();
     const planningDir = path.join(cwd, '.planning');
-    if (!fs.existsSync(planningDir)) {
-      process.exit(0);
-    }
-    try {
-      const configPath = path.join(planningDir, 'config.json');
-      const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-      if (config.hooks?.context_warnings === false) {
-        process.exit(0);
+    if (fs.existsSync(planningDir)) {
+      try {
+        const configPath = path.join(planningDir, 'config.json');
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+        if (config.hooks?.context_warnings === false) {
+          process.exit(0);
+        }
+      } catch (e) {
+        // Ignore config read/parse errors (config may not exist in .planning/)
       }
-    } catch (e) {
-      // Ignore config read/parse errors
     }
 
-    const metricsPath = ctxBridgePath(sid);
+    const tmpDir = os.tmpdir();
+    const metricsPath = path.join(tmpDir, `claude-ctx-${sessionId}.json`);
 
+    // If no metrics file, this is a subagent or fresh session -- exit silently
     if (!fs.existsSync(metricsPath)) {
       process.exit(0);
     }
@@ -55,6 +80,7 @@ process.stdin.on('end', () => {
     const metrics = JSON.parse(fs.readFileSync(metricsPath, 'utf8'));
     const now = Math.floor(Date.now() / 1000);
 
+    // Ignore stale metrics
     if (metrics.timestamp && (now - metrics.timestamp) > STALE_SECONDS) {
       process.exit(0);
     }
@@ -62,11 +88,13 @@ process.stdin.on('end', () => {
     const remaining = metrics.remaining_percentage;
     const usedPct = metrics.used_pct;
 
+    // No warning needed
     if (remaining > WARNING_THRESHOLD) {
       process.exit(0);
     }
 
-    const warnPath = ctxBridgePath(`${sid}-warned`);
+    // Debounce: check if we warned recently
+    const warnPath = path.join(tmpDir, `claude-ctx-${sessionId}-warned.json`);
     let warnData = { callsSinceWarn: 0, lastLevel: null };
     let firstWarn = true;
 
@@ -84,29 +112,36 @@ process.stdin.on('end', () => {
     const isCritical = remaining <= CRITICAL_THRESHOLD;
     const currentLevel = isCritical ? 'critical' : 'warning';
 
+    // Emit immediately on first warning, then debounce subsequent ones
+    // Severity escalation (WARNING -> CRITICAL) bypasses debounce
     const severityEscalated = currentLevel === 'critical' && warnData.lastLevel === 'warning';
     if (!firstWarn && warnData.callsSinceWarn < DEBOUNCE_CALLS && !severityEscalated) {
+      // Update counter and exit without warning
       fs.writeFileSync(warnPath, JSON.stringify(warnData));
       process.exit(0);
     }
 
+    // Reset debounce counter
     warnData.callsSinceWarn = 0;
     warnData.lastLevel = currentLevel;
     fs.writeFileSync(warnPath, JSON.stringify(warnData));
 
+    // Detect if GSD is active (has .planning/STATE.md in working directory)
     const isGsdActive = fs.existsSync(path.join(cwd, '.planning', 'STATE.md'));
 
+    // On CRITICAL with active GSD project, auto-record session state as a
+    // breadcrumb for /gsd:resume-work (#1974). Fire-and-forget subprocess —
+    // doesn't block the hook or the agent. Fires ONCE per CRITICAL session,
+    // guarded by warnData.criticalRecorded to prevent repeated overwrites
+    // of the "crash moment" record on every debounce cycle.
     if (isCritical && isGsdActive && !warnData.criticalRecorded) {
       try {
-        function findGsdTools(base) {
-          for (const dir of ['.claude']) {
-            const p = path.join(base, dir, 'get-shit-done', 'bin', 'gsd-tools.cjs');
-            if (fs.existsSync(p)) return p;
-          }
-          return null;
-        }
-        const gsdTools = findGsdTools(cwd) || findGsdTools(require('os').homedir());
-        if (!gsdTools) throw new Error('gsd-tools not found');
+        // Runtime-agnostic path: this hook lives at <runtime-config>/hooks/
+        // and gsd-tools.cjs lives at <runtime-config>/get-shit-done/bin/.
+        // Using __dirname makes this work on Claude Code, OpenCode, Gemini,
+        // Kilo, etc. without hardcoding ~/.claude/.
+        const gsdTools = path.join(__dirname, '..', 'get-shit-done', 'bin', 'gsd-tools.cjs');
+        // Coerce usedPct to a safe number in case bridge file is malformed
         const safeUsedPct = Number(usedPct) || 0;
         const stoppedAt = `context exhaustion at ${safeUsedPct}% (${new Date().toISOString().split('T')[0]})`;
         spawn(
@@ -115,10 +150,13 @@ process.stdin.on('end', () => {
           { cwd, detached: true, stdio: 'ignore' }
         ).unref();
         warnData.criticalRecorded = true;
+        // Persist the sentinel so subsequent debounce cycles don't re-fire
         fs.writeFileSync(warnPath, JSON.stringify(warnData));
-      } catch { /* non-critical */ }
+      } catch { /* non-critical — don't let state recording break the hook */ }
     }
 
+    // Build advisory warning message (never use imperative commands that
+    // override user preferences — see #884)
     let message;
     if (isCritical) {
       message = isGsdActive
@@ -139,8 +177,16 @@ process.stdin.on('end', () => {
           'starting new complex work.';
     }
 
-    emitPostContext(message);
+    const output = {
+      hookSpecificOutput: {
+        hookEventName: process.env.GEMINI_API_KEY ? "AfterTool" : "PostToolUse",
+        additionalContext: message
+      }
+    };
+
+    process.stdout.write(JSON.stringify(output));
   } catch (e) {
+    // Silent fail -- never block tool execution
     process.exit(0);
   }
 });

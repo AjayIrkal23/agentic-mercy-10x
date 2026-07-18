@@ -49,7 +49,7 @@ triggers:
 
 MCP routing for this machine is driven by **`~/.claude/settings.json`**. Load this skill when tool choice materially affects correctness, evidence, or verification — not for routine single-file edits with obvious local answers.
 
-Canonical quick table: **`~/.claude/rules/user-mcp-inventory.md`**.
+Canonical quick table: **`~/.claude/rules/user-mcp-inventory.mdc`**.
 
 ## Active MCP registry (`~/.claude/settings.json`)
 

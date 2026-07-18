@@ -116,13 +116,8 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
 > overwritten** — the engine only CREATES missing files and re-syncs the root
 > `<!-- dox:index:start -->
 <!-- dox auto-syncs this block from the tree on disk; edit directories, not these lines -->
-- [`agent-memory/`](agent-memory/CLAUDE.md)
 - [`assets/`](assets/CLAUDE.md)
-- [`ast-grep-mcp/`](ast-grep-mcp/CLAUDE.md)
-  - [`ast-grep-mcp/tests/`](ast-grep-mcp/tests/CLAUDE.md)
-    - [`ast-grep-mcp/tests/fixtures/`](ast-grep-mcp/tests/fixtures/CLAUDE.md)
 - [`docs/`](docs/CLAUDE.md)
-- [`double-shot-latte/`](double-shot-latte/CLAUDE.md)
 - [`get-shit-done/`](get-shit-done/CLAUDE.md)
   - [`get-shit-done/contexts/`](get-shit-done/contexts/CLAUDE.md)
   - [`get-shit-done/references/`](get-shit-done/references/CLAUDE.md)
@@ -136,17 +131,46 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
       - [`get-shit-done/workflows/discuss-phase/templates/`](get-shit-done/workflows/discuss-phase/templates/CLAUDE.md)
     - [`get-shit-done/workflows/execute-phase/`](get-shit-done/workflows/execute-phase/CLAUDE.md)
       - [`get-shit-done/workflows/execute-phase/steps/`](get-shit-done/workflows/execute-phase/steps/CLAUDE.md)
-- [`gsd-migration-journal/`](gsd-migration-journal/CLAUDE.md)
+- [`gsd-local-patches/`](gsd-local-patches/CLAUDE.md)
+  - [`gsd-local-patches/agents/`](gsd-local-patches/agents/CLAUDE.md)
+  - [`gsd-local-patches/hooks/`](gsd-local-patches/hooks/CLAUDE.md)
+- [`gsd-pristine/`](gsd-pristine/CLAUDE.md)
+  - [`gsd-pristine/agents/`](gsd-pristine/agents/CLAUDE.md)
+  - [`gsd-pristine/hooks/`](gsd-pristine/hooks/CLAUDE.md)
 - [`hooks/`](hooks/CLAUDE.md)
   - [`hooks/lib/`](hooks/lib/CLAUDE.md)
+  - [`hooks/prompt_router/`](hooks/prompt_router/CLAUDE.md)
+    - [`hooks/prompt_router/modules/`](hooks/prompt_router/modules/CLAUDE.md)
+  - [`hooks/tests/`](hooks/tests/CLAUDE.md)
+  - [`hooks/tools/`](hooks/tools/CLAUDE.md)
+- [`image-cache/`](image-cache/CLAUDE.md)
+  - [`image-cache/21641827-2609-4096-a490-74a1aad02940/`](image-cache/21641827-2609-4096-a490-74a1aad02940/CLAUDE.md)
+- [`installer/`](installer/CLAUDE.md)
+- [`memory/`](memory/CLAUDE.md)
 - [`plans/`](plans/CLAUDE.md)
 - [`rules/`](rules/CLAUDE.md)
+- [`scripts/`](scripts/CLAUDE.md)
 - [`shell-snapshots/`](shell-snapshots/CLAUDE.md)
 - [`state/`](state/CLAUDE.md)
 - [`telemetry/`](telemetry/CLAUDE.md)
 - [`templates/`](templates/CLAUDE.md)
+- [`tests/`](tests/CLAUDE.md)
+  - [`tests/fixtures/`](tests/fixtures/CLAUDE.md)
+    - [`tests/fixtures/hook-events/`](tests/fixtures/hook-events/CLAUDE.md)
 <!-- dox:index:end -->
 
 ## Coding Guidelines (Karpathy)
 
 Invoke `andrej-karpathy-skills:karpathy-guidelines` for the full behavioral checklist (4 rules: Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution). That skill is the single source of truth — do not restate here.
+
+## gstack
+
+Use the `/browse` skill from gstack for all web browsing. Never use
+`mcp__claude-in-chrome__*` tools. Available gstack skills: /office-hours,
+/plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation,
+/design-shotgun, /design-html, /review, /ship, /land-and-deploy, /canary,
+/benchmark, /browse, /connect-chrome, /qa, /qa-only, /design-review,
+/setup-browser-cookies, /setup-deploy, /setup-gbrain, /retro, /investigate,
+/document-release, /document-generate, /codex, /cso, /autoplan,
+/plan-devex-review, /devex-review, /careful, /freeze, /guard, /unfreeze,
+/gstack-upgrade, /learn.

@@ -28,20 +28,20 @@ const RATE_LIMIT_SECONDS = 24 * 60 * 60;
  * @param {object|null} state.cache                  Parsed cache, or null if missing/unreadable.
  * @param {boolean}     state.parseError             True iff cache file existed but JSON.parse failed.
  * @param {boolean}     state.suppressFailureWarning True when a recent failure warning already fired.
- * @returns {{additional_context: string}|null}     JSON envelope, or null for silent exit.
+ * @returns {{systemMessage: string}|null}           JSON envelope, or null for silent exit.
  */
 function buildBannerOutput(state) {
   const { cache, parseError, suppressFailureWarning } = state || {};
   if (parseError) {
     if (suppressFailureWarning) return null;
-    return { additional_context: 'GSD update check failed.' };
+    return { systemMessage: 'GSD update check failed.' };
   }
   if (!cache) return null;
   if (!cache.update_available) return null;
   const installed = cache.installed || 'unknown';
   const latest = cache.latest || 'unknown';
   return {
-    additional_context: `GSD update available: ${installed} → ${latest}. Run /gsd:update.`,
+    systemMessage: `GSD update available: ${installed} → ${latest}. Run /gsd:update.`,
   };
 }
 

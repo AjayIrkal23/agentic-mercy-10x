@@ -43,7 +43,7 @@ Agent Skills is a collection of engineering workflow skills organized by develop
 
 ## Hooks, rules, and linkage story
 
-Cursor injects context via **`~/.claude/settings.json (hooks key)`** (`sessionStart`, `beforeSubmitPrompt`, `postToolUse` on `Write`, `stop`). Always-on routing is reinforced by **`~/.claude/rules/plan-exec-superpowers-stack.md`** and **`agent-ecosystem-skills.md`**.
+Cursor injects context via **`~/.claude/settings.json (hooks key)`** (`sessionStart`, `beforeSubmitPrompt`, `postToolUse` on `Write`, `stop`). Always-on routing is reinforced by **`~/.claude/rules/plan-exec-unified-stack.md`** and **`agent-lifecycle-routing.md`**.
 
 Read **`skill-linkage-story`** when you need the full spine (Superpowers + agent skills + hooks): [`~/.claude/skills/skill-linkage-story/SKILL.md`](../skill-linkage-story/SKILL.md) → [`references/graph-and-stories.md`](../skill-linkage-story/references/graph-and-stories.md), [`references/hooks-rules-e2e.md`](../skill-linkage-story/references/hooks-rules-e2e.md).
 

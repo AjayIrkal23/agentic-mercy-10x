@@ -1,6 +1,6 @@
 {
   "version": "1.42.3",
-  "timestamp": "2026-05-19T09:45:01.904Z",
+  "timestamp": "2026-07-17T21:05:43.625Z",
   "mode": "full",
   "files": {
     "get-shit-done/VERSION": "d22b0f3ee3b3b5271bda33bbd3b25b395ae9b6e8c032185dd0e88611d5928593",
@@ -385,16 +385,20 @@
     "agents/gsd-ui-researcher.md": "3bf0a45796f9bab2bf7176b0426402a9b215e5360671594bafeffba7cfc61679",
     "agents/gsd-user-profiler.md": "a8c0788da65c58674b1a1513040e611f129111a1cdc40ff1f7aac2390731b5b3",
     "agents/gsd-verifier.md": "6739185b0879cec28738b6d4259c0cb77f0053ef8bda45c29adc2820bd9337fd",
+    "hooks/gsd-check-update-launcher.js": "f9b49709b900252406c4809ab00f5f07148b481b48f0caa70acc178394b3bd88",
     "hooks/gsd-check-update-worker.js": "7556457e88f9d9863cd5ee94c7d49c4e41fa5ea332c70e9313efbdceb57e6e56",
     "hooks/gsd-check-update.js": "b873ec3637174ac9d4d98e7b79274ace37f00289ce6af5229bf7c9080b18c69f",
     "hooks/gsd-context-monitor.js": "6e69203a593a8a287bc04ab3aa5e0563f8193ecefe1d2151f0b386bce058a67b",
+    "hooks/gsd-phase-boundary.js": "ff31661e6ea8a9d9e08ffb09afb4b94828c1161fb821032d31b5378894d6052c",
     "hooks/gsd-phase-boundary.sh": "a383de98350776d14c384c352083676b1f1e6fe0e2d77f3e0d12e0eb86d40187",
     "hooks/gsd-prompt-guard.js": "6b8e86f1a5caba76556cbb9a8f3dc79ca082e5489e6bf4d07c8cd1a8ff79c0bf",
     "hooks/gsd-read-guard.js": "f4bf5da8616559c8acf02b4f261eabe40e6e19c0d7fcf9279801a6b8458d98ab",
     "hooks/gsd-read-injection-scanner.js": "181809c1774c3ec2ab8324ab1dc19025c4e5edad9a4c992594c42c399de21f39",
+    "hooks/gsd-session-state.js": "db7c43ea929830246dff33c7cb861b6a545faf447ba05e3e951dfe6b4ec999cf",
     "hooks/gsd-session-state.sh": "a50a6a36664390a749c66f54698c5e621a6a5174210dbd6aba65801d51160e27",
     "hooks/gsd-statusline.js": "a0896a3875741acb5efa9d1f91ed5f99664a103ba83fabf7ac01926f8e75ae01",
     "hooks/gsd-update-banner.js": "f3a84d45573b510e873a52d5e0582ccdd096efad034e0870f9aff3ae29b17fa7",
+    "hooks/gsd-validate-commit.js": "153a18880b8970bb9ceb602fda34fcb7f5f64c8adf4287287a2fb535d7e5851a",
     "hooks/gsd-validate-commit.sh": "ba8b747d3ed695e0eab2a8ef888b04fff5442bfae332a75e676d4c91a2ded57d",
     "hooks/gsd-workflow-guard.js": "1ab3e2c58c0f7a07bf1b8b33b72a52e8d6c7f4e49450452bfd4e4a6c84a48bac"
   }

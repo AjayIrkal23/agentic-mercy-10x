@@ -1,0 +1,2 @@
+#!/bin/sh
+exec "/home/mercy/.local/bin/lean-ctx" hook rewrite

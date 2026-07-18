@@ -68,4 +68,4 @@ These MCPs appear in some workspaces or installs but are **absent locally** unle
 - **`deepvue-docs`** — add only when you have product-specific Deepvue doc MCP.
 - **`jcodemunch`** — add only when you intentionally install/connect that repo indexer.
 
-If you introduce new servers, duplicate the pattern above and sync **`SKILL.md`**, **`user-mcp-inventory.md`**, and **`session-start-aggregator.py`** MCP list behavior.
+If you introduce new servers, duplicate the pattern above and sync **`SKILL.md`**, **`user-mcp-inventory.mdc`**, and **`session-start-aggregator.py`** MCP list behavior.

@@ -28,7 +28,7 @@ applies to thinking too — don't run 8 steps to answer "what's the file path".
 
 ## Enforcement
 
-- `sequential-thinking-mandate.py` (UserPromptSubmit) injects a hard MANDATE into
+- The live prompt router (`prompt_router/router.py`, UserPromptSubmit; absorbed the retired `sequential-thinking-mandate.py`) injects a hard MANDATE into
   context on every reasoning-shaped prompt. It is the forcing function — without
   it this rule drifts, like every advisory tier.
 - This file keeps the doctrine in context every session.

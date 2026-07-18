@@ -333,6 +333,12 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
         _telemeter(event, "_dispatch", decision="budget-overrun",
                    ms=total_ms, budget_hit=True, session=sid)
 
+    # Harness schema: hookSpecificOutput is invalid for SessionEnd/PreCompact,
+    # and an empty one (no additionalContext/updatedInput) fails validation
+    # elsewhere — emit it only when there is real content for an event that
+    # accepts it.
+    if event_name in ("SessionEnd", "PreCompact") or (not merged and updated_input is None):
+        return {}
     out: dict = {"hookSpecificOutput": {"hookEventName": event_name}}
     if merged:
         out["hookSpecificOutput"]["additionalContext"] = merged

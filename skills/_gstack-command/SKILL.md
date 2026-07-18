@@ -1,0 +1,1 @@
+/home/mercy/.claude/skills/gstack/SKILL.md

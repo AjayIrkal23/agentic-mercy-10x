@@ -18,7 +18,7 @@
 | Clear-scope coding | `code-execution-standard` + mandatory FE/BE list from hooks |
 | Unknown failure | `debug-investigation` (and Superpowers `systematic-debugging` when appropriate) |
 
-**Linkage map:** Full hook/rule sequence diagrams, playbooks, and Superpowers↔agent matrix live in [`skill-linkage-story`](../skill-linkage-story/SKILL.md) → [`references/graph-and-stories.md`](../skill-linkage-story/references/graph-and-stories.md) and [`references/hooks-rules-e2e.md`](../skill-linkage-story/references/hooks-rules-e2e.md). Always-on summary of plan vs execution overlaps with **`~/.claude/rules/plan-exec-superpowers-stack.md`**.
+**Linkage map:** Full hook/rule sequence diagrams, playbooks, and Superpowers↔agent matrix live in [`skill-linkage-story`](../skill-linkage-story/SKILL.md) → [`references/graph-and-stories.md`](../skill-linkage-story/references/graph-and-stories.md) and [`references/hooks-rules-e2e.md`](../skill-linkage-story/references/hooks-rules-e2e.md). Always-on summary of plan vs execution overlaps with **`~/.claude/rules/plan-exec-unified-stack.md`**.
 
 ## Ported ECC Claude bundle — when to load
 
@@ -59,7 +59,7 @@ Canonical orchestrator stays **`workflow-orchestrator`**; **`agent-skills-orches
 - **Canonical E2E doc:** `~/.claude/skills/skill-linkage-story/references/hooks-rules-e2e.md` (pipeline order, configs, overlap notes).
 - **Submit hint:** `~/.claude/hooks/plan-exec-stack-hint.py` + `plan-exec-stack-hint.config.json`
 - **Write hint:** `~/.claude/hooks/fullstack-skills-reminder.py` (frontend **20** / backend **15** skills, including `architect-system-design` and `mcp-usage-standards`)
-- **Always-on rule:** `~/.claude/rules/plan-exec-superpowers-stack.md`
+- **Always-on rule:** `~/.claude/rules/plan-exec-unified-stack.md`
 - **Paste copy:** `~/.claude/rules/plan-exec-superpowers.md`
 - **Mandatory list:** `~/.claude/rules/fullstack-mandatory.md`
 - **Session soft gate (ECC `plan-mode-gate` port):** `sessionStart` → `~/.claude/hooks/session-plan-gate-hint.py`

@@ -11,10 +11,11 @@ const { spawn } = require('child_process');
 const homeDir = os.homedir();
 const cwd = process.cwd();
 
-// Detect runtime config directory (supports Cursor, Claude, OpenCode, Kilo, Gemini)
-// Respects CURSOR_CONFIG_DIR / CLAUDE_CONFIG_DIR for custom config directory setups
+// Detect runtime config directory (supports Claude, OpenCode, Kilo, Gemini)
+// Respects CLAUDE_CONFIG_DIR for custom config directory setups
 function detectConfigDir(baseDir) {
-  const envDir = process.env.CURSOR_CONFIG_DIR || process.env.CLAUDE_CONFIG_DIR;
+  // Check env override first (supports multi-account setups)
+  const envDir = process.env.CLAUDE_CONFIG_DIR;
   if (envDir && fs.existsSync(path.join(envDir, 'get-shit-done', 'VERSION'))) {
     return envDir;
   }

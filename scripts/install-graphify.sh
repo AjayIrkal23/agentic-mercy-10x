@@ -26,7 +26,7 @@ set -euo pipefail
 CLAUDE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 LAUNCHER="$CLAUDE_DIR/hooks/graphify_launcher.py"
 VENV="${GRAPHIFY_VENV:-$HOME/.local/share/claude-graphify-venv}"
-PIN="graphifyy==0.7.16"   # pinned serve version (bump intentionally)
+PIN="graphifyy==0.9.18"   # pinned serve version (bump intentionally)
 
 if ! command -v uv >/dev/null 2>&1; then
   echo "ERROR: uv not found — install it first: https://docs.astral.sh/uv/" >&2

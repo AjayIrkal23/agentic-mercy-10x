@@ -1,84 +1,50 @@
 {
-  "agentPushNotifEnabled": true,
-  "autoCompactWindow": 900000,
-  "contextWindow": 1000000,
-  "effortLevel": "xhigh",
-  "enabledPlugins": {
-    "andrej-karpathy-skills@karpathy-skills": true,
-    "claude-mermaid@claude-mermaid": true,
-    "claude-session-driver@superpowers-marketplace": true,
-    "clickhouse@claude-plugins-official": true,
-    "context7@claude-plugins-official": true,
-    "double-shot-latte@superpowers-marketplace": true,
-    "elements-of-style@superpowers-marketplace": true,
-    "firecrawl@claude-plugins-official": true,
-    "frontend-design@claude-plugins-official": true,
-    "gopls-lsp@claude-plugins-official": true,
-    "playwright@claude-plugins-official": true,
-    "ponytail@ponytail": true,
-    "supabase@claude-plugins-official": true,
-    "superpowers-lab@superpowers-marketplace": true,
-    "superpowers@claude-plugins-official": true,
-    "typescript-lsp@claude-plugins-official": true
-  },
+  "skillListingBudgetFraction": 0.1,
   "env": {
     "CLAUDE_CODE_SUBAGENT_EFFORT": "max",
     "TDD_GUARD_MODEL_VERSION": "claude-sonnet-4-0",
     "VALIDATION_CLIENT": "sdk"
   },
-  "extraKnownMarketplaces": {
-    "claude-mermaid": {
-      "source": {
-        "repo": "veelenga/claude-mermaid",
-        "source": "github"
-      }
-    },
-    "karpathy-skills": {
-      "source": {
-        "repo": "forrestchang/andrej-karpathy-skills",
-        "source": "github"
-      }
-    },
-    "ponytail": {
-      "source": {
-        "repo": "DietrichGebert/ponytail",
-        "source": "github"
-      }
-    },
-    "superpowers-marketplace": {
-      "autoUpdate": true,
-      "source": {
-        "repo": "obra/superpowers-marketplace",
-        "source": "github"
-      }
-    }
+  "permissions": {
+    "deny": [
+      "Read",
+      "Grep",
+      "Glob"
+    ],
+    "defaultMode": "bypassPermissions"
   },
+  "model": "claude-fable-5[1m]",
   "hooks": {
-    "SessionStart": [
+    "PostToolUse": [
       {
         "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${HOME}/.claude/hooks/dispatch.py session-start",
-            "timeout": 60
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py post-tool-use",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "(AskUserQuestion|mcp__.*__AskUserQuestion)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/mercy/.claude/skills/gstack/hosts/claude/hooks/question-log-hook",
+            "timeout": 5
           }
         ]
       }
     ],
-    "UserPromptSubmit": [
+    "PreCompact": [
       {
         "matcher": ".*",
         "hooks": [
           {
-            "command": "python3 ${HOME}/.claude/hooks/prompt_router/router.py",
-            "timeout": 20,
-            "type": "command"
-          },
-          {
-            "command": "lean-ctx hook observe",
-            "timeout": 5,
-            "type": "command"
+            "type": "command",
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py pre-compact",
+            "timeout": 15
           }
         ]
       }
@@ -93,16 +59,48 @@
             "timeout": 65
           }
         ]
+      },
+      {
+        "matcher": "(AskUserQuestion|mcp__.*__AskUserQuestion)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/mercy/.claude/skills/gstack/hosts/claude/hooks/question-preference-hook",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"/home/mercy/.nvm/versions/node/v24.18.0/bin/node\" \"/home/mercy/.claude/hooks/gsd-read-guard.js\"",
+            "timeout": 5
+          }
+        ]
       }
     ],
-    "PostToolUse": [
+    "SessionEnd": [
       {
         "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${HOME}/.claude/hooks/dispatch.py post-tool-use",
-            "timeout": 30
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py session-end",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 ${HOME}/.claude/hooks/dispatch.py session-start",
+            "timeout": 60
           }
         ]
       }
@@ -131,31 +129,73 @@
         ]
       }
     ],
-    "PreCompact": [
+    "UserPromptSubmit": [
       {
         "matcher": ".*",
         "hooks": [
           {
             "type": "command",
-            "command": "python3 ${HOME}/.claude/hooks/dispatch.py pre-compact",
-            "timeout": 15
-          }
-        ]
-      }
-    ],
-    "SessionEnd": [
-      {
-        "matcher": ".*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python3 ${HOME}/.claude/hooks/dispatch.py session-end",
-            "timeout": 15
+            "command": "python3 ${HOME}/.claude/hooks/prompt_router/router.py",
+            "timeout": 20
           }
         ]
       }
     ]
   },
+  "statusLine": {
+    "type": "command",
+    "command": "\"${HOME}/.local/bin/node\" \"${HOME}/.claude/hooks/gsd-statusline.js\""
+  },
+  "enabledPlugins": {
+    "andrej-karpathy-skills@karpathy-skills": true,
+    "claude-mermaid@claude-mermaid": true,
+    "claude-session-driver@superpowers-marketplace": true,
+    "clickhouse@claude-plugins-official": true,
+    "context7@claude-plugins-official": false,
+    "double-shot-latte@superpowers-marketplace": true,
+    "elements-of-style@superpowers-marketplace": true,
+    "firecrawl@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
+    "gopls-lsp@claude-plugins-official": true,
+    "playwright@claude-plugins-official": false,
+    "ponytail@ponytail": true,
+    "superpowers-lab@superpowers-marketplace": true,
+    "superpowers@claude-plugins-official": false,
+    "typescript-lsp@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {
+    "claude-mermaid": {
+      "source": {
+        "source": "github",
+        "repo": "veelenga/claude-mermaid"
+      }
+    },
+    "karpathy-skills": {
+      "source": {
+        "source": "github",
+        "repo": "forrestchang/andrej-karpathy-skills"
+      }
+    },
+    "ponytail": {
+      "source": {
+        "source": "github",
+        "repo": "DietrichGebert/ponytail"
+      }
+    },
+    "superpowers-marketplace": {
+      "source": {
+        "source": "github",
+        "repo": "obra/superpowers-marketplace"
+      },
+      "autoUpdate": true
+    }
+  },
+  "effortLevel": "xhigh",
+  "autoCompactWindow": 900000,
+  "skipDangerousModePermissionPrompt": true,
+  "theme": "dark",
+  "agentPushNotifEnabled": true,
+  "contextWindow": 1000000,
   "mcpServers": {
     "ast-grep": {
       "args": [
@@ -257,16 +297,5 @@
       ],
       "command": "npx"
     }
-  },
-  "model": "opus[1m]",
-  "permissions": {
-    "defaultMode": "bypassPermissions"
-  },
-  "skillListingBudgetFraction": 0.1,
-  "skipDangerousModePermissionPrompt": true,
-  "statusLine": {
-    "command": "\"/usr/bin/node\" \"${HOME}/.claude/hooks/gsd-statusline.js\"",
-    "type": "command"
-  },
-  "theme": "dark"
+  }
 }
