@@ -3,8 +3,7 @@
   "env": {
     "CLAUDE_CODE_SUBAGENT_EFFORT": "max",
     "TDD_GUARD_MODEL_VERSION": "claude-sonnet-4-0",
-    "VALIDATION_CLIENT": "sdk",
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "VALIDATION_CLIENT": "sdk"
   },
   "permissions": {
     "deny": [
@@ -14,7 +13,6 @@
     ],
     "defaultMode": "bypassPermissions"
   },
-  "model": "opus[1m]",
   "hooks": {
     "PostToolUse": [
       {

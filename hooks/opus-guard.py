@@ -241,7 +241,7 @@ def main() -> int:
     if "name" in updated:
         note += (
             f" Agent name normalized to '{updated['name']}' so the model is visible in "
-            "the agent list — address SendMessage to THAT name."
+            "the agent list; if the agent is addressable, use THAT name."
         )
 
     print(json.dumps({
