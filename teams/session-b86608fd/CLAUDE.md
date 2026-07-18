@@ -1,5 +1,5 @@
 <!-- dox:child v1 -->
-# `teams/session-99a224a0/` — local rules (dox)
+# `teams/session-b86608fd/` — local rules (dox)
 
 > Local doc for this directory only. Read after the root `CLAUDE.md`. Update this
 > file whenever you add, remove, or rename files here, or change a local convention.

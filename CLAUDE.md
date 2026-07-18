@@ -175,6 +175,7 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
 - [`scripts/`](scripts/CLAUDE.md)
 - [`shell-snapshots/`](shell-snapshots/CLAUDE.md)
 - [`state/`](state/CLAUDE.md)
+  - [`state/persist-dedup/`](state/persist-dedup/CLAUDE.md)
 - [`teams/`](teams/CLAUDE.md)
   - [`teams/session-3ff4a5fc/`](teams/session-3ff4a5fc/CLAUDE.md)
     - [`teams/session-3ff4a5fc/inboxes/`](teams/session-3ff4a5fc/inboxes/CLAUDE.md)
