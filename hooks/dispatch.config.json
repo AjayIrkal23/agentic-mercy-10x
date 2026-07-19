@@ -825,6 +825,18 @@
     ],
     "session-end": [
       {
+        "id": "settings-permissions-selfheal-end",
+        "type": "exec",
+        "cmd": [
+          "{PY}",
+          "{HOOKS}/settings-permissions-selfheal.py"
+        ],
+        "timeout_ms": 3000,
+        "priority": 0,
+        "enabled": true,
+        "_new": "2026-07-19: the session-start copy of this link cannot help the session it runs in — Claude Code loads settings.json at process startup, BEFORE hooks fire, so a session that started dirty keeps the stale permissions in memory and flushes them again on exit. Running the same repair at SessionEnd cleans the file AFTER that flush, so the next process to start reads a correct file. Start+end together break the loop."
+      },
+      {
         "id": "leanctx-observe-sessionend",
         "type": "exec",
         "cmd": [
