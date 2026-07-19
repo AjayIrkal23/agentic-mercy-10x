@@ -79,23 +79,33 @@ def test_default_is_sonnet():
     assert ui["description"] == "[sonnet] do a thing"
 
 
-def test_agent_pin_fable_beats_sonnet_label():
-    # frontend-uiux-designer is pinned fable (2026-07-18 directive) even with a [sonnet] label.
+def test_agent_pin_opus_beats_sonnet_label():
+    # frontend-uiux-designer is pinned opus (2026-07-19: Fable-first directive removed)
+    # even when the call carries a [sonnet] label.
     out = run_agent({"description": "[sonnet] polish UI", "subagent_type": "frontend-uiux-designer"})
     ui = resolved(out)
-    assert ui["model"] == "fable"
-    assert ui["description"] == "[fable] polish UI"
+    assert ui["model"] == "opus"
+    assert ui["description"] == "[opus] polish UI"
 
 
-def test_agent_pin_fable_implementation_engineer():
+def test_agent_pin_opus_implementation_engineer():
     out = run_agent({"description": "[sonnet] build feature", "subagent_type": "implementation-engineer"})
-    assert resolved(out)["model"] == "fable"
+    assert resolved(out)["model"] == "opus"
 
 
-def test_agent_pin_fable_new_specialists():
+def test_agent_pin_opus_new_specialists():
     for at in ("backend-implementor-specialist", "frontend-implementor-specialist", "integrator-specialist"):
         out = run_agent({"description": "[sonnet] work", "subagent_type": at})
-        assert resolved(out)["model"] == "fable", at
+        assert resolved(out)["model"] == "opus", at
+
+
+def test_no_agent_is_auto_pinned_to_fable():
+    """2026-07-19 regression guard: Fable must never be reachable by a pin.
+    It is opt-in only (explicit label / model param / fable-only-mode flag)."""
+    mod = _load_module()
+    mod._POLICY_CACHE = None
+    _sonnet, _opus, fable_set = mod._agent_sets()
+    assert fable_set == set(), f"agent_pins.fable must stay empty, got {fable_set}"
 
 
 def test_agent_pin_sonnet_beats_opus_label():
@@ -118,10 +128,10 @@ def test_label_prefix_used_when_no_pin_or_model():
 
 
 def test_noop_when_already_correct():
-    # fable agent + [fable] label + model fable -> nothing to change -> allow unchanged.
+    # opus-pinned agent + [opus] label + model opus -> nothing to change -> allow unchanged.
     out = run_agent({
-        "description": "[fable] polish",
-        "model": "fable",
+        "description": "[opus] polish",
+        "model": "opus",
         "subagent_type": "frontend-uiux-designer",
     })
     assert out == {}
@@ -172,11 +182,34 @@ def test_full_input_echoed():
         "extra_key": {"nested": [1, 2]},
     })
     ui = resolved(out)
-    # every original key preserved; only model/description overridden.
-    assert ui["prompt"] == "a long prompt that must survive"
+    # every original key preserved; only model/description/prompt overridden.
+    # The prompt is APPENDED to (read-then-write protocol, 2026-07-19), never
+    # replaced or truncated — the original text must still lead it verbatim.
+    assert ui["prompt"].startswith("a long prompt that must survive")
+    assert "<!-- opus-guard:write-protocol -->" in ui["prompt"]
     assert ui["extra_key"] == {"nested": [1, 2]}
     assert ui["subagent_type"] == "general-purpose"
     assert ui["model"] == "sonnet"
+
+
+def test_write_protocol_injected_once():
+    """Re-running the guard over its own output must not stack the protocol."""
+    first = resolved(run_agent({
+        "description": "do a thing",
+        "subagent_type": "general-purpose",
+        "prompt": "original task",
+    }))
+    second = resolved(run_agent({
+        "description": "[sonnet] do a thing",
+        "subagent_type": "general-purpose",
+        "prompt": first["prompt"],
+    }))
+    marker = "<!-- opus-guard:write-protocol -->"
+    assert first["prompt"].count(marker) == 1
+    assert second["prompt"].count(marker) == 1
+    # the protocol names the sanctioned editor and the banned forms
+    assert "ctx_patch" in first["prompt"]
+    assert "sed -i" in first["prompt"]
 
 
 # --- policy-load fail-open (in-process; corrupt/missing policy -> literals) --
@@ -212,9 +245,10 @@ def test_policy_actually_loaded_from_disk():
     mod = _load_module()
     mod._POLICY_CACHE = None
     sonnet_set, opus_set, fable_set = mod._agent_sets()
-    assert "frontend-uiux-designer" in fable_set
-    assert "implementation-engineer" in fable_set
-    assert "backend-implementor-specialist" in fable_set
+    assert "frontend-uiux-designer" in opus_set
+    assert "implementation-engineer" in opus_set
+    assert "backend-implementor-specialist" in opus_set
+    assert fable_set == set(), "Fable is opt-in only; no agent may be pinned to it"
     assert "explore" in sonnet_set
     assert mod._default_model() == "sonnet"
 

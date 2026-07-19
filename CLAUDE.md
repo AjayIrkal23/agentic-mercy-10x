@@ -2,29 +2,58 @@
 
 These rules are always in context for every Claude Code session.
 
+## ⚠️ FILE WRITES — read first, then use a real editor. Never the shell.
+
+**Nothing is denied on this machine.** `permissions.deny` is `[]`, so `Read`, `Grep`,
+`Glob`, `Edit`, and `Write` all work everywhere. There is no blocker to route around,
+and therefore no excuse to write files through Bash.
+
+| Job | Use |
+|---|---|
+| Read code | jcodemunch (`get_symbol_source` / `get_file_outline` / `get_file_content`) — it returns the content, no second read hop |
+| Read non-code | `ctx_read` (project root) · `Read` (anywhere) |
+| **Edit an existing file** | **`Edit`** (read it first) · **`ctx_patch`** inside the project root |
+| New file / whole-file replace | `Write` · `ctx_patch(op="create")` |
+| Outside the project root (`~/.claude`) | `Read` + `Edit`/`Write` — `ctx_patch` is path-jailed |
+
+**NEVER write files with:** `sed -i` · `perl -i` · `python3 - <<EOF` · `python3 -c` /
+`node -e` writes · `cat > file <<EOF` · `tee file` · `echo > file`. These leave no
+reviewable diff and bypass every write gate. **This is trusted to you — no hook blocks
+it by default.** Multiple edits means multiple `Edit`/`ctx_patch` calls; that is the
+correct cost, not a reason to batch them into a shell script.
+
+**Read before you write** — never edit a file you have not read.
+
+Bash IS correct for: builds, tests, linters, `git`, package managers, and read-only
+inspection (`grep`, `sed` *without* `-i`, `python3 -c` that only prints).
+
+If a tool ever *is* denied: that is a ROUTE, not an obstacle — switch to the sanctioned
+tool. If none exists, STOP and say so rather than improvising. Full rule:
+[`rules/no-permission-bypass.md`](rules/no-permission-bypass.md).
+
 ## ⚠️ Agent tool — REQUIRED `[sonnet]`/`[opus]`/`[fable]` prefix (check BEFORE every Agent/Task call)
 
 Every `Agent` call's `description` field **MUST** start with `[sonnet] `, `[opus] `, or `[fable] ` (literal brackets + a space). This applies to *all* agent types, including `Explore`, `Plan`, `general-purpose`, and GSD/figma/vercel agents.
 
-**Sonnet is the default — reach for `[opus]` rarely; reach for `[fable]` only when the user explicitly asks.** `[opus]` is reserved for **only two** cases:
-1. **UI/UX work** — visual/design/frontend-polish subagent tasks (`frontend-uiux-designer` → pinned **`[fable]`** since 2026-07-18).
+**Sonnet is the default — reach for `[opus]` rarely; reach for `[fable]` ONLY when the user explicitly asks for it in that turn.** `[opus]` is reserved for **only two** cases:
+1. **UI/UX work** — visual/design/frontend-polish subagent tasks (`frontend-uiux-designer` → pinned **`[opus]`**).
 2. **Genuinely HEAVY + complex** work — large novel system/architecture design across many modules; a big novel build of many interdependent new files with no pattern to copy; deep unknown-root-cause debugging spanning many independent subsystems; cross-surface synthesis that must hold FE+BE+infra together at once.
 
-**`[fable]` is the standing pin for specialist agents** (user directive 2026-07-18: "use fable for everything"): the implementor/design/integrator specialists and all substantive `/invoke` acts run Fable via `model-policy.json` pins. For ad-hoc `general-purpose` subagents doing substantive work, prefer `[fable]`; cheap searches stay `[sonnet]`.
+**`[fable]` has NO standing pin (2026-07-19).** Fable is reachable only when the user explicitly asks for it on that turn ("use fable for this"), via a `[fable]` label you write deliberately, `model:"fable"`, or the `fable-only-mode` flag. No agent and no `/invoke` act routes to Fable automatically.
 
 **Do NOT use `[opus]`/`[fable]` for medium, small, or even "a bit complex" tasks.** The following are **always `[sonnet]`**: searches/exploration (`Explore`, `claude-code-guide`), single-to-several-file edits, refactors, pattern replication, bug fixes where the locus is known, lint/tests, doc updates, focused code review, and any task that is merely moderately complex. When unsure → `[sonnet]`.
 
 **Dynamic per-task overrides (user-driven).** When the user says "use opus for this task" / "use fable for this" / "use sonnet", honor it on that turn's Agent calls: write the matching label AND set `model:"opus"|"fable"|"sonnet"`. The user's explicit word wins over the default for that task. For multiple subagents in one turn, apply the user's choice to each.
 
-**Standing directive — Fable-first specialists (2026-07-18).** The IMPLEMENT suite and all substantive `/invoke` acts (impl, review, audit, spec, plan, debug, design, docs, verify) run on **Fable**: specialist subagents get `[fable]` + `model:"fable"`. IMPLEMENT also surface-routes: FE→`frontend-implementor-specialist`, BE→`backend-implementor-specialist` (contract-first), mixed→BE→FE→`integrator-specialist`, general→`implementation-engineer`. Source of truth: `agent_pins.fable` + `invoke_categories` in `hooks/model-policy.json`, rendered by `gen-invoke-commands.py`. See [[invoke-impl-opus]] (`rules/invoke-impl-opus.md`, retitled Fable-first).
+**Specialist routing (2026-07-19 — Fable-first REMOVED at user request).** The implementor/design/integrator specialists run on **Opus**: `[opus]` + `model:"opus"`. `/invoke` acts: IMPLEMENT and REVIEW pin Opus; every other act (audit, spec, plan, debug, design, docs, verify) falls through to the **Sonnet** default. IMPLEMENT still surface-routes: FE→`frontend-implementor-specialist`, BE→`backend-implementor-specialist` (contract-first), mixed→BE→FE→`integrator-specialist`, general→`implementation-engineer`. Source of truth: `agent_pins` + `invoke_categories` in `hooks/model-policy.json`, rendered by `gen-invoke-commands.py`. See `rules/invoke-impl-opus.md`.
 
-- `Explore` and `claude-code-guide` → always `[sonnet]`. `frontend-uiux-designer`, `implementation-engineer`, `backend-implementor-specialist`, `frontend-implementor-specialist`, `integrator-specialist` → pinned `[fable]` (opus-guard enforces).
+- `Explore` and `claude-code-guide` → always `[sonnet]`. `frontend-uiux-designer`, `implementation-engineer`, `backend-implementor-specialist`, `frontend-implementor-specialist`, `integrator-specialist` → pinned `[opus]` (opus-guard enforces).
 - Example (heavy): `Agent(subagent_type="general-purpose", description="[opus] Design the multi-service event pipeline end-to-end", prompt="…")`.
 - Example (normal): `Agent(subagent_type="Explore", description="[sonnet] Map loco process data flow", prompt="…")`.
 - Example (user said "use fable"): `Agent(subagent_type="general-purpose", description="[fable] …", model="fable", prompt="…")`.
 
 **The label is real, not cosmetic.** Two hooks enforce the sonnet-by-default policy (neither relies on the `CLAUDE_CODE_SUBAGENT_MODEL` env var, which stays `inherit` — a concrete value there would hard-override per-call models and break all overrides):
-- **`opus-guard.py`** (PreToolUse, `Agent` matcher) PINS the `model` param: `[opus]`/UI-UX agent → `opus`; `[fable]`/`model:fable` → `fable`; everything else → `sonnet`. Auto-corrects a missing/wrong prefix via `updatedInput` (never denies).
+- **`opus-guard.py`** (PreToolUse, `Agent` matcher) PINS the `model` param: `[opus]`/pinned specialist → `opus`; an explicit `[fable]`/`model:fable` you wrote deliberately → `fable`; everything else → `sonnet`. Auto-corrects a missing/wrong prefix via `updatedInput` (never denies).
 - **`workflow-model-guard.py`** (PreToolUse, `Workflow` matcher) rewrites each inline-workflow `agent()` call so it DEFAULTS to `sonnet` (UI/UX `agentType` → opus) unless the call passes an explicit `model`. This is what stops **workflow** subagents from inheriting the Opus parent (the main historical token burn). Workflows run from `scriptPath`/`name` are advised, not rewritten — pass an explicit `model` to each `agent()` there.
 
 **ALSO REQUIRED — the model appears in the agent `name`, not just the description.**
@@ -111,6 +140,9 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
 ## lean-ctx
 @~/.claude/rules/lean-ctx.md
 
+## File writes — no shell writes, no bypassing a denied tool
+@~/.claude/rules/no-permission-bypass.md
+
 ## TDD doctrine (skills + tdd-guard + gates)
 @~/.claude/rules/tdd-doctrine.md
 @~/.claude/rules/tdd-autoinit.md
@@ -167,7 +199,12 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
   - [`hooks/tests/`](hooks/tests/CLAUDE.md)
   - [`hooks/tools/`](hooks/tools/CLAUDE.md)
 - [`image-cache/`](image-cache/CLAUDE.md)
-  - [`image-cache/b86608fd-8906-41f6-8ceb-802b9dbf25f1/`](image-cache/b86608fd-8906-41f6-8ceb-802b9dbf25f1/CLAUDE.md)
+  - [`image-cache/1f97667a-5fcc-4f00-962c-6bb97373958f/`](image-cache/1f97667a-5fcc-4f00-962c-6bb97373958f/CLAUDE.md)
+  - [`image-cache/251bae2f-47d7-4fd0-a47d-13ebb72f151a/`](image-cache/251bae2f-47d7-4fd0-a47d-13ebb72f151a/CLAUDE.md)
+  - [`image-cache/472ac569-a918-4f99-b1f0-1333fb322887/`](image-cache/472ac569-a918-4f99-b1f0-1333fb322887/CLAUDE.md)
+  - [`image-cache/62c78764-3ad4-495e-9973-acee1f67af73/`](image-cache/62c78764-3ad4-495e-9973-acee1f67af73/CLAUDE.md)
+  - [`image-cache/d4b09dcb-9d7c-4d9b-b7de-97c270e53ed7/`](image-cache/d4b09dcb-9d7c-4d9b-b7de-97c270e53ed7/CLAUDE.md)
+  - [`image-cache/f5fd58cc-8e68-459a-898a-a3acd8ce585d/`](image-cache/f5fd58cc-8e68-459a-898a-a3acd8ce585d/CLAUDE.md)
 - [`installer/`](installer/CLAUDE.md)
 - [`memory/`](memory/CLAUDE.md)
 - [`plans/`](plans/CLAUDE.md)
@@ -177,9 +214,6 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
 - [`state/`](state/CLAUDE.md)
   - [`state/persist-dedup/`](state/persist-dedup/CLAUDE.md)
 - [`teams/`](teams/CLAUDE.md)
-  - [`teams/session-3ff4a5fc/`](teams/session-3ff4a5fc/CLAUDE.md)
-    - [`teams/session-3ff4a5fc/inboxes/`](teams/session-3ff4a5fc/inboxes/CLAUDE.md)
-  - [`teams/session-b86608fd/`](teams/session-b86608fd/CLAUDE.md)
   - [`teams/session-c456ad7d/`](teams/session-c456ad7d/CLAUDE.md)
     - [`teams/session-c456ad7d/inboxes/`](teams/session-c456ad7d/inboxes/CLAUDE.md)
 - [`telemetry/`](telemetry/CLAUDE.md)

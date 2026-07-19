@@ -21,42 +21,56 @@ because it looks like success.
 no choice" — it is "the sanctioned tool needed N calls and the shell needed one."
 Take the N calls.
 
-## `Edit` does not work on this machine. Ever. Anywhere.
+## Every tool works. Nothing is denied. That is deliberate.
 
-`~/.claude/settings.json` sets `permissions.deny = ["Read", "Grep", "Glob"]`.
-`Edit` requires a prior native `Read` of its target, so **`Edit` is unusable on
-every file, including files in the current project.**
+**`permissions.deny` is `[]`** in `settings.template.json` (the tracked source of
+truth that `installer/render.py` renders into `settings.json`). `Read`, `Grep`, and
+`Glob` all work, so **`Edit` and `Write` work everywhere**, including outside the
+project root.
 
-`File is covered by a Read deny rule and cannot be edited` is the expected,
-designed message — not a malfunction, not a path problem, not something to
-retry or work around.
+This changed on 2026-07-19. It is the correction to the incident above, not a
+relaxation of it. `Read` had been denied to force jcodemunch-first discovery — but
+`Edit` requires a prior `Read`, and `Write` requires one to overwrite an existing
+file, so denying `Read` silently killed *both* native write paths on every file.
+`ctx_patch` is path-jailed to the project root, so outside it there was **no
+sanctioned editor at all**. Agents did not shell out to be clever; they shelled out
+because nothing else could write. Removing the deny removes the motive.
 
-**→ The editor on this machine is `ctx_patch`. Reach for it FIRST; do not
-discover it by failing `Edit` first.**
+Discovery discipline did not depend on that deny anyway: the `jcm-gate-read`
+dispatch link gates `Read`/`Grep`/`Glob` until a jcodemunch call happens in the
+conversation, then fails open. The hook does the steering; the blanket deny only
+added collateral damage.
 
-`ctx_patch` needs no native `Read` — that is the entire point of it:
+## Write through the editor, never through the shell
 
-- `ctx_patch(op="replace_all", path, find, replace)` — unique literal, one call.
-- `ctx_read(path, mode="anchored")` → `ctx_patch(op="replace_lines"|"set_line", …)`
-  with the returned `line:hash` anchors, when the text is not unique.
-- `ctx_patch(op="create", …)` or the `Write` tool for new files.
+**This is trusted to you, not enforced.** No hook blocks these by default (see
+Enforcement) — the ban is real regardless.
 
-Multiple edits are still multiple `ctx_patch` calls. Batching them into one
-`python3`/`sed` invocation is the banned shortcut, not an optimization.
-
-## Banned bypasses (hard — no exceptions, no "just this once")
-
-| Bypass | Why it's banned |
+| Do not | Why |
 |---|---|
-| `sed -i` / `perl -i -pe` | in-place edit, invisible to every write gate |
-| `python3 -c "...write_text()/open(...,'w')..."` | interpreter-mediated write |
-| `python3 - <<'EOF'` / `node -e` / `ruby -e` | heredoc into an interpreter's **stdin** — no `>` redirect, so redirect-matching gates miss it |
+| `sed -i` / `perl -i -pe` | in-place edit, no reviewable diff, invisible to every write gate |
+| `python3 -c "...open(...,'w')..."` | interpreter-mediated write |
+| `python3 - <<'EOF'` / `node -e` / `ruby -e` | heredoc into an interpreter's **stdin** — no `>` at all |
 | `cat <<EOF > file` / `tee file` / `echo … > file` | redirect write |
 | `awk … > file && mv` | write-then-swap |
-| `grep -r` / `find` / `ls -R` **to discover code** | reimplements a denied Grep/Glob |
+| `grep -r` / `find` / `ls -R` **to discover code** | that is jcodemunch/graphify's job |
+
+Use instead: **`Edit`** (existing file, after reading it), **`Write`** (new file, or
+whole-file replacement outside the project root), **`ctx_patch`** (inside the project
+root; `op="replace_all"` for a unique literal, or `ctx_read(mode="anchored")` →
+`op="replace_lines"` when the text is not unique).
+
+**Read before you write.** Never edit a file you have not read — `Edit` enforces this
+structurally, and it is the reason the deny was harmful rather than merely strict.
+
+**Convenience is never a reason.** The failure mode is not "I was blocked and had no
+choice" — it is "the editor needed N calls and the shell needed one." Take the N
+calls. Batching edits into one `python3`/`sed` invocation is the banned shortcut, not
+an optimization.
 
 Bash remains correct for what it is actually for: builds, tests, linters, `git`,
-package managers, and read-only inspection of command output.
+package managers, and read-only inspection — `grep`, `sed` *without* `-i`, and
+`python3 -c` that only prints.
 
 ## Sanctioned matrix
 
@@ -89,7 +103,31 @@ around it is not.
 
 ## Enforcement
 
-`hooks/bash-write-gate.py` (PreToolUse on `Bash`) detects these patterns.
+**Nothing blocks shell writes by default. This rule is carried by instruction.**
+
+`hooks/bash-write-gate.py` (PreToolUse on `Bash`) can detect every pattern above —
+the detection is implemented and tested — but **Layer 1 is opt-in and OFF**. Arm it
+with `BASH_WRITE_GATE_DENY_SHELL_WRITES=1`.
+
+It is off because static string-scanning cannot tell a command being *run* from one
+being *quoted*. Within minutes of being armed it denied, in order: a `git commit`
+whose message mentioned `` `sed -i` `` in markdown backticks; an `echo` containing
+`=>` (parsed as a redirect, with `the` as the target filename); and its own test
+harness. Anchoring patterns to command positions fixed the common cases and is
+retained, but the class is unfixable without parsing shell rather than scanning it.
+A guard that blocks real work teaches you to disable it, which is worse than no
+guard.
+
+What carries the rule instead:
+- **This file**, always in context.
+- **`hooks/opus-guard.py`** appends a read-then-write protocol to every subagent
+  prompt via the `updatedInput` it already returned. Subagents start fresh and
+  inherit none of these rules — as of 2026-07-19, 0 of 58 agent definitions
+  mentioned `ctx_patch`, so they found `Edit` broken and improvised. Injecting at
+  the one call site every `Agent` invocation passes through beats 58 copies that
+  drift.
+- **A working editor.** The strongest enforcement is that `Edit`/`Write`/`ctx_patch`
+  all function, so shelling out buys nothing.
 
 **History — this rule described enforcement that did not exist (2026-07-18 → 2026-07-19).**
 The hook originally carried only three redirect-based regexes (`cat <<EOF > path`,

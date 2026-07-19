@@ -367,11 +367,7 @@
   "model": "claude-fable-5[1m]",
   "permissions": {
     "defaultMode": "bypassPermissions",
-    "deny": [
-      "Read",
-      "Grep",
-      "Glob"
-    ]
+    "deny": []
   },
   "skillListingBudgetFraction": 0.1,
   "skipDangerousModePermissionPrompt": true,

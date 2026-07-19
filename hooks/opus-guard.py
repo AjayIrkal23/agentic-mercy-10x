@@ -76,16 +76,20 @@ WRITE
   - create a new file          -> `Write`, or `ctx_patch(op="create")`
   - path OUTSIDE project root  -> `Write` (ctx_patch is path-jailed to the root)
 
-BANNED — these are DENIED by bash-write-gate and are not workarounds:
+DO NOT WRITE FILES THROUGH THE SHELL. Not blocked — trusted to you:
   `sed -i` · `perl -i` · `python3 - <<EOF` · `python3 -c`/`node -e` writes ·
   `cat > file <<EOF` · `tee file` · `echo > file`
-Bash is still correct for builds, tests, linters, git, package managers, and
-read-only inspection.
+These bypass every write gate and leave no reviewable edit. `Edit`, `Write`, and
+`ctx_patch` all work — there is no situation where a shell write is your only
+option, and "it was fewer calls" is not a reason. N separate edits is the correct
+cost.
+
+Bash IS correct for builds, tests, linters, git, package managers, and read-only
+inspection (`grep`, `sed` without `-i`, `python3 -c` that only prints).
 
 If a tool is denied, that is a ROUTE, not an obstacle: switch to the sanctioned tool
-above. Never reimplement a denied tool's job in Bash. N separate `ctx_patch` calls is
-the correct cost — batching them into one shell script is the banned shortcut.
-If no sanctioned path exists, STOP and say so rather than improvising around it.
+above rather than reimplementing its job in Bash. If no sanctioned path exists, STOP
+and say so instead of improvising around it.
 """
 # -------------------------------------------------------------------------------
 

@@ -1,24 +1,27 @@
 #!/usr/bin/env python3
 """bash-write-gate.py — PreToolUse hook on Bash.
 
-TWO LAYERS:
+DEFAULT BEHAVIOR (2026-07-19): this hook does NOT block shell writes.
 
-  LAYER 1 (2026-07-19) — BYPASS DENY. Hard-denies shell-mediated file writes that
-  reimplement the sanctioned editor and bypass every write gate:
-    - python3/node/ruby/perl/php  -  <<'EOF'   (interpreter heredoc via STDIN — no `>`)
-    - python3/node/ruby -c / -e "...write..."  (inline interpreter write)
-    - sed -i / perl -i / ruby -i               (in-place edit, no redirect at all)
-    - cat <<EOF > path  AND  cat > path <<EOF  (both argument orders)
-    - tee path / echo|printf > path
-  These are DENIED unconditionally — not gated on blast radius, not gated on
-  HARD_BLOCK, all file extensions. Rationale: rules/no-permission-bypass.md.
-  Read-only interpreter invocations are NOT denied: a write indicator must be
-  present in the command body. Writes confined to /tmp, scratchpad, /dev/*,
-  *.log, node_modules, dist/build are allowed so builds and tests keep working.
+  LAYER 1 — BYPASS DENY, **OPT-IN, OFF BY DEFAULT**. Detects shell-mediated file
+  writes (interpreter stdin heredocs, inline -c/-e writes, sed -i / perl -i, both
+  cat heredoc orders, tee, echo/printf redirects). Fully implemented and tested,
+  but disabled: static scanning cannot distinguish a command being run from one
+  quoted inside a commit message or doc string, and the false positives blocked
+  real work. Arm with BASH_WRITE_GATE_DENY_SHELL_WRITES=1. See the BYPASS_DENY_ON
+  comment for the full rationale.
 
   LAYER 2 (original) — blast-radius advisory on cat/tee/echo redirects to source
-  files with >=THRESHOLD importers. Unchanged behavior, still governed by
-  BASH_WRITE_GATE_HARD_BLOCK. Only reached for writes Layer 1 permitted.
+  files with >=THRESHOLD importers. Unchanged, still governed by
+  BASH_WRITE_GATE_HARD_BLOCK (also off by default). Advisory, not a block.
+
+Shell writes are instead discouraged by INSTRUCTION: rules/no-permission-bypass.md
+and the read-then-write protocol opus-guard injects into every subagent prompt.
+Instructions do not misfire on a commit message. The behavior this hook was built
+to stop was never caused by a missing block — it was caused by agents having no
+working editor (Read was in permissions.deny, and both Edit and Write require a
+prior Read). That is fixed at the source: settings.template.json now ships
+deny: [].
 
 HISTORY: before 2026-07-19 this hook carried only three redirect-based regexes
 (cat <<EOF > path / tee / echo >). An interpreter heredoc pipes to STDIN and has
@@ -44,8 +47,27 @@ from pathlib import Path
 THRESHOLD = 5  # same as gateguard-write-gate.py
 HARD_BLOCK = os.environ.get("BASH_WRITE_GATE_HARD_BLOCK", "").strip() == "1"
 
-# Layer 1 escape hatch. Unset by design — set to "1" only to debug the gate itself.
-BYPASS_DENY_OFF = os.environ.get("BASH_WRITE_GATE_ALLOW_SHELL_WRITES", "").strip() == "1"
+# Layer 1 is OPT-IN and OFF by default (2026-07-19, user decision).
+#
+# It worked — it denied every bypass form. But static string-scanning cannot tell a
+# command being RUN from one being TALKED ABOUT, and the false positives landed on
+# ordinary work within minutes of shipping:
+#   - `git commit -m '...`sed -i`...'`      (banned pattern in markdown backticks)
+#   - `echo "  (identical => the failure)"` (`=>` parsed as a redirect, `the` as a path)
+#   - any probe/test/doc string containing a banned pattern at a command position
+# Each was blocked while doing legitimate work. Anchoring helped and is retained, but
+# the class is unfixable in general: the gate would need to parse shell, not scan it.
+#
+# The ACTUAL cause of shell writes was never the missing block — it was that agents
+# had no working editor (permissions.deny listed Read; Edit and Write both require a
+# prior Read; ctx_patch is path-jailed to the project root). That vacuum is fixed:
+# the deny list is empty in settings.template.json, so Edit/Write work everywhere.
+# Discipline is now carried by INSTRUCTION instead of interception —
+# rules/no-permission-bypass.md plus the protocol opus-guard injects into every
+# subagent prompt. Instructions do not misfire on a commit message.
+#
+# Set BASH_WRITE_GATE_DENY_SHELL_WRITES=1 to re-arm hard denial.
+BYPASS_DENY_ON = os.environ.get("BASH_WRITE_GATE_DENY_SHELL_WRITES", "").strip() == "1"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 STATE_DIR = SCRIPT_DIR / ".state"
@@ -77,7 +99,13 @@ _INTERPRETERS = r"(?:python3?(?:\.\d+)?|node|nodejs|ruby|perl|php|deno|bun)"
 #   git commit -m "switch from sed -i to ctx_patch"
 # was denied, because `sed -i` appeared anywhere in the string. Anchoring means
 # we only fire on a command actually being RUN, not one being talked about.
-_CMD_POS = r"(?:^|[\n;&|(]|\$\(|`|^\s*)\s*"
+#
+# A backtick is deliberately NOT a command position. Legacy `cmd` substitution is
+# rare, but backticks are ubiquitous as markdown code quoting — including in commit
+# messages that document these very patterns. Treating them as command positions
+# made `git commit -m "... \`sed -i\` ..."` undeniable-in-theory but denied in
+# practice. $( ) still counts, so real command substitution is still caught.
+_CMD_POS = r"(?:^|[\n;&|(]|\$\(|^\s*)\s*"
 
 # `python3 - <<'PY'` / `node - <<EOF` — script piped to STDIN. No `>` anywhere,
 # which is exactly why the original redirect-only regexes never saw it.
@@ -201,6 +229,14 @@ def _detect_bypass(cmd: str):
         for m in rx.finditer(cmd):
             p = m.group("path").strip("'\"")
             if not p or p in ("/dev/null", "/dev/stderr", "/dev/stdout"):
+                continue
+            # The "path" must actually look like one. `>` appears inside ordinary
+            # text far more often than it introduces a redirect — `=>`, `->`, `2>&1`,
+            # prose. Without this, `echo "(identical => the failure)"` was read as a
+            # redirect to a file named `the`. Requires a slash or an extension, so a
+            # bare `echo x > outfile` is not caught — an accepted miss, since every
+            # real source target has one.
+            if not _looks_like_path(p):
                 continue
             if _is_allowed_path(p):
                 continue
@@ -441,10 +477,11 @@ def main() -> int:
             return 0
 
         # -------------------------------------------------------------------
-        # LAYER 1 — hard deny on shell-mediated writes. Runs first, applies to
-        # every extension, ignores blast radius and HARD_BLOCK.
+        # LAYER 1 — OPT-IN hard deny on shell-mediated writes. Off by default;
+        # see the BYPASS_DENY_ON comment above for why. When armed it runs first,
+        # applies to every extension, and ignores blast radius and HARD_BLOCK.
         # -------------------------------------------------------------------
-        if not BYPASS_DENY_OFF:
+        if BYPASS_DENY_ON:
             hit = _detect_bypass(cmd)
             if hit:
                 kind, alternative = hit
