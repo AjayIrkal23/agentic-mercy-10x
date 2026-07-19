@@ -60,21 +60,37 @@ _WRITE_PROTOCOL = f"""
 {_WRITE_PROTOCOL_MARKER}
 ## FILE ACCESS PROTOCOL (injected — applies to everything below)
 
-**READ BEFORE YOU WRITE. Never edit a file you have not read.**
+**READ THE FILE IMMEDIATELY BEFORE YOU EDIT IT.**
+
+`Edit` REQUIRES a prior `Read` of that exact file. Do not call `Edit` first and let it
+fail — that error is avoidable, not informative. Always:
+
+    1. Read(file_path)        <- or jcodemunch get_file_content / get_file_outline
+    2. Edit(file_path, old_string, new_string)
+
+Read the region you are about to change, not just any part of the file: you need the
+exact current text to build `old_string`. One Read per file is enough — no need to
+re-read between your own consecutive edits to the same file.
 
 READ
   - source code  -> jcodemunch: `get_symbol_source`, `get_file_outline`,
                     `get_file_content`, `assemble_task_context`. It returns the
                     content itself — do NOT re-read the same file through another tool.
-  - non-code     -> `ctx_read` (inside the project root)
+  - non-code     -> `ctx_read` (inside the project root), or `Read` anywhere
   - docs/md sets -> jdocmunch: `search_sections` / `get_section`
 
 WRITE
-  - edit an existing file      -> `ctx_patch(op="replace_all", path, find, replace)`
+  - edit an existing file      -> `Read` it, then `Edit`
+                                  (or `ctx_patch(op="replace_all", path, find, replace)`)
   - text that is not unique    -> `ctx_read(mode="anchored")` then
                                   `ctx_patch(op="replace_lines", ...)` with the anchors
   - create a new file          -> `Write`, or `ctx_patch(op="create")`
-  - path OUTSIDE project root  -> `Write` (ctx_patch is path-jailed to the root)
+  - path OUTSIDE project root  -> `Read` + `Edit`/`Write` (ctx_patch is path-jailed)
+
+If `Read` is refused with "File is covered by a Read deny rule", a permissions.deny
+entry is active and should not be. Do NOT retry `Edit` and do NOT shell out — use
+`ctx_patch` (it needs no prior Read) and SAY SO in your report, because it means
+settings.json has drifted from settings.template.json.
 
 DO NOT WRITE FILES THROUGH THE SHELL. Not blocked — trusted to you:
   `sed -i` · `perl -i` · `python3 - <<EOF` · `python3 -c`/`node -e` writes ·

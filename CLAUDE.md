@@ -22,7 +22,27 @@ reviewable diff and bypass every write gate. **This is trusted to you — no hoo
 it by default.** Multiple edits means multiple `Edit`/`ctx_patch` calls; that is the
 correct cost, not a reason to batch them into a shell script.
 
-**Read before you write** — never edit a file you have not read.
+### ALWAYS read the file immediately before you edit it
+
+`Edit` **requires** a prior `Read` of that exact file. Do not call `Edit` and let it
+fail — that error is avoidable, not informative. The sequence is always:
+
+```
+1. Read(file_path)          ← or jcodemunch get_file_content / get_file_outline
+2. Edit(file_path, old_string, new_string)
+```
+
+Read the region you are about to change, not just any part of the file: you need the
+exact current text to build `old_string`. One Read per file is enough — you do not
+need to re-read between your own consecutive edits to the same file.
+
+If `Read` itself is refused (`File is covered by a Read deny rule`), a
+`permissions.deny` entry is active, which should NOT normally be the case. Do not
+retry `Edit`, and do not shell out. Use **`ctx_patch`** instead — it needs no prior
+`Read` (that is its entire point) and works anywhere inside the project root; outside
+the root use `Write`. Then TELL THE USER a deny rule is active, because it means
+`settings.json` has drifted from `settings.template.json` (usually another running
+Claude session re-serializing its stale in-memory copy over the rendered file).
 
 Bash IS correct for: builds, tests, linters, `git`, package managers, and read-only
 inspection (`grep`, `sed` *without* `-i`, `python3 -c` that only prints).
@@ -199,10 +219,13 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
   - [`hooks/tests/`](hooks/tests/CLAUDE.md)
   - [`hooks/tools/`](hooks/tools/CLAUDE.md)
 - [`image-cache/`](image-cache/CLAUDE.md)
+  - [`image-cache/1b4eb6b9-a7b0-41f4-bc48-c1bab3de2daa/`](image-cache/1b4eb6b9-a7b0-41f4-bc48-c1bab3de2daa/CLAUDE.md)
   - [`image-cache/1f97667a-5fcc-4f00-962c-6bb97373958f/`](image-cache/1f97667a-5fcc-4f00-962c-6bb97373958f/CLAUDE.md)
   - [`image-cache/251bae2f-47d7-4fd0-a47d-13ebb72f151a/`](image-cache/251bae2f-47d7-4fd0-a47d-13ebb72f151a/CLAUDE.md)
   - [`image-cache/472ac569-a918-4f99-b1f0-1333fb322887/`](image-cache/472ac569-a918-4f99-b1f0-1333fb322887/CLAUDE.md)
   - [`image-cache/62c78764-3ad4-495e-9973-acee1f67af73/`](image-cache/62c78764-3ad4-495e-9973-acee1f67af73/CLAUDE.md)
+  - [`image-cache/8b23e8bf-e17a-4860-a69a-8c49a30b9822/`](image-cache/8b23e8bf-e17a-4860-a69a-8c49a30b9822/CLAUDE.md)
+  - [`image-cache/cf8591cf-857f-49ca-a393-1dace608f8f1/`](image-cache/cf8591cf-857f-49ca-a393-1dace608f8f1/CLAUDE.md)
   - [`image-cache/d4b09dcb-9d7c-4d9b-b7de-97c270e53ed7/`](image-cache/d4b09dcb-9d7c-4d9b-b7de-97c270e53ed7/CLAUDE.md)
   - [`image-cache/f5fd58cc-8e68-459a-898a-a3acd8ce585d/`](image-cache/f5fd58cc-8e68-459a-898a-a3acd8ce585d/CLAUDE.md)
 - [`installer/`](installer/CLAUDE.md)
@@ -214,8 +237,11 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
 - [`state/`](state/CLAUDE.md)
   - [`state/persist-dedup/`](state/persist-dedup/CLAUDE.md)
 - [`teams/`](teams/CLAUDE.md)
+  - [`teams/session-1b4eb6b9/`](teams/session-1b4eb6b9/CLAUDE.md)
+  - [`teams/session-8b23e8bf/`](teams/session-8b23e8bf/CLAUDE.md)
   - [`teams/session-c456ad7d/`](teams/session-c456ad7d/CLAUDE.md)
     - [`teams/session-c456ad7d/inboxes/`](teams/session-c456ad7d/inboxes/CLAUDE.md)
+  - [`teams/session-cf8591cf/`](teams/session-cf8591cf/CLAUDE.md)
 - [`telemetry/`](telemetry/CLAUDE.md)
 - [`templates/`](templates/CLAUDE.md)
 - [`tests/`](tests/CLAUDE.md)
