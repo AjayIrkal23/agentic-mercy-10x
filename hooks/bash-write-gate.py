@@ -1,18 +1,31 @@
 #!/usr/bin/env python3
 """bash-write-gate.py — PreToolUse hook on Bash.
 
-Detects heredoc/tee writes to source files that bypass Write|Edit|MultiEdit hooks.
-Patterns detected:
-  - cat <<'EOF' > target.ts  (heredoc redirect)
-  - cat <<EOF > target.py    (heredoc redirect, unquoted)
-  - tee target.go            (tee write)
-  - echo 'content' > target.js  (echo redirect to source file)
+TWO LAYERS:
 
-Action: followup_message (advisory) by default. Set BASH_WRITE_GATE_HARD_BLOCK=1
-to enable permissionDecision:"deny" mode (may cause false positives on migration scripts).
+  LAYER 1 (2026-07-19) — BYPASS DENY. Hard-denies shell-mediated file writes that
+  reimplement the sanctioned editor and bypass every write gate:
+    - python3/node/ruby/perl/php  -  <<'EOF'   (interpreter heredoc via STDIN — no `>`)
+    - python3/node/ruby -c / -e "...write..."  (inline interpreter write)
+    - sed -i / perl -i / ruby -i               (in-place edit, no redirect at all)
+    - cat <<EOF > path  AND  cat > path <<EOF  (both argument orders)
+    - tee path / echo|printf > path
+  These are DENIED unconditionally — not gated on blast radius, not gated on
+  HARD_BLOCK, all file extensions. Rationale: rules/no-permission-bypass.md.
+  Read-only interpreter invocations are NOT denied: a write indicator must be
+  present in the command body. Writes confined to /tmp, scratchpad, /dev/*,
+  *.log, node_modules, dist/build are allowed so builds and tests keep working.
 
-Blast-radius check: same logic as gateguard-write-gate.py — counts import references.
-THRESHOLD=5 importers triggers the warning.
+  LAYER 2 (original) — blast-radius advisory on cat/tee/echo redirects to source
+  files with >=THRESHOLD importers. Unchanged behavior, still governed by
+  BASH_WRITE_GATE_HARD_BLOCK. Only reached for writes Layer 1 permitted.
+
+HISTORY: before 2026-07-19 this hook carried only three redirect-based regexes
+(cat <<EOF > path / tee / echo >). An interpreter heredoc pipes to STDIN and has
+no `>` at all, and `sed -i` has no redirect either, so every interpreter write
+and every in-place edit passed through as `{}` — allowed. `cat > path <<EOF` also
+passed, because the original regex hardcoded the opposite argument order from its
+own docstring. Layer 1 closes all of it.
 
 Python 3.8+ stdlib only. Exit 0 always. Exception → stderr, exit 0 (never crash session).
 """
@@ -31,10 +44,13 @@ from pathlib import Path
 THRESHOLD = 5  # same as gateguard-write-gate.py
 HARD_BLOCK = os.environ.get("BASH_WRITE_GATE_HARD_BLOCK", "").strip() == "1"
 
+# Layer 1 escape hatch. Unset by design — set to "1" only to debug the gate itself.
+BYPASS_DENY_OFF = os.environ.get("BASH_WRITE_GATE_ALLOW_SHELL_WRITES", "").strip() == "1"
+
 SCRIPT_DIR = Path(__file__).resolve().parent
 STATE_DIR = SCRIPT_DIR / ".state"
 
-# Source file extensions to monitor. Lock files, configs, docs are excluded.
+# Source file extensions to monitor (Layer 2 only). Layer 1 covers every extension.
 SOURCE_EXTENSIONS = frozenset({
     ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
     ".py", ".go", ".rs", ".java", ".kt",
@@ -50,12 +66,47 @@ _SHORT_STEMS = frozenset({
 
 
 # ---------------------------------------------------------------------------
-# Pattern detection
+# Layer 1: bypass detection
 # ---------------------------------------------------------------------------
 
-# Heredoc redirect: cat <<'EOF' > path or cat << EOF > path (with optional space)
+_INTERPRETERS = r"(?:python3?(?:\.\d+)?|node|nodejs|ruby|perl|php|deno|bun)"
+
+# A COMMAND POSITION: start of line, or just after a shell separator / subshell
+# opener. Without this anchor the patterns also match their own names quoted
+# inside an otherwise-legitimate command — e.g.
+#   git commit -m "switch from sed -i to ctx_patch"
+# was denied, because `sed -i` appeared anywhere in the string. Anchoring means
+# we only fire on a command actually being RUN, not one being talked about.
+_CMD_POS = r"(?:^|[\n;&|(]|\$\(|`|^\s*)\s*"
+
+# `python3 - <<'PY'` / `node - <<EOF` — script piped to STDIN. No `>` anywhere,
+# which is exactly why the original redirect-only regexes never saw it.
+_INTERP_STDIN_RE = re.compile(
+    _CMD_POS + _INTERPRETERS + r"\b[^\n;|&]*?\s-\s*<<",
+    re.MULTILINE,
+)
+
+# `python3 -c "..."` / `node -e "..."`
+_INTERP_INLINE_RE = re.compile(
+    _CMD_POS + _INTERPRETERS + r"\b[^\n;|&]*?\s-(?:c|e)\b",
+    re.MULTILINE,
+)
+
+# `sed -i` / `sed --in-place` / `perl -i -pe` / `perl -pi -e` / `ruby -i`
+_INPLACE_RE = re.compile(
+    _CMD_POS + r"(?:sed|perl|ruby)\s+(?:-[a-zA-Z]*i\b|--in-place)",
+    re.MULTILINE,
+)
+
+# `cat <<'EOF' > path` (original order)
 _HEREDOC_RE = re.compile(
-    r"""cat\s+<<\s*['"]?(\w+)['"]?\s+>\s*(?P<path>[^\s;|&>]+)""",
+    r"""cat\s+<<\s*['"]?(\w+)['"]?\s+>>?\s*(?P<path>[^\s;|&>]+)""",
+    re.IGNORECASE,
+)
+
+# `cat > path <<'EOF'` (reversed order — slipped through the original gate)
+_HEREDOC_REV_RE = re.compile(
+    r"""cat\s*>>?\s*(?P<path>[^\s;|&<]+)\s*<<""",
     re.IGNORECASE,
 )
 
@@ -71,15 +122,139 @@ _ECHO_RE = re.compile(
     re.IGNORECASE | re.DOTALL,
 )
 
+# A write actually happening inside an interpreter body. Without one of these,
+# `python3 - <<PY ... PY` is a read-only analysis script and is left alone.
+_WRITE_INDICATOR_RE = re.compile(
+    r"(?:"
+    r"open\s*\([^)]*,\s*['\"][wax]"           # open(p, 'w'|'a'|'x')
+    r"|\bwrite_text\b|\bwrite_bytes\b"         # pathlib
+    r"|\bwriteFileSync\b|\bappendFileSync\b|\bcreateWriteStream\b"
+    r"|\bfs\.write|\bfs\.append|\bfs\.rename|\bfs\.copyFile"
+    r"|\.write\s*\("                           # f.write(...) / stream.write(...)
+    r"|\bos\.replace\b|\bos\.rename\b|\bos\.remove\b|\bos\.unlink\b"
+    r"|\bshutil\.(?:copy|copy2|move|rmtree)\b"
+    r"|\bjson\.dump\s*\(|\byaml\.(?:dump|safe_dump)\s*\("
+    r"|\bFile\.(?:write|open)\b|\bIO\.write\b"  # ruby
+    r")",
+)
+
+# Paths a shell write may legitimately target — scratch, logs, build output.
+_ALLOW_PATH_RE = re.compile(
+    r"^/dev/"
+    r"|^/tmp/|(?:^|/)tmp/"
+    r"|/claude-\d+/|scratchpad"
+    r"|(?:^|/)(?:node_modules|dist|build|coverage|\.next|\.turbo|target)/"
+    r"|\.log$|\.tmp$|\.lock$|\.pid$",
+)
+
+# Quoted tokens that may name a filesystem path.
+_QUOTED_TOKEN_RE = re.compile(r"""['"]([^'"\n]{1,200})['"]""")
+
+# Trailing bare file arguments, e.g. the target of `sed -i 's/a/b/' src/app.ts`
+_TRAILING_FILE_RE = re.compile(r"\s([\w./~-]+\.[A-Za-z0-9]{1,6})(?=\s|$)")
+
+
+def _looks_like_path(tok: str) -> bool:
+    tok = tok.strip()
+    if not tok or tok.startswith(("http://", "https://", "-")):
+        return False
+    if "/" in tok:
+        return True
+    return bool(re.match(r"^[\w.-]+\.[A-Za-z0-9]{1,6}$", tok))
+
+
+def _is_allowed_path(p: str) -> bool:
+    return bool(_ALLOW_PATH_RE.search(p.strip().strip("'\"")))
+
+
+def _candidate_paths(body: str) -> list[str]:
+    """Path-looking tokens inside an interpreter body / command."""
+    toks = [t for t in _QUOTED_TOKEN_RE.findall(body) if _looks_like_path(t)]
+    toks += _TRAILING_FILE_RE.findall(body)
+    return toks
+
+
+def _all_targets_allowed(paths: list[str]) -> bool:
+    """True only when at least one path was found and every one is scratch/log."""
+    return bool(paths) and all(_is_allowed_path(p) for p in paths)
+
+
+def _detect_bypass(cmd: str):
+    """Return (kind, sanctioned_alternative) when cmd is a banned shell write."""
+    # In-place editors: no read-only variant exists — the flag IS the write.
+    if _INPLACE_RE.search(cmd):
+        if not _all_targets_allowed(_candidate_paths(cmd)):
+            return ("in-place edit (sed -i / perl -i)", "ctx_patch")
+
+    # Interpreter writes: only banned when the body actually writes.
+    for rx, label in ((_INTERP_STDIN_RE, "interpreter heredoc (python3 - <<EOF)"),
+                      (_INTERP_INLINE_RE, "inline interpreter write (-c / -e)")):
+        if rx.search(cmd) and _WRITE_INDICATOR_RE.search(cmd):
+            if not _all_targets_allowed(_candidate_paths(cmd)):
+                return (label, "ctx_patch")
+
+    # Shell redirect writes, both cat orders.
+    for rx, label in ((_HEREDOC_RE, "heredoc redirect (cat <<EOF > file)"),
+                      (_HEREDOC_REV_RE, "heredoc redirect (cat > file <<EOF)"),
+                      (_TEE_RE, "tee write"),
+                      (_ECHO_RE, "echo/printf redirect")):
+        for m in rx.finditer(cmd):
+            p = m.group("path").strip("'\"")
+            if not p or p in ("/dev/null", "/dev/stderr", "/dev/stdout"):
+                continue
+            if _is_allowed_path(p):
+                continue
+            return (f"{label} → {os.path.basename(p)}",
+                    "ctx_patch (edit) / Write (new file)")
+
+    return None
+
+
+def _emit_bypass_deny(kind: str, alternative: str, cmd_preview: str) -> None:
+    reason = (
+        f"BASH-WRITE-GATE — DENIED: {kind}.\n"
+        f"Command: {cmd_preview[:160]}\n\n"
+        "Shell-mediated file writes are banned on this machine "
+        "(rules/no-permission-bypass.md). They bypass every write gate. A denied tool "
+        "is a ROUTE, not an obstacle — do NOT reimplement this write in another shell "
+        "form (that is the same violation, not a workaround).\n\n"
+        "READ FIRST, THEN WRITE:\n"
+        "  1. READ  source code  → jcodemunch: get_symbol_source / get_file_outline /\n"
+        "                          get_file_content  (never edit a file you have not read)\n"
+        "     READ  non-code     → ctx_read  (inside the project root)\n"
+        f"  2. WRITE existing    → {alternative}\n"
+        "                          ctx_patch(op=\"replace_all\", path, find, replace)\n"
+        "     ambiguous text    → ctx_read(mode=\"anchored\") then\n"
+        "                          ctx_patch(op=\"replace_lines\", ...) with the returned anchors\n"
+        "     new file          → Write tool, or ctx_patch(op=\"create\")\n"
+        "     outside the root  → Write tool (ctx_patch is path-jailed to the project root)\n\n"
+        "N separate ctx_patch calls is the CORRECT cost. Batching them into one shell "
+        "script is the banned shortcut, not an optimization.\n\n"
+        "Bash stays correct for: builds, tests, linters, git, package managers, and "
+        "read-only inspection of command output."
+    )
+    print(json.dumps({
+        "hookSpecificOutput": {
+            "hookEventName": "PreToolUse",
+            "permissionDecision": "deny",
+            "permissionDecisionReason": reason,
+        }
+    }))
+
+
+# ---------------------------------------------------------------------------
+# Layer 2: legacy path extraction (blast-radius advisory)
+# ---------------------------------------------------------------------------
 
 def _extract_target_paths(cmd: str) -> list[str]:
     """Extract target file paths from bash write patterns."""
     paths: list[str] = []
 
-    for m in _HEREDOC_RE.finditer(cmd):
-        p = m.group("path").strip("'\"")
-        if p:
-            paths.append(p)
+    for rx in (_HEREDOC_RE, _HEREDOC_REV_RE):
+        for m in rx.finditer(cmd):
+            p = m.group("path").strip("'\"")
+            if p:
+                paths.append(p)
 
     for m in _TEE_RE.finditer(cmd):
         p = m.group("path").strip("'\"")
@@ -265,7 +440,20 @@ def main() -> int:
             print("{}")
             return 0
 
-        # Extract potential target paths from the command
+        # -------------------------------------------------------------------
+        # LAYER 1 — hard deny on shell-mediated writes. Runs first, applies to
+        # every extension, ignores blast radius and HARD_BLOCK.
+        # -------------------------------------------------------------------
+        if not BYPASS_DENY_OFF:
+            hit = _detect_bypass(cmd)
+            if hit:
+                kind, alternative = hit
+                _emit_bypass_deny(kind, alternative, cmd)
+                return 0
+
+        # -------------------------------------------------------------------
+        # LAYER 2 — legacy blast-radius advisory on what Layer 1 permitted.
+        # -------------------------------------------------------------------
         target_paths = _extract_target_paths(cmd)
         if not target_paths:
             print("{}")

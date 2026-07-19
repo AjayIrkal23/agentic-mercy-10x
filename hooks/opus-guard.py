@@ -48,6 +48,47 @@ from pathlib import Path
 
 PREFIX_RE = re.compile(r"^\[(sonnet|opus|fable)\]\s", re.IGNORECASE)
 
+# --- read-then-write protocol appended to every subagent prompt (2026-07-19) ----
+# Subagents get a fresh context and inherit none of the parent's rules. Without this
+# they hit the broken native Edit and improvise a shell write. The marker keeps the
+# append idempotent if a prompt is ever recycled through the guard twice.
+_WRITE_PROTOCOL_MARKER = "<!-- opus-guard:write-protocol -->"
+
+_WRITE_PROTOCOL = f"""
+
+---
+{_WRITE_PROTOCOL_MARKER}
+## FILE ACCESS PROTOCOL (injected — applies to everything below)
+
+**READ BEFORE YOU WRITE. Never edit a file you have not read.**
+
+READ
+  - source code  -> jcodemunch: `get_symbol_source`, `get_file_outline`,
+                    `get_file_content`, `assemble_task_context`. It returns the
+                    content itself — do NOT re-read the same file through another tool.
+  - non-code     -> `ctx_read` (inside the project root)
+  - docs/md sets -> jdocmunch: `search_sections` / `get_section`
+
+WRITE
+  - edit an existing file      -> `ctx_patch(op="replace_all", path, find, replace)`
+  - text that is not unique    -> `ctx_read(mode="anchored")` then
+                                  `ctx_patch(op="replace_lines", ...)` with the anchors
+  - create a new file          -> `Write`, or `ctx_patch(op="create")`
+  - path OUTSIDE project root  -> `Write` (ctx_patch is path-jailed to the root)
+
+BANNED — these are DENIED by bash-write-gate and are not workarounds:
+  `sed -i` · `perl -i` · `python3 - <<EOF` · `python3 -c`/`node -e` writes ·
+  `cat > file <<EOF` · `tee file` · `echo > file`
+Bash is still correct for builds, tests, linters, git, package managers, and
+read-only inspection.
+
+If a tool is denied, that is a ROUTE, not an obstacle: switch to the sanctioned tool
+above. Never reimplement a denied tool's job in Bash. N separate `ctx_patch` calls is
+the correct cost — batching them into one shell script is the banned shortcut.
+If no sanctioned path exists, STOP and say so rather than improvising around it.
+"""
+# -------------------------------------------------------------------------------
+
 # --- model-policy.json: the single model truth (P2). ---------------------------
 # opus-guard consumes it for the flag dir/names, the agent pins, and the valid-model
 # set. It FAILS OPEN to these literals if the file is missing/corrupt so the guard is
@@ -86,8 +127,9 @@ def _load_policy() -> dict:
 
 def _agent_sets() -> tuple[set[str], set[str], set[str]]:
     """(sonnet_only, opus_only, fable_only) agent sets from policy, fail-open to literals.
-    2026-07-18: empty opus list in policy is RESPECTED (fable-everything directive) —
-    only a missing/invalid list falls back to the literals."""
+    An empty opus list in policy is RESPECTED; only a missing/invalid list falls back
+    to the literals. (2026-07-19: the 2026-07-18 fable-everything directive was removed
+    at user request — agent_pins.fable no longer exists and Fable is opt-in only.)"""
     pins = _load_policy().get("agent_pins")
     pins = pins if isinstance(pins, dict) else {}
     opus = pins.get("opus")
@@ -221,6 +263,17 @@ def main() -> int:
     new_name = _normalize_name(tool_input.get("name", "") or "", required)
     if new_name:
         updated["name"] = new_name
+
+    # Hand every subagent the read-then-write protocol (2026-07-19).
+    # A subagent starts in a FRESH context: it does not inherit this conversation's
+    # rules, and no agent definition carries them (0 of 58 mentioned ctx_patch). So it
+    # discovers the write path by trial and error — finds native Edit broken, and falls
+    # back to `python3 - <<EOF` / `sed -i`, which is how shell writes kept appearing.
+    # This is the one place every Agent call passes through, so it is injected here
+    # instead of being copied into 58 agent files that would drift.
+    prompt = tool_input.get("prompt", "")
+    if isinstance(prompt, str) and prompt and _WRITE_PROTOCOL_MARKER not in prompt:
+        updated["prompt"] = prompt + _WRITE_PROTOCOL
 
     if not updated:
         return _allow_unchanged()
