@@ -105,11 +105,9 @@ def emit_template(live_path: Path = _LIVE, out_path: Path = _TEMPLATE) -> str:
 
 
 def check_equivalence(live_path: Path = _LIVE, template_path: Path = _TEMPLATE) -> tuple[bool, str]:
-    """Prove render(template, default POSIX subs) == live settings.json byte-for-byte
-    (modulo token substitution) — the P6-T3 acceptance gate."""
+    """Prove the template plus local overlay equals live settings.json."""
     live = Path(live_path).read_text(encoding="utf-8")
-    # substitution round-trip on RAW TEXT (byte-equal after token substitution)
-    rendered_text = substitute(Path(template_path).read_text(encoding="utf-8"))
+    rendered_text = render(template_path, _USER)
     if rendered_text == live:
         return True, "render(template) == live settings.json (byte-identical)"
     # fall back to semantic (parsed) comparison for a clearer diff signal

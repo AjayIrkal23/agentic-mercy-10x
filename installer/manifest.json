@@ -470,24 +470,7 @@
     ]
    }
   ],
-  "manual": [
-   {
-    "id": "get-shit-done",
-    "detect_paths": [
-     "get-shit-done/VERSION",
-     "agents/gsd-*.md",
-     "skills/gsd-*"
-    ],
-    "version_file": "get-shit-done/VERSION",
-    "install_cmd": [
-     "npx",
-     "-y",
-     "get-shit-done-cc@latest"
-    ],
-    "install_timeout": 600,
-    "note": "GSD engine + gsd-* agents/skills (its /gsd:* command surface ships AS skills, so 0 files in commands/ is correct). Auto-installed best-effort via `npx get-shit-done-cc` when absent (skipped if already present); if it needs interaction, run `npx get-shit-done-cc@latest` yourself, then /gsd-update. Package name is the exact constant get-shit-done-cc (beware typosquats)."
-   }
-  ]
+  "manual": []
  },
  "connectors": [
   {
@@ -500,13 +483,6 @@
   }
  ],
  "externals": [
-  {
-   "id": "gstack",
-   "kind": "git-clone",
-   "path": "skills/gstack",
-   "url": "https://github.com/garrytan/gstack.git",
-   "note": "gstack skill suite (/ship,/qa,/browse,...). Cloned by install.sh on consent; post_steps sync its pointer skills."
-  },
   {
    "id": "ast-grep-mcp",
    "kind": "git-clone",
@@ -521,15 +497,6 @@
   }
  ],
  "post_steps": [
-  {
-   "id": "sync-gstack-pointers",
-   "cmd": [
-    "{PYTHON}",
-    "{CLAUDE_DIR}/scripts/sync-gstack-pointers.py"
-   ],
-   "optional": true,
-   "note": "regenerate gstack pointer skills from the clone (trigger parity)."
-  },
   {
    "id": "build-skills-index",
    "cmd": [
@@ -576,12 +543,12 @@
   }
  ],
  "palette": {
-  "skill_names": 237,
-  "skill_bodies": 205,
+  "skill_names": 128,
+  "skill_bodies": 104,
   "aliases": 24,
-  "command_files": 24,
+  "command_files": 25,
   "historic_command_names": 139,
-  "_updated": "2026-07-18 routing-100x: +10 first-party skills (pocock x3, vercel x2, anthropic x5)"
+  "_updated": "2026-08-15 after complete workflow skill retirement"
  },
  "doctor_probes": {
   "link_doctor": true,
@@ -603,7 +570,7 @@
    "r9_floor",
    "r10_provenance",
    "palette_counts",
-   "zero_symlinks",
+   "locked_source_links",
    "command_resolution"
   ],
   "model_routing": [

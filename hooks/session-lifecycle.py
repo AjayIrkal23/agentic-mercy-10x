@@ -105,9 +105,7 @@ def session_start() -> None:
         if continue_md.is_file():
             try:
                 snippet = continue_md.read_text(encoding="utf-8", errors="replace")[:1000].strip()
-                parts.append(
-                    "RESUME PROMPT (.continue-here.md — invoke `gsd-resume-work` skill):\n" + snippet
-                )
+                parts.append("RESUME PROMPT (.continue-here.md):\n" + snippet)
             except OSError:
                 pass
 

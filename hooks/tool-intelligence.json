@@ -1,0 +1,137 @@
+{
+  "_meta": {
+    "purpose": "Single source of truth mapping AGENT INTENT -> the ordered jcodemunch/graphify/jdocmunch tool playbook. Consumed by the prompt router (code_intel.py) to emit intent-matched tool sequences per prompt, linked by rules (codebase-intel-first.md) and skills (Phase 4). Facts (jcode/graphify/jdocmunch) -> reasoning -> action.",
+    "consumed_by": [
+      "hooks/prompt_router/modules/code_intel.py",
+      "rules/codebase-intel-first.md",
+      "mandatory FE/BE skills (their intent slice)"
+    ],
+    "mirror": "rules/references/tool-intelligence.md",
+    "version": 1,
+    "tool_prefix": "mcp__jcodemunch__ / mcp__graphify__ / mcp__jdocmunch__ (bare names below)"
+  },
+
+  "engines": {
+    "jcodemunch": "code structure: symbols, refs, call graph, impact, dead code, complexity + SEMANTIC search (embeddings). Reads its own finds (get_symbol_source/get_file_outline/get_file_content) — no second read hop.",
+    "graphify": "architecture: dependency graph, god nodes, cross-module shortest_path, NL structure queries.",
+    "jdocmunch": "documentation SETS: md/rst/adoc trees, docs/ folders, READMEs — section-level index.",
+    "dox": "per-directory CLAUDE.md LOCAL rules — read root->target before editing."
+  },
+
+  "intents": {
+    "understand": {
+      "aka": ["plan", "orient", "explore", "how does X work", "architecture", "map the codebase", "what is X"],
+      "lead": "jcodemunch.plan_turn OR assemble_task_context",
+      "playbook": [
+        {"n": 1, "tool": "plan_turn", "alt": ["assemble_task_context", "get_context_bundle", "get_ranked_context"], "when": "start of any non-trivial task", "why": "assembles the whole relevant code slice in ONE call — rarely need a blind file read"},
+        {"n": 2, "engine": "graphify", "tool": "graph_stats", "alt": ["god_nodes", "query_graph"], "when": "need the architecture shape / entry points", "why": "size + most-connected modules; the graph IS the map"},
+        {"n": 3, "tool": "get_repo_map", "alt": ["get_repo_outline", "get_file_tree"], "when": "need layout", "why": "structural map — never ls -R across source"},
+        {"n": 4, "tool": "get_file_outline", "alt": ["get_symbol_source", "get_file_content"], "when": "reading a located file", "why": "skeleton first; jcodemunch reads its own finds"},
+        {"n": 5, "tool": "search_symbols", "modifiers": {"semantic": true}, "alt": ["find_similar_symbols", "get_related_symbols"], "when": "finding code by MEANING when you don't know the name", "why": "embeddings — lexical search can't"},
+        {"n": 6, "engine": "jdocmunch", "tool": "get_toc", "alt": ["search_sections", "get_document_outline"], "when": "docs exist for the area", "why": "section-level doc retrieval, not whole-file reads"}
+      ]
+    },
+
+    "audit": {
+      "aka": ["tech debt", "health check", "dead code", "coupling", "hotspots", "quality assessment", "risk"],
+      "lead": "jcodemunch.find_dead_code + get_hotspots",
+      "playbook": [
+        {"n": 1, "tool": "find_dead_code", "alt": ["get_dead_code_v2", "find_unused_paths"], "when": "hunting removable code", "why": "complete + ranked; grep misses cross-module edges"},
+        {"n": 2, "tool": "get_hotspots", "alt": ["get_churn_rate", "get_coupling_metrics"], "when": "prioritizing risk", "why": "where bugs and change concentrate"},
+        {"n": 3, "tool": "get_repo_health", "alt": ["get_file_risk", "get_architecture_metrics", "diff_health_radar"], "when": "whole-repo assessment", "why": "one-shot health picture"},
+        {"n": 4, "tool": "get_blast_radius", "alt": ["get_impact_preview"], "when": "assessing a specific symbol", "why": "what a change to it breaks"},
+        {"n": 5, "tool": "get_extraction_candidates", "alt": ["get_symbol_complexity", "get_layer_violations", "get_dependency_cycles", "get_untested_symbols"], "when": "refactor/quality targets", "why": "concrete, cited targets"},
+        {"n": 6, "engine": "graphify", "tool": "god_nodes", "alt": ["get_neighbors"], "when": "architecture risk", "why": "over-connected modules"},
+        {"n": 7, "engine": "jdocmunch", "tool": "get_doc_coverage", "alt": ["get_stale_pages", "get_broken_links"], "when": "auditing docs too", "why": "doc health parity"}
+      ]
+    },
+
+    "implement": {
+      "aka": ["build", "add feature", "write code", "change behavior", "new endpoint/component"],
+      "lead": "jcodemunch.assemble_task_context",
+      "playbook": [
+        {"n": 1, "tool": "assemble_task_context", "alt": ["get_context_bundle", "plan_turn"], "when": "before writing anything", "why": "the whole slice in one call"},
+        {"n": 2, "tool": "search_symbols", "alt": ["get_symbol_source", "search_ast", "search_text"], "when": "locating exact code", "why": "precise, then read the body"},
+        {"n": 3, "tool": "find_similar_symbols", "modifiers": {"semantic": true}, "alt": ["get_related_symbols"], "when": "before writing new code", "why": "REUSE existing patterns — don't reinvent (ponytail rung 2)"},
+        {"n": 4, "tool": "find_references", "alt": ["find_importers", "get_call_hierarchy"], "when": "touching a shared symbol", "why": "every call site — fix once at the root"},
+        {"n": 5, "tool": "get_blast_radius", "alt": ["get_impact_preview", "get_endpoint_impact"], "when": "before the edit", "why": "downstream impact"},
+        {"n": 6, "tool": "check_edit_safe", "alt": ["check_rename_safe", "check_delete_safe", "check_references"], "when": "just before mutating", "why": "pre-edit safety gate"},
+        {"n": 7, "tool": "register_edit", "alt": ["index_file"], "when": "after the edit", "why": "keep the index fresh (also automatic via index-lifecycle)"}
+      ]
+    },
+
+    "debug": {
+      "aka": ["bug", "regression", "crash", "flaky", "root cause", "why is X failing", "unexpected behavior"],
+      "lead": "jcodemunch.get_call_hierarchy + get_signal_chains",
+      "playbook": [
+        {"n": 1, "tool": "get_call_hierarchy", "alt": ["get_signal_chains", "find_hot_paths"], "when": "tracing the failing path", "why": "how execution reaches the symptom"},
+        {"n": 2, "tool": "find_implementations", "alt": ["find_references", "get_related_symbols"], "when": "suspect symbol known", "why": "all impls + callers, no missed edge"},
+        {"n": 3, "tool": "search_symbols", "modifiers": {"semantic": true}, "when": "you don't know the culprit's name", "why": "find related code by MEANING"},
+        {"n": 4, "engine": "graphify", "tool": "shortest_path", "alt": ["get_neighbors"], "when": "connecting two known points", "why": "cross-module path the call graph alone misses"},
+        {"n": 5, "tool": "get_blast_radius", "alt": ["get_impact_preview"], "when": "before proposing the fix", "why": "confirm the fix locus + what it touches"},
+        {"n": 6, "tool": "get_symbol_provenance", "alt": ["get_churn_rate", "get_changed_symbols"], "when": "regression forensics", "why": "what/when the suspect last changed"}
+      ]
+    },
+
+    "review": {
+      "aka": ["code review", "pr review", "check my diff", "santa review", "is this safe"],
+      "lead": "jcodemunch.get_changed_symbols + get_pr_risk_profile",
+      "playbook": [
+        {"n": 1, "tool": "get_changed_symbols", "alt": ["get_symbol_diff", "diff_health_radar"], "when": "start of review", "why": "exactly what changed, semantically"},
+        {"n": 2, "tool": "get_pr_risk_profile", "alt": ["get_file_risk"], "when": "gauging blast", "why": "risk score of the diff"},
+        {"n": 3, "tool": "get_blast_radius", "alt": ["find_references", "find_importers"], "when": "per changed symbol", "why": "did the change break callers"},
+        {"n": 4, "tool": "get_untested_symbols", "alt": ["get_runtime_coverage"], "when": "coverage check", "why": "changed-but-untested surfaces"},
+        {"n": 5, "tool": "get_symbol_complexity", "alt": ["get_coupling_metrics"], "when": "quality axis", "why": "complexity/coupling regressions"}
+      ]
+    },
+
+    "refactor": {
+      "aka": ["rename", "extract", "restructure", "split file", "dedupe", "move code", "untangle"],
+      "lead": "jcodemunch.check_rename_safe + find_references (safety FIRST)",
+      "playbook": [
+        {"n": 1, "tool": "check_rename_safe", "alt": ["check_delete_safe", "check_edit_safe", "check_references"], "when": "before ANY move/rename", "why": "enumerate risk before touching"},
+        {"n": 2, "tool": "find_references", "alt": ["find_importers", "get_call_hierarchy"], "when": "wide rename/move", "why": "every site — none missed"},
+        {"n": 3, "tool": "get_blast_radius", "alt": ["get_impact_preview", "plan_refactoring"], "when": "scoping the change", "why": "full downstream impact + a plan"},
+        {"n": 4, "tool": "find_similar_symbols", "modifiers": {"semantic": true}, "when": "de-duplicating", "why": "find semantic clones to merge"},
+        {"n": 5, "tool": "get_extraction_candidates", "alt": ["get_dependency_cycles", "get_layer_violations"], "when": "structural refactor", "why": "concrete extract/decouple targets"}
+      ]
+    },
+
+    "navigate_docs": {
+      "aka": ["read the docs", "how do I use X (library)", "find in documentation", "api reference"],
+      "engine": "jdocmunch",
+      "lead": "jdocmunch.search_sections",
+      "playbook": [
+        {"n": 1, "engine": "jdocmunch", "tool": "search_sections", "alt": ["get_toc", "get_toc_tree", "search_titles"], "when": "finding the right doc section", "why": "section-level, not whole-file reads"},
+        {"n": 2, "engine": "jdocmunch", "tool": "get_section", "alt": ["get_sections", "get_section_context"], "when": "reading a specific section", "why": "minimal, contextual"},
+        {"n": 3, "engine": "jdocmunch", "tool": "get_document_outline", "when": "one big doc's shape", "why": "skeleton before scrolling"},
+        {"n": 4, "engine": "jdocmunch", "tool": "find_code_examples", "alt": ["find_endpoint", "lookup_term"], "when": "need a usage example / term", "why": "targeted retrieval"}
+      ]
+    }
+  },
+
+  "cross_cutting": {
+    "semantic_search": {
+      "when": "you can't name the exact symbol; finding related/similar code by MEANING; 'where do we do X'",
+      "tools": ["search_symbols(semantic=true)", "find_similar_symbols", "get_related_symbols", "assemble_task_context (semantic-ranked)"],
+      "requires": "embeddings present. Verify: check_embedding_drift. Build: embed_repo (backend: ollama all-minilm, 384-dim).",
+      "note": "This is the newly-enabled capability — prefer it over lexical search whenever the name is unknown."
+    },
+    "safety_before_edit": {
+      "when": "immediately before any mutate/rename/delete of a shared symbol",
+      "tools": ["check_edit_safe", "check_rename_safe", "check_delete_safe", "check_references", "get_blast_radius"]
+    },
+    "freshness": {
+      "auto": "index-lifecycle.py keeps the ACTIVE repo fresh (session-start rebuild on HEAD/dirty change; post-write incremental). AI summaries inline via ollama; skipped+warned if ollama down.",
+      "manual_if_stale": ["index_folder(incremental=true)", "index_file", "graphify update <root>"],
+      "semantic": "embed_repo per repo (not auto — run after summaries) ; check_embedding_drift to verify canary"
+    }
+  },
+
+  "handoff_pipeline": {
+    "order": ["facts", "reasoning", "action"],
+    "facts": "jcodemunch (structure) + graphify (architecture) + jdocmunch (docs) — gather in parallel",
+    "reasoning": "sequential-thinking over the facts",
+    "action": "edit via Edit/ctx_patch; then register_edit / index-lifecycle keeps the index fresh"
+  }
+}

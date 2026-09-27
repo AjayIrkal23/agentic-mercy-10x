@@ -2,22 +2,10 @@
   "_meta": {
     "purpose": "Ranked-routing catalog (Spec A §5.2). Covers all on-disk skills; schema-v1 front-matter where present, else floor-fallback keywords.",
     "generator": "build-skills-index.py",
-    "skill_count": 237,
-    "checksum": "7035010b5ac4edad89a2f53a5e52ce7371a578887c93beb68533d0ca5ad4bf88"
+    "skill_count": 114,
+    "checksum": "b4d2f92dd5b70cc8cb44fed9eaad3856046a0abb4bd6bacf273fc98f47d82e80"
   },
   "skills": {
-    "_gstack-command": {
-      "name": "_gstack-command",
-      "description": "",
-      "keywords": [
-        "gstack-command"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
     "agent-development": {
       "name": "agent-development",
       "description": "ALWAYS invoke when creating or revising reusable agent definitions, trigger text, or system prompts for autonomous helpers.",
@@ -40,6 +28,43 @@
       "surfaces": [
         "general"
       ],
+      "intents": [],
+      "path_rules": [],
+      "weight": 1.0,
+      "source": "floor-fallback"
+    },
+    "animejs-motion": {
+      "name": "animejs-motion",
+      "description": "ALWAYS invoke for SVG animation (line-draw/morph), standalone timelines, and non-React or \"sprinkle\" motion — anime.js v4 is the engine for these. In React app UI, `motion-dev` (Motion) is PRIMARY for layout/exit/gestures/scroll; reach here for SVG (`svg.createDrawable`/`morphTo`/`createMotionPath`), imperative `createTimeline` sequences, `createDraggable`, and non-React pages. MUST use v4 ESM API",
+      "keywords": [
+        "always",
+        "animation",
+        "anime",
+        "animejs-motion",
+        "app",
+        "createdrawable",
+        "engine",
+        "exit",
+        "gestures",
+        "here",
+        "invoke",
+        "layout",
+        "line-draw",
+        "morph",
+        "motion",
+        "motion-dev",
+        "non-react",
+        "primary",
+        "reach",
+        "react",
+        "scroll",
+        "sprinkle",
+        "standalone",
+        "svg",
+        "these",
+        "timelines"
+      ],
+      "surfaces": [],
       "intents": [],
       "path_rules": [],
       "weight": 1.0,
@@ -136,27 +161,6 @@
       "surfaces": [
         "planning"
       ],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "autoplan": {
-      "name": "autoplan",
-      "description": "Auto-review pipeline — reads the full CEO, design, eng, and DX review skills from disk and",
-      "keywords": [
-        "auto-review",
-        "autoplan",
-        "ceo",
-        "design",
-        "disk",
-        "eng",
-        "full",
-        "pipeline",
-        "reads",
-        "review"
-      ],
-      "surfaces": [],
       "intents": [],
       "path_rules": [],
       "weight": 1.0,
@@ -520,57 +524,35 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "benchmark": {
-      "name": "benchmark",
-      "description": "Performance regression detection using the browse daemon. (gstack)",
+    "brand": {
+      "name": "brand",
+      "description": "ALWAYS invoke for brand voice, visual identity, messaging frameworks, and brand consistency — tone of voice, branded content, marketing copy, style guides, and brand-compliance review of existing assets.",
       "keywords": [
-        "benchmark",
-        "browse",
-        "daemon",
-        "detection",
-        "gstack",
-        "performance",
-        "regression"
+        "brand assets",
+        "brand compliance",
+        "brand consistency",
+        "brand guidelines",
+        "brand identity",
+        "brand voice",
+        "branded content",
+        "marketing copy",
+        "messaging",
+        "messaging framework",
+        "positioning",
+        "style guide",
+        "tagline",
+        "tone of voice",
+        "visual identity"
       ],
-      "surfaces": [],
-      "intents": [],
+      "surfaces": [
+        "frontend"
+      ],
+      "intents": [
+        "DESIGN"
+      ],
       "path_rules": [],
       "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "benchmark-models": {
-      "name": "benchmark-models",
-      "description": "Cross-model benchmark for gstack skills. (gstack)",
-      "keywords": [
-        "benchmark",
-        "benchmark-models",
-        "cross-model",
-        "gstack"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "browse": {
-      "name": "browse",
-      "description": "Fast headless browser for QA testing and site dogfooding. (gstack)",
-      "keywords": [
-        "browse",
-        "browser",
-        "dogfooding",
-        "fast",
-        "gstack",
-        "headless",
-        "site",
-        "testing"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
+      "source": "front-matter"
     },
     "browser-testing-with-devtools": {
       "name": "browser-testing-with-devtools",
@@ -581,61 +563,6 @@
         "real",
         "tests",
         "webapp-testing"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "canary": {
-      "name": "canary",
-      "description": "Post-deploy canary monitoring. (gstack)",
-      "keywords": [
-        "canary",
-        "gstack",
-        "monitoring",
-        "post-deploy"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "canary-playwright": {
-      "name": "canary-playwright",
-      "description": "ALWAYS invoke for post-deploy canary monitoring using Playwright MCP (adapted from GStack /canary).",
-      "keywords": [
-        "adapted",
-        "always",
-        "canary",
-        "canary-playwright",
-        "gstack",
-        "invoke",
-        "mcp",
-        "monitoring",
-        "playwright",
-        "post-deploy"
-      ],
-      "surfaces": [
-        "general"
-      ],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "careful": {
-      "name": "careful",
-      "description": "Safety guardrails for destructive commands. (gstack)",
-      "keywords": [
-        "careful",
-        "commands",
-        "destructive",
-        "gstack",
-        "guardrails",
-        "safety"
       ],
       "surfaces": [],
       "intents": [],
@@ -876,24 +803,6 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "codex": {
-      "name": "codex",
-      "description": "OpenAI Codex CLI wrapper — three modes. (gstack)",
-      "keywords": [
-        "cli",
-        "codex",
-        "gstack",
-        "modes",
-        "openai",
-        "three",
-        "wrapper"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
     "command-development": {
       "name": "command-development",
       "description": "Use when creating or updating command definitions, command frontmatter, arguments, or reusable",
@@ -920,26 +829,6 @@
       "description": "",
       "keywords": [
         "composition-patterns"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "connect-chrome": {
-      "name": "connect-chrome",
-      "description": "Launch GStack Browser — AI-controlled Chromium with the sidebar extension baked in.",
-      "keywords": [
-        "ai-controlled",
-        "baked",
-        "browser",
-        "chromium",
-        "connect-chrome",
-        "extension",
-        "gstack",
-        "launch",
-        "sidebar"
       ],
       "surfaces": [],
       "intents": [],
@@ -979,67 +868,38 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "context-restore": {
-      "name": "context-restore",
-      "description": "Restore working context saved earlier by /context-save. (gstack)",
+    "context7-mcp": {
+      "name": "context7-mcp",
+      "description": "This skill should be used when the user asks about libraries, frameworks, API references, or needs code examples. Activates for setup questions, code generation involving libraries, or mentions of specific frameworks like React, Vue, Next.js, Prisma, Supabase, etc.",
       "keywords": [
-        "context",
-        "context-restore",
-        "context-save",
-        "earlier",
-        "gstack",
-        "restore",
-        "saved",
-        "working"
+        "about",
+        "activates",
+        "api",
+        "asks",
+        "context7-mcp",
+        "etc",
+        "examples",
+        "frameworks",
+        "generation",
+        "involving",
+        "libraries",
+        "like",
+        "mentions",
+        "needs",
+        "next",
+        "prisma",
+        "questions",
+        "react",
+        "references",
+        "setup",
+        "should",
+        "specific",
+        "supabase",
+        "vue"
       ],
       "surfaces": [],
       "intents": [],
       "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "context-save": {
-      "name": "context-save",
-      "description": "Save working context. (gstack)",
-      "keywords": [
-        "context",
-        "context-save",
-        "gstack",
-        "save",
-        "working"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "cso": {
-      "name": "cso",
-      "description": "Chief Security Officer mode. (gstack)",
-      "keywords": [
-        "audit",
-        "chief",
-        "cso",
-        "gstack",
-        "mode",
-        "officer",
-        "owasp",
-        "security"
-      ],
-      "surfaces": [
-        "backend"
-      ],
-      "intents": [],
-      "path_rules": [
-        {
-          "filename_contains_any": [
-            "security",
-            "audit",
-            "owasp"
-          ]
-        }
-      ],
       "weight": 1.0,
       "source": "floor-fallback"
     },
@@ -1193,179 +1053,69 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "design-consultation": {
-      "name": "design-consultation",
-      "description": "Design consultation: understands your product, researches the landscape, proposes a complete",
+    "design": {
+      "name": "design",
+      "description": "ALWAYS invoke for identity and marketing-asset design work: logo generation (55 styles), corporate identity programs (50 deliverables, CIP mockups), icon design (15 styles, SVG), banner design (22 styles for social/ads/web/print), and social photo sets. Broader identity scope than component UI work.",
       "keywords": [
-        "complete",
-        "consultation",
-        "design",
-        "design-consultation",
-        "landscape",
-        "product",
-        "proposes",
-        "researches",
-        "understands"
+        "brand collateral",
+        "brand mark",
+        "business card",
+        "cip",
+        "corporate identity",
+        "icon design",
+        "icon set",
+        "identity program",
+        "letterhead",
+        "logo",
+        "logo design",
+        "logotype",
+        "mockup",
+        "mockups",
+        "social media image",
+        "social photo",
+        "stationery",
+        "svg icon",
+        "wordmark"
       ],
-      "surfaces": [],
-      "intents": [],
+      "surfaces": [
+        "frontend"
+      ],
+      "intents": [
+        "DESIGN"
+      ],
       "path_rules": [],
       "weight": 1.0,
-      "source": "floor-fallback"
+      "source": "front-matter"
     },
-    "design-extract": {
-      "name": "design-extract",
-      "description": "ALWAYS invoke when a reference URL is available to extract complete design systems from live websites — tokens, Tailwind config, typography, colors, and component anatomy. Commands: /extract, /grade, /battle, /remix, /pack, /theme-swap, /brand, /pair.",
+    "design-taste-frontend": {
+      "name": "design-taste-frontend",
+      "description": "Anti-slop frontend skill for landing pages, portfolios, and redesigns. The agent reads the brief, infers the right design direction, and ships interfaces that do not look templated. Real design systems when applicable, audit-first on redesigns, strict pre-flight check.",
       "keywords": [
-        "always",
-        "anatomy",
-        "available",
-        "battle",
-        "brand",
-        "colors",
-        "commands",
-        "complete",
-        "component",
-        "components",
-        "config",
+        "agent",
+        "anti-slop",
+        "applicable",
+        "audit-first",
+        "brief",
+        "check",
         "design",
-        "design-extract",
-        "extract",
-        "grade",
-        "invoke",
-        "layout",
-        "live",
-        "pack",
+        "design-taste-frontend",
+        "direction",
+        "frontend",
+        "infers",
+        "interfaces",
+        "landing",
+        "look",
         "pages",
-        "reference",
-        "remix",
+        "portfolios",
+        "pre-flight",
+        "reads",
+        "real",
+        "redesigns",
+        "right",
+        "ships",
+        "strict",
         "systems",
-        "tailwind",
-        "theme-swap",
-        "tokens",
-        "typography",
-        "url",
-        "views",
-        "websites"
-      ],
-      "surfaces": [
-        "frontend"
-      ],
-      "intents": [],
-      "path_rules": [
-        {
-          "path_contains_any": [
-            "/components/",
-            "/layout/",
-            "/pages/",
-            "/views/"
-          ]
-        }
-      ],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "design-html": {
-      "name": "design-html",
-      "description": "Design finalization: generates production-quality Pretext-native HTML/CSS. (gstack)",
-      "keywords": [
-        "css",
-        "design",
-        "design-html",
-        "finalization",
-        "generates",
-        "gstack",
-        "html",
-        "pretext-native",
-        "production-quality"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "design-review": {
-      "name": "design-review",
-      "description": "Designer''s eye QA: finds visual inconsistency, spacing issues, hierarchy problems, AI slop",
-      "keywords": [
-        "design-review",
-        "designer",
-        "eye",
-        "finds",
-        "hierarchy",
-        "inconsistency",
-        "issues",
-        "problems",
-        "slop",
-        "spacing",
-        "visual"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "design-review-playwright": {
-      "name": "design-review-playwright",
-      "description": "ALWAYS invoke for live visual QA against design specs using Playwright screenshots (adapted from GStack /design-review).",
-      "keywords": [
-        "adapted",
-        "against",
-        "always",
-        "design",
-        "design-review",
-        "design-review-playwright",
-        "gstack",
-        "invoke",
-        "live",
-        "playwright",
-        "screenshots",
-        "specs",
-        "visual"
-      ],
-      "surfaces": [
-        "backend",
-        "frontend"
-      ],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "design-shotgun": {
-      "name": "design-shotgun",
-      "description": "Design shotgun: generate multiple AI design variants, open a comparison board, collect structured",
-      "keywords": [
-        "board",
-        "collect",
-        "comparison",
-        "design",
-        "design-shotgun",
-        "generate",
-        "multiple",
-        "open",
-        "shotgun",
-        "structured",
-        "variants"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "devex-review": {
-      "name": "devex-review",
-      "description": "Live developer experience audit. (gstack)",
-      "keywords": [
-        "audit",
-        "developer",
-        "devex-review",
-        "experience",
-        "gstack",
-        "live"
+        "templated"
       ],
       "surfaces": [],
       "intents": [],
@@ -1393,62 +1143,6 @@
       "path_rules": [],
       "weight": 1.0,
       "source": "front-matter"
-    },
-    "diagram": {
-      "name": "diagram",
-      "description": "Turn an English description (or mermaid source) into a diagram triplet: the source, an editable",
-      "keywords": [
-        "description",
-        "diagram",
-        "editable",
-        "english",
-        "mermaid",
-        "source",
-        "triplet",
-        "turn"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "document-generate": {
-      "name": "document-generate",
-      "description": "Generate missing documentation from scratch for a feature, module, or entire project. (gstack)",
-      "keywords": [
-        "document-generate",
-        "documentation",
-        "entire",
-        "feature",
-        "generate",
-        "gstack",
-        "missing",
-        "module",
-        "project",
-        "scratch"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "document-release": {
-      "name": "document-release",
-      "description": "Post-ship documentation update. (gstack)",
-      "keywords": [
-        "document-release",
-        "documentation",
-        "gstack",
-        "post-ship",
-        "update"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
     },
     "documentation-and-adrs": {
       "name": "documentation-and-adrs",
@@ -1803,24 +1497,6 @@
         "recurring",
         "refactoring",
         "which"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "freeze": {
-      "name": "freeze",
-      "description": "Restrict file edits to a specific directory for the session. (gstack)",
-      "keywords": [
-        "directory",
-        "edits",
-        "freeze",
-        "gstack",
-        "restrict",
-        "session",
-        "specific"
       ],
       "surfaces": [],
       "intents": [],
@@ -2476,1398 +2152,6 @@
       "weight": 1.0,
       "source": "front-matter"
     },
-    "gsd-add-tests": {
-      "name": "gsd-add-tests",
-      "description": "Generate tests for a completed phase based on UAT criteria and implementation",
-      "keywords": [
-        "based",
-        "completed",
-        "criteria",
-        "generate",
-        "gsd-add-tests",
-        "implementation",
-        "phase",
-        "tests",
-        "uat"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-ai-integration-phase": {
-      "name": "gsd-ai-integration-phase",
-      "description": "Generate an AI-SPEC.md design contract for phases that involve building AI systems.",
-      "keywords": [
-        "ai-spec",
-        "building",
-        "contract",
-        "design",
-        "generate",
-        "gsd-ai-integration-phase",
-        "involve",
-        "phases",
-        "systems"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-audit-fix": {
-      "name": "gsd-audit-fix",
-      "description": "Autonomous audit-to-fix pipeline — find issues, classify, fix, test, commit",
-      "keywords": [
-        "audit-to-fix",
-        "autonomous",
-        "classify",
-        "commit",
-        "find",
-        "fix",
-        "gsd-audit-fix",
-        "issues",
-        "pipeline",
-        "test"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-audit-milestone": {
-      "name": "gsd-audit-milestone",
-      "description": "Audit milestone completion against original intent before archiving",
-      "keywords": [
-        "against",
-        "archiving",
-        "audit",
-        "completion",
-        "gsd-audit-milestone",
-        "intent",
-        "milestone",
-        "original"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-audit-uat": {
-      "name": "gsd-audit-uat",
-      "description": "Cross-phase audit of all outstanding UAT and verification items",
-      "keywords": [
-        "audit",
-        "cross-phase",
-        "gsd-audit-uat",
-        "items",
-        "outstanding",
-        "uat",
-        "verification"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-autonomous": {
-      "name": "gsd-autonomous",
-      "description": "Run all remaining phases autonomously — discuss→plan→execute per phase",
-      "keywords": [
-        "autonomously",
-        "discuss",
-        "execute",
-        "gsd-autonomous",
-        "phase",
-        "phases",
-        "plan",
-        "remaining",
-        "run"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-capture": {
-      "name": "gsd-capture",
-      "description": "Capture ideas, tasks, notes, and seeds to their destination",
-      "keywords": [
-        "capture",
-        "destination",
-        "gsd-capture",
-        "ideas",
-        "notes",
-        "seeds",
-        "tasks",
-        "their"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-cleanup": {
-      "name": "gsd-cleanup",
-      "description": "Archive accumulated phase directories from completed milestones",
-      "keywords": [
-        "accumulated",
-        "archive",
-        "completed",
-        "directories",
-        "gsd-cleanup",
-        "milestones",
-        "phase"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-code-review": {
-      "name": "gsd-code-review",
-      "description": "Review source files changed during a phase for bugs, security issues, and code quality problems",
-      "keywords": [
-        "bugs",
-        "changed",
-        "during",
-        "gsd-code-review",
-        "issues",
-        "phase",
-        "problems",
-        "quality",
-        "review",
-        "security",
-        "source"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-complete-milestone": {
-      "name": "gsd-complete-milestone",
-      "description": "Archive completed milestone and prepare for next version",
-      "keywords": [
-        "archive",
-        "completed",
-        "gsd-complete-milestone",
-        "milestone",
-        "next",
-        "prepare",
-        "version"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-config": {
-      "name": "gsd-config",
-      "description": "Configure GSD settings — workflow toggles, advanced knobs, integrations, and model profile",
-      "keywords": [
-        "advanced",
-        "configure",
-        "gsd",
-        "gsd-config",
-        "integrations",
-        "knobs",
-        "model",
-        "profile",
-        "settings",
-        "toggles",
-        "workflow"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-debug": {
-      "name": "gsd-debug",
-      "description": "Systematic debugging with persistent state across context resets",
-      "keywords": [
-        "across",
-        "context",
-        "debugging",
-        "gsd-debug",
-        "persistent",
-        "resets",
-        "state",
-        "systematic"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-discuss-phase": {
-      "name": "gsd-discuss-phase",
-      "description": "Gather phase context through adaptive questioning before planning.",
-      "keywords": [
-        "adaptive",
-        "context",
-        "gather",
-        "gsd-discuss-phase",
-        "phase",
-        "planning",
-        "questioning",
-        "through"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-docs-update": {
-      "name": "gsd-docs-update",
-      "description": "Generate or update project documentation verified against the codebase",
-      "keywords": [
-        "against",
-        "codebase",
-        "documentation",
-        "generate",
-        "gsd-docs-update",
-        "project",
-        "update",
-        "verified"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-eval-review": {
-      "name": "gsd-eval-review",
-      "description": "Audit an executed AI phase's evaluation coverage and produce an EVAL-REVIEW.md remediation plan.",
-      "keywords": [
-        "audit",
-        "coverage",
-        "eval-review",
-        "evaluation",
-        "executed",
-        "gsd-eval-review",
-        "phase",
-        "plan",
-        "produce",
-        "remediation"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-execute-phase": {
-      "name": "gsd-execute-phase",
-      "description": "Execute all plans in a phase with wave-based parallelization",
-      "keywords": [
-        "execute",
-        "gsd-execute-phase",
-        "parallelization",
-        "phase",
-        "plans",
-        "wave-based"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-explore": {
-      "name": "gsd-explore",
-      "description": "Socratic ideation and idea routing — think through ideas before committing to plans",
-      "keywords": [
-        "committing",
-        "gsd-explore",
-        "idea",
-        "ideas",
-        "ideation",
-        "plans",
-        "routing",
-        "socratic",
-        "think",
-        "through"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-extract-learnings": {
-      "name": "gsd-extract-learnings",
-      "description": "Extract decisions, lessons, patterns, and surprises from completed phase artifacts",
-      "keywords": [
-        "artifacts",
-        "completed",
-        "decisions",
-        "extract",
-        "gsd-extract-learnings",
-        "lessons",
-        "patterns",
-        "phase",
-        "surprises"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-fast": {
-      "name": "gsd-fast",
-      "description": "Execute a trivial task inline — no subagents, no planning overhead",
-      "keywords": [
-        "execute",
-        "gsd-fast",
-        "inline",
-        "overhead",
-        "planning",
-        "subagents",
-        "trivial"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-forensics": {
-      "name": "gsd-forensics",
-      "description": "Post-mortem investigation for failed GSD workflows — diagnoses what went wrong.",
-      "keywords": [
-        "diagnoses",
-        "failed",
-        "gsd",
-        "gsd-forensics",
-        "investigation",
-        "post-mortem",
-        "went",
-        "what",
-        "workflows",
-        "wrong"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-graphify": {
-      "name": "gsd-graphify",
-      "description": "Build, query, and inspect the project knowledge graph in .planning/graphs/",
-      "keywords": [
-        "build",
-        "graph",
-        "graphs",
-        "gsd-graphify",
-        "inspect",
-        "knowledge",
-        "planning",
-        "project",
-        "query"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-health": {
-      "name": "gsd-health",
-      "description": "Diagnose planning directory health and optionally repair issues",
-      "keywords": [
-        "diagnose",
-        "directory",
-        "gsd-health",
-        "health",
-        "issues",
-        "optionally",
-        "planning",
-        "repair"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-help": {
-      "name": "gsd-help",
-      "description": "Show available GSD commands and usage guide",
-      "keywords": [
-        "available",
-        "commands",
-        "gsd",
-        "gsd-help",
-        "guide",
-        "show",
-        "usage"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-import": {
-      "name": "gsd-import",
-      "description": "Ingest external plans with conflict detection against project decisions before writing anything.",
-      "keywords": [
-        "against",
-        "anything",
-        "conflict",
-        "decisions",
-        "detection",
-        "external",
-        "gsd-import",
-        "ingest",
-        "plans",
-        "project",
-        "writing"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-inbox": {
-      "name": "gsd-inbox",
-      "description": "Triage and review open GitHub issues and PRs against project templates and contribution guidelines.",
-      "keywords": [
-        "against",
-        "contribution",
-        "github",
-        "gsd-inbox",
-        "guidelines",
-        "issues",
-        "open",
-        "project",
-        "prs",
-        "review",
-        "templates",
-        "triage"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-ingest-docs": {
-      "name": "gsd-ingest-docs",
-      "description": "Bootstrap or merge a .planning/ setup from existing ADRs, PRDs, SPECs, and docs in a repo.",
-      "keywords": [
-        "adrs",
-        "bootstrap",
-        "docs",
-        "existing",
-        "gsd-ingest-docs",
-        "merge",
-        "planning",
-        "prds",
-        "repo",
-        "setup",
-        "specs"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-manager": {
-      "name": "gsd-manager",
-      "description": "Interactive command center for managing multiple phases from one terminal",
-      "keywords": [
-        "center",
-        "command",
-        "gsd-manager",
-        "interactive",
-        "managing",
-        "multiple",
-        "one",
-        "phases",
-        "terminal"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-map-codebase": {
-      "name": "gsd-map-codebase",
-      "description": "Analyze codebase with parallel mapper agents to produce .planning/codebase/ documents",
-      "keywords": [
-        "agents",
-        "analyze",
-        "codebase",
-        "documents",
-        "gsd-map-codebase",
-        "mapper",
-        "parallel",
-        "planning",
-        "produce"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-milestone-summary": {
-      "name": "gsd-milestone-summary",
-      "description": "Generate a comprehensive project summary from milestone artifacts for team onboarding and review",
-      "keywords": [
-        "artifacts",
-        "comprehensive",
-        "generate",
-        "gsd-milestone-summary",
-        "milestone",
-        "onboarding",
-        "project",
-        "review",
-        "summary",
-        "team"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-mvp-phase": {
-      "name": "gsd-mvp-phase",
-      "description": "Plan a phase as a vertical MVP slice — user story, SPIDR splitting, then plan-phase",
-      "keywords": [
-        "gsd-mvp-phase",
-        "mvp",
-        "phase",
-        "plan",
-        "plan-phase",
-        "slice",
-        "spidr",
-        "splitting",
-        "story",
-        "then",
-        "vertical"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-new-milestone": {
-      "name": "gsd-new-milestone",
-      "description": "Start a new milestone cycle — update PROJECT.md and route to requirements",
-      "keywords": [
-        "cycle",
-        "gsd-new-milestone",
-        "milestone",
-        "project",
-        "requirements",
-        "route",
-        "start",
-        "update"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-new-project": {
-      "name": "gsd-new-project",
-      "description": "Initialize a new project with deep context gathering and PROJECT.md",
-      "keywords": [
-        "context",
-        "deep",
-        "gathering",
-        "gsd-new-project",
-        "initialize",
-        "project"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-ns-context": {
-      "name": "gsd-ns-context",
-      "description": "codebase intelligence | map graphify docs learnings",
-      "keywords": [
-        "codebase",
-        "docs",
-        "graphify",
-        "gsd-ns-context",
-        "intelligence",
-        "learnings",
-        "map"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-ns-ideate": {
-      "name": "gsd-ns-ideate",
-      "description": "exploration capture | explore sketch spike spec capture",
-      "keywords": [
-        "capture",
-        "exploration",
-        "explore",
-        "gsd-ns-ideate",
-        "sketch",
-        "spec",
-        "spike"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-ns-manage": {
-      "name": "gsd-ns-manage",
-      "description": "config workspace | workstreams thread update ship inbox",
-      "keywords": [
-        "config",
-        "gsd-ns-manage",
-        "inbox",
-        "ship",
-        "thread",
-        "update",
-        "workspace",
-        "workstreams"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-ns-project": {
-      "name": "gsd-ns-project",
-      "description": "project lifecycle | milestones audits summary",
-      "keywords": [
-        "audits",
-        "gsd-ns-project",
-        "lifecycle",
-        "milestones",
-        "project",
-        "summary"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-ns-review": {
-      "name": "gsd-ns-review",
-      "description": "quality gates | code review debug audit security eval ui",
-      "keywords": [
-        "audit",
-        "debug",
-        "eval",
-        "gates",
-        "gsd-ns-review",
-        "quality",
-        "review",
-        "security"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-ns-workflow": {
-      "name": "gsd-ns-workflow",
-      "description": "workflow | discuss plan execute verify phase progress",
-      "keywords": [
-        "discuss",
-        "execute",
-        "gsd-ns-workflow",
-        "phase",
-        "plan",
-        "progress",
-        "verify",
-        "workflow"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-pause-work": {
-      "name": "gsd-pause-work",
-      "description": "Create context handoff when pausing work mid-phase",
-      "keywords": [
-        "context",
-        "create",
-        "gsd-pause-work",
-        "handoff",
-        "mid-phase",
-        "pausing"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-phase": {
-      "name": "gsd-phase",
-      "description": "CRUD for phases in ROADMAP.md — add, insert, remove, or edit phases",
-      "keywords": [
-        "add",
-        "crud",
-        "edit",
-        "gsd-phase",
-        "insert",
-        "phases",
-        "remove",
-        "roadmap"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-plan-phase": {
-      "name": "gsd-plan-phase",
-      "description": "Create detailed phase plan (PLAN.md) with verification loop",
-      "keywords": [
-        "create",
-        "detailed",
-        "gsd-plan-phase",
-        "loop",
-        "phase",
-        "plan",
-        "verification"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-plan-review-convergence": {
-      "name": "gsd-plan-review-convergence",
-      "description": "Cross-AI plan convergence loop — replan with review feedback until no HIGH concerns remain.",
-      "keywords": [
-        "concerns",
-        "convergence",
-        "cross-ai",
-        "feedback",
-        "gsd-plan-review-convergence",
-        "high",
-        "loop",
-        "plan",
-        "remain",
-        "replan",
-        "review",
-        "until"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-pr-branch": {
-      "name": "gsd-pr-branch",
-      "description": "Create a clean PR branch by filtering out .planning/ commits — ready for code review",
-      "keywords": [
-        "branch",
-        "clean",
-        "commits",
-        "create",
-        "filtering",
-        "gsd-pr-branch",
-        "out",
-        "planning",
-        "ready",
-        "review"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-profile-user": {
-      "name": "gsd-profile-user",
-      "description": "Generate developer behavioral profile and create Claude-discoverable artifacts",
-      "keywords": [
-        "artifacts",
-        "behavioral",
-        "claude-discoverable",
-        "create",
-        "developer",
-        "generate",
-        "gsd-profile-user",
-        "profile"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-progress": {
-      "name": "gsd-progress",
-      "description": "Check progress, advance workflow, or dispatch freeform intent — the unified GSD situational command",
-      "keywords": [
-        "advance",
-        "check",
-        "command",
-        "dispatch",
-        "freeform",
-        "gsd",
-        "gsd-progress",
-        "intent",
-        "progress",
-        "situational",
-        "unified",
-        "workflow"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-quick": {
-      "name": "gsd-quick",
-      "description": "Execute a quick task with GSD guarantees (atomic commits, state tracking) but skip optional agents",
-      "keywords": [
-        "agents",
-        "atomic",
-        "commits",
-        "execute",
-        "gsd",
-        "gsd-quick",
-        "guarantees",
-        "optional",
-        "quick",
-        "skip",
-        "state",
-        "tracking"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-resume-work": {
-      "name": "gsd-resume-work",
-      "description": "Resume work from previous session with full context restoration",
-      "keywords": [
-        "context",
-        "full",
-        "gsd-resume-work",
-        "previous",
-        "restoration",
-        "resume",
-        "session"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-review": {
-      "name": "gsd-review",
-      "description": "Request cross-AI peer review of phase plans from external AI CLIs",
-      "keywords": [
-        "clis",
-        "cross-ai",
-        "external",
-        "gsd-review",
-        "peer",
-        "phase",
-        "plans",
-        "request",
-        "review"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-review-backlog": {
-      "name": "gsd-review-backlog",
-      "description": "Review and promote backlog items to active milestone",
-      "keywords": [
-        "active",
-        "backlog",
-        "gsd-review-backlog",
-        "items",
-        "milestone",
-        "promote",
-        "review"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-secure-phase": {
-      "name": "gsd-secure-phase",
-      "description": "Retroactively verify threat mitigations for a completed phase",
-      "keywords": [
-        "completed",
-        "gsd-secure-phase",
-        "mitigations",
-        "phase",
-        "retroactively",
-        "threat",
-        "verify"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-settings": {
-      "name": "gsd-settings",
-      "description": "Configure GSD workflow toggles and model profile",
-      "keywords": [
-        "configure",
-        "gsd",
-        "gsd-settings",
-        "model",
-        "profile",
-        "toggles",
-        "workflow"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-ship": {
-      "name": "gsd-ship",
-      "description": "Create PR, run review, and prepare for merge after verification passes",
-      "keywords": [
-        "create",
-        "gsd-ship",
-        "merge",
-        "passes",
-        "prepare",
-        "review",
-        "run",
-        "verification"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-sketch": {
-      "name": "gsd-sketch",
-      "description": "Sketch UI/design ideas with throwaway HTML mockups, or propose what to sketch next (frontier mode)",
-      "keywords": [
-        "design",
-        "frontier",
-        "gsd-sketch",
-        "html",
-        "ideas",
-        "mockups",
-        "mode",
-        "next",
-        "propose",
-        "sketch",
-        "throwaway",
-        "what"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-spec-phase": {
-      "name": "gsd-spec-phase",
-      "description": "Clarify WHAT a phase delivers with ambiguity scoring; produces a SPEC.md before discuss-phase.",
-      "keywords": [
-        "ambiguity",
-        "clarify",
-        "delivers",
-        "discuss-phase",
-        "gsd-spec-phase",
-        "phase",
-        "produces",
-        "scoring",
-        "spec",
-        "what"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-spike": {
-      "name": "gsd-spike",
-      "description": "Spike an idea through experiential exploration, or propose what to spike next (frontier mode)",
-      "keywords": [
-        "experiential",
-        "exploration",
-        "frontier",
-        "gsd-spike",
-        "idea",
-        "mode",
-        "next",
-        "propose",
-        "spike",
-        "through",
-        "what"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-stats": {
-      "name": "gsd-stats",
-      "description": "Display project statistics — phases, plans, requirements, git metrics, and timeline",
-      "keywords": [
-        "display",
-        "git",
-        "gsd-stats",
-        "metrics",
-        "phases",
-        "plans",
-        "project",
-        "requirements",
-        "statistics",
-        "timeline"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-surface": {
-      "name": "gsd-surface",
-      "description": "Toggle which skills are surfaced — apply a profile, list, or disable a cluster without reinstall",
-      "keywords": [
-        "apply",
-        "cluster",
-        "disable",
-        "gsd-surface",
-        "list",
-        "profile",
-        "reinstall",
-        "surfaced",
-        "toggle",
-        "which",
-        "without"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-thread": {
-      "name": "gsd-thread",
-      "description": "Manage persistent context threads for cross-session work",
-      "keywords": [
-        "context",
-        "cross-session",
-        "gsd-thread",
-        "manage",
-        "persistent",
-        "threads"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-ui-phase": {
-      "name": "gsd-ui-phase",
-      "description": "Generate UI design contract (UI-SPEC.md) for frontend phases",
-      "keywords": [
-        "contract",
-        "design",
-        "frontend",
-        "generate",
-        "gsd-ui-phase",
-        "phases",
-        "ui-spec"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-ui-review": {
-      "name": "gsd-ui-review",
-      "description": "Retroactive 6-pillar visual audit of implemented frontend code",
-      "keywords": [
-        "audit",
-        "frontend",
-        "gsd-ui-review",
-        "implemented",
-        "pillar",
-        "retroactive",
-        "visual"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-ultraplan-phase": {
-      "name": "gsd-ultraplan-phase",
-      "description": "[BETA] Offload plan phase to Claude Code's ultraplan cloud; review in browser and import back.",
-      "keywords": [
-        "back",
-        "beta",
-        "browser",
-        "claude",
-        "cloud",
-        "gsd-ultraplan-phase",
-        "import",
-        "offload",
-        "phase",
-        "plan",
-        "review",
-        "ultraplan"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-undo": {
-      "name": "gsd-undo",
-      "description": "Safe git revert. Roll back phase or plan commits using the phase manifest with dependency checks.",
-      "keywords": [
-        "back",
-        "checks",
-        "commits",
-        "dependency",
-        "git",
-        "gsd-undo",
-        "manifest",
-        "phase",
-        "plan",
-        "revert",
-        "roll",
-        "safe"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-update": {
-      "name": "gsd-update",
-      "description": "Update GSD to latest version with changelog display",
-      "keywords": [
-        "changelog",
-        "display",
-        "gsd",
-        "gsd-update",
-        "latest",
-        "update",
-        "version"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-validate-phase": {
-      "name": "gsd-validate-phase",
-      "description": "Retroactively audit and fill Nyquist validation gaps for a completed phase",
-      "keywords": [
-        "audit",
-        "completed",
-        "fill",
-        "gaps",
-        "gsd-validate-phase",
-        "nyquist",
-        "phase",
-        "retroactively",
-        "validation"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-verify-work": {
-      "name": "gsd-verify-work",
-      "description": "Validate built features through conversational UAT",
-      "keywords": [
-        "built",
-        "conversational",
-        "features",
-        "gsd-verify-work",
-        "through",
-        "uat",
-        "validate"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-workspace": {
-      "name": "gsd-workspace",
-      "description": "Manage GSD workspaces — create, list, or remove isolated workspace environments",
-      "keywords": [
-        "create",
-        "environments",
-        "gsd",
-        "gsd-workspace",
-        "isolated",
-        "list",
-        "manage",
-        "remove",
-        "workspace",
-        "workspaces"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gsd-workstreams": {
-      "name": "gsd-workstreams",
-      "description": "Manage parallel workstreams — list, create, switch, status, progress, complete, and resume",
-      "keywords": [
-        "complete",
-        "create",
-        "gsd-workstreams",
-        "list",
-        "manage",
-        "parallel",
-        "progress",
-        "resume",
-        "status",
-        "switch",
-        "workstreams"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gstack": {
-      "name": "gstack",
-      "description": "Router for the gstack skill suite. (gstack)",
-      "keywords": [
-        "gstack",
-        "router",
-        "suite"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "gstack-upgrade": {
-      "name": "gstack-upgrade",
-      "description": "Upgrade gstack to the latest version.",
-      "keywords": [
-        "gstack",
-        "gstack-upgrade",
-        "latest",
-        "upgrade",
-        "version"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "guard": {
-      "name": "guard",
-      "description": "Full safety mode: destructive command warnings + directory-scoped edits. (gstack)",
-      "keywords": [
-        "command",
-        "destructive",
-        "directory-scoped",
-        "edits",
-        "full",
-        "gstack",
-        "guard",
-        "mode",
-        "safety",
-        "warnings"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "health": {
-      "name": "health",
-      "description": "Code quality dashboard. (gstack)",
-      "keywords": [
-        "dashboard",
-        "gstack",
-        "health",
-        "quality"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
     "higgsfield-generate": {
       "name": "higgsfield-generate",
       "description": "|",
@@ -3928,43 +2212,6 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "huashu-design": {
-      "name": "huashu-design",
-      "description": "必须调用（ALWAYS invoke）当命中触发词：做原型、PPT、幻灯片、动画、设计风格、评审、做个HTML页面、UI mockup、导出MP4/GIF、做个好看的。花叔Design——用HTML做高保真原型、幻灯片、动画、可视化与专家评审，需求模糊时给设计方向。生产级Web App/需后端的系统不适用。",
-      "keywords": [
-        "always",
-        "app",
-        "components",
-        "design",
-        "gif",
-        "html",
-        "huashu-design",
-        "invoke",
-        "layout",
-        "mockup",
-        "mp4",
-        "pages",
-        "ppt",
-        "views",
-        "web"
-      ],
-      "surfaces": [
-        "frontend"
-      ],
-      "intents": [],
-      "path_rules": [
-        {
-          "path_contains_any": [
-            "/components/",
-            "/layout/",
-            "/pages/",
-            "/views/"
-          ]
-        }
-      ],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
     "idea-refine": {
       "name": "idea-refine",
       "description": "ALWAYS invoke when the user says \\\"idea-refine\\\" or \\\"ideate\\\" — refines ideas through structured divergent and convergent thinking.",
@@ -3987,57 +2234,6 @@
       "path_rules": [],
       "weight": 1.0,
       "source": "front-matter"
-    },
-    "impeccable": {
-      "name": "impeccable",
-      "description": "ALWAYS invoke when the user wants to design, redesign, shape, critique, audit, polish, clarify, distill, harden, optimize, adapt, animate, colorize, extract, or otherwise improve a frontend interface. Covers websites, landing pages, dashboards, product UI, app shells, components, forms, settings, onboarding, and empty states. Handles UX review, visual hierarchy, information architecture, cognitive",
-      "keywords": [
-        "adapt",
-        "always",
-        "animate",
-        "audit",
-        "clarify",
-        "colorize",
-        "components",
-        "covers",
-        "critique",
-        "design",
-        "distill",
-        "extract",
-        "frontend",
-        "harden",
-        "impeccable",
-        "improve",
-        "interface",
-        "invoke",
-        "landing",
-        "layout",
-        "optimize",
-        "otherwise",
-        "pages",
-        "polish",
-        "redesign",
-        "shape",
-        "views",
-        "wants",
-        "websites"
-      ],
-      "surfaces": [
-        "frontend"
-      ],
-      "intents": [],
-      "path_rules": [
-        {
-          "path_contains_any": [
-            "/components/",
-            "/layout/",
-            "/pages/",
-            "/views/"
-          ]
-        }
-      ],
-      "weight": 1.0,
-      "source": "floor-fallback"
     },
     "improve-codebase-architecture": {
       "name": "improve-codebase-architecture",
@@ -4079,120 +2275,6 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "investigate": {
-      "name": "investigate",
-      "description": "Systematic debugging with root cause investigation. (gstack)",
-      "keywords": [
-        "cause",
-        "debugging",
-        "gstack",
-        "investigate",
-        "investigation",
-        "root",
-        "systematic"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "ios-clean": {
-      "name": "ios-clean",
-      "description": "Remove the DebugBridge SPM package and all #if DEBUG wiring from an iOS app. (gstack)",
-      "keywords": [
-        "app",
-        "debug",
-        "debugbridge",
-        "gstack",
-        "ios",
-        "ios-clean",
-        "package",
-        "remove",
-        "spm",
-        "wiring"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "ios-design-review": {
-      "name": "ios-design-review",
-      "description": "Visual design audit for iOS apps on real hardware. (gstack)",
-      "keywords": [
-        "apps",
-        "audit",
-        "design",
-        "gstack",
-        "hardware",
-        "ios",
-        "ios-design-review",
-        "real",
-        "visual"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "ios-fix": {
-      "name": "ios-fix",
-      "description": "Autonomous iOS bug fixer. (gstack)",
-      "keywords": [
-        "autonomous",
-        "bug",
-        "fixer",
-        "gstack",
-        "ios",
-        "ios-fix"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "ios-qa": {
-      "name": "ios-qa",
-      "description": "Live-device iOS QA for SwiftUI apps. (gstack)",
-      "keywords": [
-        "apps",
-        "gstack",
-        "ios",
-        "ios-qa",
-        "live-device",
-        "swiftui"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "ios-sync": {
-      "name": "ios-sync",
-      "description": "Regenerate the iOS debug bridge against the latest upstream gstack templates. (gstack)",
-      "keywords": [
-        "against",
-        "bridge",
-        "debug",
-        "gstack",
-        "ios",
-        "ios-sync",
-        "latest",
-        "regenerate",
-        "templates",
-        "upstream"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
     "iterative-retrieval": {
       "name": "iterative-retrieval",
       "description": "Pattern for progressively refining context retrieval to solve the subagent context problem",
@@ -4227,33 +2309,35 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "land-and-deploy": {
-      "name": "land-and-deploy",
-      "description": "Land and deploy workflow. (gstack)",
+    "kokonutui": {
+      "name": "kokonutui",
+      "description": "Invoke ONLY when the user EXPLICITLY says \"KokonutUI\" / \"kokonut\" / \"kokonut ui\". ON-DEMAND block source — NOT a default, NOT auto-fired. Do NOT invoke for generic \"build a component/page/dashboard\" requests — those stay with shadcn + . KokonutUI is 100+ design-forward, animated React/TS components & blocks built ON shadcn/ui + Tailwind v4 + Motion, installed via the shadcn CLI registry (`npx shad",
       "keywords": [
-        "deploy",
-        "gstack",
-        "land",
-        "land-and-deploy",
-        "workflow"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "landing-report": {
-      "name": "landing-report",
-      "description": "Read-only queue dashboard for workspace-aware ship. (gstack)",
-      "keywords": [
+        "animated",
+        "auto-fired",
+        "block",
+        "blocks",
+        "build",
+        "component",
+        "components",
         "dashboard",
-        "gstack",
-        "landing-report",
-        "queue",
-        "read-only",
-        "ship",
-        "workspace-aware"
+        "default",
+        "design-forward",
+        "explicitly",
+        "generic",
+        "invoke",
+        "kokonut",
+        "kokonutui",
+        "on-demand",
+        "only",
+        "page",
+        "react",
+        "requests",
+        "says",
+        "shadcn",
+        "source",
+        "stay",
+        "those"
       ],
       "surfaces": [],
       "intents": [],
@@ -4263,7 +2347,7 @@
     },
     "lean-ctx": {
       "name": "lean-ctx",
-      "description": "Context Engineering for AI Agents — 81 MCP tools, 10 read modes, 95+ shell patterns, tree-sitter AST for 27 languages. Compresses LLM context by up to 99%. Use when reading files, running shell commands, searching code, or exploring directories. Auto-installs if not present.",
+      "description": "Context Engineering for AI Agents — 83 MCP tools, 10 read modes, 95+ shell patterns, tree-sitter AST for 27 languages. Compresses LLM context by up to 99%. Use when reading files, running shell commands, searching code, or exploring directories. Auto-installs if not present.",
       "keywords": [
         "agents",
         "ast",
@@ -4288,38 +2372,6 @@
         "shell",
         "tools",
         "tree-sitter"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "learn": {
-      "name": "learn",
-      "description": "Manage project learnings.",
-      "keywords": [
-        "learn",
-        "learnings",
-        "manage",
-        "project"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "make-pdf": {
-      "name": "make-pdf",
-      "description": "Turn any markdown file into a publication-quality PDF. (gstack)",
-      "keywords": [
-        "gstack",
-        "make-pdf",
-        "markdown",
-        "pdf",
-        "publication-quality",
-        "turn"
       ],
       "surfaces": [],
       "intents": [],
@@ -4437,36 +2489,36 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "office-hours": {
-      "name": "office-hours",
-      "description": "YC Office Hours — two modes. (gstack)",
+    "motion-dev": {
+      "name": "motion-dev",
+      "description": "ALWAYS invoke for React UI motion — this is the PRIMARY motion engine for React app interfaces. Motion (motion.dev, the rebranded Framer Motion) owns declarative React motion — enter/exit transitions (`AnimatePresence`), layout & shared-element animations (`layout`/`layoutId`), gestures (`whileHover`/`whileTap`/`whileInView`/`drag`), and scroll-linked motion (`useScroll`). Pairs with `animejs-moti",
       "keywords": [
-        "gstack",
-        "hours",
-        "modes",
-        "office",
-        "office-hours",
-        "two"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "open-gstack-browser": {
-      "name": "open-gstack-browser",
-      "description": "Launch GStack Browser — AI-controlled Chromium with the sidebar extension baked in.",
-      "keywords": [
-        "ai-controlled",
-        "baked",
-        "browser",
-        "chromium",
-        "extension",
-        "gstack",
-        "launch",
-        "open-gstack-browser",
-        "sidebar"
+        "always",
+        "animatepresence",
+        "animations",
+        "app",
+        "declarative",
+        "dev",
+        "engine",
+        "enter",
+        "exit",
+        "framer",
+        "gestures",
+        "interfaces",
+        "invoke",
+        "layout",
+        "layoutid",
+        "motion",
+        "motion-dev",
+        "owns",
+        "primary",
+        "react",
+        "rebranded",
+        "shared-element",
+        "transitions",
+        "whilehover",
+        "whileinview",
+        "whiletap"
       ],
       "surfaces": [],
       "intents": [],
@@ -4552,23 +2604,6 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "pair-agent": {
-      "name": "pair-agent",
-      "description": "Pair a remote AI agent with your browser. (gstack)",
-      "keywords": [
-        "agent",
-        "browser",
-        "gstack",
-        "pair",
-        "pair-agent",
-        "remote"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
     "pdf": {
       "name": "pdf",
       "description": "Use this skill whenever the user wants to do anything with PDF files. This includes reading or extracting text/tables from PDFs, combining or merging multiple PDFs into one, splitting PDFs apart, rotating pages, adding watermarks, creating new PDFs, filling PDF forms, encrypting/decrypting PDFs, extracting images, and OCR on scanned PDFs to make them searchable. If the user mentions a .pdf file or",
@@ -4625,79 +2660,6 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "plan-ceo-review": {
-      "name": "plan-ceo-review",
-      "description": "CEO/founder-mode plan review. (gstack)",
-      "keywords": [
-        "ceo",
-        "founder-mode",
-        "gstack",
-        "plan",
-        "plan-ceo-review",
-        "review"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "plan-design-review": {
-      "name": "plan-design-review",
-      "description": "Designer's eye plan review — interactive, like CEO and Eng review. (gstack)",
-      "keywords": [
-        "ceo",
-        "designer",
-        "eng",
-        "eye",
-        "gstack",
-        "interactive",
-        "like",
-        "plan",
-        "plan-design-review",
-        "review"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "plan-devex-review": {
-      "name": "plan-devex-review",
-      "description": "Interactive developer experience plan review. (gstack)",
-      "keywords": [
-        "developer",
-        "experience",
-        "gstack",
-        "interactive",
-        "plan",
-        "plan-devex-review",
-        "review"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "plan-eng-review": {
-      "name": "plan-eng-review",
-      "description": "Eng manager-mode plan review. (gstack)",
-      "keywords": [
-        "eng",
-        "gstack",
-        "manager-mode",
-        "plan",
-        "plan-eng-review",
-        "review"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
     "plan-exec-stack-guide": {
       "name": "plan-exec-stack-guide",
       "description": "Use when choosing between planning vs implementation stacks, Superpowers vs mandatory frontend/backend",
@@ -4735,25 +2697,6 @@
       "surfaces": [
         "planning"
       ],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "plan-tune": {
-      "name": "plan-tune",
-      "description": "Self-tuning question sensitivity + developer psychographic for gstack (v1: observational).",
-      "keywords": [
-        "developer",
-        "gstack",
-        "observational",
-        "plan-tune",
-        "psychographic",
-        "question",
-        "self-tuning",
-        "sensitivity"
-      ],
-      "surfaces": [],
       "intents": [],
       "path_rules": [],
       "weight": 1.0,
@@ -4920,89 +2863,6 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "prototype": {
-      "name": "prototype",
-      "description": "ALWAYS invoke when the user wants to prototype, sanity-check a data model or state machine, mock up a UI, explore design options, or says \\\"prototype this\\\", \\\"let me play with it\\\", \\\"try a few designs\\\" — builds a throwaway prototype to flesh out a design before committing to it. Routes between two branches: a runnable terminal app for state/business-logic questions, or several radically differe",
-      "keywords": [
-        "let me play with it",
-        "mock up",
-        "mockup",
-        "prototype",
-        "prototype this",
-        "sanity-check the data model",
-        "spike",
-        "throwaway prototype",
-        "try a few designs",
-        "ui variations"
-      ],
-      "surfaces": [
-        "frontend"
-      ],
-      "intents": [
-        "DESIGN",
-        "SPEC"
-      ],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "front-matter"
-    },
-    "qa": {
-      "name": "qa",
-      "description": "Systematically QA test a web application and fix bugs found. (gstack)",
-      "keywords": [
-        "application",
-        "bugs",
-        "fix",
-        "found",
-        "gstack",
-        "systematically",
-        "test",
-        "web"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "qa-only": {
-      "name": "qa-only",
-      "description": "Report-only QA testing. (gstack)",
-      "keywords": [
-        "gstack",
-        "qa-only",
-        "report-only",
-        "testing"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "qa-playwright": {
-      "name": "qa-playwright",
-      "description": "ALWAYS invoke for a systematic QA testing loop using Playwright MCP (adapted from GStack /qa).",
-      "keywords": [
-        "adapted",
-        "always",
-        "gstack",
-        "invoke",
-        "loop",
-        "mcp",
-        "playwright",
-        "qa-playwright",
-        "systematic",
-        "testing"
-      ],
-      "surfaces": [
-        "general"
-      ],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
     "react-hooks-patterns": {
       "name": "react-hooks-patterns",
       "description": "ALWAYS invoke when implementing or reviewing React component state, effects, refs, reducers, memoization, or custom hook extraction.",
@@ -5098,36 +2958,6 @@
         "rebase",
         "resolve",
         "resolving-merge-conflicts"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "retro": {
-      "name": "retro",
-      "description": "Weekly engineering retrospective. (gstack)",
-      "keywords": [
-        "engineering",
-        "gstack",
-        "retro",
-        "retrospective",
-        "weekly"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "review": {
-      "name": "review",
-      "description": "Pre-landing PR review. (gstack)",
-      "keywords": [
-        "gstack",
-        "pre-landing",
-        "review"
       ],
       "surfaces": [],
       "intents": [],
@@ -5235,23 +3065,6 @@
           ]
         }
       ],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "scrape": {
-      "name": "scrape",
-      "description": "Pull data from a web page. (gstack)",
-      "keywords": [
-        "data",
-        "gstack",
-        "page",
-        "pull",
-        "scrape",
-        "web"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
       "weight": 1.0,
       "source": "floor-fallback"
     },
@@ -5365,64 +3178,6 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "setup-browser-cookies": {
-      "name": "setup-browser-cookies",
-      "description": "Import cookies from your real Chromium browser into the headless browse session. (gstack)",
-      "keywords": [
-        "browse",
-        "browser",
-        "chromium",
-        "cookies",
-        "gstack",
-        "headless",
-        "import",
-        "real",
-        "session",
-        "setup-browser-cookies"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "setup-deploy": {
-      "name": "setup-deploy",
-      "description": "Configure deployment settings for /land-and-deploy.",
-      "keywords": [
-        "configure",
-        "deployment",
-        "land-and-deploy",
-        "settings",
-        "setup-deploy"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "setup-gbrain": {
-      "name": "setup-gbrain",
-      "description": "Set up gbrain for this coding agent: install the CLI, initialize a local PGLite or Supabase",
-      "keywords": [
-        "agent",
-        "cli",
-        "coding",
-        "gbrain",
-        "initialize",
-        "install",
-        "local",
-        "pglite",
-        "setup-gbrain",
-        "supabase"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
     "shadcn": {
       "name": "shadcn",
       "description": "Manages shadcn components and projects — adding, searching, fixing, debugging, styling, and",
@@ -5450,30 +3205,6 @@
           ]
         }
       ],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "ship": {
-      "name": "ship",
-      "description": "Ship workflow: detect + merge base branch, run tests, review diff, bump VERSION, update",
-      "keywords": [
-        "base",
-        "branch",
-        "bump",
-        "detect",
-        "diff",
-        "merge",
-        "review",
-        "run",
-        "ship",
-        "tests",
-        "update",
-        "version",
-        "workflow"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
       "weight": 1.0,
       "source": "floor-fallback"
     },
@@ -5545,27 +3276,33 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "skillify": {
-      "name": "skillify",
-      "description": "Codify the most recent successful /scrape flow into a permanent browser-skill on disk. (gstack)",
+    "slides": {
+      "name": "slides",
+      "description": "ALWAYS invoke when creating HTML presentations or slide decks — Chart.js data slides, design-token-driven layouts, responsive slide structure, copywriting formulas, and contextual slide strategy.",
       "keywords": [
-        "browser-skill",
-        "codify",
-        "disk",
-        "flow",
-        "gstack",
-        "most",
-        "permanent",
-        "recent",
-        "scrape",
-        "skillify",
-        "successful"
+        "chart.js",
+        "data slide",
+        "deck",
+        "html presentation",
+        "keynote",
+        "pitch deck",
+        "powerpoint alternative",
+        "presentation",
+        "slide",
+        "slide deck",
+        "slide layout",
+        "slides",
+        "speaker notes"
       ],
-      "surfaces": [],
-      "intents": [],
+      "surfaces": [
+        "frontend"
+      ],
+      "intents": [
+        "DESIGN"
+      ],
       "path_rules": [],
       "weight": 1.0,
-      "source": "floor-fallback"
+      "source": "front-matter"
     },
     "source-driven-development": {
       "name": "source-driven-development",
@@ -5606,26 +3343,6 @@
       "weight": 1.0,
       "source": "floor-fallback"
     },
-    "spec": {
-      "name": "spec",
-      "description": "Turn vague intent into a precise, executable spec in five phases. (gstack)",
-      "keywords": [
-        "executable",
-        "five",
-        "gstack",
-        "intent",
-        "phases",
-        "precise",
-        "spec",
-        "turn",
-        "vague"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
     "spec-driven-development": {
       "name": "spec-driven-development",
       "description": "Creates specs before coding. Use when starting a new project, feature, or significant change",
@@ -5661,27 +3378,6 @@
         "strategic-compact",
         "suggests",
         "through"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "sync-gbrain": {
-      "name": "sync-gbrain",
-      "description": "Keep gbrain current with this repo's code and refresh agent search guidance in CLAUDE.md.",
-      "keywords": [
-        "agent",
-        "claude",
-        "current",
-        "gbrain",
-        "guidance",
-        "keep",
-        "refresh",
-        "repo",
-        "search",
-        "sync-gbrain"
       ],
       "surfaces": [],
       "intents": [],
@@ -6058,77 +3754,45 @@
       "weight": 1.0,
       "source": "front-matter"
     },
-    "ui-ux-pro-max": {
-      "name": "ui-ux-pro-max",
-      "description": "ALWAYS invoke for UI/UX design work on web and mobile. UI/UX design intelligence including 50+ styles, 161 color palettes, 57 font pairings, 161 product types, 99 UX guidelines, and 25 chart types across 10 stacks (React, Next.js, Vue, Svelte, SwiftUI, React Native, Flutter, Tailwind, shadcn/ui, and HTML/CSS). Actions: plan, build, create, design, implement, review, fix, improve, optimize, enhance",
+    "ui-styling": {
+      "name": "ui-styling",
+      "description": "ALWAYS invoke when implementing UI with shadcn/ui, Radix UI, or Tailwind CSS — components (dialog, dropdown, form, table, sheet, command), theming and dark mode, responsive layout, accessible primitives, and consistent styling patterns. The component-implementation layer beneath the design craft stack.",
       "keywords": [
-        "across",
-        "always",
-        "chart",
-        "color",
-        "components",
-        "design",
-        "flutter",
-        "font",
-        "guidelines",
-        "including",
-        "intelligence",
-        "invoke",
-        "layout",
-        "mobile",
-        "native",
-        "next",
-        "pages",
-        "pairings",
-        "palettes",
-        "product",
-        "react",
-        "stacks",
-        "styles",
-        "svelte",
-        "swiftui",
-        "types",
-        "ui-ux-pro-max",
-        "views",
-        "vue",
-        "web"
+        "accessible component",
+        "class variance",
+        "command palette",
+        "component library",
+        "css variables",
+        "cva",
+        "dark mode",
+        "data table",
+        "dialog",
+        "dropdown",
+        "form component",
+        "headless ui",
+        "popover",
+        "radix",
+        "radix ui",
+        "responsive layout",
+        "shadcn",
+        "shadcn/ui",
+        "sheet",
+        "tailwind",
+        "tailwind css",
+        "theme",
+        "theming",
+        "utility classes",
+        "variant"
       ],
       "surfaces": [
         "frontend"
       ],
-      "intents": [],
-      "path_rules": [
-        {
-          "path_contains_any": [
-            "/components/",
-            "/layout/",
-            "/pages/",
-            "/views/"
-          ]
-        }
+      "intents": [
+        "DESIGN"
       ],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "unfreeze": {
-      "name": "unfreeze",
-      "description": "Clear the freeze boundary set by /freeze, allowing edits to all directories again. (gstack)",
-      "keywords": [
-        "again",
-        "allowing",
-        "boundary",
-        "clear",
-        "directories",
-        "edits",
-        "freeze",
-        "gstack",
-        "unfreeze"
-      ],
-      "surfaces": [],
-      "intents": [],
       "path_rules": [],
       "weight": 1.0,
-      "source": "floor-fallback"
+      "source": "front-matter"
     },
     "update-docs": {
       "name": "update-docs",
@@ -6265,32 +3929,6 @@
           ]
         }
       ],
-      "weight": 1.0,
-      "source": "floor-fallback"
-    },
-    "web-design-guidelines": {
-      "name": "web-design-guidelines",
-      "description": "Review UI code for Web Interface Guidelines compliance. Use when asked to \"review my UI\", \"check accessibility\", \"audit design\", \"review UX\", or \"check my site against best practices\".",
-      "keywords": [
-        "accessibility",
-        "against",
-        "asked",
-        "audit",
-        "best",
-        "check",
-        "compliance",
-        "design",
-        "guidelines",
-        "interface",
-        "practices",
-        "review",
-        "site",
-        "web",
-        "web-design-guidelines"
-      ],
-      "surfaces": [],
-      "intents": [],
-      "path_rules": [],
       "weight": 1.0,
       "source": "floor-fallback"
     },

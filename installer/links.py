@@ -3,10 +3,8 @@
 
 Windows cannot rely on POSIX symlinks (they need admin/developer mode), so every
 skill that used to be a symlink is materialized as a real directory (copy) or an
-NTFS junction. This workbench was already fully de-symlinked in P5-T12 (gstack
-pointer skills + higgsfield/mmx real dirs), so on an existing install this is an
-idempotent verify. On a fresh clone it (re)creates any declared link target and
-runs the gstack pointer generator.
+NTFS junction. On an existing install this is an idempotent verify. On a fresh
+clone it (re)creates any declared link target.
 
 Strategy per target:
   * target already a real dir/file      -> OK (skip)
@@ -78,16 +76,14 @@ def materialize(*, dry_run: bool = False) -> list[tuple[str, str]]:
     return results
 
 
-# Vendored / dependency trees that carry their own (gitignored) symlinks and are
-# NOT part of the tracked skill surface: the upstream gstack clone, npm deps, and
-# build output. A symlink inside any of these is not a workbench-owned symlink.
-_SYMLINK_SCAN_SKIP = {"gstack", "node_modules", ".bin", "dist", ".git", "__pycache__"}
+# Vendored / dependency trees that carry their own (gitignored) symlinks are not
+# part of the tracked skill surface.
+_SYMLINK_SCAN_SKIP = {"node_modules", ".bin", "dist", ".git", "__pycache__"}
 
 
 def find_symlinks(scope: Path | None = None) -> list[Path]:
     """Every symlink under the INSTALLED skill surface (excludes upstream/vendored
-    trees — gstack clone internals, node_modules, dist — which the workbench never
-    owns and which npm/upstream populate with their own symlinks)."""
+    trees such as node_modules and dist, which the workbench never owns)."""
     base = scope or (_ROOT / "skills")
     out: list[Path] = []
     if not base.exists():

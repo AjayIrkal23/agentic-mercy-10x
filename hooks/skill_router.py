@@ -95,7 +95,7 @@ _BUILTIN_FRONTEND_RULES: list[dict] = [
     {
         "id": "fe_ui_design",
         "match": {"path_contains_any": ["/components/", "/layout/", "/pages/", "/views/"]},
-        "skills": ["impeccable", "huashu-design", "ui-ux-pro-max", "taste-skill", "frontend-ui-engineering", "design-extract"],
+        "skills": ["taste-skill", "frontend-ui-engineering"],
     },
     {
         "id": "fe_component_tsx",
@@ -170,7 +170,7 @@ _BUILTIN_BACKEND_RULES: list[dict] = [
     {
         "id": "be_security_audit",
         "match": {"filename_contains_any": ["security", "audit", "owasp"]},
-        "skills": ["cso", "owasp-security", "security-and-hardening"],
+        "skills": ["owasp-security", "security-and-hardening"],
     },
     {
         "id": "be_go_file",

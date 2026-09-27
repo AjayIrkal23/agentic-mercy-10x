@@ -1,6 +1,6 @@
 ---
 name: lean-ctx
-description: Context Engineering for AI Agents — 81 MCP tools, 10 read modes, 95+ shell patterns, tree-sitter AST for 27 languages. Compresses LLM context by up to 99%. Use when reading files, running shell commands, searching code, or exploring directories. Auto-installs if not present.
+description: Context Engineering for AI Agents — 83 MCP tools, 10 read modes, 95+ shell patterns, tree-sitter AST for 27 languages. Compresses LLM context by up to 99%. Use when reading files, running shell commands, searching code, or exploring directories. Auto-installs if not present.
 ---
 
 # lean-ctx — Context Engineering for AI Agents
@@ -12,20 +12,17 @@ which lean-ctx || curl -fsSL https://raw.githubusercontent.com/yvgude/lean-ctx/m
 lean-ctx setup
 ```
 
-## Core Tools (10 always visible)
+## Tool Visibility Profiles
 
-| Tool | Purpose |
-|------|---------|
-| `ctx_read(path, mode)` | Read file with compression and caching |
-| `ctx_search(pattern, path)` | Search code with compressed results |
-| `ctx_shell(command)` | Run shell with compressed output |
-| `ctx_tree(path, depth)` | Directory listing |
-| `ctx_patch(path, ops)` | Anchored editing (line+hash, no old-text echo) |
-| `ctx_session(action)` | Session state and persistence |
-| `ctx_knowledge(action)` | Project knowledge across sessions |
-| `ctx_overview(task)` | Task-relevant project map |
-| `ctx_graph(action)` | Code relationships and impact |
-| `ctx_call(name, args)` | Invoke any tool by name |
+| Profile | Tools advertised |
+|---------|------------------|
+| Lean (default, unpinned) | `ctx_read`, `ctx_shell`, `shell`, `ctx_search`, `ctx_glob`, `ctx_tree`, `ctx_session`, `ctx_compose`, `ctx_callgraph`, `ctx_patch`*, `ctx_call`, `ctx_expand` |
+| `minimal` | `ctx_read`, `ctx_shell`, `ctx_search`, `ctx_glob`, `ctx_tree`; `ctx_call` is also advertised as the fallback invoker |
+| `standard` | Minimal + `ctx_compose`, `ctx_explore`, `ctx_knowledge`, `ctx_session`, `ctx_callgraph`, `ctx_graph`, `ctx_delta`, `ctx_execute`, `ctx_expand`, `ctx_overview`, `ctx_url_read`, `ctx_patch`; `ctx_call` is also advertised as the fallback invoker |
+| `power` | Full public tool registry |
+
+\* Lean hides `ctx_patch` for clients with a reliable native editor. Disabled
+tools, role policy, and client compatibility can further narrow every profile.
 
 ## Shell Hook (use instead of raw exec)
 

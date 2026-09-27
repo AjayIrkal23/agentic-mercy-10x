@@ -8,7 +8,7 @@ Rules (Charter §4 amended):
   R3  >=3 trigger keywords once migrated (schema present)                        [WARN]
   R4  token-cost within +/-20% of estimate (--fix rewrites)                      [WARN]
   R5  platforms honesty: 'windows' forbidden if .sh/open/caffeinate/systemctl    [HARD]
-  R6  all links / references/*.md resolve (user-authored)                        [HARD]
+  R6  all links / references/*.{md,mdc} resolve (user-authored)                  [HARD]
   R7  keyword overlap across >3 skills per intent — disambiguation report        [WARN]
   R8  index freshness hash (--fix rebuilds index)                                [WARN]
   R9  floor guard: every trigger-floor.json entry reachable in the index         [HARD when floor present, else SKIP]
@@ -82,11 +82,9 @@ def validate(fix: bool = False) -> int:
             hard_fail += 1
             continue
 
-        # R1 name == dir. Locked skills are upstream-named (e.g. the gstack twin
-        # dir 'connect-chrome' whose clone SKILL.md says 'open-gstack-browser', or
+        # R1 name == dir. Locked skills can retain upstream names (for example,
         # vendored 'taste-skill' -> 'design-taste-frontend'); their sidecar alias
-        # handles routing and P5-T12 pointerization gives twins name==dir. So R1 is
-        # enforced only for user-authored skills.
+        # handles routing. R1 is enforced only for user-authored skills.
         fm_name = str(fm.get("name", ""))
         if is_user and fm_name != name and name not in exempt and fm_name not in exempt:
             if fix:
@@ -136,11 +134,18 @@ def validate(fix: bool = False) -> int:
         # "<skill>/references/x.md" is skill-root-relative (thin aliases point at
         # their canonical); a bare "references/x.md" is dir-relative.
         if is_user:
-            refs = set(re.findall(r"(?:[\w-]+/)?references/[\w./-]+\.md", body))
+            refs = set(re.findall(
+                r"(?<![\w./-])(?:~/\.claude/)?(?:[\w-]+/)?references/"
+                r"[\w./-]+\.(?:mdc|md)(?![\w.-])",
+                body,
+            ))
             for lk in (fm.get("links") or []):
-                if isinstance(lk, str) and lk.endswith(".md"):
+                if isinstance(lk, str) and lk.endswith((".md", ".mdc")):
                     refs.add(lk)
             for r in refs:
+                if r.startswith("~/.claude/"):
+                    if (sl.CLAUDE_DIR / r.removeprefix("~/.claude/")).exists():
+                        continue
                 if (d / r).exists() or (sl.SKILLS_DIR / r).exists():
                     continue
                 print(f"  R6  HARD {name}: missing reference {r}")

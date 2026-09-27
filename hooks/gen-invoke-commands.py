@@ -73,8 +73,8 @@ def act_model(act: str, model_policy: dict) -> str:
     inv = model_policy.get("invoke_categories", {})
     if cat and cat in inv:
         return inv[cat]
-    if act in ("design", "impl"):  # pinned agents resolved by opus-guard; fable since 2026-07-18
-        return "fable"
+    if act in ("design", "impl"):
+        return "opus"
     return "sonnet"
 
 
@@ -132,7 +132,7 @@ For each requested act, spawn its agent (Agent tool, `subagent_type` = the agent
 description prefix `[<model>] ` from the table and `model:"<model>"`, passing the BRIEF + **every
 prior artifact**. Wait for the act's artifact before the next act.
 
-- **`impl` RUNS ON FABLE (user directive 2026-07-18)** — surface routing: FE-only -> `frontend-implementor-specialist`, BE-only -> `backend-implementor-specialist` (contract-first, emits `IMPL-REPORT-BE.md ## CONTRACT`), mixed -> BE then FE then `integrator-specialist` (parity + E2E evidence), general/infra -> `implementation-engineer`. All get `[fable]` + `model:"fable"` (opus-guard pins)
+- **`impl` RUNS ON OPUS** — surface routing: FE-only -> `frontend-implementor-specialist`, BE-only -> `backend-implementor-specialist` (contract-first, emits `IMPL-REPORT-BE.md ## CONTRACT`), mixed -> BE then FE then `integrator-specialist` (parity + E2E evidence), general/infra -> `implementation-engineer`. All get `[opus]` + `model:"opus"` (opus-guard pins)
   (model-policy `invoke_categories.IMPLEMENT`). When PLAN already ran, its plan artifact is the
   implementation input and the `requires: plan` note is satisfied — do not re-ask.
 - **`design`** dispatches `frontend-uiux-designer` (opus); assets come from Higgsfield
@@ -194,11 +194,10 @@ UTILITIES = {
                       "Report current state: newest `*-REPORT.md` / plan / spec artifacts, any "
                       "unfinished `/invoke` chain, gate states, and the suggested resume command."),
     "invoke-update": ("Upstream skill sync — read hooks/skills-provenance.json, run per-family "
-                      "update commands, re-sync gstack pointers, doctor R10.",
+                      "update commands, then doctor R10.",
                       "For each entry in `hooks/skills-provenance.json`, run its family "
-                      "`updateCommand` (gstack-upgrade / npx skills update / gsd-update / re-vendor "
-                      "/ .git-upstream pull); then `python3 scripts/sync-gstack-pointers.py` and "
-                      "`python3 scripts/build_provenance.py --check` (R10). Report drift."),
+                      "`updateCommand`; then run `python3 scripts/build_provenance.py --check` "
+                      "(R10). Report drift."),
 }
 
 

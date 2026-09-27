@@ -103,6 +103,19 @@ def test_active_repo_resolution_order_payload_workspace_roots():
     assert str(_HOOKS).startswith(str(root))
 
 
+def test_home_is_never_a_repo_root():
+    # $HOME is a container dir: a stray `git init` there must not make every
+    # session register the whole home tree (indexes/graph/dox).
+    home = str(pathlib.Path.home())
+    assert rc.active_repo(cwd=home) is None
+    assert rc.git_root(home) is None
+    # ...but a real repo BELOW home still resolves
+    ctx = rc.active_repo(cwd=str(_HOOKS))
+    assert ctx is not None and ctx.root != home
+    # unnormalized paths must not slip the guard (git_root used to miss these)
+    assert rc.git_root(home + os.sep + "nonexistent-dir" + os.sep + "..") is None
+
+
 def test_is_inside_containment():
     ctx = rc.active_repo(cwd=str(_HOOKS))
     assert rc.is_inside(ctx, str(_HOOKS / "lib" / "platform.py"))

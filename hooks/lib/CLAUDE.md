@@ -38,6 +38,19 @@ fails soft (returns a safe default) so an importing hook can stay fail-open.
 - `git_remote_identity` is a behavioural twin of the private copy inside
   `../jcodemunch-enforce.py` (kept private there to avoid touching the hard read
   gate). If you change one, change both — they must stay identical.
+- **`$HOME` is a walk-up CEILING, not a repo** (2026-08-16). `~/.git` exists on
+  this machine, so without the guard in `_home()` every session resolved the
+  whole home tree as the active repo — registering `local/mercy` in jcodemunch
+  and firing endless graphify builds. `active_repo` and `git_root` both `break`
+  at `$HOME` before testing for `.git`. A repo BELOW home (incl. `~/.claude`)
+  still resolves normally.
+- `git_root` **must** `.resolve()` its input. It previously did not, so
+  `git_root('<home>/x/..')` walked to an unnormalized `<home>/x/..`, never
+  string-matched `$HOME`, and slipped the ceiling guard. `active_repo` already
+  resolved; the two are now consistent.
+- This file is a **parallel twin of `~/.codex/hooks/lib/repo_context.py`** — the
+  Codex stack carries its own copy. Port every change to both; never copy the
+  file wholesale (see `../CLAUDE.md` "Hook drift").
 
 ## Up / down
 

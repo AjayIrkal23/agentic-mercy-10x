@@ -37,7 +37,6 @@ Paste bootstrap per `~/.cursor/docs/USER-RULES-SETUP.md` — cannot be automated
 After `bash ~/.cursor/hooks/sync-all-to-claude.sh --apply`:
 
 - [ ] `settings.json` includes `post-write-aggregator`, `santa-method-writer`, `security-semgrep-tracker post-tool-use`
-- [ ] `gsd-read-guard.js` still on PreToolUse (preserve)
 - [ ] `model` still `claude-opus-4-6`, `permissions.defaultMode` still `bypassPermissions`
 - [ ] `mcpServers.jcodemunch` present
 - [ ] New Claude session: SessionStart plan gate; Write skill injection; Stop advisories once (`pass_advisories_sent`)

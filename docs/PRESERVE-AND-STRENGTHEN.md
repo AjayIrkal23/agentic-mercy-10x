@@ -10,7 +10,7 @@ This document locks the non-negotiables for the Cursor agent stack. Fixes may ch
 | **Frontend skills** | All **28** mandatory FE skills in [`fullstack-skills-reminder.py`](../hooks/fullstack-skills-reminder.py) stay enforced: path-ranked on each Write + session manifest covers full list + stop re-verify |
 | **Backend skills** | All **27** mandatory BE skills stay enforced; router gaps are filled, not trimmed |
 | **Scaffold** | [`scaffold-standards`](../skills/scaffold-standards/SKILL.md), [`frontend-structure-standards`](../skills/frontend-structure-standards/SKILL.md), [`service-layer-standards`](../skills/service-layer-standards/SKILL.md) win over subsidiary layout advice |
-| **Planning layers** | mandatory Phase 1 + `workflow-orchestrator` + `plan-mode-gate` + GSD + Superpowers are **complementary** — see [`plan-exec-unified-stack.md`](../rules/plan-exec-unified-stack.md) |
+| **Planning layers** | mandatory Phase 1 + `workflow-orchestrator` + `plan-mode-gate` + Superpowers are **complementary** — see [`plan-exec-unified-stack.md`](../rules/plan-exec-unified-stack.md) |
 | **UI/UX** | Six-skill stack per [`ui-ux-playbook.mdc`](../rules/ui-ux-playbook.mdc); Impeccable precedence on layout/motion bans |
 | **Completion** | Doc gate (Gate 2) stays hard; Santa gate (Gate 4) requires real review completion, not removal |
 
@@ -31,7 +31,7 @@ Slim User Rules (~400 tokens) free budget for skill/planning context. FE/BE list
 
 1. `workflow-orchestrator` — surfaces, phases, mermaid
 2. `plan-mode-gate` — formal gate when planning
-3. Layer choice: GSD (`.planning/`), Superpowers (`docs/superpowers/`), or architect-system-design
+3. Layer choice: Superpowers (`docs/superpowers/`) or architect-system-design
 4. User approval before Phase 2 coding
 5. `fullstack-skills-reminder` + `skill_router` on first Write; session manifest surfaces remaining FE/BE skills over the conversation
 

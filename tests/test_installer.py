@@ -34,8 +34,10 @@ def test_manifest_valid_json_and_shape():
     assert m["min_python"] == "3.10"
     assert isinstance(m["deps"], list) and m["deps"]
     assert isinstance(m["mcp_servers"], list)
-    assert m["palette"]["skill_names"] == 219
-    assert m["palette"]["command_files"] == 24
+    skill_count = len(list((_ROOT / "skills").glob("*/SKILL.md")))
+    command_count = len(list((_ROOT / "commands").glob("*.md")))
+    assert m["palette"]["skill_names"] == skill_count
+    assert m["palette"]["command_files"] == command_count
     assert m["palette"]["historic_command_names"] == 139
 
 
@@ -69,13 +71,23 @@ def test_deps_dry_run_no_exceptions():
         assert not status.startswith("INSTALLED")
 
 
+def test_user_facing_entrypoint_rejects_cli_verbs(monkeypatch):
+    """A mistyped read-only command must never launch the mutating UI installer."""
+    bootstrap = _load("bootstrap", "installer/bootstrap.py")
+    launched: list[bool] = []
+    monkeypatch.setattr(bootstrap, "_launch_ui", lambda: launched.append(True) or 0)
+
+    assert bootstrap.main(["doctor"]) == 2
+    assert launched == []
+
+
 def test_doctor_deterministic_checks_pass():
     doctor = _load("doctor", "installer/doctor.py")
     rows = doctor.run_doctor()
     by_name = {n: (s, d) for n, s, d in rows}
     # these must PASS on any faithful checkout
     for check in ("interpreters", "render-equivalence", "palette-skills",
-                  "palette-commands", "command-resolution", "aliases", "zero-symlinks"):
+                  "palette-commands", "command-resolution", "aliases", "locked-source-links"):
         assert by_name[check][0] == "PASS", f"{check}: {by_name[check]}"
     # no check may hard-FAIL
     fails = [n for n, s, _ in rows if s == "FAIL"]

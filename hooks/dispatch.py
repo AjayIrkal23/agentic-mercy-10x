@@ -247,7 +247,16 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
         typ = ln.get("type", "advisory")
         if typ == "gate":
             parsed, _ = _run_link(ln, event, payload_text, sid)
-            dec, reason = _extract_decision(parsed)
+            if (
+                event == "stop"
+                and isinstance(parsed, dict)
+                and parsed.get("decision") == "block"
+            ):
+                return {
+                    "decision": "block",
+                    "reason": str(parsed.get("reason") or ""),
+                }
+            dec, reason = _extract_decision(parsed) if event != "stop" else (None, None)
             if dec is not None:
                 # short-circuit: emit the deny/ask decision now
                 _telemeter(event, "_dispatch", decision=dec, session=sid,
@@ -332,6 +341,11 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
     if total_ms > ms_budget:
         _telemeter(event, "_dispatch", decision="budget-overrun",
                    ms=total_ms, budget_hit=True, session=sid)
+
+    # Stop accepts only an explicit top-level block. Advisory text and the
+    # permissionDecision schema belong to other hook events.
+    if event == "stop":
+        return {}
 
     # Harness schema: hookSpecificOutput is invalid for SessionEnd/PreCompact,
     # and an empty one (no additionalContext/updatedInput) fails validation

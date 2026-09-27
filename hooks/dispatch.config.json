@@ -156,31 +156,6 @@
         "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
       },
       {
-        "id": "gsd-session-state",
-        "type": "exec",
-        "cmd": [
-          "{NODE}",
-          "{HOOKS}/gsd-session-state.js"
-        ],
-        "timeout_ms": 10000,
-        "priority": 2,
-        "enabled": true,
-        "_reg": 8,
-        "_port": "P6-T2: bash launcher ported to js (parity-verified); bash original kept for 30-day flip-back only"
-      },
-      {
-        "id": "gsd-check-update",
-        "type": "advisory",
-        "cmd": [
-          "{NODE}",
-          "{HOOKS}/gsd-check-update-launcher.js"
-        ],
-        "timeout_ms": 5000,
-        "priority": 2,
-        "enabled": true,
-        "_new": "P6-T4: ACTIVATE gsd-check-update on a 7-day TTL (launcher gates the npm-hitting worker); surfaces update/stale-hook advisory. GSD-managed files untouched."
-      },
-      {
         "id": "skills-index-guard",
         "type": "exec",
         "cmd": [
@@ -234,34 +209,6 @@
         "_reg": 23
       },
       {
-        "id": "gsd-prompt-guard",
-        "type": "gate",
-        "tools": "Write|Edit|MultiEdit",
-        "cmd": [
-          "/bin/sh",
-          "-c",
-          "[ -d .planning ] && exec {NODE} {HOOKS}/gsd-prompt-guard.js || printf \"{}\""
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 24,
-        "_gated": "2026-07-18: fast-exit unless repo has .planning/ (was: node spawn on every call in non-GSD repos)"
-      },
-      {
-        "id": "gsd-workflow-guard",
-        "type": "gate",
-        "tools": "Write|Edit|MultiEdit",
-        "cmd": [
-          "/bin/sh",
-          "-c",
-          "[ -d .planning ] && exec {NODE} {HOOKS}/gsd-workflow-guard.js || printf \"{}\""
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 25,
-        "_gated": "2026-07-18: fast-exit unless repo has .planning/ (was: node spawn on every call in non-GSD repos)"
-      },
-      {
         "id": "dox-write-gate-write",
         "type": "gate",
         "tools": "Write|Edit|MultiEdit",
@@ -296,21 +243,6 @@
         "timeout_ms": 6000,
         "enabled": true,
         "_reg": 29
-      },
-      {
-        "id": "gsd-validate-commit",
-        "type": "gate",
-        "tools": "Bash",
-        "cmd": [
-          "/bin/sh",
-          "-c",
-          "[ -d .planning ] && exec {NODE} {HOOKS}/gsd-validate-commit.js || printf \"{}\""
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 32,
-        "_port": "P6-T2: bash launcher ported to js gate (deny/exit-2 parity); bash original kept for 30-day flip-back",
-        "_gated": "2026-07-18: fast-exit unless repo has .planning/ (was: node spawn on every call in non-GSD repos)"
       },
       {
         "id": "blocking-doc-enforcer",
@@ -375,19 +307,6 @@
         "enabled": true,
         "_reg": 20,
         "_note": "warn-mode; advisory in practice. Ported to tdd_guard_launcher.py in P6-T2 (parity-verified); bash original kept for 30-day flip-back."
-      },
-      {
-        "id": "impeccable-design-gate",
-        "type": "gate",
-        "tools": "Write|Edit|MultiEdit",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/impeccable-design-gate.py"
-        ],
-        "timeout_ms": 15000,
-        "enabled": true,
-        "_reg": 43,
-        "_note": "2026-07-19 Phase 4: BLOCKING design-slop gate (user chose blocking over tdd-guard-style warn). Runs impeccable's detector on PROPOSED content via skills/impeccable/scripts/hook-before-edit.mjs and denies before the write lands. Upstream ships blocking only for Cursor; Claude Code got a post-write advisory that fires AFTER bad code exists. Fails OPEN on any error. Kill switch: touch ~/.claude/state/impeccable-gate-off"
       },
       {
         "id": "graphify-enforce",
@@ -550,23 +469,9 @@
         ],
         "timeout_ms": 15000,
         "priority": 1,
-        "enabled": true,
+        "enabled": false,
+        "_disabled": "2026-09-27: script retired 2026-07-19 (only ui-ux-stack-orchestrator.py.bak-emil-20260719 remains); the link exited 2 on every fire.",
         "_reg": 43
-      },
-      {
-        "id": "gsd-phase-boundary",
-        "type": "exec",
-        "tools": "Write|Edit|MultiEdit",
-        "cmd": [
-          "/bin/sh",
-          "-c",
-          "[ -d .planning ] && exec {NODE} {HOOKS}/gsd-phase-boundary.js || printf \"{}\""
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 44,
-        "_port": "P6-T2: bash launcher ported to js (parity-verified); bash original kept for 30-day flip-back only",
-        "_gated": "2026-07-18: fast-exit unless repo has .planning/ (was: node spawn on every call in non-GSD repos)"
       },
       {
         "id": "desloppify-cleanup",
@@ -619,32 +524,6 @@
         "enabled": false,
         "_reg": 48,
         "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
-      },
-      {
-        "id": "gsd-context-monitor",
-        "type": "exec",
-        "tools": "Bash|Write|Edit|MultiEdit|Task|Agent",
-        "cmd": [
-          "/bin/sh",
-          "-c",
-          "[ -d .planning ] && exec {NODE} {HOOKS}/gsd-context-monitor.js || printf \"{}\""
-        ],
-        "timeout_ms": 10000,
-        "enabled": true,
-        "_reg": 49,
-        "_gated": "2026-07-18: fast-exit unless repo has .planning/ (was: node spawn on every call in non-GSD repos)"
-      },
-      {
-        "id": "gsd-read-injection",
-        "type": "gate",
-        "tools": "Read",
-        "cmd": [
-          "{NODE}",
-          "{HOOKS}/gsd-read-injection-scanner.js"
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 50
       },
       {
         "id": "jcm-mcp-used",

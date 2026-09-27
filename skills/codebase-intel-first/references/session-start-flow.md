@@ -106,7 +106,7 @@ Apply the Frontend Core Compliance Set:
 
 Additionally apply when relevant:
 
-- `ui-ux-pro-max` for visual direction and design-system research
+- `` for visual direction and design-system research
 - `tailwind-design-system` when tokens, layout system, or shared components are touched
 
 ---

@@ -19,9 +19,9 @@
 | Skill | Trigger | When to Use |
 |-------|---------|-------------|
 | `frontend-design-gate` | ANY frontend work | Enforces design skills consultation. |
-| `ui-ux-pro-max` | UI components, pages | Design system, accessibility, patterns. |
-| `impeccable` | Design, audit, polish | Production-grade interface craft. |
-| `huashu-design` | Visual exploration, prototypes | HTML-based hi-fi design, motion. |
+| `` | UI components, pages | Design system, accessibility, patterns. |
+| `` | Design, audit, polish | Production-grade interface craft. |
+| `` | Visual exploration, prototypes | HTML-based hi-fi design, motion. |
 | `ui-styling` | shadcn/ui implementation | Component implementation with Tailwind. |
 | `backend-patterns` | API, server, database | Backend architecture and patterns. |
 | `tdd-workflow` | New features, bug fixes | Test-driven development with 80%+ coverage. |
@@ -59,6 +59,6 @@ Finishing skill (finishing-a-development-branch)
 | "Fix this bug" | systematic-debugging | (domain-specific) |
 | "Add auth" | brainstorming → writing-plans | backend-patterns + security |
 | "Refactor this" | writing-plans | (domain-specific) |
-| "Make it look better" | brainstorming | impeccable + ui-ux-pro-max |
+| "Make it look better" | brainstorming |  +  |
 | "Add tests" | tdd-workflow | (domain-specific) |
 | "Deploy this" | writing-plans | deployment-patterns |

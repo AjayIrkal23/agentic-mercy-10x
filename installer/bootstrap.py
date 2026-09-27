@@ -127,6 +127,15 @@ def _launch_ui() -> int:
 
 
 def main(argv=None) -> int:
+    argv = [] if argv is None else list(argv)
+    if argv:
+        print(
+            "install.py has no CLI verbs; run it without arguments. "
+            "For a read-only health check, run installer/doctor.py directly.",
+            file=sys.stderr,
+        )
+        return 2
+
     target = canonical_target()
 
     # Step 1 (user's flow): check whether all bundle items already exist at ~/.claude.

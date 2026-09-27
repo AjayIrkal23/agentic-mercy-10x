@@ -25,10 +25,10 @@ SOFTWARE.
 NOTE ON THIRD-PARTY CONTENT:
 
 This repository vendors a number of third-party Agent Skills under skills/
-(for example: impeccable, huashu-design, ui-ux-pro-max, taste-skill, the gstack
-suite, and others). Those skills are the work of their respective authors and
+(for example: impeccable, huashu-design, ui-ux-pro-max, taste-skill, and
+others). Those skills are the work of their respective authors and
 are governed by THEIR OWN upstream licenses, not by this MIT license. See
-README.md (Credits) and skills/.provenance.json for each skill's source and
+README.md (Credits) and hooks/skills-provenance.json for each skill's source and
 version. The MIT license above applies only to the original work authored in
 this repository (hooks, agents, commands, rules, self-authored skills, and
 documentation).

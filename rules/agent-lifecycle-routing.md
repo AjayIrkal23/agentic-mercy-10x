@@ -13,8 +13,8 @@ See also: [`plan-exec-unified-stack.md`](plan-exec-unified-stack.md), [`skill-li
 | Phase | Hooks | Primary skills |
 |-------|-------|----------------|
 | **0 Session** | `session-start-aggregator`, `session-lifecycle`, `jcodemunch-index-guard`, `graphify-index-guard` | `codebase-start-point-guide`, `using-agent-skills`, Superpowers `using-superpowers` |
-| **1 Plan** | `session-plan-gate-hint`, `ui-ux-stack-orchestrator` (beforeSubmit) | `workflow-orchestrator` → `plan-mode-gate` → GSD or Superpowers planning chain |
-| **2–3 Code** | `fullstack-skills-reminder` (first Write + session manifest), `skill_router` (path-ranked + cross_cutting), `ui-ux-stack-orchestrator` (six-skill UI) | All **28 FE / 27 BE** slugs in `fullstack-skills-reminder.py`; manifest batches pending skills on later writes |
+| **1 Plan** | `session-plan-gate-hint` | `workflow-orchestrator` → `plan-mode-gate` → GSD or Superpowers planning chain |
+| **2–3 Code** | `fullstack-skills-reminder` (first Write + session manifest), `skill_router` (path-ranked + cross_cutting) | All **28 FE / 27 BE** slugs in `fullstack-skills-reminder.py`; manifest batches pending skills on later writes |
 | **4 Dead code** | `post-write-aggregator` → `desloppify-cleanup` @8 writes | `dead-code-and-change-audit` — **your changes only** for deletes |
 | **5 Lint/security** | `security-scan-gate`, Semgrep via Shell | `owasp-security`, `security-and-hardening`, `fix-lint-format` |
 | **6 Review** | `santa-reviewer` agent (Santa Method — `/santa-review`), `santa-method-writer` (flag), stop re-verify | `santa-review`, `code-review-and-quality`, Superpowers review skills |
@@ -53,7 +53,6 @@ Source: `~/.claude/hooks/fullstack-skills-reminder.py` → `FRONTEND_SKILLS`.
 | frontend-ui-engineering | fe_ui_design |
 | vite-react-best-practices | fe_vite_config |
 | browser-testing-with-devtools | fe_test |
-| design-extract | fe_ui_design |
 
 ## Backend mandatory skills (27)
 
@@ -99,9 +98,7 @@ Source: `BACKEND_SKILLS` in same hook file.
 
 | Flow | Agent | Skill |
 |------|-------|-------|
-| Codebase map → intel | `gsd-codebase-mapper` → **`gsd-intel-updater`** | `gsd-map-codebase`, `gsd-graphify` |
 | UI polish (ad-hoc) | `frontend-uiux-designer` | Six-skill UI stack |
-| UI phase (GSD) | `gsd-ui-researcher`, `gsd-ui-auditor` | `gsd-ui-phase`, `gsd-ui-review` |
 | Figma | `figma-implementation`, `figma-code-connect` | When Figma URL present |
 | Vercel | `vercel-ai-architect`, `vercel-deployment-expert` | Deploy/architecture prompts |
 

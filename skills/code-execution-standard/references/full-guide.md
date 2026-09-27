@@ -21,7 +21,7 @@ metadata:
     - frontend-api-standards
     - react-hooks-patterns
     - mcp-usage-standards
-    - ui-ux-pro-max
+    - 
 ---
 
 # Code Mode — Implementation Skill (Skill-Aware Production Standard)
@@ -131,7 +131,7 @@ Never expose tokens or secrets.
 
 ---
 
-### UI/UX Quality (`ui-ux-pro-max`)
+### UI/UX Quality (``)
 If UI involved:
 - Reuse components
 - Maintain premium UI consistency

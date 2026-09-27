@@ -2,7 +2,7 @@
 """postToolUse: mark Santa Method review complete when code-reviewer Task runs.
 
 Writes {cid}.santa.json with fired=true so hard-completion-gate Gate 4 can pass.
-Also detects gsd-code-reviewer and generic code-reviewer subagent types.
+Also detects generic code-reviewer subagent types.
 """
 from __future__ import annotations
 
@@ -17,7 +17,6 @@ SANTA_SUBAGENTS = frozenset(
     {
         "santa-reviewer",   # the dedicated Santa Method agent (agents/santa-reviewer.md)
         "code-reviewer",
-        "gsd-code-reviewer",
         "thermo-nuclear-code-quality-review",
     }
 )

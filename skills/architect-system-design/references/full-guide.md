@@ -21,7 +21,7 @@ metadata:
     - frontend-api-standards
     - react-hooks-patterns
     - mcp-usage-standards
-    - ui-ux-pro-max
+    - 
 ---
 
 # Architect Mode – System Design Skill (Optimized + Skill-Aware)
@@ -101,7 +101,7 @@ This project already enforces strict standards via skills. Your architecture out
 - Never expose secrets/tokens
 - Prefer GitHub MCP for repo patterns; Mongo MCP for schema
 
-## UI/UX (from `ui-ux-pro-max`)
+## UI/UX (from ``)
 - Tables and dashboards must be premium, consistent, and usable
 - Proper empty/loading/error states
 

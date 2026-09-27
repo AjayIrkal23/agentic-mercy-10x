@@ -21,7 +21,7 @@ metadata:
     - frontend-server-data-patterns
     - backend-performance-standards
     - mcp-usage-standards
-    - ui-ux-pro-max
+    - 
 ---
 
 # Orchestrator Mode — Workflow Coordinator (Skill-Aware)
@@ -55,7 +55,7 @@ This project enforces strict standards through skills. Your orchestration MUST a
 - **Frontend API isolation:** `frontend-response-handling`
 - **Performance:** `backend-performance-standards`, `frontend-standards-always-follow`, and `react-hooks-patterns` when needed
 - **MCP verification:** `mcp-usage-standards`
-- **UI quality:** `ui-ux-pro-max`
+- **UI quality:** ``
 - **Mode-specific execution:** `architect-system-design`, `code-execution-standard`, `debug-investigation`
 
 Orchestrator output must reference these rules implicitly by designing phases that comply with them.

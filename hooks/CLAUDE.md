@@ -55,6 +55,16 @@ Only hook logic and hook config belong here — no skill bodies, no app code.
   part of the UPS injector stack.
 - Dispatcher and every link **fail open** — a crashing link logs to telemetry and
   the chain continues; never let a link raise past its own try/except.
+- **`index-lifecycle.py: NEVER_INDEX` excludes the agent-infra dirs** (`$HOME`,
+  `~/.claude`, `~/.codex`) from ALL FOUR surfaces (2026-08-16, user directive).
+  They are real git repos but config/tooling, never project code — indexing them
+  fired a full jcodemunch rebuild + ollama AI-summary pass on every hook edit for
+  zero retrieval value. Enforced at two choke points: `_active_ctx()` (returns
+  None → every surface no-ops) and the detached `build` subcommand (drops a
+  queued/stale build). `_is_never_index()` resolves both sides so an
+  unnormalized path cannot slip past. Note this is DELIBERATELY not in
+  `lib/repo_context.py` — `active_repo()` still resolves `~/.claude` so the
+  write/read gates keep scoping correctly there; only indexing stops.
 
 ## Up / down
 

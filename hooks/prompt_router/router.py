@@ -112,21 +112,6 @@ def _skill_excerpt(name: str, max_chars: int = 4500) -> str:
         return ""
 
 
-def _ui_stack_block(payload: dict) -> str:
-    """Bridge to ui-ux-stack-orchestrator.handle_before_submit — the rich UI
-    stack block (impeccable auto-context, taste dials, designer-agent mandate)
-    that was unreachable dead code since the 2026-07-12 router flip."""
-    try:
-        import importlib.util
-        mod_path = _HOOKS / "ui-ux-stack-orchestrator.py"
-        spec = importlib.util.spec_from_file_location("uiux_orch", mod_path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
-        out = mod.handle_before_submit(payload, mod._load_config())
-        return (out or {}).get("additionalContext") or ""
-    except Exception:  # noqa: BLE001
-        return ""
-
 def _builtin_items(profile, ctx: dict) -> list[dict]:
     items: list[dict] = []
     repo = ctx.get("repo")
@@ -250,8 +235,7 @@ def _builtin_items(profile, ctx: dict) -> list[dict]:
         else:
             items.append({
                 "id": "route:ui", "tier": 2, "section": "ROUTING",
-                "text": ("UI/UX signal: use the craft stack (impeccable / taste-skill / "
-                         "ui-ux-pro-max / huashu-design / frontend-ui-engineering) and source "
+                "text": ("UI/UX signal: use the configured frontend engineering guidance and source "
                          "every raster/video/3D/audio asset from Higgsfield (no placeholders/stock)."),
             })
 

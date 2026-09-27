@@ -44,7 +44,6 @@ This is the full 29-skill FRONTEND_SKILLS set from `hooks/fullstack-skills-remin
 - verification-loop
 - frontend-ui-engineering
 - vite-react-best-practices
-- design-extract
 - higgsfield-generate
 <!-- skills:auto:end -->
 
@@ -57,7 +56,7 @@ If `hooks/fullstack-skills-reminder.py` FRONTEND_SKILLS and this list ever disag
 3. **Contract check.** Diff the plan's assumed shapes against the actual contract. Mismatch -> flag it in the report and to the orchestrator; do not improvise a shape.
 4. **Per task, in plan order:** write the failing test -> run it (must fail) -> implement exactly the task's scope (query layer per frontend-server-data-patterns, hooks per react-hooks-patterns, styling per tailwind-design-system) -> run the test (must pass) -> lint/build -> commit with the task number.
 5. **Assets.** Generate every needed raster/video/3D/audio asset via Higgsfield (`models_explore` -> `generate_*` -> `upscale`/`remove_background` as needed) before wiring it in. No placeholder survives to close-out.
-6. **Self-review.** frontend-code-review pass on the diff; if UI-visible, an impeccable audit/critique pass with breakpoint screenshots as evidence.
+6. **Self-review.** frontend-code-review pass on the diff; if UI-visible, capture breakpoint screenshots as evidence.
 7. **Close out.** Full test suite, write IMPL-REPORT-FE.md, and return.
 
 ## ARTIFACT

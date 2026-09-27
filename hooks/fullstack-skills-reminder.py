@@ -54,8 +54,6 @@ FRONTEND_SKILLS = [
     "frontend-ui-engineering",
     "vite-react-best-practices",
     "browser-testing-with-devtools",
-    # Design skills
-    "design-extract",
     # Asset generation — Higgsfield (mandatory for all image/video/3D/audio assets)
     "higgsfield-generate",
 ]
@@ -103,7 +101,6 @@ ENGINEERING_SKILLS = [
     "to-issues",
     "to-prd",
     "zoom-out",
-    "prototype",
 ]
 
 # ENGINEERING_EXTENDED: quality / shipping / workflow — appended selectively in _post() and _stop()
@@ -287,19 +284,38 @@ def _paths_from(ti: object) -> list[str]:
     return out
 
 
+_FRONTEND_EXTENSIONS = {".tsx", ".jsx", ".vue", ".svelte", ".astro", ".css", ".scss", ".sass", ".less"}
+_FRONTEND_TS_SEGMENTS = ("/components/", "/app/", "/pages/", "/routes/", "/client/", "/frontend/", "/apps/web/", "/packages/ui/")
+_BACKEND_TS_SEGMENTS = ("/server/", "/backend/", "/api/", "/internal/", "/cmd/", "/pkg/")
+
+
+def _surface_of_path(path: str, roots: list[str], fe_segs: list[str], be_segs: list[str]) -> tuple[bool, bool]:
+    normalized = "/" + _norm(path).lower().lstrip("/")
+    suffix = Path(normalized).suffix.lower()
+    fe = _path_hits_segments(path, roots, fe_segs)
+    be = _path_hits_segments(path, roots, be_segs)
+    if suffix in _FRONTEND_EXTENSIONS:
+        fe = True
+    elif suffix == ".ts":
+        fe = fe or any(segment in normalized for segment in _FRONTEND_TS_SEGMENTS)
+        be = be or any(segment in normalized for segment in _BACKEND_TS_SEGMENTS)
+    elif suffix == ".go":
+        be = True
+    return fe, be
+
+
 def _skill_line(name: str) -> str:
     return f"  - {(SKILL_ROOT / name / 'SKILL.md').resolve()}"
 
 
 def _classify(ti: dict, roots: list[str], fe_segs: list[str], be_segs: list[str]):
     paths = _paths_from(ti)
+    if paths:
+        surfaces = [_surface_of_path(path, roots, fe_segs, be_segs) for path in paths]
+        return any(fe for fe, _ in surfaces), any(be for _, be in surfaces)
     blob = _norm(json.dumps(ti))
-    fe = any(_path_hits_segments(p, roots, fe_segs) for p in paths)
-    be = any(_path_hits_segments(p, roots, be_segs) for p in paths)
-    if not fe:
-        fe = _matches_any("", blob, fe_segs)
-    if not be:
-        be = _matches_any("", blob, be_segs)
+    fe = _matches_any("", blob, fe_segs)
+    be = _matches_any("", blob, be_segs)
     return fe, be
 
 
@@ -325,7 +341,6 @@ def _engineering_lines() -> list[str]:
         f"  - `/grill-with-docs` → before finalizing plan touching >3 files or new domain concepts: {_skill_resolved('grill-with-docs')}",
         f"  - `/to-prd` → user wants PRD, large new feature: {_skill_resolved('to-prd')}",
         f"  - `/to-issues` → after plan/PRD approval, break into vertical issues: {_skill_resolved('to-issues')}",
-        f"  - `/prototype` → uncertain approach, throwaway spike resolves faster than discussion: {_skill_resolved('prototype')}",
         f"  - `/improve-codebase-architecture` → refactoring, tech debt, structural changes: {_skill_resolved('improve-codebase-architecture')}",
         f"  - `/zoom-out` → unfamiliar code area, need broader context: {_skill_resolved('zoom-out')}",
         f"  - `/triage` → processing external issues/bug reports: {_skill_resolved('triage')}",

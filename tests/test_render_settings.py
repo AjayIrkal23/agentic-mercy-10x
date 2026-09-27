@@ -45,7 +45,7 @@ def test_template_has_no_bare_interpreter_literals():
     # every dispatch command must be tokenized, not a bare python3/usr-bin-node
     assert "python3 ${HOME}" not in tmpl
     assert "/usr/bin/node" not in tmpl
-    assert "{{PYTHON}}" in tmpl and "{{NODE}}" in tmpl and "{{CLAUDE_DIR}}" in tmpl
+    assert "{{PYTHON}}" in tmpl and "{{CLAUDE_DIR}}" in tmpl
     # sanity: substitution restores a bare interpreter for POSIX
     rendered = r.substitute(tmpl)
     assert "python3 ${HOME}/.claude/hooks/dispatch.py" in rendered

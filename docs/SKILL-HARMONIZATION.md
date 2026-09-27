@@ -14,7 +14,6 @@ Document when overlapping skills fire. **Do not delete** — router and hooks se
 
 | Skill | When |
 |-------|------|
-| `investigate` (gstack) | Proactive root-cause on production/live issues |
 | `diagnose` | Structured diagnose loop keyword trigger |
 | `debug-investigation` | Mandatory hook cross_cutting + router `be_debug` |
 | Superpowers `systematic-debugging` | Superpowers debug path |
@@ -24,7 +23,6 @@ Document when overlapping skills fire. **Do not delete** — router and hooks se
 | Skill | When |
 |-------|------|
 | `webapp-testing` | FE test files and Playwright flows |
-| `qa` / `qa-only` (gstack) | Full ship / report-only site QA |
 | `browser-testing-with-devtools` | DevTools MCP debugging |
 
 ## Plan cluster (complementary — do not collapse)
@@ -33,9 +31,8 @@ Document when overlapping skills fire. **Do not delete** — router and hooks se
 |-------|----------------|------|
 | 1 | `workflow-orchestrator` | Surfaces BE/FE/fullstack, phase map |
 | 2 | `plan-mode-gate` | PLAN_GATE checklist when planning or >2 files |
-| 3a | GSD chain | `.planning/` active → discuss → plan → execute |
-| 3b | Superpowers | Greenfield → brainstorming → writing-plans |
-| 3c | `architect-system-design` | Contract / architecture before code |
+| 3a | Superpowers | Greenfield → brainstorming → writing-plans |
+| 3b | `architect-system-design` | Contract / architecture before code |
 | Coding | Phases 2–3 after user approval | Agent mode |
 | Post | Phases 4–7 sequential | After every coding task |
 
@@ -68,7 +65,6 @@ See [`plan-exec-unified-stack.md`](../rules/plan-exec-unified-stack.md).
 |-------|------|
 | `owasp-security` | Auth/API changes; Gate 3 semgrep |
 | `security-and-hardening` | Middleware/auth paths |
-| `cso` (gstack) | "security audit" / CSO review intents |
 
 ## Discovery filter
 

@@ -48,7 +48,7 @@ alwaysApply: true
 | PRD / product requirements | `/to-prd` |
 | After plan/PRD approval → issues | `/to-issues` |
 | Refactoring priorities / tech debt | `/improve-codebase-architecture` |
-| 2+ valid approaches, code resolves faster | `/prototype` |
+| 2+ valid approaches, code resolves faster | `planning-and-task-breakdown` |
 
 ---
 
@@ -71,7 +71,7 @@ alwaysApply: true
 | New service methods / test-first / prevent recurrence | `/tdd` |
 | Unknown bug / unexpected test fail | `/diagnose` |
 | External issue intake | `/triage` |
-| Uncertain approach | `/prototype` |
+| Uncertain approach | `planning-and-task-breakdown` |
 
 ---
 
@@ -90,7 +90,7 @@ alwaysApply: true
 
 ## PHASE 3b: UI/UX DESIGN
 
-1. `load-context.mjs` before design. PRODUCT.md must exist. `/impeccable shape` → confirm → code.
+1. Read the project's existing product and design context before coding.
 2. OKLCH colors. No `#000`/`#fff`. Banned: side-stripe, gradient text, hero-metric, identical grids, glassmorphism, modals-first.
 3. Dials: VARIANCE=8, MOTION=6, DENSITY=4. `min-h-[100dvh]`. CSS Grid. Animate transform+opacity only.
 4. Touch 44x44pt. 4/8dp spacing. No emoji icons. 3+ variations. Anti-center when VARIANCE>4.
@@ -183,6 +183,6 @@ Phase→skill map and Superpowers aliases: **`~/.claude/rules/agent-lifecycle-ro
 
 **Mandatory skill sets (FE/BE/fullstack):** injected by `fullstack-skills-reminder` hook at first qualifying **Write** (smart router: top 3 + cross-cut; full slugs in hook source). Do not duplicate lists here — saves context tokens.
 
-**E2E:** Clarify → grill/spec → decompose → (prototype) → TDD → verify → review → ship.
+**E2E:** Clarify → grill/spec → decompose → TDD → verify → review → ship.
 
 **Forensics (on-demand):** forensic-complexity-trends, forensic-debt-quantification, forensic-hotspot-finder, forensic-change-coupling.

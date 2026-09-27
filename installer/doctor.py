@@ -9,12 +9,12 @@ regression is caught at install/update time, not mid-session:
   interpreters         the settings TEMPLATE is fully tokenized (no bare
                        python3/usr-bin-node/bash/.sh) — the Windows-runnable bar
   render-equivalence   render(template) == live settings.json (byte-identical)
-  palette-skills       219 SKILL.md under skills/ (195 bodies + 24 aliases)
-  palette-commands     24 command files in commands/
+  palette-skills       exact manifest-declared SKILL.md count under skills/
+  palette-commands     exact manifest-declared command count under commands/
   command-resolution   all 139 historic /invoke names resolve (file or invoke_compat)
   aliases              24 alias skills, each resolving to an existing canonical
   R9/R10               validate_skills.py green (floor guard + upstream-intactness)
-  zero-symlinks        no symlink survives on the installed skill surface
+  locked-source-links  skill links resolve to valid canonical sources
   mcp-roster           every expected MCP registered (settings.json / ~/.claude.json)
 
 PASS/WARN/FAIL table; non-zero exit on any FAIL. Pure stdlib; importable
@@ -35,6 +35,7 @@ for _p in (str(_ROOT / "installer"), str(_HOOKS), str(_HOOKS / "tools")):
         sys.path.insert(0, _p)
 
 from lib import platform as plat  # noqa: E402
+import doctor_checks  # noqa: E402
 
 PASS, WARN, FAIL, SKIP = "PASS", "WARN", "FAIL", "SKIP"
 
@@ -67,7 +68,7 @@ def _check_interpreters(rows):
     for lit in ("python3 ${HOME}", "/usr/bin/node", "/usr/bin/python", "bash ", ".sh"):
         if lit in text:
             bad.append(lit)
-    have_tokens = all(t in text for t in ("{{PYTHON}}", "{{NODE}}", "{{CLAUDE_DIR}}"))
+    have_tokens = all(t in text for t in ("{{PYTHON}}", "{{CLAUDE_DIR}}"))
     if bad or not have_tokens:
         _row(rows, "interpreters", FAIL, f"bare literals={bad} tokens={'ok' if have_tokens else 'MISSING'}")
     else:
@@ -94,21 +95,17 @@ def _count_skill_mds() -> int:
 def _check_palette(rows):
     manifest = json.loads((_ROOT / "installer" / "manifest.json").read_text(encoding="utf-8"))
     want = manifest.get("palette", {})
-    want_sk = want.get("skill_names", 219)
+    want_sk = want.get("skill_names", 0)
     n_sk = _count_skill_mds()
-    # The gstack clone (skills/gstack/, gitignored, upstream) contributes exactly
-    # one depth-2 SKILL.md — the router. Before `gstack-upgrade`/the installer
-    # clones it (fresh checkout, CI pre-clone), the count is want-1; that is still
-    # a healthy workbench, so treat it as PASS with a note rather than a FAIL.
-    gstack_present = (_ROOT / "skills" / "gstack" / "SKILL.md").exists()
-    if n_sk == want_sk and gstack_present:
-        _row(rows, "palette-skills", PASS, f"{n_sk} SKILL.md (want {want_sk})")
-    elif n_sk == want_sk - 1 and not gstack_present:
-        _row(rows, "palette-skills", PASS, f"{n_sk} SKILL.md (gstack clone not installed; full={want_sk})")
-    else:
-        _row(rows, "palette-skills", FAIL, f"{n_sk} SKILL.md (want {want_sk}, gstack={'yes' if gstack_present else 'no'})")
+    _row(
+        rows,
+        "palette-skills",
+        PASS if n_sk == want_sk else FAIL,
+        f"{n_sk} SKILL.md (want {want_sk})",
+    )
     cmds = list((_ROOT / "commands").glob("*.md"))
-    _row(rows, "palette-commands", PASS if len(cmds) == want.get("command_files", 24) else FAIL, f"{len(cmds)} command files (want {want.get('command_files')})")
+    want_cmds = want.get("command_files", 0)
+    _row(rows, "palette-commands", PASS if len(cmds) == want_cmds else FAIL, f"{len(cmds)} command files (want {want_cmds})")
 
 
 def resolve_historic_commands(names, cmd_dir: Path, cmap: dict) -> list[str]:
@@ -135,36 +132,17 @@ def _check_command_resolution(rows):
 
 
 def _check_model_routing(rows):
-    # 1. IMPLEMENT suite pins Fable (user directive 2026-07-18: fable for everything).
-    try:
-        policy = json.loads((_HOOKS / "model-policy.json").read_text(encoding="utf-8"))
-        impl = (policy.get("invoke_categories") or {}).get("IMPLEMENT")
-        default = policy.get("default")
-        fable_pins = set((policy.get("agent_pins") or {}).get("fable") or [])
-        need = {"implementation-engineer", "backend-implementor-specialist",
-                "frontend-implementor-specialist", "integrator-specialist"}
-        ok = impl == "fable" and default == "sonnet" and need <= fable_pins
-        _row(rows, "model-routing", PASS if ok else FAIL, f"IMPLEMENT={impl} default={default}")
-    except Exception as exc:  # noqa: BLE001
-        _row(rows, "model-routing", FAIL, f"model-policy.json: {type(exc).__name__}: {exc}")
-        return
-    # 2. workflow-model-guard preserves tool_input.args byte-for-byte (P2 regression).
-    fx = _ROOT / "tests" / "fixtures" / "hook-events" / "workflow-model-guard.json"
-    guard = _HOOKS / "workflow-model-guard.py"
-    if not fx.exists() or not guard.exists():
-        _row(rows, "workflow-args", WARN, "fixture or guard missing")
-        return
-    try:
-        payload = json.loads(fx.read_text(encoding="utf-8"))
-        want_args = payload["tool_input"]["args"]
-        cp = _run_with_stdin([plat.python_exe(), str(guard)], json.dumps(payload))
-        out = json.loads(cp.stdout) if cp.stdout.strip() else {}
-        updated = (out.get("hookSpecificOutput") or {}).get("updatedInput") or {}
-        got_args = updated.get("args")
-        _row(rows, "workflow-args", PASS if got_args == want_args else FAIL,
-             "args preserved byte-for-byte" if got_args == want_args else f"args changed: {got_args}")
-    except Exception as exc:  # noqa: BLE001
-        _row(rows, "workflow-args", FAIL, f"{type(exc).__name__}: {exc}")
+    doctor_checks.check_model_routing(
+        rows,
+        _ROOT,
+        _HOOKS,
+        _row,
+        _run_with_stdin,
+        plat.python_exe(),
+        PASS,
+        FAIL,
+        WARN,
+    )
 
 
 def _run_with_stdin(cmd, stdin_data: str):
@@ -224,10 +202,11 @@ def _check_validator(rows):
 def _check_zero_symlinks(rows):
     try:
         import links  # type: ignore
-        syms = links.find_symlinks()
-        _row(rows, "zero-symlinks", PASS if not syms else FAIL, f"{len(syms)} symlink(s)" + (f" e.g. {syms[0]}" if syms else ""))
+        doctor_checks.check_locked_source_links(
+            rows, links.find_symlinks(), _row, PASS, FAIL
+        )
     except Exception as exc:  # noqa: BLE001
-        _row(rows, "zero-symlinks", WARN, f"{type(exc).__name__}: {exc}")
+        _row(rows, "locked-source-links", WARN, f"{type(exc).__name__}: {exc}")
 
 
 def _registered_mcp_names() -> set[str]:

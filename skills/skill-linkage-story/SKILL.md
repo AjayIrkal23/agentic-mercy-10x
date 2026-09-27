@@ -52,7 +52,6 @@ triggers:
 |------|---------|
 | `ui-ux-stack-orchestrator.py` | Full 6-skill UI stack + Impeccable context + designlang hints on UI prompts |
 | `token-stack-prompt-reminder.py` | jcodemunch/graphify/ast-grep routing on code-intent prompts |
-| `gsd-context-monitor.js` | GSD context budget when `.planning/` active |
 
 ## 3. preToolUse
 

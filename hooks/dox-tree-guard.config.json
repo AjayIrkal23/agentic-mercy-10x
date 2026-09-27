@@ -5,8 +5,10 @@
  "autoCreateChildren": true,
  "syncRootIndex": true,
  "sweepMaxDepth": 12,
- "maxSweepDirs": 500,
+ "maxSweepDirs": 1400,
  "skipPaths": [
+  "~/CODE_FILES/GO_UDP/REFERENCE_PRODUCTION_FRONTEND_BACKEND_USERDASHBOARD",
+  "~/CODE_FILES/GO_UDP/AJAY EXPORT",
   "~/.claude/agents",
   "~/.claude/commands",
   "~/.claude/skills",
@@ -24,7 +26,15 @@
   "~/.claude/tasks",
   "~/.claude/ide",
   "~/.claude/attic",
-  "~/.claude/improvements"
+  "~/.claude/improvements",
+  "~/CODE_FILES/WATCH_SDK/UteAndroidSDK(RK)_V5.4.2/UteSdkDemohx/app/src/main/assets",
+  "~/CODE_FILES/WATCH_SDK/UteAndroidSDK(RK)_V5.4.2/UteSdkDemohx/app/src/main/res",
+  "~/CODE_FILES/WATCH_SDK/UteAndroidSDK(RK)_V5.4.2/UteSdkDemohx/app/src/main/jniLibs",
+  "~/CODE_FILES/WATCH_SDK/UteAndroidSDK(RK)_V5.4.2/UteSdkDemohx/app/debug",
+  "~/CODE_FILES/WATCH_SDK/UteAndroidSDK(RK)_V5.4.2/UteSdkDemohx/app/release",
+  "~/CODE_FILES/WATCH_SDK/UteAndroidSDK(RK)_V5.4.2/UteSdkDemohx/gradle",
+  "~/CODE_FILES/gatepass-nexus-secure-entry/VMS-Android-APP-main/app/src/main/res",
+  "~/CODE_FILES/gatepass-nexus-secure-entry/server/src/db/migrations/meta"
  ],
  "significantDirThreshold": 3,
  "rootDoxMarker": "<!-- dox:root v1 -->",

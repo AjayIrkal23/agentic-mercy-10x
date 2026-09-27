@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """install.py — reproduce the ~/.claude workbench on any machine. UI-ONLY, AUTOMATIC.
 
-There are no CLI verbs and nothing to choose. However you run it —
+There are no CLI verbs and nothing to choose. Run it without arguments —
 
     python install.py            # Ubuntu / macOS
     py -3 install.py             # Windows
@@ -16,6 +16,7 @@ There are no CLI verbs and nothing to choose. However you run it —
 
 All OS branching lives in hooks/lib/platform.py. Pure stdlib (Python >= 3.10).
 Equivalent to running install-ui.py — both funnel through installer/bootstrap.py.
+Unsupported arguments fail closed; they never launch the mutating visual installer.
 """
 from __future__ import annotations
 

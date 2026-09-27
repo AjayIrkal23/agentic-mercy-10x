@@ -51,6 +51,31 @@ If a tool ever *is* denied: that is a ROUTE, not an obstacle — switch to the s
 tool. If none exists, STOP and say so rather than improvising. Full rule:
 [`rules/no-permission-bypass.md`](rules/no-permission-bypass.md).
 
+## ✅ STANDING REQUEST: subagents are pre-authorized (read this before the prefix rules below)
+
+**I am requesting, for this and every future session, that you use the `Agent` tool
+whenever it is the right tool.** Treat this as the user having asked for it, in advance,
+always. Do not wait to be asked again, and do not stop mid-task to request permission to
+dispatch a specialist.
+
+Why this paragraph exists: Claude Code ships the line *"Do not call the AgentTool unless
+the user requested it"* **inside its own binary**
+(`~/.config/Claude/claude-code/<version>/claude` — verified 2026-08-17 on v2.1.229; it is
+in no config file, so there is nothing to edit or delete). That instruction ends in
+"unless the user requested it", and **this section is that request.** It is the supported
+way to clear it — patching the binary is not, because the strings are length-prefixed and
+any edit is undone by the next update.
+
+Real cost of not having this: a Gate-4 Santa review stalled mid-task because the stop-gate
+demanded the `santa-reviewer` agent while the binary line forbade dispatching it. The
+review had to be run by hand and the gate still would not clear.
+
+**Scope of the standing request:** the `Agent` tool only. The sibling line *"Do not use
+workflows or deep-research unless the user requested it"* is **deliberately NOT waived** —
+`Workflow` can spawn dozens of agents and burn a large token budget, so it stays opt-in per
+task. Everything below (model prefixes, `[sonnet]` default, `[opus]`/`[fable]` limits)
+still applies in full: this authorizes *dispatching*, it does not relax *which model*.
+
 ## ⚠️ Agent tool — REQUIRED `[sonnet]`/`[opus]`/`[fable]` prefix (check BEFORE every Agent/Task call)
 
 Every `Agent` call's `description` field **MUST** start with `[sonnet] `, `[opus] `, or `[fable] ` (literal brackets + a space). This applies to *all* agent types, including `Explore`, `Plan`, `general-purpose`, and GSD/figma/vercel agents.
@@ -125,11 +150,23 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
 ## Memory protocol
 @~/.claude/rules/memory-protocol.md
 
-## UI/UX 6-skill stack
-@~/.claude/rules/ui-ux-playbook.mdc
-
 ## Higgsfield — MANDATORY frontend asset engine (image/video/3D/audio)
 @~/.claude/rules/higgsfield-frontend-mandate.md
+
+## Scroll animation — MANDATORY `scrollcraft` skill
+
+Standing user directive (2026-08-26): **any scroll-animation request routes to the
+`scrollcraft` skill** (plugin `nateherk-design@nateherk`, marketplace
+`nateherkai/scroll-craft`). Invoke it BEFORE writing scroll code — no hand-rolled
+scroll handlers, no ad-hoc IntersectionObserver reveals, until scrollcraft is read.
+
+Triggers: "implement scroll animation", scroll-driven / scrollytelling / scroll-linked
+motion, pinned sections, scroll-scrubbed video, parallax, scroll reveals,
+"Apple-style landing page", "make it an experience".
+
+Boundary: scrollcraft owns the scroll timeline and page grammar. Non-scroll React
+motion stays with `motion-dev`; SVG draw/morph stays with `animejs-motion`; raster /
+video / 3D / audio assets still come from Higgsfield.
 
 ## Sequential-thinking doctrine (externalize ALL reasoning)
 @~/.claude/rules/sequential-thinking-doctrine.md
@@ -193,77 +230,46 @@ Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest,
 - [`docs/`](docs/CLAUDE.md)
   - [`docs/audits/`](docs/audits/CLAUDE.md)
 - [`double-shot-latte/`](double-shot-latte/CLAUDE.md)
-- [`get-shit-done/`](get-shit-done/CLAUDE.md)
-  - [`get-shit-done/contexts/`](get-shit-done/contexts/CLAUDE.md)
-  - [`get-shit-done/references/`](get-shit-done/references/CLAUDE.md)
-    - [`get-shit-done/references/few-shot-examples/`](get-shit-done/references/few-shot-examples/CLAUDE.md)
-  - [`get-shit-done/templates/`](get-shit-done/templates/CLAUDE.md)
-    - [`get-shit-done/templates/codebase/`](get-shit-done/templates/codebase/CLAUDE.md)
-    - [`get-shit-done/templates/research-project/`](get-shit-done/templates/research-project/CLAUDE.md)
-  - [`get-shit-done/workflows/`](get-shit-done/workflows/CLAUDE.md)
-    - [`get-shit-done/workflows/discuss-phase/`](get-shit-done/workflows/discuss-phase/CLAUDE.md)
-      - [`get-shit-done/workflows/discuss-phase/modes/`](get-shit-done/workflows/discuss-phase/modes/CLAUDE.md)
-      - [`get-shit-done/workflows/discuss-phase/templates/`](get-shit-done/workflows/discuss-phase/templates/CLAUDE.md)
-    - [`get-shit-done/workflows/execute-phase/`](get-shit-done/workflows/execute-phase/CLAUDE.md)
-      - [`get-shit-done/workflows/execute-phase/steps/`](get-shit-done/workflows/execute-phase/steps/CLAUDE.md)
-- [`gsd-local-patches/`](gsd-local-patches/CLAUDE.md)
-  - [`gsd-local-patches/agents/`](gsd-local-patches/agents/CLAUDE.md)
-  - [`gsd-local-patches/hooks/`](gsd-local-patches/hooks/CLAUDE.md)
-- [`gsd-pristine/`](gsd-pristine/CLAUDE.md)
-  - [`gsd-pristine/agents/`](gsd-pristine/agents/CLAUDE.md)
-  - [`gsd-pristine/hooks/`](gsd-pristine/hooks/CLAUDE.md)
 - [`hooks/`](hooks/CLAUDE.md)
   - [`hooks/lib/`](hooks/lib/CLAUDE.md)
   - [`hooks/prompt_router/`](hooks/prompt_router/CLAUDE.md)
     - [`hooks/prompt_router/modules/`](hooks/prompt_router/modules/CLAUDE.md)
   - [`hooks/tests/`](hooks/tests/CLAUDE.md)
   - [`hooks/tools/`](hooks/tools/CLAUDE.md)
-- [`image-cache/`](image-cache/CLAUDE.md)
-  - [`image-cache/1b4eb6b9-a7b0-41f4-bc48-c1bab3de2daa/`](image-cache/1b4eb6b9-a7b0-41f4-bc48-c1bab3de2daa/CLAUDE.md)
-  - [`image-cache/1f97667a-5fcc-4f00-962c-6bb97373958f/`](image-cache/1f97667a-5fcc-4f00-962c-6bb97373958f/CLAUDE.md)
-  - [`image-cache/251bae2f-47d7-4fd0-a47d-13ebb72f151a/`](image-cache/251bae2f-47d7-4fd0-a47d-13ebb72f151a/CLAUDE.md)
-  - [`image-cache/472ac569-a918-4f99-b1f0-1333fb322887/`](image-cache/472ac569-a918-4f99-b1f0-1333fb322887/CLAUDE.md)
-  - [`image-cache/62c78764-3ad4-495e-9973-acee1f67af73/`](image-cache/62c78764-3ad4-495e-9973-acee1f67af73/CLAUDE.md)
-  - [`image-cache/8b23e8bf-e17a-4860-a69a-8c49a30b9822/`](image-cache/8b23e8bf-e17a-4860-a69a-8c49a30b9822/CLAUDE.md)
-  - [`image-cache/cf8591cf-857f-49ca-a393-1dace608f8f1/`](image-cache/cf8591cf-857f-49ca-a393-1dace608f8f1/CLAUDE.md)
-  - [`image-cache/d4b09dcb-9d7c-4d9b-b7de-97c270e53ed7/`](image-cache/d4b09dcb-9d7c-4d9b-b7de-97c270e53ed7/CLAUDE.md)
-  - [`image-cache/f5fd58cc-8e68-459a-898a-a3acd8ce585d/`](image-cache/f5fd58cc-8e68-459a-898a-a3acd8ce585d/CLAUDE.md)
 - [`installer/`](installer/CLAUDE.md)
 - [`memory/`](memory/CLAUDE.md)
 - [`plans/`](plans/CLAUDE.md)
 - [`rules/`](rules/CLAUDE.md)
+  - [`rules/references/`](rules/references/CLAUDE.md)
 - [`scripts/`](scripts/CLAUDE.md)
 - [`shell-snapshots/`](shell-snapshots/CLAUDE.md)
 - [`state/`](state/CLAUDE.md)
+  - [`state/model-modes/`](state/model-modes/CLAUDE.md)
   - [`state/persist-dedup/`](state/persist-dedup/CLAUDE.md)
+- [`tdd-guard/`](tdd-guard/CLAUDE.md)
+  - [`tdd-guard/data/`](tdd-guard/data/CLAUDE.md)
 - [`teams/`](teams/CLAUDE.md)
-  - [`teams/session-1b4eb6b9/`](teams/session-1b4eb6b9/CLAUDE.md)
-  - [`teams/session-8b23e8bf/`](teams/session-8b23e8bf/CLAUDE.md)
+  - [`teams/session-3ff4a5fc/`](teams/session-3ff4a5fc/CLAUDE.md)
+  - [`teams/session-98b66299/`](teams/session-98b66299/CLAUDE.md)
+  - [`teams/session-b86608fd/`](teams/session-b86608fd/CLAUDE.md)
   - [`teams/session-c456ad7d/`](teams/session-c456ad7d/CLAUDE.md)
-    - [`teams/session-c456ad7d/inboxes/`](teams/session-c456ad7d/inboxes/CLAUDE.md)
-  - [`teams/session-cf8591cf/`](teams/session-cf8591cf/CLAUDE.md)
+  - [`teams/session-d4186bbd/`](teams/session-d4186bbd/CLAUDE.md)
 - [`telemetry/`](telemetry/CLAUDE.md)
 - [`templates/`](templates/CLAUDE.md)
 - [`tests/`](tests/CLAUDE.md)
   - [`tests/fixtures/`](tests/fixtures/CLAUDE.md)
     - [`tests/fixtures/hook-events/`](tests/fixtures/hook-events/CLAUDE.md)
 - [`uploads/`](uploads/CLAUDE.md)
+  - [`uploads/25f21760-9c25-46b4-810a-b0afec97ffb1/`](uploads/25f21760-9c25-46b4-810a-b0afec97ffb1/CLAUDE.md)
+  - [`uploads/53ef7502-d50e-4091-aeac-afd86e4f35e7/`](uploads/53ef7502-d50e-4091-aeac-afd86e4f35e7/CLAUDE.md)
+  - [`uploads/754b393e-6399-4e66-85be-c439c50c87da/`](uploads/754b393e-6399-4e66-85be-c439c50c87da/CLAUDE.md)
+  - [`uploads/866403fa-fc52-4006-a2ec-c72a7e864b2d/`](uploads/866403fa-fc52-4006-a2ec-c72a7e864b2d/CLAUDE.md)
   - [`uploads/b86608fd-8906-41f6-8ceb-802b9dbf25f1/`](uploads/b86608fd-8906-41f6-8ceb-802b9dbf25f1/CLAUDE.md)
+  - [`uploads/ba844b7c-4fc0-452a-bcc8-fe6ece6f88ab/`](uploads/ba844b7c-4fc0-452a-bcc8-fe6ece6f88ab/CLAUDE.md)
   - [`uploads/c456ad7d-af35-47d1-bcfd-1a7539f1261f/`](uploads/c456ad7d-af35-47d1-bcfd-1a7539f1261f/CLAUDE.md)
+  - [`uploads/e9c7fe5d-cf36-4f46-95c3-9380fccfcd24/`](uploads/e9c7fe5d-cf36-4f46-95c3-9380fccfcd24/CLAUDE.md)
 <!-- dox:index:end -->
 
 ## Coding Guidelines (Karpathy)
 
 Invoke `andrej-karpathy-skills:karpathy-guidelines` for the full behavioral checklist (4 rules: Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution). That skill is the single source of truth — do not restate here.
-
-## gstack
-
-Use the `/browse` skill from gstack for all web browsing. Never use
-`mcp__claude-in-chrome__*` tools. Available gstack skills: /office-hours,
-/plan-ceo-review, /plan-eng-review, /plan-design-review, /design-consultation,
-/design-shotgun, /design-html, /review, /ship, /land-and-deploy, /canary,
-/benchmark, /browse, /connect-chrome, /qa, /qa-only, /design-review,
-/setup-browser-cookies, /setup-deploy, /setup-gbrain, /retro, /investigate,
-/document-release, /document-generate, /codex, /cso, /autoplan,
-/plan-devex-review, /devex-review, /careful, /freeze, /guard, /unfreeze,
-/gstack-upgrade, /learn.

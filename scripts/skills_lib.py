@@ -202,18 +202,6 @@ INSTALLER_MANAGED = {"higgsfield-generate", "higgsfield-marketplace-cards",
                      "higgsfield-websites", "mmx-cli"}
 
 
-def _is_gstack_pointer(d: Path) -> bool:
-    """A generated gstack pointer (post-P5-T12): real SKILL.md, provenance tag."""
-    sk = d / "SKILL.md"
-    if not sk.is_file():
-        return False
-    try:
-        text = sk.read_text(encoding="utf-8", errors="ignore")[:400]
-    except OSError:
-        return False
-    return "provenance: gstack-clone" in text
-
-
 def skill_dirs() -> list[Path]:
     """All 218 skill directories (a dir with a resolvable SKILL.md)."""
     out = []
@@ -231,34 +219,17 @@ def skill_names() -> list[str]:
     return [d.name for d in skill_dirs()]
 
 
-def is_gstack_twin(d: Path) -> bool:
-    sk = d / "SKILL.md"
-    if not sk.is_symlink():
-        return False
-    try:
-        return "/skills/gstack/" in os.readlink(sk)
-    except OSError:
-        return False
-
-
 def derive_families() -> dict[str, str]:
     """skill_name -> family, for the 128 upstream-locked skills only.
 
-    Families: gstack-clone, installer-managed, gsd, vendored-design,
-    embedded-git, skills-cli.
+    Families: installer-managed, vendored-design, embedded-git, skills-cli.
     """
     fam: dict[str, str] = {}
     for d in skill_dirs():
         n = d.name
-        if n == "gstack":
-            fam[n] = "gstack-clone"
-        elif is_gstack_twin(d) or _is_gstack_pointer(d):
-            fam[n] = "gstack-clone"
-        elif n in INSTALLER_MANAGED or (
+        if n in INSTALLER_MANAGED or (
                 d.is_symlink() and ".agents/skills" in (os.readlink(d) if d.is_symlink() else "")):
             fam[n] = "installer-managed"
-        elif n.startswith("gsd-"):
-            fam[n] = "gsd"
         elif n in VENDORED_DESIGN:
             fam[n] = "vendored-design"
         elif n in EMBEDDED_GIT:
@@ -331,12 +302,6 @@ def infer_platforms(body: str) -> list[str]:
     return ["linux", "darwin", "windows"]
 
 
-def clone_member_description(name: str) -> str:
-    """Description string of a gstack clone member (skills/gstack/<name>)."""
-    fm, _, ok = read_frontmatter(SKILLS_DIR / "gstack" / name / "SKILL.md")
-    return str(fm.get("description", "")) if ok else ""
-
-
 def skill_description(name: str) -> str:
     fm, _, ok = read_frontmatter(SKILLS_DIR / name / "SKILL.md")
     return str(fm.get("description", "")) if ok else ""
@@ -346,36 +311,14 @@ def r10_check(provenance: dict) -> list[tuple[str, str, str]]:
     """R10 upstream-intactness probe.
 
     Returns [(skill, status, detail)] with status OK|FAIL|SKIP.
-    - gstack clone dir  -> `git status --porcelain` clean (tracked only)
-    - gstack twin       -> pointer/symlink description == recorded baseline
-    - all other locked  -> dir content hash == recorded baseline
+    - every locked skill -> dir content hash == recorded baseline
     """
-    import subprocess
     out: list[tuple[str, str, str]] = []
     for name, meta in provenance.items():
         basis = meta.get("hashBasis")
         baseline = meta.get("baselineHash")
         d = SKILLS_DIR / name
-        if basis == "git-clean":
-            try:
-                r = subprocess.run(
-                    ["git", "-C", str(d), "status", "--porcelain",
-                     "--untracked-files=no"],
-                    capture_output=True, text=True, timeout=30)
-                out.append((name, "OK" if not r.stdout.strip() else "FAIL",
-                            "clean" if not r.stdout.strip() else r.stdout.strip()[:200]))
-            except Exception as e:  # noqa: BLE001
-                out.append((name, "SKIP", f"git error: {e}"))
-        elif basis == "pointer-desc":
-            cur = sha256_text(skill_description(name))
-            clone = sha256_text(clone_member_description(name))
-            if cur == baseline and clone == baseline:
-                out.append((name, "OK", "pointer==clone==baseline"))
-            elif cur == clone:
-                out.append((name, "OK", "pointer==clone (upstream moved; rebaseline)"))
-            else:
-                out.append((name, "FAIL", "pointer description drifted from clone"))
-        elif basis == "content-hash":
+        if basis == "content-hash":
             cur = dir_content_hash(d)
             out.append((name, "OK" if cur == baseline else "FAIL",
                         "match" if cur == baseline else "local edit detected"))

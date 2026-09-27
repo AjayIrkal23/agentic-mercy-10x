@@ -32,9 +32,10 @@ re-check) happens automatically until the doctor reports 0 FAIL.
 - **UI only.** Never re-add CLI verbs (`install`/`update`/`doctor`/`verify`) to
   the entry points — they were removed on purpose. Internal engine modules
   (`doctor`, `deps`, `verify`, `render`) stay importable; only the user-facing
-  surface is UI.
+  surface is UI. Unsupported entry-point arguments fail closed before the UI
+  starts; run `python installer/doctor.py` for the read-only doctor.
 - **Never guess line endings.** R10 (`dir_content_hash`) reads raw BYTES and the
-  committed baseline legitimately mixes LF and CRLF (e.g. `ui-ux-pro-max/
+  committed baseline legitimately mixes LF and CRLF in third-party sources.
   scripts/search.py`, `data/motion.csv`). The primary fix is
   `git_restore_worktree` (exact committed bytes); the fallback
   `repair_r10_drift` normalizes CRLF→LF per locked dir and **reverts** if the dir

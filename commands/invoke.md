@@ -10,18 +10,18 @@ Acts always run in this canonical order regardless of how they are typed:
 
 | act | specialist agent | artifact | model | role |
 |-----|------------------|----------|-------|------|
-| `audit` | audit-specialist | `AUDIT-{date}.md` | fable | tech-debt / forensic / architecture audit |
-| `spec` | spec-architect | `SPEC-{slug}.md` | fable | build-ready spec + contracts |
-| `plan` | planning-director | `plan-{date}-{slug}.md` | fable | phased execution plan |
+| `audit` | audit-specialist | `AUDIT-{date}.md` | sonnet | tech-debt / forensic / architecture audit |
+| `spec` | spec-architect | `SPEC-{slug}.md` | sonnet | build-ready spec + contracts |
+| `plan` | planning-director | `plan-{date}-{slug}.md` | sonnet | phased execution plan |
 | `test` | test-author | `TEST-REPORT.md` | sonnet | author failing tests first (TDD red) |
-| `impl` | implementation-engineer | `IMPL-REPORT.md` | fable | implement the plan (fable; surface-routed FE/BE/integrator) |
+| `impl` | implementation-engineer | `IMPL-REPORT.md` | opus | implement the plan (fable; surface-routed FE/BE/integrator) |
 | `refactor` | refactor-specialist | `REFACTOR-REPORT.md` | sonnet | behavior-preserving refactor (test-guarded) |
-| `debug` | debug-detective | `ROOTCAUSE.md` | fable | root-cause an unknown failure |
-| `design` | frontend-uiux-designer | `DESIGN-REPORT.md` | fable | UI/UX design + polish (opus) |
+| `debug` | debug-detective | `ROOTCAUSE.md` | sonnet | root-cause an unknown failure |
+| `design` | frontend-uiux-designer | `DESIGN-REPORT.md` | opus | UI/UX design + polish (opus) |
 | `clean` | deadcode-reaper | `REAP-REPORT.md` | sonnet | dead-code reap (code-mutating) |
-| `review` | santa-reviewer | `SANTA-REVIEW.md` | fable | Santa Method adversarial review (opus) |
-| `docs` | docs-sync-agent | `DOCS-SYNC-REPORT.md` | fable | sync docs to the change |
-| `verify` | qa-verifier | `VERIFY-REPORT.md` | fable | verify behavior end-to-end |
+| `review` | santa-reviewer | `SANTA-REVIEW.md` | opus | Santa Method adversarial review (opus) |
+| `docs` | docs-sync-agent | `DOCS-SYNC-REPORT.md` | sonnet | sync docs to the change |
+| `verify` | qa-verifier | `VERIFY-REPORT.md` | sonnet | verify behavior end-to-end |
 | `security` | security-sentinel | `SECURITY-REPORT.md` | sonnet | security review / hardening |
 
 An unknown token is reported ("valid acts: …") and the flow proceeds with the recognized acts.
@@ -42,7 +42,7 @@ For each requested act, spawn its agent (Agent tool, `subagent_type` = the agent
 description prefix `[<model>] ` from the table and `model:"<model>"`, passing the BRIEF + **every
 prior artifact**. Wait for the act's artifact before the next act.
 
-- **`impl` RUNS ON FABLE (user directive 2026-07-18)** — surface routing: FE-only -> `frontend-implementor-specialist`, BE-only -> `backend-implementor-specialist` (contract-first, emits `IMPL-REPORT-BE.md ## CONTRACT`), mixed -> BE then FE then `integrator-specialist` (parity + E2E evidence), general/infra -> `implementation-engineer`. All get `[fable]` + `model:"fable"` (opus-guard pins)
+- **`impl` RUNS ON OPUS** — surface routing: FE-only -> `frontend-implementor-specialist`, BE-only -> `backend-implementor-specialist` (contract-first, emits `IMPL-REPORT-BE.md ## CONTRACT`), mixed -> BE then FE then `integrator-specialist` (parity + E2E evidence), general/infra -> `implementation-engineer`. All get `[opus]` + `model:"opus"` (opus-guard pins)
   (model-policy `invoke_categories.IMPLEMENT`). When PLAN already ran, its plan artifact is the
   implementation input and the `requires: plan` note is satisfied — do not re-ask.
 - **`design`** dispatches `frontend-uiux-designer` (opus); assets come from Higgsfield
@@ -220,5 +220,4 @@ executing every act sequentially. Never silently drop an act.
 
   - `owasp-security`
   - `security-and-hardening`
-  - `cso`
 </details>

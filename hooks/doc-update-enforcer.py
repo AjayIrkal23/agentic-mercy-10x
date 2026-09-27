@@ -176,6 +176,19 @@ def main() -> int:
         if d and d not in dirs:
             dirs.append(d)
             state["claude_md_dirs"] = dirs
+        # A dox file ALSO counts as a surface doc when the config opts in by
+        # listing CLAUDE.md/AGENTS.md in the segment arrays. Without this, the
+        # early return above meant blocking-doc-enforcer.py's git-commit gate
+        # could never be satisfied in a repo whose doc layout is the dox tree
+        # rather than GO_UDP's frontend_docs/ + PROJECT_LINKAGES.md — the gate
+        # demanded files that repo does not and should not have.
+        if state.get("code_files"):
+            if any(seg in norm for seg in BE_DOC_SEGMENTS):
+                state["be_docs_written"] = True
+            if any(seg in norm for seg in FE_DOC_SEGMENTS):
+                state["fe_docs_written"] = True
+            if any(seg in norm for seg in LINKAGE_SEGMENTS):
+                state["linkages_written"] = True
         _save_state(cid, state)
         print("{}")
         return 0

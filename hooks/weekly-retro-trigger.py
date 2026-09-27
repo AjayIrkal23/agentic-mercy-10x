@@ -69,14 +69,12 @@ def _is_retro_session(payload: dict) -> bool:
     'retro' keyword. The Stop hook receives limited context — we use a best-effort
     check on conversation_id matching a known retro session marker.
 
-    More reliable: check if ~/.gstack/retro/ has a file written today.
+    More reliable: check if the local telemetry directory has a retro marker
+    written today.
     """
-    # Check if gstack retro output was written today
+    # Check if local retro telemetry was written today.
     today_str = date.today().isoformat()
-    retro_dirs = [
-        Path.home() / ".gstack" / "retro",
-        Path.home() / ".claude" / "telemetry",
-    ]
+    retro_dirs = [Path.home() / ".claude" / "telemetry"]
     for d in retro_dirs:
         if d.is_dir():
             for f in d.iterdir():

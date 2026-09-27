@@ -10,8 +10,7 @@ entries when the limit is exceeded.
 
 Outputs:
   1. {workspace}/CODEX.md   — living per-project decision document
-  2. ~/.gstack/projects/{slug}/learnings.jsonl  — via gstack-learnings-log binary
-  3. ~/.claude/hooks/.telemetry/learnings.jsonl — local fallback (always)
+  2. ~/.claude/hooks/.telemetry/learnings.jsonl — local record
 
 Environment:
   DRY_RUN=1   Print what would be written, write nothing.
@@ -25,8 +24,6 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -79,7 +76,7 @@ def _workspace_from_payload(payload: dict) -> Path | None:
 
 
 def _project_slug(workspace: Path | None) -> str:
-    """Convert workspace path to a URL-safe slug for gstack project directory."""
+    """Convert the workspace name to a URL-safe telemetry slug."""
     if not workspace:
         return "unknown"
     # e.g. /path/to/site-sync-vista → site-sync-vista
@@ -183,40 +180,6 @@ def _append_telemetry_learning(record: dict) -> None:
         print(f"Warning: could not write telemetry learnings.jsonl: {e}", file=sys.stderr)
 
 
-def _call_gstack_learnings_log(slug: str, record: dict) -> bool:
-    """Attempt to call gstack-learnings-log binary. Returns True on success."""
-    binary = shutil.which("gstack-learnings-log")
-    if not binary:
-        # Also try common install locations
-        candidates = [
-            Path.home() / ".gstack" / "bin" / "gstack-learnings-log",
-            Path.home() / ".claude" / "skills" / "gstack" / "bin" / "gstack-learnings-log",
-            Path("/usr/local/bin/gstack-learnings-log"),
-        ]
-        for c in candidates:
-            if c.is_file() and os.access(c, os.X_OK):
-                binary = str(c)
-                break
-
-    if not binary:
-        return False
-
-    if DRY_RUN:
-        print(f"[DRY_RUN] Would call: {binary} '{json.dumps(record)}'", file=sys.stderr)
-        return True
-
-    try:
-        result = subprocess.run(
-            [binary, json.dumps(record)],
-            timeout=8,
-            capture_output=True,
-            text=True,
-        )
-        return result.returncode == 0
-    except (OSError, subprocess.TimeoutExpired):
-        return False
-
-
 def _bootstrap_codex_if_absent(codex_path: Path, workspace: Path) -> str:
     """Create a minimal CODEX.md skeleton if it does not exist."""
     template = f"""# CODEX — {workspace.name}
@@ -250,181 +213,6 @@ Read this BEFORE any source files. It contains prior decisions and known pitfall
 *Last updated: {_now_iso()}*
 """
     return template
-
-
-# ── GSD LEARNINGS.md bridge ───────────────────────────────────────────────────
-
-def _find_recent_learnings_md(workspace: Path, cid: str) -> list[Path]:
-    """Find .planning/phases/*/LEARNINGS.md files modified in the last 24 hours.
-
-    We use mtime as a proxy for "written this session" — reliable enough since
-    sessions are typically < 2 hours, and 24h gives comfortable margin.
-    """
-    planning_dir = workspace / ".planning" / "phases"
-    if not planning_dir.is_dir():
-        return []
-
-    import time
-    cutoff = time.time() - 86400  # 24 hours ago
-
-    found: list[Path] = []
-    try:
-        for phase_dir in planning_dir.iterdir():
-            if not phase_dir.is_dir():
-                continue
-            candidate = phase_dir / "LEARNINGS.md"
-            if candidate.is_file():
-                try:
-                    if candidate.stat().st_mtime >= cutoff:
-                        found.append(candidate)
-                except OSError:
-                    continue
-    except OSError:
-        pass
-
-    return found
-
-
-def _parse_learnings_md(path: Path) -> list[dict]:
-    """Parse a LEARNINGS.md file into structured learning records.
-
-    Expected format (from gsd-extract-learnings):
-      ## Key Decisions
-      - Decision text here
-      - Another decision
-
-      ## Lessons Learned
-      - Lesson text here
-
-      ## Patterns
-      - Pattern text here
-
-    Returns list of dicts with keys: type, key, insight, source, phase
-    """
-    try:
-        content = path.read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return []
-
-    records: list[dict] = []
-    phase_name = path.parent.name  # e.g. "phase-01-auth"
-
-    # Section → type mapping
-    section_types: dict[str, str] = {
-        "key decisions":    "decision",
-        "decisions":        "decision",
-        "lessons learned":  "lesson",
-        "lessons":          "lesson",
-        "patterns":         "pattern",
-        "surprises":        "lesson",
-        "open questions":   "question",
-    }
-
-    current_type = "lesson"
-    section_re = re.compile(r"^#{1,3}\s+(.+)$")
-    item_re    = re.compile(r"^[-*]\s+(.+)$")
-
-    for line in content.splitlines():
-        line = line.rstrip()
-        section_match = section_re.match(line)
-        if section_match:
-            title = section_match.group(1).strip().lower()
-            for key, t in section_types.items():
-                if key in title:
-                    current_type = t
-                    break
-            continue
-
-        item_match = item_re.match(line)
-        if item_match:
-            text = item_match.group(1).strip()
-            if not text or len(text) < 10:
-                continue
-            # Build a stable key from the first 40 chars
-            key = re.sub(r"[^a-z0-9]", "-", text[:40].lower()).strip("-")
-            records.append({
-                "type":    current_type,
-                "key":     key,
-                "insight": text,
-                "source":  "phase-artifact",
-                "phase":   phase_name,
-            })
-
-    return records
-
-
-def _write_gstack_learnings(slug: str, records: list[dict]) -> int:
-    """Write parsed learning records to gstack JSONL and via binary.
-
-    Returns count of records written.
-    """
-    if not records:
-        return 0
-
-    written = 0
-    gstack_dir = Path.home() / ".gstack" / "projects" / slug
-    jsonl_path = gstack_dir / "learnings.jsonl"
-
-    for rec in records:
-        full_record = {
-            "skill":      "gsd-learnings-bridge",
-            "type":       rec.get("type", "lesson"),
-            "key":        rec.get("key", "unknown"),
-            "insight":    rec.get("insight", ""),
-            "confidence": 7,  # phase artifacts are high-confidence
-            "source":     rec.get("source", "phase-artifact"),
-            "phase":      rec.get("phase", ""),
-            "ts":         _now_iso(),
-        }
-
-        # Write to gstack JSONL directly (create directory if needed)
-        if DRY_RUN:
-            print(f"[DRY_RUN] Would append to {jsonl_path}: {full_record}", file=sys.stderr)
-        else:
-            try:
-                gstack_dir.mkdir(parents=True, exist_ok=True)
-                with jsonl_path.open("a", encoding="utf-8") as fh:
-                    fh.write(json.dumps(full_record, ensure_ascii=False) + "\n")
-                    fh.flush()
-            except OSError as e:
-                print(f"Warning: could not write {jsonl_path}: {e}", file=sys.stderr)
-                continue
-
-        # Also call gstack-learnings-log binary for cross-system sync
-        binary_record = {
-            "skill":      full_record["skill"],
-            "type":       full_record["type"],
-            "key":        full_record["key"],
-            "insight":    full_record["insight"],
-            "confidence": full_record["confidence"],
-            "source":     full_record["source"],
-        }
-        _call_gstack_learnings_log(slug, binary_record)  # failure is silent
-
-        # Append to local telemetry fallback
-        _append_telemetry_learning(full_record)
-
-        written += 1
-
-    return written
-
-
-def _run_gsd_learnings_bridge(workspace: Path | None, slug: str, cid: str) -> int:
-    """Detect recent LEARNINGS.md files and bridge them to gstack. Returns record count."""
-    if not workspace:
-        return 0
-
-    learnings_files = _find_recent_learnings_md(workspace, cid)
-    if not learnings_files:
-        return 0
-
-    total_written = 0
-    for lf in learnings_files:
-        records = _parse_learnings_md(lf)
-        written = _write_gstack_learnings(slug, records)
-        total_written += written
-
-    return total_written
 
 
 def _build_followup_message(
@@ -509,31 +297,6 @@ def main() -> int:
         "event":       "learning_prompt_emitted",
     }
     _append_telemetry_learning(telemetry_record)
-
-    # Attempt gstack-learnings-log call (fires an event; actual content is model-driven)
-    gstack_record = {
-        "skill":      "session-learning-extractor",
-        "type":       "session-end",
-        "key":        f"session-end-{cid[:8]}",
-        "insight":    f"Session ended: {writes} code writes on {slug}. Learning prompt emitted.",
-        "confidence": 5,
-        "source":     "session-hook",
-    }
-    _call_gstack_learnings_log(slug, gstack_record)
-
-    # ── GSD bridge: if LEARNINGS.md was written this session, bridge it ────────
-    if workspace:
-        bridge_count = _run_gsd_learnings_bridge(workspace, slug, cid)
-        if bridge_count > 0 and not DRY_RUN:
-            # Update telemetry record to note the bridge fired
-            _append_telemetry_learning({
-                "ts":             _now_iso(),
-                "cid":            cid,
-                "slug":           slug,
-                "event":          "gsd_bridge_fired",
-                "records_bridged": bridge_count,
-            })
-    # ───────────────────────────────────────────────────────────────────────────
 
     # Mark as fired for this session
     try:

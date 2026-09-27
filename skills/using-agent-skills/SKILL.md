@@ -58,7 +58,7 @@ Task arrives
     ├── New project/feature/change? ──→ spec-driven-development
     ├── Have a spec, need tasks? ──────→ planning-and-task-breakdown
     ├── Implementing code? ────────────→ incremental-implementation (+ Superpowers `executing-plans`, `subagent-driven-development`; hook: **`plan-exec-stack-hint` execution mode**)
-    │   ├── UI work? ─────────────────→ frontend-standards-always-follow (+ `vite-react-best-practices`, `frontend-ui-engineering`, `impeccable` / `taste-skill` when polish matters; UI hook overlay when paths match)
+    │   ├── UI work? ─────────────────→ frontend-standards-always-follow (+ `vite-react-best-practices`, `frontend-ui-engineering`, `` / `taste-skill` when polish matters; UI hook overlay when paths match)
     │   ├── API work? ────────────────→ api-and-interface-design
     │   ├── Need better context? ─────→ context-engineering
     │   ├── Need doc-verified code? ───→ source-driven-development

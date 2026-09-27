@@ -590,7 +590,7 @@ By design, the repo excludes anything that is a secret, a session artifact, pers
 
 - **Secrets** — `.credentials.json`, API keys, tokens, and `~/.claude.json` (your MCP config) are never committed. `settings.json` references env vars (e.g. `${GITHUB_TOKEN}`) instead.
 - **Sessions & personal data** — `projects/`, `history.jsonl`, `sessions/`, `file-history/`, `todos/`, shell snapshots, and per-machine state.
-- **Re-installable externals** — the plugin cache/marketplaces, `skills/gstack/`, `ast-grep-mcp/`, and the GSD (`get-shit-done/`) system. The installer and notes fetch these.
+- **Re-installable externals** — the plugin cache/marketplaces and `ast-grep-mcp/`. The installer and notes fetch these.
 
 The installer fetches and registers these **automatically** — MCP servers (`jcodemunch`, `jdocmunch`, `graphify`, `lean-ctx`, `memory`, `sequential-thinking`, `context7`, and the rest), the plugin marketplaces + plugins, and the code-intelligence engines. On Windows it runs the `claude` `.cmd` shim through the shell so registration actually completes. **The only things left to you** are the ones no installer can do for you:
 
@@ -640,13 +640,12 @@ This workspace stands on excellent third-party skills. **Each keeps its own upst
 | Huashu Design (花叔) | [alchaincyf/huashu-design](https://github.com/alchaincyf/huashu-design) |
 | UI/UX Pro Max | [nextlevelbuilder/ui-ux-pro-max-skill](https://github.com/nextlevelbuilder/ui-ux-pro-max-skill) |
 | Taste-Skill (anti-slop frontend) | [Leonxlnx/taste-skill](https://github.com/Leonxlnx/taste-skill) |
-| gstack (ship/QA/browse/design suite) | [garrytan/gstack](https://github.com/garrytan/gstack) |
 | Superpowers | [obra/superpowers-marketplace](https://github.com/obra/superpowers-marketplace) |
 | Ponytail (anti-over-engineering) | [DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail) |
 | Karpathy Guidelines | [forrestchang/andrej-karpathy-skills](https://github.com/forrestchang/andrej-karpathy-skills) |
 | ast-grep MCP | [ast-grep/ast-grep-mcp](https://github.com/ast-grep/ast-grep-mcp) |
 
-Frontend design assets are generated with Higgsfield; GSD (`get-shit-done`) supplies the `gsd-*` command system.
+Frontend design assets are generated with Higgsfield.
 
 ---
 

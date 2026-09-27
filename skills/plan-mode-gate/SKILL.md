@@ -122,7 +122,7 @@ Before exploring, planning, or implementing:
 
 1. **Read `using-superpowers` skill** to refresh discipline
 2. **Scan user request for skill triggers:**
-   - "design", "UI", "UX", "component", "page" → `frontend-design-gate`, `ui-ux-pro-max`, `impeccable`
+   - "design", "UI", "UX", "component", "page" → `frontend-design-gate`, ``, ``
    - "test", "tdd", "coverage" → `tdd-workflow`, `test-driven-development`
    - "bug", "fix", "error", "failure" → `systematic-debugging`
    - "plan", "architecture", "design doc" → `brainstorming`, `writing-plans`

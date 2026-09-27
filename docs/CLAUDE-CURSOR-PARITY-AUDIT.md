@@ -35,7 +35,6 @@
 | P1-2 | `token-stack-prompt-reminder` vs split prompt hooks | Sync + **preserve** Claude prompt-submit hooks |
 | P1-3 | `afterMCPExecution` jcodemunch | Mapped to `AfterMcpExecution` (if supported by Claude Code) |
 | P1-4 | Separate `.state` per runtime | Documented — expected |
-| P1-5 | GSD paths reference `.cursor` in some workflow refs | Optional path fix in `.claude/get-shit-done` |
 
 ## Preserve list (never remove)
 
@@ -44,8 +43,6 @@
 | `model` | `claude-opus-4-6` |
 | `permissions.defaultMode` | `bypassPermissions` |
 | `effortLevel` | `xhigh` |
-| `statusLine` | `gsd-statusline.js` |
-| `gsd-read-guard.js` | PreToolUse |
 | `jcodemunch-enforce.py prompt-submit` | UserPromptSubmit |
 | `graphify-enforce.py prompt-submit` | UserPromptSubmit |
 | `enabledPlugins`, `env`, plugins MCP roster | settings root |
@@ -57,7 +54,6 @@
 | Post-write chain | `post-write-aggregator.py` | Same | No |
 | Semgrep track | `security-semgrep-tracker` / Shell | Bash matcher | No |
 | Santa | `santa-method-writer` / Task | Task\|Agent | No |
-| Read guard | — | `gsd-read-guard.js` | **Yes** |
 | Prompt enforcers | `token-stack-prompt-reminder` | + preserved direct hooks | **Yes** |
 | Stop gate | `hard-completion-gate` | Same | No |
 | Fullstack skills | `fullstack-skills-reminder` | Same | No |

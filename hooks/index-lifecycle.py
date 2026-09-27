@@ -77,6 +77,13 @@ FRESH, STALE, MISSING, BUILDING, FAILED, UNAVAILABLE = (
 )
 SURFACES = ("jcodemunch", "jdocmunch", "graphify", "dox")
 
+# Agent-infra dirs. They ARE git repos, but they are config/tooling, never
+# project code — indexing them (jcodemunch symbols + ollama AI summaries,
+# graphify, jdocmunch, dox) burns CPU on every hook edit for zero retrieval
+# value, and $HOME additionally drags the whole home tree in. Excluded from ALL
+# four surfaces. User directive 2026-08-16.
+NEVER_INDEX = (HOME, HOME / ".claude", HOME / ".codex")
+
 DOC_GLOBS = ["*.md", "*.mdx", "*.markdown", "*.rst", "*.adoc", "*.txt",
              "*.yaml", "*.yml", "*.html", "*.ipynb"]
 
@@ -229,9 +236,28 @@ def _active_ctx(payload):
     if not _LIBS_OK:
         return None
     try:
-        return rc.active_repo(payload)
+        ctx = rc.active_repo(payload)
     except Exception:
         return None
+    if ctx is not None and _is_never_index(ctx.root):
+        return None  # infra dir — every surface becomes a no-op (see NEVER_INDEX)
+    return ctx
+
+
+def _is_never_index(root) -> bool:
+    """True when ``root`` is one of the NEVER_INDEX infra dirs. Resolves both
+    sides so a symlinked or unnormalized path cannot slip past. Never raises."""
+    try:
+        r = Path(root).expanduser().resolve()
+    except (OSError, RuntimeError):
+        return False
+    for skip in NEVER_INDEX:
+        try:
+            if r == skip.resolve():
+                return True
+        except (OSError, RuntimeError):
+            continue
+    return False
 
 
 def _state_path(key: str) -> Path:
@@ -901,6 +927,8 @@ def main(argv=None) -> int:
             args = parser.parse_args(argv[1:])
         except SystemExit:
             return 0
+        if _is_never_index(args.root):
+            return 0  # a queued/stale build for an infra dir — drop it
         return mode_build(args, cfg)
 
     payload = _read_payload()

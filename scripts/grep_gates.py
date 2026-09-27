@@ -44,9 +44,6 @@ _SYSPLATFORM_EXEMPT = {
 # ports in P6-T2). Flip-back was retired 2026-07-14 (git is the recovery path);
 # discovery-skills-reminder.sh was deleted with the legacy UPS stack. No NEW .sh here.
 _LEGACY_SH_GRANDFATHER = {
-    "gsd-phase-boundary.sh",
-    "gsd-session-state.sh",
-    "gsd-validate-commit.sh",
     "tdd-guard-launcher.sh",
     # graphify-runner.sh retired 2026-07-14 (tri-tool rework): the LIVE hook,
     # settings.json, AND ~/.claude.json all now point graphify's MCP at
@@ -55,7 +52,7 @@ _LEGACY_SH_GRANDFATHER = {
 
 _EXCLUDE_DIR_PARTS = {
     "attic", "__pycache__", "node_modules", ".git", "fixtures",
-    "plugins", "gstack", ".state", ".telemetry", ".agents",
+    "plugins", ".state", ".telemetry", ".agents",
 }
 
 # Files that NAME the banned patterns by design (this gate + its test document

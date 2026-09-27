@@ -33,20 +33,10 @@ OVERRIDES_PATH = sl.HOOKS_DIR / "skills-index-overrides.json"
 LOCK_PATH = sl.HOOKS_DIR / "skills-lock.json"
 
 _FAMILY_META = {
-    "gstack-clone": {
-        "source": "https://github.com/garrytan/gstack",
-        "sourceType": "git-clone",
-        "updateCommand": "gstack-upgrade (git pull inside skills/gstack)",
-    },
     "installer-managed": {
         "source": "https://github.com/higgsfield-ai/skills (npx skills)",
         "sourceType": "skills-cli",
         "updateCommand": "npx skills update -> re-materialize -> re-hash",
-    },
-    "gsd": {
-        "source": "get-shit-done suite (~/.claude/get-shit-done)",
-        "sourceType": "vendored-suite",
-        "updateCommand": "gsd-update",
     },
     "vendored-design": {
         "source": "author release (six-skill UI craft stack)",
@@ -67,16 +57,10 @@ _FAMILY_META = {
 
 
 def _baseline(name: str, family: str, basis: str) -> str:
-    if basis == "git-clean":
-        return ""  # git status is the check; no stored hash
-    if basis == "pointer-desc":
-        return sl.sha256_text(sl.clone_member_description(name))
     return sl.dir_content_hash(sl.SKILLS_DIR / name)
 
 
 def _basis_for(name: str, family: str) -> str:
-    if family == "gstack-clone":
-        return "git-clean" if name == "gstack" else "pointer-desc"
     return "content-hash"
 
 
@@ -151,21 +135,6 @@ def ensure_overrides_skeleton() -> None:
     OVERRIDES_PATH.write_text(json.dumps(skel, indent=2) + "\n", encoding="utf-8")
 
 
-def gsd_reconcile() -> None:
-    """Reconcile on-disk gsd-* set vs get-shit-done's managed suite (SKILL-FATE §0).
-
-    There is no flat skill manifest in get-shit-done/; the suite ships its skills
-    into skills/. All on-disk gsd-* dirs are treated as GSD-upstream-managed
-    (sidecar-only treatment is safe in both directions). Reports the count and any
-    obvious straggler (a gsd-* dir with no SKILL.md, which would be non-upstream).
-    """
-    disk = sorted(d.name for d in sl.SKILLS_DIR.glob("gsd-*") if (d / "SKILL.md").exists())
-    version = (sl.CLAUDE_DIR / "get-shit-done" / "VERSION")
-    ver = version.read_text().strip() if version.exists() else "?"
-    print(f"gsd reconcile: {len(disk)} gsd-* skills on disk vs get-shit-done v{ver}; "
-          f"all treated as upstream-managed (SKILL-FATE §0 — resolves 53-vs-67).")
-
-
 def run_check() -> int:
     if not PROV_PATH.exists():
         print("R10: no provenance registry — run build first", file=sys.stderr)
@@ -178,7 +147,6 @@ def run_check() -> int:
     print(f"R10: {len(results)} locked skills, {len(fails)} FAIL, {len(skips)} SKIP")
     for name, status, detail in fails + skips:
         print(f"  {status:4} {name}: {detail}")
-    gsd_reconcile()
     return 1 if fails else 0
 
 

@@ -89,8 +89,7 @@ def _row(rows, mark, name, detail="", fix=""):
 
 
 def _present(root: Path, pat: str) -> bool:
-    """True if a path (glob or literal) exists under root — used to detect local
-    installs (e.g. GSD's engine dir + materialized gsd-* agents/skills)."""
+    """True if a path (glob or literal) exists under root."""
     if any(c in pat for c in "*?["):
         return any(root.glob(pat))
     return (root / pat).exists()

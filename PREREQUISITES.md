@@ -88,12 +88,12 @@ everything green.
 
 > **Everything else is automatic**, including MCP-server + plugin registration
 > (on Windows the `claude` `.cmd` shim is run through the shell so it actually
-> completes) and GSD (`get-shit-done`) via `npx -y get-shit-done-cc@latest`.
+> completes).
 > Anything that needs the `claude` CLI or the network but can't reach it shows as
 > a non-blocking **WARN** — it never gates the "100%" success and self-completes on
 > the next launch once the prerequisite is in place.
 
 ## Optional (only if you use them)
 
-`bun` (gstack build) · `ripgrep` · `golangci-lint` (Go TDD) · the `ast-grep` MCP
+`ripgrep` · `golangci-lint` (Go TDD) · the `ast-grep` MCP
 (`git clone` + `uv sync` in `ast-grep-mcp/`, offered by `install.sh`).

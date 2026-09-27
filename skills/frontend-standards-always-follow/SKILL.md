@@ -145,7 +145,7 @@ Apply it immediately after the matching Build Web Apps plugin skill for any fron
 - `frontend-response-handling` for API parsing, normalized errors, and backend-driven list behavior.
 - `frontend-server-data-patterns` for tables, lists, search, and query-state flows.
 - `react-hooks-patterns` for complex local state, effects, refs, reducers, or custom hook extraction.
-- `tailwind-design-system`, `ui-ux-pro-max`, `frontend-ui-engineering`, or `impeccable` only when the task explicitly needs them.
+- `tailwind-design-system`, ``, `frontend-ui-engineering`, or `` only when the task explicitly needs them.
 
 ## Completion Checklist
 

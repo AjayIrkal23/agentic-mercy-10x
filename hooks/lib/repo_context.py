@@ -28,6 +28,16 @@ from typing import Any, Mapping
 _MAX_WALK_UP = 20
 
 
+def _home() -> Path | None:
+    """``$HOME`` resolved, or None. It is a CONTAINER dir, never a project repo:
+    a stray ``git init`` in the home dir would otherwise make every session
+    register the whole home tree as the active repo (indexes, graph, dox)."""
+    try:
+        return Path.home().resolve()
+    except (OSError, RuntimeError):
+        return None
+
+
 @dataclass(frozen=True)
 class RepoCtx:
     root: str          # absolute path to the repo root (the dir containing .git)
@@ -85,7 +95,10 @@ def active_repo(
         except OSError:
             return None
 
+    home = _home()
     for _ in range(_MAX_WALK_UP + 1):
+        if cur == home:  # container dir — stop before matching a home-level .git
+            break
         try:
             if (cur / ".git").exists():
                 return RepoCtx(root=str(cur), key=_repo_key(cur), name=cur.name or "root")
@@ -148,11 +161,14 @@ def git_root(path: str | os.PathLike) -> Path | None:
     """Walk up from ``path`` to the nearest dir containing a ``.git`` entry (dir
     or worktree pointer file). ``None`` when not inside a git repo. Never raises."""
     try:
-        p = Path(path).expanduser()
+        p = Path(path).expanduser().resolve()  # resolve: else '<home>/x/..' slips the home guard
         cur = p if p.is_dir() else p.parent
     except (OSError, RuntimeError):
         return None
+    home = _home()
     for _ in range(_MAX_WALK_UP + 10):
+        if cur == home:  # container dir — see _home()
+            break
         try:
             if (cur / ".git").exists():
                 return cur

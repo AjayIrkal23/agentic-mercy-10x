@@ -174,8 +174,7 @@ def check_prereqs(env) -> list[tuple[str, str]]:
 
 
 def _present(root: Path, pat: str) -> bool:
-    """True if a path (glob or literal) exists under root — detects local installs
-    (e.g. GSD's engine dir + materialized gsd-* agents/skills) for idempotency."""
+    """True if a path (glob or literal) exists under root."""
     if any(c in pat for c in "*?["):
         return any(root.glob(pat))
     return (root / pat).exists()
@@ -183,9 +182,9 @@ def _present(root: Path, pat: str) -> bool:
 
 def install_plugins(env, *, ci: bool = False, dry_run: bool = False) -> list[tuple[str, str]]:
     """Add plugin marketplaces + install the workbench plugins (via the claude
-    CLI), THEN install any local/manual packages that ship their own installer
-    (e.g. GSD via `npx get-shit-done-cc`). Idempotent: an already-present local
-    install is left untouched. Fail-open: a bad step WARNs, never crashes."""
+    CLI), then any manifest-declared local/manual packages. Idempotent: an
+    already-present local install is left untouched. Fail-open: a bad step
+    WARNs, never crashes."""
     manifest = _load_manifest()
     plugins = manifest.get("plugins", {})
     results: list[tuple[str, str]] = []
@@ -228,7 +227,7 @@ def install_plugins(env, *, ci: bool = False, dry_run: bool = False) -> list[tup
             cp = plat.run(_sub(pl["add"], tokens), timeout=180)
             results.append((f"plugin:{pid}", "INSTALLED" if cp.returncode == 0 else f"WARN(rc={cp.returncode})"))
 
-    # --- local/manual installs (own installer, e.g. GSD via npx) — need node, NOT the claude CLI ---
+    # --- local/manual installs need node, not the Claude CLI ---
     for man in plugins.get("manual", []):
         mid = man["id"]
         if any(_present(target, p) for p in man.get("detect_paths", [])):

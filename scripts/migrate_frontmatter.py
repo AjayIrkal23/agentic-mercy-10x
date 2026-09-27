@@ -62,9 +62,6 @@ DESC_REWRITE = {
         "conventions, or component primitives in a Tailwind-based frontend.",
 }
 
-_LOCKED_PLATFORMS = {"gstack-clone": ["linux", "darwin"]}
-
-
 def _floor_paths_by_skill() -> dict[str, set[str]]:
     out: dict[str, set[str]] = {}
     if not FLOOR.exists():
@@ -153,7 +150,7 @@ def migrate_locked_sidecar() -> int:
                          "intents": [category]},
             "category": category,
             "surfaces": sl.infer_surfaces(category),
-            "platforms": _LOCKED_PLATFORMS.get(family, ["linux", "darwin", "windows"]),
+            "platforms": ["linux", "darwin", "windows"],
             "family": family,
         })
         # preserve any cluster links / exec-note set by T5

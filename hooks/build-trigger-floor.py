@@ -13,7 +13,7 @@ Sources reverse-imported (verbatim):
   1. skill_router.config.json          frontend_rules / backend_rules / cross_cutting
   2. skill_router.py builtins          _BUILTIN_FRONTEND_RULES / _BUILTIN_BACKEND_RULES /
                                         _BUILTIN_CROSS_CUTTING   (UNION — captures the
-                                        drifted be_security_audit + gstack `cso` route)
+                                        drifted security-audit route)
   3. autonomous-skill-router.config    categories[*].keywords (act keywords) + invoke_commands
   4. fullstack-skills-reminder.config  frontend/backend/documentation path segments
   5. ui-ux-stack-orchestrator.config   ui_keywords + ui_path_suffixes + exclude_keywords
@@ -141,7 +141,7 @@ def _collect() -> list[dict]:
         if isinstance(r, dict):
             be_by_id[r.get("id", "")] = ("skill_router.config.json", r)
     # builtin-only rules are ADDED (never override a config rule) — this is the
-    # verbatim capture of the drift (be_security_audit + cso) so it can never be lost.
+    # Keep builtin-only routing rules in the generated floor.
     for r in builtins.get("_BUILTIN_FRONTEND_RULES", []) or []:
         rid = r.get("id", "")
         if rid not in fe_by_id:
