@@ -16,6 +16,6 @@ phrases "use opus for this project" / "back to normal" (prompt router). Global f
 `state/sonnet-only-mode` > `opus-only-mode` > `fable-only-mode` hit every project — never
 for one repo.
 
-Effort: `CLAUDE_CODE_SUBAGENT_EFFORT=high` default; per-agent `effort:` — xhigh
+Effort: `CLAUDE_CODE_SUBAGENT_EFFORT=xhigh` default; per-agent `effort:` — xhigh
 implementors, santa, debug, uiux; high audit, spec, plan, security, test, refactor,
 integrator; medium docs-sync, deadcode, qa, memory-codex.
