@@ -1,5 +1,5 @@
 ---
-version: 0.7.0
+version: 0.13.0
 name: higgsfield-marketplace-cards
 description: |
   Generate marketplace product image cards through Higgsfield: compliant

@@ -37,18 +37,18 @@ read `references/auth.md`.
   bridge that runs inside the iframe.
 - Child bridge code lives in `app/src/module/design-inspector`:
   `registry.ts`, `runtime.ts`, and `vite.ts`.
-- `bun run build` is production-clean: no inspector runtime, no source metadata,
-  and no per-element debug attributes.
-- `bun run build:design` is the editable preview build and must run
-  `HF_DESIGN_INSPECTOR=1 vite build --mode design`.
-- The deploy platform must use `build:design` for editable previews and `build`
-  for public production deploys.
-- On website-builder tasks, deploy the editable preview first or alongside
-  production. The preview is the surface Supercomputer Design mode opens.
-  Production must stay production-clean.
-- Never change `build` to run `HF_DESIGN_INSPECTOR=1`, never rename
-  `build:design` into `build`, and never put inspector runtime/source metadata
-  into a public production deploy as a workaround.
+- `bun run build` is inspector-free by default: no inspector runtime, no
+  source metadata, and no per-element debug attributes. Setting
+  `HF_DESIGN_INSPECTOR=1` in the env turns the same build into the
+  inspector-enabled one (for LOCAL work only).
+- The deploy platform CI sets `HF_DESIGN_INSPECTOR=1` on every deploy build,
+  so the live deployed site always carries the inspector.
+- There is ONE deploy per website (`higgsfield website deploy <website_id>`),
+  and it ships the live public site immediately. The live site is the surface
+  Supercomputer Design mode opens.
+- Never hard-code `HF_DESIGN_INSPECTOR=1` into the `build` script and never
+  hand-edit the build script to toggle it — the deploy build is controlled by
+  CI, not by these scripts.
 - The design build attaches source metadata through callback refs and a
   `WeakMap` registry. It must not add per-element DOM attributes.
 - The design build instruments intrinsic DOM tags and ref-capable component
@@ -56,7 +56,7 @@ read `references/auth.md`.
   is automatic; agents must not add marker props by hand. Components that do not
   forward refs fall back to nearest DOM/heuristic metadata.
 - Keep the guarded dynamic import in `app/src/routes/__root.tsx`; do not make the
-  inspector a static root import. Production tree-shaking depends on the
+  inspector a static root import. Inspector-free tree-shaking depends on the
   compile-time `__HF_DESIGN_INSPECTOR__` guard.
 - Never manually write `data-hf-*` attributes, source markers, inspector refs,
   or postMessage handlers in website components. The design-inspector module and Vite config own all
@@ -89,12 +89,28 @@ export const Route = createFileRoute('/api/user')({
 Server routes are part of the same Worker. Do not add Hono/Express or a second
 backend process.
 
-Do not manually edit or hand-write `app/src/routeTree.gen.ts`. After adding nested
-routes such as `app/src/routes/api/user.tsx` or
-`app/src/routes/api/media/upload.tsx`, let the TanStack Router plugin regenerate the
-route tree. A stale route tree that imports nested routes but never adds them as
-children can make `/api/user` or `/api/media/upload` look like backend failures
-when the route was never registered.
+`app/src/routeTree.gen.ts` is GENERATED — normally you don't hand-write it.
+After adding a route (`app/src/routes/api/user.ts`,
+`app/src/routes/api/media/upload.tsx`, …) the TanStack Router plugin
+regenerates it on `bun run dev`/`bun run build`; a stale tree that imports a
+nested route but never registers it as a child makes `/api/user` etc. look like
+backend failures when the route was simply never registered.
+
+**But the deploy build typechecks against the COMMITTED tree.** `createFileRoute("/api/user")`
+type-checks its path string against `routeTree.gen.ts`, and the CI `build` runs
+`tsc` and `vite` **in parallel** — so `tsc` sees whatever route tree you
+committed, before Vite regenerates it. If you add a route, commit a stale tree,
+and can't run the toolchain in the sandbox (no `bun`, or the npm registry is
+blocked), CI fails with `TS2345: '"/api/user"' is not assignable to keyof
+FileRoutesByPath`. Two ways out, in order:
+
+1. **Regenerate locally and commit the result** — run `bun run dev` (or `build`)
+   so the plugin rewrites `routeTree.gen.ts`, then commit it. Preferred.
+2. **Hand-register the route** when you genuinely can't run the toolchain. The
+   file is deterministic: add the `*RouteImport`, the route const, all three
+   route maps, the `FileRoutesByPath` module augmentation, and the
+   `rootRouteChildren` entry — mirroring an existing route exactly. Then it
+   typechecks and the plugin will just reproduce the same tree on the CI build.
 
 ## Binary Upload Routes
 
@@ -173,10 +189,12 @@ a GET server function. This commonly breaks generation submit/cost/media flows.
 - `app/app.manifest.json` declares infra. `app/wrangler.jsonc` is build/dev input; the
   deploy platform overwrites authoritative bindings.
 
-## Shared Data Warning
+## Live Data Warning
 
-Preview and production share the same D1 and R2 resources. `env.HF_ENV` changes
-code behavior only; it does not switch databases or buckets.
+There is one deploy and one set of D1 and R2 resources backing it. Every
+migration or data change hits live production data directly. `env.HF_ENV` is
+always `"production"` on deployed builds; it does not give you a separate
+database or bucket to test against.
 
 - Prefer additive migrations.
 - Avoid `DROP`, destructive `UPDATE`, and destructive backfills unless the user
@@ -212,12 +230,12 @@ Every site with a public face must include:
    `server.ts` before the SSR handler.
 
 These are not optional for deployed sites. The SEO audit
-(`references/seo-audit.md`) checks them before deploy.
+(`references/seo.md#audit`) checks them before deploy.
 
 ## Worker Security
 
 Every Worker must follow these constraints. Load
-`references/security-worker-hardening.md` for the full rules.
+`references/security.md#worker-hardening` for the full rules.
 
 1. **No global mutable state.** Module-level variables are shared across requests
    in the same V8 isolate. Never store request-scoped data at module scope.
@@ -229,6 +247,6 @@ Every Worker must follow these constraints. Load
    and read them server-side as `bindings().SECRET_NAME` — never hardcode them in source.
 4. **Security headers on every response.** Apply `applySecurityHeaders()`
    (frame-ancestors allowlist, no X-Frame-Options) — see
-   `references/security-worker-hardening.md`.
+   `references/security.md#worker-hardening`.
 5. **Validate server function inputs.** `createServerFn` inputs come from the
    client. Always validate shape and types before processing.

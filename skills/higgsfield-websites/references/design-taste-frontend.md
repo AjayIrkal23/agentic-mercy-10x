@@ -8,7 +8,7 @@ metadata:
   hermes:
     tags: [design, frontend, landing-page, portfolio, ui, tailwind, react, anti-slop, web-development, redesign]
     category: creative
-    related_skills: [minimalist-ui]
+    related_skills: [quanta-design]
 triggers:
   - landing page
   - portfolio site

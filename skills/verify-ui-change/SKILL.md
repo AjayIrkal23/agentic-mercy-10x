@@ -1,0 +1,103 @@
+---
+name: verify-ui-change
+description: Check that a change to a web app actually works in the running app before calling it done.
+  Drives the real page and returns a pass/fail verdict with the request that fired, the state that moved,
+  and the file:line to fix. Use after editing a component, a form, a route, or an API call; when you have
+  said "fixed" but have not opened the app; when the user asks "does it actually work?"; or when a change
+  looks right on screen and you cannot prove it.
+license: Apache-2.0
+metadata:
+  version: 3.3.0
+  homepage: https://www.reticle.sh
+  repository: https://github.com/reticlehq/reticle
+  category: frontend
+  surfaces:
+  - frontend
+  requires_mcp: reticle
+  triggers:
+    keywords:
+    - reticle
+    - verify it works
+    - does it actually work
+    - prove the fix
+    - verify the change
+    - verify ui change
+    paths:
+    - '**/*.{tsx,jsx,vue,svelte,astro}'
+    intents:
+    - VERIFY
+    - QA
+    - TEST
+  guard: Never run reticle init / start dev servers / open browsers unprompted; attach to the user's running
+    app.
+when_to_use: After editing a component, form, route or API call in a web app the user is already running;
+  when you said 'fixed' but have not seen it work; 'does it actually work?'. Needs the reticle MCP connected.
+paths:
+- '**/*.{tsx,jsx,vue,svelte,astro}'
+---
+
+> **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted. If Reticle is missing or no session is connected, say so in one line and fall back to playwright / `verification-loop`.
+
+# Verify the change in the running app
+
+You edited something a user can see. Nothing is proven until the real app has done it and something other than the DOM agrees.
+
+This uses **Reticle**, which embeds a dev-only SDK in the user's running app and exposes it as `reticle_*` MCP tools. No screenshots, no browser download for the verify loop, no dev server of its own.
+
+## 1. Are the tools here?
+
+```
+reticle_session({ action: "list" })
+```
+
+- **A session comes back** → go to step 2.
+- **Tools do not exist** → Reticle is not installed. Do not install it yourself: tell the user in one line that setup is theirs (`npx @reticlehq/server@3.3.0 init --dry-run`, then a client restart), and verify with playwright / `verification-loop` meanwhile. Full setup is in the [`install-and-verify`](https://github.com/reticlehq/reticle/blob/main/skills/install-and-verify/SKILL.md) skill.
+- **Tools exist, list is empty** → read the `why` field on the response. It distinguishes "no app running" from "an app is running that never dialled this daemon" from "a tab was here and closed", and each has a different fix. If no app is running, ask the user to start it (name the `package.json` dev script) and wait; never start a dev server yourself. If one IS running, the app is not the missing piece and the SDK is; do not send the user to start what they already started.
+
+## 2. Name the consequence BEFORE you act
+
+This is the whole method. An expectation written after you see the result can be talked into agreeing with whatever happened; one written before cannot.
+
+```
+reticle_look({ action: "page", sessionId, mode: "interactive" })   // controls only, with refs
+
+reticle_act_and_wait({ sessionId, ref, action: "click", until: { kind: "allOf", predicates: [
+  { kind: "net",     method: "POST", urlContains: "/api/...", status: 200 },
+  { kind: "element", query: { testid: "..." } },
+  { kind: "console", level: "error", absent: true },
+]}})
+```
+
+Multi-step journey? Drive it in one call with `reticle_act { steps: [...] }`, then assert the outcome once. Do not act → snapshot → act → snapshot: it proves the same thing at several times the cost.
+
+**Only `reticle_act_and_wait` and `reticle_assert` produce a verdict.** `reticle_act`, `snapshot`, `query`, `navigate`, `network` and `console` move or read the app and prove nothing. A drive that ends without one of the first two has no result, however many calls it made.
+
+## 3. Read the verdict honestly
+
+| `verified` | means | do |
+| --- | --- | --- |
+| `yes` | the consequence you named happened | report it, with the evidence |
+| `no` | it did not happen, or a channel contradicted the UI | a real finding: report it with `because` |
+| `unknown` | Reticle drove the app and could not tell | **not a pass.** Say unknown and say why |
+
+On `unknown` / `unsettled`, re-assert rather than re-driving: `reticle_assert({ predicate, since, timeout_ms: 8000 })` using the `since` from the act result. Re-driving repeats a side effect that already happened.
+
+**Never weaken a check to turn a verdict green.** An assertion edited until it passes proves nothing.
+
+## 4. Check what you did not touch
+
+```
+reticle_run({ tool: "reticle_verify", sessionId, args: { action: "coverage" } })   // { total, exercised, untouched }
+```
+
+If `untouched` still holds controls your change affects, the drive is unfinished. One call, and it is the cheapest guard against reporting a pass over the half you never opened.
+
+## 5. Report
+
+State what you drove, what the verdict was, and the evidence: the request and status, the state that changed, the app's own signal. If something failed, `reticle_look({ action: "element", sessionId, ref })` on the failing element gives the `file:line`: put it in the report.
+
+Then `reticle_session({ action: "yield", mode: "waiting" })` so the human's panel stops reading "live".
+
+---
+
+More detail, fetchable one page at a time: `curl https://docs.reticle.sh/llms.txt` for the index, then the single page you need (`tools/act-and-wait.md`, `predicates.md`, `troubleshooting.md`). If Reticle itself misbehaves, file it with `reticle_session { action: "feedback" }`: one call, then carry on.

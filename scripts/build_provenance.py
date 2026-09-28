@@ -1,22 +1,21 @@
 #!/usr/bin/env python3
 """
-build_provenance.py — P5-T14 provenance registry builder (the carve-out, made
-permanent + machine-enforced).
+build_provenance.py — R10 provenance registry for vendored third-party skills.
 
-Emits hooks/skills-provenance.json — one entry per upstream-locked skill (128):
-  {family, source, sourceType, updateCommand, hashBasis, baselineHash, capturedAt}
+Emits hooks/skills-provenance.json — one entry per skill declared in
+hooks/skills-sources.json (family "vendored-git"):
+  {family, source, sourceType, pinnedRef, ref, sha, updateCommand,
+   hashBasis, baselineHash, capturedAt}
 
-Baseline hashes are captured NOW (pre-P5 edits) so R10 can prove zero local
-edits from day one. Families are DERIVED FROM DISK (skills_lib.derive_families),
-never hardcoded. Also creates the hooks/skills-index-overrides.json skeleton if
-absent (filled by P5-T2/T5).
+source/ref come from skills-sources.json; sha from skills/<name>/.vendored.json
+(written by scripts/vendor_skill.py). The baseline hash is of the PATCHED result,
+so R10 fails on any local edit made after vendoring.
 
 Usage:
-  python3 scripts/build_provenance.py            # write registry (idempotent-safe:
-                                                 #   preserves existing baselines)
+  python3 scripts/build_provenance.py              # write registry (keeps existing baselines)
   python3 scripts/build_provenance.py --recapture  # recapture ALL baselines
-  python3 scripts/build_provenance.py --check    # run R10 against current tree
-  python3 scripts/build_provenance.py --rebaseline <skill>  # after verified update
+  python3 scripts/build_provenance.py --check      # run R10 against the current tree
+  python3 scripts/build_provenance.py --rebaseline <skill>  # after a verified re-vendor
 """
 from __future__ import annotations
 
@@ -24,115 +23,69 @@ import argparse
 import datetime as dt
 import json
 import sys
-from pathlib import Path
 
 import skills_lib as sl
 
 PROV_PATH = sl.HOOKS_DIR / "skills-provenance.json"
-OVERRIDES_PATH = sl.HOOKS_DIR / "skills-index-overrides.json"
-LOCK_PATH = sl.HOOKS_DIR / "skills-lock.json"
-
-_FAMILY_META = {
-    "installer-managed": {
-        "source": "https://github.com/higgsfield-ai/skills (npx skills)",
-        "sourceType": "skills-cli",
-        "updateCommand": "npx skills update -> re-materialize -> re-hash",
-    },
-    "vendored-design": {
-        "source": "author release (six-skill UI craft stack)",
-        "sourceType": "vendored",
-        "updateCommand": "re-vendor from author release",
-    },
-    "embedded-git": {
-        "source": "https://github.com/claudiocebpaz/vite-react-best-practices",
-        "sourceType": "embedded-git",
-        "updateCommand": "rename .git-upstream->.git; git pull; rename .git->.git-upstream",
-    },
-    "skills-cli": {
-        "source": "npx skills ecosystem discovery skill",
-        "sourceType": "skills-cli",
-        "updateCommand": "npx skills update",
-    },
-}
 
 
-def _baseline(name: str, family: str, basis: str) -> str:
-    return sl.dir_content_hash(sl.SKILLS_DIR / name)
+def _marker(name: str) -> dict:
+    try:
+        return json.loads((sl.SKILLS_DIR / name / ".vendored.json").read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
 
 
-def _basis_for(name: str, family: str) -> str:
-    return "content-hash"
-
-
-def build(recapture: bool = False) -> dict:
-    families = sl.derive_families()
+def build(recapture: bool | set = False) -> dict:
+    """recapture=True -> every baseline; a set -> only those names."""
+    sources = sl.vendored_sources()
     existing = {}
-    if PROV_PATH.exists() and not recapture:
+    if PROV_PATH.exists():
         try:
             existing = json.loads(PROV_PATH.read_text())
         except json.JSONDecodeError:
             existing = {}
-    now = dt.datetime.now().strftime("%Y-%m-%d")
+    now = dt.date.today().isoformat()
     reg: dict = {}
-    for name in sorted(families):
-        family = families[name]
-        basis = _basis_for(name, family)
-        meta = dict(_FAMILY_META[family])
-        # preserve an already-captured baseline unless recapturing
-        prior = existing.get(name, {}) if isinstance(existing.get(name), dict) else {}
-        if not recapture and prior.get("baselineHash") is not None \
-                and prior.get("hashBasis") == basis:
-            baseline = prior["baselineHash"]
-            captured = prior.get("capturedAt", now)
+    for name in sorted(sources):
+        d = sl.SKILLS_DIR / name
+        if not (d / "SKILL.md").exists():
+            continue
+        src, mk = sources[name], _marker(name)
+        prior = existing.get(name) if isinstance(existing.get(name), dict) else {}
+        again = recapture is True or (isinstance(recapture, set) and name in recapture)
+        if not again and prior.get("baselineHash") and prior.get("family") == "vendored-git":
+            baseline, captured = prior["baselineHash"], prior.get("capturedAt", now)
         else:
-            baseline = _baseline(name, family, basis)
-            captured = now
-        entry = {
-            "family": family,
-            "source": meta["source"],
-            "sourceType": meta["sourceType"],
-            "updateCommand": meta["updateCommand"],
-            "hashBasis": basis,
+            baseline, captured = sl.dir_content_hash(d), now
+        reg[name] = {
+            "family": "vendored-git",
+            "source": src["repo"],
+            "sourceType": "vendored-git",
+            "subpath": src.get("subpath", "."),
+            "pinnedRef": src["ref"],
+            "ref": mk.get("ref"),
+            "sha": mk.get("sha"),
+            "updateCommand": f"python3 ~/.claude/scripts/vendor_skill.py {name}",
+            "hashBasis": "content-hash",
             "baselineHash": baseline,
             "capturedAt": captured,
         }
-        if family == "installer-managed":
-            entry["authoritativeCheck"] = "hooks/skills-lock.json computedHash"
-        reg[name] = entry
     return reg
 
 
 def write_registry(reg: dict) -> None:
     header = {
         "_meta": {
-            "purpose": "P5-T14 upstream-locked skill provenance + R10 baseline registry",
+            "purpose": "R10 provenance + baseline registry for vendored-git skills",
             "count": len(reg),
-            "authority": "plans/SKILL-FATE-2026-07-11.md §1",
-            "note": "Locked skills are NEVER edited; router integration is sidecar-only. "
-                    "R10 (validate_skills.py / doctor / CI) re-hashes and FAILS on any local edit.",
+            "source_of_truth": "hooks/skills-sources.json (+ skills/<name>/.vendored.json)",
+            "note": "Vendored skills are never hand-edited: change skills-sources.json "
+                    "(frontmatter_overrides/patches) and re-run vendor_skill.py. R10 "
+                    "(validate_skills.py / doctor / CI) re-hashes and FAILS on any local edit.",
         }
     }
-    out = {**header, **reg}
-    PROV_PATH.write_text(json.dumps(out, indent=2) + "\n", encoding="utf-8")
-
-
-def ensure_overrides_skeleton() -> None:
-    if OVERRIDES_PATH.exists():
-        return
-    skel = {
-        "_meta": {
-            "purpose": "Sidecar routing metadata for the 128 upstream-locked skills "
-                       "(SKILL-FATE §1.2). build_skills_index merges these; no locked "
-                       "file is ever parsed beyond its native name/description.",
-            "schema": 1,
-        },
-        "_aliases": {
-            "_comment": "sidecar name aliases for locked skills, e.g. taste-skill",
-            "design-taste-frontend": "taste-skill",
-        },
-        "skills": {},
-    }
-    OVERRIDES_PATH.write_text(json.dumps(skel, indent=2) + "\n", encoding="utf-8")
+    PROV_PATH.write_text(json.dumps({**header, **reg}, indent=2) + "\n", encoding="utf-8")
 
 
 def run_check() -> int:
@@ -142,32 +95,19 @@ def run_check() -> int:
     reg = {k: v for k, v in json.loads(PROV_PATH.read_text()).items()
            if not k.startswith("_")}
     results = sl.r10_check(reg)
+    missing = [n for n in sl.vendored_sources() if n not in reg]
+    results += [(n, "FAIL", "declared in skills-sources.json but not vendored/registered")
+                for n in missing]
+    for n, meta in reg.items():
+        pin, ref = meta.get("pinnedRef"), _marker(n).get("ref")
+        if pin and ref != pin:
+            results.append((n, "FAIL", f"on-disk ref {ref} != pinned {pin}"))
     fails = [r for r in results if r[1] == "FAIL"]
     skips = [r for r in results if r[1] == "SKIP"]
-    print(f"R10: {len(results)} locked skills, {len(fails)} FAIL, {len(skips)} SKIP")
+    print(f"R10: {len(reg)} locked skills, {len(fails)} FAIL, {len(skips)} SKIP")
     for name, status, detail in fails + skips:
         print(f"  {status:4} {name}: {detail}")
     return 1 if fails else 0
-
-
-def rebaseline(skill: str) -> int:
-    reg = json.loads(PROV_PATH.read_text())
-    entries = {k: v for k, v in reg.items() if not k.startswith("_")}
-    if skill not in entries:
-        print(f"{skill} not in registry", file=sys.stderr)
-        return 2
-    fam = entries[skill]["family"]
-    basis = entries[skill]["hashBasis"]
-    entries[skill]["baselineHash"] = _baseline(skill, fam, basis)
-    entries[skill]["capturedAt"] = dt.datetime.now().strftime("%Y-%m-%d")
-    write_registry(entries)
-    manifest = sl.CLAUDE_DIR / "attic" / "2026-07-11" / "MANIFEST.md"
-    if manifest.exists():
-        with manifest.open("a") as f:
-            f.write(f"- [P5-T14] rebaseline {skill} ({fam}) after verified upstream "
-                    f"update — {dt.datetime.now():%Y-%m-%d}\n")
-    print(f"rebaselined {skill}")
-    return 0
 
 
 def main() -> int:
@@ -178,14 +118,12 @@ def main() -> int:
     args = ap.parse_args()
     if args.check:
         return run_check()
-    if args.rebaseline:
-        return rebaseline(args.rebaseline)
-    reg = build(recapture=args.recapture)
+    if args.rebaseline and args.rebaseline not in sl.vendored_sources():
+        print(f"{args.rebaseline} not in skills-sources.json", file=sys.stderr)
+        return 2
+    reg = build(recapture={args.rebaseline} if args.rebaseline else args.recapture)
     write_registry(reg)
-    ensure_overrides_skeleton()
-    print(f"wrote {PROV_PATH.name}: {len(reg)} locked skills")
-    from collections import Counter
-    print("families:", dict(Counter(v["family"] for v in reg.values())))
+    print(f"wrote {PROV_PATH.name}: {len(reg)} vendored-git skills")
     return 0
 
 

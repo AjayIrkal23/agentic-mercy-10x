@@ -56,8 +56,23 @@ Provider hooks:
 
 - `useFnf()` returns the composed client bundle.
 - `useFnfJobClient()` returns the SDK job client.
+- `useFnfRealtimeClient()` returns the stateful image-editing/custom-style
+  client when the adapter implements the realtime backend (or an explicit
+  `realtimeAdapter` is supplied).
+- `useFnfCharacterClient()` returns the character-training client.
+- `useFnfReferenceClient()` returns the signed-in user's Elements client.
 - `useFnfMediaClient()` returns the SDK media client.
 - `useFnfProfileClient()` returns the SDK profile client.
+- `useFnfLlmClient()` returns the LLM chat/text client (OpenAI-shape
+  `complete`/`stream`, tool-calling) when a browser-safe `llm` backend is
+  passed to `FnfProvider`; the hook throws if none was provided. The raw
+  `createLlmClient({ baseUrl: 'https://fnf.internal/llm' })` client is
+  Worker-side only (zero-token — the platform attaches the visitor's identity
+  and bills their credits) and must be called through authenticated app-local
+  server functions or routes. Discover the exact available model ids there via
+  `listModels()`; never ship the raw client or a hardcoded catalog to browser
+  code. App-only, not for a `type: "website"` build. See
+  `references/fnf-sdk.md` → "LLM chat / text".
 - `useFnfJobs()` returns the registered model entries.
 - `useFnfScopeKey()` returns the cache scope.
 - `useFnfObservability()` returns the observer config.
@@ -70,7 +85,8 @@ references stable. Do not create a new adapter or new job array on every render.
 - Use exported query option factories and `fnfKeys`.
 - Do not hand-build query key arrays.
 - Use cache-door helpers for generation updates.
-- Workspace switches should scope or clear generation/feed/job-set/cost caches.
+- Workspace switches should scope or clear generation/feed/job-set/cost and
+  realtime caches.
 - Use `scopeKey` for user/workspace-aware websites, usually
   `${userId}:${workspaceId}`.
 - Use profile query options for profile panels and workspace switchers.
@@ -78,13 +94,36 @@ references stable. Do not create a new adapter or new job array on every render.
 Common query helpers:
 
 ```ts
+characterQueryOptions(characterClient, characterId, { scopeKey })
+referenceQueryOptions(referenceClient, elementId, { scopeKey })
+referencesQueryOptions(referenceClient, { category: 'character' }, { scopeKey })
 generationQueryOptions(jobClient, id, { scopeKey })
 jobSetQueryOptions(jobClient, jobSetId, { scopeKey })
 jobsFeedQueryOptions(jobClient, { type: 'image', size: 20 }, { scopeKey })
 profileSnapshotQueryOptions(profileClient, { scopeKey })
 profileCreditsQueryOptions(profileClient, { scopeKey, includeOnDemand: true })
 costQueryOptions(jobClient, input, { scopeKey, enabled })
+realtimeChainCostQueryOptions(realtimeClient, input, { scopeKey, enabled })
+realtimeCustomStylesQueryOptions(realtimeClient, query, { scopeKey, enabled })
 ```
+
+The realtime query helpers cache read-only cost estimates and saved-style
+pages. Run `editChain`, `finalizeChain`, and style mutations through the
+realtime client and the authenticated server boundary; after a style mutation,
+invalidate the matching `fnfKeys.realtime({ scopeKey })` subtree. Poll edit
+results with `getEditJob` / `pollEditJob` and render their normal `Generation`
+shape. Workspace switching clears the previous scope's realtime cache. Full
+contract: `references/fnf-sdk.md` → "Stateful realtime image editing and saved
+custom styles".
+
+For Elements and character workflows, use `referencesQueryOptions` for the
+Elements picker and `characterQueryOptions` to poll newly trained characters.
+After training
+completes, invalidate the matching `fnfKeys.references(...)` query so the new
+Character Element appears. The Element id and `reference.characterId` are
+different; Soul generation uses `characterId` as
+`settings.customReferenceId`. Full server recipe:
+`references/fnf-sdk.md` → "Elements and custom-reference character training".
 
 Use `flattenFeedPages` with infinite feeds. Use `applyGenerations`,
 `prependGenerations`, and `removeGenerationQueries` for generation cache writes.
@@ -97,6 +136,10 @@ For any model form generated from a prompt, the default React structure is:
 - profile/credits/workspace tab or side panel
 - settings form and upload controls
 - cost preview query
+- confirmation modal before submit: `run.start` fires only after the user
+  confirms (model + settings summary + cost preview); the server wires the
+  adapter `confirm` gate — see the fnf-sdk reference, "Submission Confirmation
+  Gate"
 - `useGenerationRun` for submit + poll
 - `jobsFeedQueryOptions` / `jobSetQueryOptions` for feed/history
 - `prependGenerations` after submit when the returned generations should appear
@@ -120,8 +163,11 @@ import { jobsFeedQueryOptions, flattenFeedPages, useGenerationRun } from "@higgs
 Required behavior:
 
 - Use `useGenerationRun` for submit + polling until terminal status.
-- Insert submitted generations into the visible feed with `prependGenerations`
-  when the UX should show them immediately.
+- After EVERY accepted submit, insert the returned queued/running generations
+  into the visible feed with `prependGenerations` before polling completes.
+  `preset` activates History/Results in the same transition; inline-feed
+  layouts scroll or focus the inserted card. Never leave an accepted submit
+  visible only on the form or preset screen.
 - Use `applyGenerations` or the built-in run/cache helpers to fold polling
   updates into generation caches.
 - Load history with `jobsFeedQueryOptions` and `flattenFeedPages`; refresh by
@@ -135,6 +181,11 @@ Required behavior:
 - Completed jobs with no result URL show an explicit preview-unavailable state
   plus refresh/get behavior.
 - Show prompt, model, status, created time, and failure reason where available.
+- Opening a ready History generation keeps the feed mounted and presents its
+  image/video and metadata in the shipped detail surface. Previous/Next moves
+  through the current filtered/sorted feed without closing. Close restores the
+  History tab, search/filter state, and scroll position; changing detail
+  selection must not refetch or reset the feed.
 
 Never render a completed generation as a blank rectangle that only says
 `completed` or only shows an id. That means the website ignored SDK
@@ -148,7 +199,9 @@ Never render a completed generation as a blank rectangle that only says
   cost previews. Returned `credits` are display credits.
 - Use `useGenerationRun` for submit-through-poll lifecycle; `run.start()` does
   not throw for normal lifecycle failures, so render from `run.error` and
-  generation statuses.
+  generation statuses. Call `run.start` only after the confirmation modal is
+  accepted; render `run.error?.code === 'confirmation_rejected'` as a quiet
+  user-cancelled state, not an error toast.
 - Use `useAttachments` for uploads and submit-ready `MediaRef` values.
 - The job client passed to React helpers must ultimately call a server-side SDK
   path. If it wraps TanStack server functions or `/api/*` routes, submit, cost,

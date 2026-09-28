@@ -1,0 +1,401 @@
+{
+  "_meta": {
+    "purpose": "Single source of truth for every third-party (vendored-git) skill: repo, pinned ref, subpath, prune list, frontmatter overrides and body patches applied at vendor time.",
+    "tool": "python3 ~/.claude/scripts/vendor_skill.py <name>|--all [--check]",
+    "schema": "flat: <skill-name> -> {repo, ref, subpath, prune?, frontmatter_overrides?, prepend_body?, patches?:[{file,find,replace}], notes?}. ref = tag or FULL commit sha. frontmatter_overrides: add/replace keys, null deletes, metadata deep-merged. patches are literal find/replace and must match.",
+    "provenance": "build_provenance.py reads this file + skills/<name>/.vendored.json; R10 hashes the patched result.",
+    "rules": "Never run upstream install scripts that write settings; never start dev servers; the reticle MCP server is registered separately (installer manifest, pinned, RETICLE_TELEMETRY=0)."
+  },
+  "higgsfield-generate": {
+    "repo": "https://github.com/higgsfield-ai/skills.git",
+    "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
+    "subpath": "higgsfield-generate",
+    "notes": "Higgsfield skills 0.13.0 (upstream VERSION)."
+  },
+  "higgsfield-marketplace-cards": {
+    "repo": "https://github.com/higgsfield-ai/skills.git",
+    "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
+    "subpath": "higgsfield-marketplace-cards"
+  },
+  "higgsfield-product-photoshoot": {
+    "repo": "https://github.com/higgsfield-ai/skills.git",
+    "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
+    "subpath": "higgsfield-product-photoshoot"
+  },
+  "higgsfield-soul-id": {
+    "repo": "https://github.com/higgsfield-ai/skills.git",
+    "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
+    "subpath": "higgsfield-soul-id"
+  },
+  "higgsfield-websites": {
+    "repo": "https://github.com/higgsfield-ai/skills.git",
+    "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
+    "subpath": "higgsfield-websites",
+    "notes": "Creates its own Cloudflare repos; never run its dev server for the user."
+  },
+  "higgsfield-brandkit": {
+    "repo": "https://github.com/higgsfield-ai/skills.git",
+    "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
+    "subpath": "higgsfield-brandkit",
+    "prune": ["agents"],
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** never run the `curl … | sh` CLI installer or `npx playwright install` from `references/prerequisites.md` without an explicit yes from the user; if a prerequisite is missing, name it and stop.\n\n",
+    "notes": "scripts/ fetch the user-named brand site (urllib) and shell out to local renderers; agents/openai.yaml is Codex-only (pruned)."
+  },
+  "higgsfield-video-explainer": {
+    "repo": "https://github.com/higgsfield-ai/skills.git",
+    "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
+    "subpath": "higgsfield-video-explainer"
+  },
+  "higgsfield-youtube-thumbnail": {
+    "repo": "https://github.com/higgsfield-ai/skills.git",
+    "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
+    "subpath": "higgsfield-youtube-thumbnail"
+  },
+  "find-skills": {
+    "repo": "https://github.com/vercel-labs/skills.git",
+    "ref": "7407f3893ad4dceab546ac002c3ef806e4000c73",
+    "subpath": "skills/find-skills",
+    "notes": "Upstream v1.7.0 description is already de-inflated; no override needed."
+  },
+  "mmx-cli": {
+    "repo": "https://github.com/MiniMax-AI/cli.git",
+    "ref": "33453cf123927f41c00e1935450e504d8a630763",
+    "subpath": "skill",
+    "frontmatter_overrides": {
+      "disable-model-invocation": true,
+      "when_to_use": "Only when the user names MiniMax/mmx. Higgsfield is the default media engine."
+    },
+    "notes": "Secondary media engine, explicit-only. Old records wrongly said higgsfield-ai/skills and minimax/mmx."
+  },
+  "design-taste-frontend": {
+    "repo": "https://github.com/Leonxlnx/taste-skill.git",
+    "ref": "ce26fc25c0e5e8cab638f883de62d9a86ee5e45b",
+    "subpath": "skills/taste-skill",
+    "frontmatter_overrides": {
+      "when_to_use": "Landing pages, portfolios, redesigns, 'looks templated'."
+    },
+    "notes": "Was a symlink into ~/.agents/skills; now a real vendored copy."
+  },
+  "vite-react-best-practices": {
+    "repo": "https://github.com/claudiocebpaz/vite-react-best-practices.git",
+    "ref": "74b9e4fc8e4ee0bb58d65ed71e9f14512ca0082a",
+    "subpath": ".",
+    "frontmatter_overrides": {
+      "paths": ["**/vite.config.*", "**/index.html", "**/src/main.{tsx,jsx}"]
+    }
+  },
+  "img2threejs": {
+    "repo": "https://github.com/img2threejs/img2threejs.git",
+    "ref": "v2.0.0",
+    "subpath": ".",
+    "prune": ["forge/tests", "docs/raw", ".github", "assets/demo", "scripts/issue_triage.py", "CLAUDE.md"],
+    "frontmatter_overrides": {
+      "disable-model-invocation": false,
+      "when_to_use": "Only when asked to rebuild a reference image as a procedural code-built Three.js model (image to 3D in code, sculpt spec, 'rebuild this object in three.js'). Not a GLB asset — that is Higgsfield generate_3d; consuming a GLB in React is threejs-r3f.",
+      "metadata": {
+        "category": "frontend",
+        "surfaces": ["frontend"],
+        "triggers": {
+          "keywords": ["img2threejs", "image to 3d", "image to three.js", "procedural model", "procedural 3d", "sculpt spec", "rebuild this object", "three.js model", "threejs model", "THREE.Group", "character model", "rig"],
+          "paths": ["**/{three,3d,scene,scenes,models,webgl,r3f}/**/*.{ts,tsx,js,jsx}", "**/*.sculpt-spec.json", "**/.img2threejs/**"],
+          "intents": ["IMPLEMENT", "DESIGN"]
+        },
+        "guard": "Visual gate uses a user-started preview or a user-supplied screenshot; never start a server."
+      }
+    },
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** run the forge from this skill dir (`python3 ~/.claude/skills/img2threejs/forge/next.py --state .img2threejs/state.json`); state lives in the project's `.img2threejs/`. The screenshot/visual gate uses a preview the USER already runs or a screenshot the user supplies — never start a dev or preview server yourself. Never `uv sync`/prefetch vision models or upload images to hosted services without an explicit yes. A GLB mesh asset is Higgsfield `generate_3d`, not this skill.\n\n",
+    "patches": [
+      {
+        "file": "SKILL.md",
+        "find": "Keep one checkout of this repository and let every host enter it through a symlink, so Claude and\nCodex execute the same code instead of drifting apart:",
+        "replace": "This copy is vendored (pinned) by `~/.claude/scripts/vendor_skill.py` — do not symlink, re-clone or edit it. Upstream layout, for reference only:"
+      },
+      {
+        "file": "SKILL.md",
+        "find": "7. Render the current pass in a browser/preview, capture a screenshot at a review viewpoint.",
+        "replace": "7. Capture the current pass at a review viewpoint from a preview the USER already runs (browser MCP, or `scripts/capture_threejs_playwright.py` against their URL), or ask the user for a screenshot. Never start a dev/preview server yourself."
+      }
+    ],
+    "notes": "Pinned v2.0.0 (HEAD is mid character-split refactor). Core forge is stdlib, no network; scripts/issue_triage.py (GitHub API, maintainer-only) pruned."
+  },
+  "verify-ui-change": {
+    "repo": "https://github.com/reticlehq/reticle.git",
+    "ref": "v3.3.0",
+    "subpath": "skills/verify-ui-change",
+    "frontmatter_overrides": {
+      "when_to_use": "After editing a component, form, route or API call in a web app the user is already running; when you said 'fixed' but have not seen it work; 'does it actually work?'. Needs the reticle MCP connected.",
+      "paths": ["**/*.{tsx,jsx,vue,svelte,astro}"],
+      "metadata": {
+        "category": "frontend",
+        "surfaces": ["frontend"],
+        "requires_mcp": "reticle",
+        "triggers": {
+          "keywords": ["reticle", "verify it works", "does it actually work", "prove the fix", "verify the change", "verify ui change"],
+          "paths": ["**/*.{tsx,jsx,vue,svelte,astro}"],
+          "intents": ["VERIFY", "QA", "TEST"]
+        },
+        "guard": "Never run reticle init / start dev servers / open browsers unprompted; attach to the user's running app."
+      }
+    },
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted. If Reticle is missing or no session is connected, say so in one line and fall back to playwright / `verification-loop`.\n\n",
+    "patches": [
+      {
+        "file": "SKILL.md",
+        "find": "Run `RETICLE_INSTALL_SOURCE=npx_skill npx @reticlehq/server@latest init`, then keep going without the tools: fix every `⚠` it printed, start the project's own dev script in the background if nothing is serving the app, and open it with `npx @reticlehq/server open <the url the dev server is serving>`. Only once the app is running and connected, ask for the one thing you cannot do yourself: a client restart, so it picks up the MCP server. Stopping at the `init` command leaves the user with config files and an uninstrumented page.",
+        "replace": "Do not install it yourself: tell the user in one line that setup is theirs (`npx @reticlehq/server@3.3.0 init --dry-run`, then a client restart), and verify with playwright / `verification-loop` meanwhile."
+      },
+      {
+        "file": "SKILL.md",
+        "find": "If no app is running, start the project's own dev script from `package.json` in the background yourself and tell the user in one line that it is running and how to stop it: never a second one, never a guessed command, never kill anything, and the permission prompt is your host's.",
+        "replace": "If no app is running, ask the user to start it (name the `package.json` dev script) and wait; never start a dev server yourself."
+      }
+    ]
+  },
+  "debug-broken-ui": {
+    "repo": "https://github.com/reticlehq/reticle.git",
+    "ref": "v3.3.0",
+    "subpath": "skills/debug-broken-ui",
+    "frontmatter_overrides": {
+      "when_to_use": "A button does nothing, a form will not submit, data will not load, a page renders blank or stale, a silent failed request — in a web app the user is already running. Needs the reticle MCP connected.",
+      "metadata": {
+        "category": "frontend",
+        "surfaces": ["frontend"],
+        "requires_mcp": "reticle",
+        "triggers": {
+          "keywords": ["reticle", "button does nothing", "form will not submit", "silent failed request", "page renders blank", "data will not load"],
+          "paths": ["**/*.{tsx,jsx,vue,svelte,astro}"],
+          "intents": ["DEBUG"]
+        },
+        "guard": "Never run reticle init / start dev servers / open browsers unprompted; attach to the user's running app."
+      }
+    },
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted. `debug-investigation` stays the doctrine; Reticle is the evidence tool.\n\n",
+    "patches": [
+      {
+        "file": "SKILL.md",
+        "find": "`RETICLE_INSTALL_SOURCE=npx_skill npx @reticlehq/server@latest init`, then",
+        "replace": "Stop and tell the user in one line: setup is theirs, never run `reticle init` yourself. Their guide:"
+      }
+    ]
+  },
+  "false-green-tests": {
+    "repo": "https://github.com/reticlehq/reticle.git",
+    "ref": "v3.3.0",
+    "subpath": "skills/false-green-tests",
+    "frontmatter_overrides": {
+      "when_to_use": "The suite is green but the user says the feature is broken; a test never fails; mocked APIs standing in for real ones. Runtime checks need the reticle MCP connected.",
+      "metadata": {
+        "category": "testing",
+        "surfaces": ["frontend"],
+        "requires_mcp": "reticle",
+        "triggers": {
+          "keywords": ["false green", "tests pass but broken", "tests pass but", "test never fails", "green suite"],
+          "paths": ["**/*.{test,spec}.{ts,tsx,js,jsx}"],
+          "intents": ["TEST", "DEBUG"]
+        },
+        "guard": "Never run reticle init / start dev servers / open browsers unprompted; attach to the user's running app."
+      }
+    },
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted.\n\n",
+    "patches": [
+      {
+        "file": "SKILL.md",
+        "find": "`RETICLE_INSTALL_SOURCE=npx_skill npx @reticlehq/server@latest init`, then",
+        "replace": "Stop and tell the user in one line: setup is theirs, never run `reticle init` yourself. Their guide:"
+      }
+    ]
+  },
+  "test-error-states": {
+    "repo": "https://github.com/reticlehq/reticle.git",
+    "ref": "v3.3.0",
+    "subpath": "skills/test-error-states",
+    "frontmatter_overrides": {
+      "when_to_use": "Verify error, empty, loading, slow-network, timeout or expired-session states in a web app the user is already running. Needs the reticle MCP connected.",
+      "metadata": {
+        "category": "testing",
+        "surfaces": ["frontend"],
+        "requires_mcp": "reticle",
+        "triggers": {
+          "keywords": ["error state", "empty state", "loading state", "slow network", "expired session", "test error states"],
+          "paths": ["**/*.{tsx,jsx,vue,svelte,astro}"],
+          "intents": ["TEST", "VERIFY", "DEBUG"]
+        },
+        "guard": "Never run reticle init / start dev servers / open browsers unprompted; attach to the user's running app."
+      }
+    },
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`/`drive`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted.\n\n",
+    "patches": [
+      {
+        "file": "SKILL.md",
+        "find": "`RETICLE_INSTALL_SOURCE=npx_skill npx @reticlehq/server@latest init`, then",
+        "replace": "Stop and tell the user in one line: setup is theirs, never run `reticle init` yourself. Their guide:"
+      }
+    ]
+  },
+  "design-system-compliance": {
+    "repo": "https://github.com/reticlehq/reticle.git",
+    "ref": "v3.3.0",
+    "subpath": "skills/design-system-compliance",
+    "frontmatter_overrides": {
+      "when_to_use": "After building or restyling a component: check computed styles in the running app against the design tokens (hardcoded hex, off-palette colors). Needs the reticle MCP connected.",
+      "metadata": {
+        "category": "frontend",
+        "surfaces": ["frontend"],
+        "requires_mcp": "reticle",
+        "triggers": {
+          "keywords": ["design tokens compliance", "design system compliance", "computed styles", "hardcoded hex", "off-palette"],
+          "paths": ["**/*.{tsx,jsx,vue,svelte,astro,css,scss}"],
+          "intents": ["REVIEW", "VERIFY"]
+        },
+        "guard": "Never run reticle init / start dev servers / open browsers unprompted; attach to the user's running app."
+      }
+    },
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted.\n\n",
+    "patches": [
+      {
+        "file": "SKILL.md",
+        "find": "`RETICLE_INSTALL_SOURCE=npx_skill npx @reticlehq/server@latest init`, then",
+        "replace": "Stop and tell the user in one line: setup is theirs, never run `reticle init` yourself. Their guide:"
+      }
+    ]
+  },
+  "verify-cli-run": {
+    "repo": "https://github.com/reticlehq/reticle.git",
+    "ref": "v3.3.0",
+    "subpath": "skills/verify-cli-run",
+    "frontmatter_overrides": {
+      "when_to_use": "After a build, migration, scaffolder, formatter or codegen step printed success and you are about to say 'done' — prove the filesystem consequence. Needs nothing installed.",
+      "metadata": {
+        "category": "testing",
+        "surfaces": ["general"],
+        "triggers": {
+          "keywords": ["verify cli run", "exit code 0", "did the command work", "prove the command"],
+          "intents": ["VERIFY", "QA"]
+        }
+      }
+    }
+  },
+  "fixing-accessibility": {
+    "repo": "https://github.com/ibelick/ui-skills.git",
+    "ref": "v0.2.3",
+    "subpath": "skills/fixing-accessibility",
+    "frontmatter_overrides": {
+      "when_to_use": "a11y / accessibility audits and fixes: ARIA, keyboard navigation, focus trap, contrast, screen reader, form errors, WCAG.",
+      "paths": ["**/*.{tsx,jsx,vue,svelte,astro,html}"],
+      "metadata": {
+        "category": "frontend",
+        "surfaces": ["frontend"],
+        "triggers": {
+          "keywords": ["a11y", "accessibility", "aria", "wcag", "keyboard navigation", "focus trap", "contrast", "screen reader", "form errors"],
+          "intents": ["REVIEW", "IMPLEMENT"]
+        }
+      }
+    }
+  },
+  "fixing-metadata": {
+    "repo": "https://github.com/ibelick/ui-skills.git",
+    "ref": "v0.2.3",
+    "subpath": "skills/fixing-metadata",
+    "frontmatter_overrides": {
+      "when_to_use": "SEO and share metadata: page titles, meta description, Open Graph / og image, Twitter card, canonical, favicon, JSON-LD, robots.",
+      "paths": ["**/{app,pages,src/app,src/pages}/**/{layout,page,head,_document,_app}.{tsx,jsx,ts,js}", "**/index.html", "**/*.astro"],
+      "metadata": {
+        "category": "frontend",
+        "surfaces": ["frontend"],
+        "triggers": {
+          "keywords": ["seo", "meta tags", "open graph", "og image", "twitter card", "canonical", "favicon", "json-ld", "robots"],
+          "intents": ["IMPLEMENT", "REVIEW"]
+        }
+      }
+    }
+  },
+  "fixing-motion-performance": {
+    "repo": "https://github.com/ibelick/ui-skills.git",
+    "ref": "v0.2.3",
+    "subpath": "skills/fixing-motion-performance",
+    "frontmatter_overrides": {
+      "when_to_use": "Animation jank / stutter, layout thrash, will-change, compositor-only properties, scroll-linked motion perf.",
+      "paths": ["**/*.{css,scss}", "**/{animations,motion}/**"],
+      "metadata": {
+        "category": "frontend",
+        "surfaces": ["frontend"],
+        "triggers": {
+          "keywords": ["jank", "stutter", "animation performance", "layout thrash", "will-change", "compositor", "scroll perf", "60fps"],
+          "intents": ["REVIEW", "DEBUG"]
+        }
+      }
+    }
+  },
+  "baseline-ui": {
+    "repo": "https://github.com/ibelick/ui-skills.git",
+    "ref": "v0.2.3",
+    "subpath": "skills/baseline-ui",
+    "frontmatter_overrides": {
+      "disable-model-invocation": true
+    },
+    "notes": "User-invoked only: its MUST/NEVER constraints conflict with motion-dev, tailwind tokens and the shadcn stack."
+  },
+  "improve-ui": {
+    "repo": "https://github.com/ibelick/ui-skills.git",
+    "ref": "f9515cb90e9d1ed1eee9384f79f1e0ac6c26825e",
+    "subpath": "skills/improve-ui",
+    "prune": ["agents"],
+    "frontmatter_overrides": {
+      "when_to_use": "Read-only UI audit of an existing surface (design drift, polish plan, design handoff); writes plans to design-plans/ only.",
+      "metadata": {
+        "category": "frontend",
+        "surfaces": ["frontend"],
+        "triggers": {
+          "keywords": ["ui audit", "design review", "design drift", "polish plan", "improve ui", "improve the ui"],
+          "intents": ["REVIEW", "AUDIT"]
+        }
+      }
+    },
+    "notes": "Not in the v0.2.3 tag; pinned to the HEAD sha. agents/openai.yaml is Codex-only (pruned)."
+  },
+  "create-design-md": {
+    "repo": "https://github.com/ibelick/ui-skills.git",
+    "ref": "f9515cb90e9d1ed1eee9384f79f1e0ac6c26825e",
+    "subpath": "skills/create-design-md",
+    "frontmatter_overrides": {
+      "when_to_use": "Write or update a DESIGN.md (document the design system / design language, extract design tokens) from the repo or a public site.",
+      "metadata": {
+        "category": "frontend",
+        "surfaces": ["frontend"],
+        "triggers": {
+          "keywords": ["design.md", "document design system", "extract design tokens", "design language"],
+          "paths": ["**/DESIGN.md"],
+          "intents": ["DESIGN", "DOCS"]
+        },
+        "guard": "`npx @google/design.md` lint/export steps run an npm package — ask before running them."
+      }
+    },
+    "notes": "Not in the v0.2.3 tag; pinned to the HEAD sha. No native paths: (would hide it until a DESIGN.md exists)."
+  },
+  "modern-web-guidance": {
+    "repo": "https://github.com/GoogleChrome/modern-web-guidance.git",
+    "ref": "v0.0.190",
+    "subpath": "skills/modern-web-guidance",
+    "patches": [
+      {"file": "SKILL.md", "find": "modern-web-guidance@latest", "replace": "modern-web-guidance@0.0.190"},
+      {"file": "SKILL.md", "find": "npx -y modern-web-guidance@", "replace": "DISABLE_TELEMETRY=1 npx -y modern-web-guidance@"},
+      {"file": "SKILL.md", "find": "(or `pnpx modern-web-guidance@", "replace": "(or `DISABLE_TELEMETRY=1 pnpx modern-web-guidance@"}
+    ],
+    "frontmatter_overrides": {
+      "description": "Offline search over Chrome-team guides for modern HTML/CSS/web-platform features (dialog, popover, anchor positioning, container queries, :has(), view transitions, scroll-driven animation, Core Web Vitals) with Baseline browser support and fallbacks. - Use before hand-rolling JS or adding a dependency for UI behaviour the web platform may already do natively.",
+      "when_to_use": "At the start of HTML/CSS/client-side JS UI work (modals, popovers, layout, forms, scroll/motion, CWV) — search the guides before writing code. Not for backend, CI, or library API docs (context7 owns those).",
+      "paths": ["**/*.{css,scss,html,tsx,jsx}"],
+      "metadata": {
+        "category": "frontend",
+        "surfaces": ["frontend"],
+        "triggers": {
+          "keywords": ["css", "html", "dialog", "popover", "container query", "view transition", "scroll-driven", "anchor positioning", "baseline", "browser support", "core web vitals", "inp", "lcp"],
+          "paths": ["**/*.{css,scss,html,tsx,jsx}"],
+          "intents": ["DESIGN", "IMPLEMENT"]
+        },
+        "guard": "CLI runs via npx (first run downloads the pinned npm package, ~12 MB). Always keep the DISABLE_TELEMETRY=1 prefix: without it the CLI spawns a watchdog that posts usage to play.googleapis.com/log."
+      }
+    },
+    "notes": "Tag v0.0.190 = sha 22ab18dfb50a (same pin as the claude-plugins-official listing). Upstream ships as a skills-only plugin; vendored as a skill instead so it is pinned + path-scoped. Reviewed npm CLI 0.0.190: search is offline (bundled MiniLM, allowRemoteModels=false); only network egress is Clearcut telemetry, disabled by DISABLE_TELEMETRY=1 (patched into every command). Sibling chrome-extensions skill not vendored (no extension work)."
+  }
+}

@@ -2,6 +2,8 @@
 
 A brand kit captures a brand's identity (name, logo, hero images, colours, fonts, tone, products) and is reused across image generations to keep visuals on-brand.
 
+This is a Marketing Studio metadata import for ad generation, not a visual-identity design workflow. For a new or extended logo, palette, typography system, applications, or editable Brandbook, route to `higgsfield-brandkit` instead. Use this page only to fetch website metadata into a Marketing Studio brand-kit ID.
+
 A kit is created by handing in a website URL — it is being fetched and fields are being filled.
 
 ## Discover

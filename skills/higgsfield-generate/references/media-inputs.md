@@ -8,13 +8,13 @@ Each media flag accepts either a local file path or a UUID. The CLI auto-uploads
 
 ```bash
 # Local path — CLI uploads automatically
-higgsfield generate create nano_banana_2 --prompt "stylize in watercolor" --image ./photo.png --wait
+higgsfield generate create nano_banana_flash --prompt "stylize in watercolor" --image ./photo.png --wait
 
 # Upload id (from higgsfield upload create)
-higgsfield generate create nano_banana_2 --prompt "..." --image <upload_id> --wait
+higgsfield generate create nano_banana_flash --prompt "..." --image <upload_id> --wait
 
 # Job id from a previous generation
-higgsfield generate create seedance_2_0 --prompt "anim" --start-image <previous_job_id> --wait
+higgsfield generate create seedance_2_5 --prompt "anim" --mode omni_reference --start-image <previous_job_id> --wait
 
 # Video analysis — CLI uploads the file, Virality Predictor returns a text score/report plus an Open report link.
 # The output is text, but the task is still video analysis.
@@ -33,9 +33,11 @@ Each model declares a closed set of accepted roles or `*_references` params. Pas
 
 | Model | Accepted roles | Notes |
 |---|---|---|
-| Most image models (`nano_banana_2`, `flux_2`, `seedream_v4_5`, `gpt_image_2`, …) | `image` | 1+ references, often up to 8. |
+| Most image models (`nano_banana_flash`, `flux_2`, `seedream_v4_5`, `gpt_image_2`, …) | `image` | 1+ references, often up to 8. |
 | `nano_banana_2_lite` | `image_references` | Up to 14 image references. Use repeated `--image-references` or short alias `--image`; `aspect_ratio=auto` requires at least one reference. |
 | `gemini_omni` | `image_references`, `video_references` | Fast reference-to-video. Use repeated `--image-references`/`--video-references` or aliases `--image`/`--video`. Max 1 video reference; max 7 image references, or max 5 when a video reference is included. |
+| `gpt_image_2_5` | `image_references` | Use repeated `--image-references` or the short alias `--image`. |
+| `seedance_2_5` | `start_image`, `end_image`, `image_references`, `video_references`, `audio_references` | Use `--mode omni_reference` for reference generation. `t2v` accepts no media. |
 | `seedance_2_0` | `image`, `start_image`, `end_image`, `video`, `audio` | Audio is via `medias` (role `audio`), NOT via `--generate-audio`. |
 | `brain_activity` | `video` | Virality Predictor analyzes one uploaded clip and returns a text score report plus an Open report link; no prompt required. Treat "analyze this video" / "score this ad" as this video-analysis flow even though the output is text. Raw `.glb` and `.bin` artifacts stay in JSON/debug output, not normal chat output. |
 | `grok_video_v15` | `start_image` | Required single start frame. CLI also accepts `--image` and maps it to `start_image`. |
@@ -62,7 +64,7 @@ higgsfield model get <model_id>   # shows the accepted media roles for this mode
 Most image models accept multiple references — repeat the `--image` flag:
 
 ```bash
-higgsfield generate create nano_banana_2 --prompt "..." \
+higgsfield generate create nano_banana_flash --prompt "..." \
   --image ./a.png --image ./b.png --image <upload_id> \
   --wait
 ```
@@ -80,7 +82,9 @@ higgsfield generate create multi_image_to_3d \
 
 ## Audio reference (Seedance)
 
-`seedance_2_0` is the one model that takes an audio reference for lipsync / soundtrack matching. Pass via `medias` with role `audio`:
+`seedance_2_5` accepts `--audio-references` (or `--audio`) in `omni_reference` mode. Its `--generate_audio` flag separately controls output audio.
+
+For `seedance_2_0`, audio references work differently. Pass via `medias` with role `audio`:
 
 ```bash
 higgsfield generate create seedance_2_0 \

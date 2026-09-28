@@ -84,7 +84,12 @@ same-origin. Downscale: hero ≤2k, cutouts ~800px, icons ~256px.
 
 **Cinema tier adds:**
 
-7. **Hero video — cinema tier REQUIRES the scroll-scrub, not the loop.** A
+7. **Hero video — cinema tier REQUIRES the scroll-scrub, not the loop.**
+   (The DEFAULT website is the **animated website** — the full-site seam-locked
+   chain in `references/scroll-scrub.md` — whose MP4 chain replaces this single
+   hero scrub; see the note after this list. This §7 single-hero recipe is the
+   hero mechanic only when the user explicitly asked for a non-animated-website
+   treatment.) A
    static image + CSS effect is the floor; an autoplay ambient loop is barely
    above it (it moves, but the user's scroll does nothing — passive motion
    doesn't register as craft). The cinema-tier Tier-1 carrier is the
@@ -111,6 +116,15 @@ same-origin. Downscale: hero ≤2k, cutouts ~800px, icons ~256px.
      acceptable only when the composition genuinely can't carry a scrub
      (dense collage heroes) or video generation failed per the failure rules;
      say so in the report. A mid-page band may still use a loop freely.
+
+For the **animated website (A4 — Seam-locked scroll scrub, the default)**, read
+`references/scroll-scrub.md` and let its entry still, exact deployed-segment
+posters, and chained MP4s replace the ordinary single hero scrub above. Those
+posters also satisfy hero/content imagery for their chapters. Continue the
+logo/icon, section-UI, head-kit, and OG work, but do not generate a redundant
+second hero film. Batch independent B stills/dives; keep A's exact-frame leg
+handoffs sequential even though the default Phase 2 rule prefers submitting
+early.
 
 **Spectacle tier adds:**
 
@@ -170,8 +184,11 @@ brand property they now own.
 - **Submit early, never idle.** All kit jobs go in right after the boards are
   chosen; poll between build steps. A build that waits on renders is
   mis-sequenced.
-- **Coherence check:** when the kit lands, view the assets together (read the
-  images). Any piece whose grade/palette fights the boards gets re-generated
+- **Coherence check — ONE batched vision pass, maximum.** When the kit lands,
+  view the assets TOGETHER in one pass — never one look per asset, never
+  re-inspecting something already viewed. The storyboard and the scroll-scrub
+  film are EXEMPT: you authored their prompts and the user reviews the
+  storyboard. Any piece whose grade/palette fights the boards gets re-generated
   with the hexes named harder. A mixed-grade asset kit reads cheaper than no
   assets. **Off-grade video budget: ONE re-roll.** If the re-roll drifts
   scene/composition (video models often do), keep the better take and

@@ -1,17 +1,22 @@
-# review-rubric — Phase 5 mechanical gate + Phase 6 adversarial review
+# review-rubric — Phase 5 mechanical gate
 
-Two checklists. §A runs BEFORE the first deploy (grep/read the code — every item
-is mechanically checkable). §B runs AFTER the preview deploy, against real
-screenshots, in the voice of a skeptical outside reviewer whose default verdict
-is NEEDS_WORK. Both are completion gates, not suggestions.
+§A runs BEFORE deploy and is a completion gate, not a suggestion. Most items
+are verified by grep/code inspection. **Item 9f is the hard machine gate for the
+animated-website default: a website that ships without the scroll-scrub component
++ scene media (and without an explicit `non-animated` choice in the brief) FAILS, no matter
+how polished the rest is** — this is the single most common miss, so run 9f every
+time. For the animated website, item 9e adds its interactive runtime checks in
+local preview before the final deploy. There is no post-deploy visual/screenshot
+review — this mechanical gate is the only verification.
 
 ## §A. Mechanical gate (pre-deploy, code-level)
 
-Run `bun run qa:fill -- --strict` first. Then check each item; fix every hit
-before deploying.
+Check each item; fix every hit before deploying.
 
-1. **Placeholders** — `qa:fill --strict` passes; zero `<...>` tokens, `lorem`,
-   `REMOVE_THIS`, `blank-app-v1`, empty `src=""`.
+1. **Placeholders** — zero `<...>`-style tokens (e.g. `<brand name>`, `<product>`),
+   `lorem`, `REMOVE_THIS`, `blank-app-v1`, or empty `src=""`. Grep for the
+   literal markers: `grep -rniE 'lorem ipsum|REMOVE_THIS|blank-app-v1' app/src/`,
+   and scan for any remaining `<...>` placeholder tokens in quoted strings.
 2. **Em-dash ban** — `grep -rn "—\|–" app/src/` over user-visible strings returns
    nothing (code comments exempt).
 3. **Banned default palette** — none of the banned palette families from
@@ -70,54 +75,53 @@ before deploying.
    build's six identity axes (palette family, type pairing, hero
    architecture, Tier-1 technique, CTA garments, corner language) and this
    build differs on ≥4; the rationed garments (drawing underline, hover
-   flood-fill, framed block) appear at most once page-wide combined; the
-   Tier-1 technique carries a `wow-catalog.md` ID and is interactive (not a
-   passive loop) on cinema/spectacle.
+   flood-fill, framed block) appear at most once page-wide combined. On the
+   `non-animated` path the Tier-1 technique carries a `wow-catalog.md` ID and is
+   interactive (not a passive loop); on the default `animated-website` path the
+   Tier-1 technique IS the scroll-scrub animated website (enforced by 9f) — a
+   generic wow-catalog ID does NOT satisfy the default path.
+9e. **Animated website — A4 seam-locked scroll scrub (every website by default;
+   skip only if the user explicitly opted out)** — verify every media segment
+   has a first-frame poster extracted from the
+   exact deployed clip; chapter copy is server-rendered in semantic document
+   flow (not hidden until a viewport callback); `prefers-reduced-motion`
+   performs no video fetch and shows the complete static story; desktop and
+   lighter mobile encodes are wired; connector/leg handoffs use the neighboring
+   rendered clips' ACTUAL boundary frames; camera velocity does not reverse
+   accidentally; initialization runs only in an effect; and teardown aborts
+   fetches, removes listeners/video nodes, cancels RAF, and revokes Blob URLs.
+   Scrub videos directly from seekable MP4/Blob URLs, ensure CSP `media-src`
+   permits `blob:`, and ensure no second ScrollTrigger timeline drives the same
+   media. Inspect each seam immediately before/after in both scroll directions
+   and test source swapping, a fast mobile flick, and unmount/remount in local
+   preview before final deploy.
+9f. **Animation mode gate (machine-verifiable — HARD, every website).** This is
+   the completion gate for the animated-website default; a site that passes every
+   other check but this one is NOT done. Steps:
+   1. `grep -n "^Animation mode:" app/design-brief.md` — there MUST be exactly
+      one such line. Zero matches → FAIL (the brief never declared the state).
+   2. If the value is **`animated-website`**, ALL of these must hold, or FAIL:
+      - the scroll-scrub component exists —
+        `ls app/src/components/scroll-scrub/scroll-scrub.tsx` succeeds — and is
+        actually imported/rendered by a route (grep for its import);
+      - real film shipped — at least ONE clip (`single-shot` ships exactly
+        one; a `multi-leg` journey ships one per leg) under
+        `app/public/assets/**/*.mp4` (the seam-locked chain), each with a
+        first-frame poster (item 9e);
+      - the brief carries the journey block (Journey scenes + Camera
+        architecture A/B) written in Phase 0.
+      A website on this path with no scroll-scrub component or no scene MP4s is
+      the failure mode this gate exists to catch — do NOT deploy it; go build the
+      camera journey.
+   3. If the value is **`non-animated`**, the line MUST record the user's choice
+      (an intake pick or a verbatim request). No scroll-scrub artifacts are
+      required; instead confirm the site clears the `wow-maker.md` craft floor and
+      any chosen `wow-catalog.md` technique is actually built (9d). A
+      `non-animated` with no recorded user choice → FAIL (treat as
+      `animated-website` and go back to step 2).
 10. **Section plan honored** — the built page matches `app/design-brief.md`'s
     section plan (families, order, no consecutive family repeats). If the plan
     changed during the build, the brief was updated to match.
 11. **Copy self-audit** — every visible string re-read; nothing grammatically
     broken, referent-unclear, filler-verb ("Elevate", "Seamless"…), or fake-precise
     (`92%`, `4.1×` without a source).
-
-## §B. Visual rubric (post-deploy, screenshot-level)
-
-Screenshot the deployed preview: full-page at ~1440px wide AND ~390px wide. Grade
-each item PASS / FAIL with one sentence of evidence. Be adversarial — you are
-hunting for reasons the page reads as AI-template output. Collect every FAIL into
-one batch fix list, apply, redeploy once.
-
-1. **First impression (the squint test).** Blur your eyes at the hero: is there
-   one clear focal point and an obvious next action? Does it look like a site a
-   studio charged real money for, or like a component demo?
-2. **Hero discipline.** Everything critical inside the first viewport; headline
-   ≤2 lines; no stacked micro-elements (eyebrow + tagline + trust strip); the
-   generated hero asset is actually visible and well-composed (not cropped into
-   mush, not buried under an overlay).
-3. **Type hierarchy.** Clear 3-level scale (display / section head / body); line
-   lengths ≤65ch; no headline wrapping into 4 lines; italic descenders not
-   clipped; consistent font usage per the brief.
-4. **Palette lock.** One accent everywhere; page reads as ONE theme top to
-   bottom; contrast holds (no white-on-white buttons, no gray-on-gray body); no
-   accidental beige+brass default.
-5. **Layout variance.** Scrolling the full page: no layout family repeats
-   back-to-back, no 3+ zigzag chain, no identical-trio card row, bento cells all
-   filled with real visual variation.
-6. **Asset integration.** Generated images look intentional: aspect ratios fit
-   their slots, palette matches the page, no obvious AI artifacts (garbled text,
-   warped hands/objects), no empty image boxes or broken image icons.
-7. **Density & copy.** Sections breathe; no data-dump tables; copy is short and
-   specific with zero AI-tell phrases visible; footer/nav read as finished.
-8. **Mobile integrity (390px).** Nav collapses properly; hero still fits and the
-   asset still works; no horizontal scroll; multi-column sections stack in a
-   deliberate order; tap targets aren't microscopic; signature effect degrades
-   gracefully (or is replaced by its static fallback).
-9. **Board faithfulness (per section).** Compare each built section against its
-   `refs/` reference board: does it still carry the board's composition, type
-   character, and component logic, or did it drift back to a template pattern
-   the board never showed? Any section that no longer resembles its board is a
-   FAIL for that section.
-
-Scoring: 9/9 = done. Any FAIL in items 1-4, 8, or 9 is blocking. FAILs in 5-7
-are blocking on the first pass; on the second pass, note remaining taste-level
-nits to the user instead of looping again.

@@ -1,8 +1,9 @@
 # Skill: Auth Boundary
 
 Use this when a website needs signed-in user state, login, logout, account-gated
-pages, or profile loading. This template does not implement its own identity
-provider. The platform owns auth and exposes a small contract to the website.
+pages, profile loading, or protected file downloads. This template does not
+implement its own identity provider. The platform owns auth and exposes a small
+contract to the website.
 
 ## Contract
 
@@ -140,6 +141,102 @@ Rules:
 - Do not try to delete platform cookies manually from website code.
 - Do not call `fnf.internal` for logout.
 
+## Authenticated File Downloads
+
+Apps may run inside a cross-origin authenticated iframe. Native download
+navigation may not preserve that embedded authentication context and can return
+`401 Unauthorized`. For a protected app-local `/api/...` file, NEVER use:
+
+- `<a href="/api/..." download>`
+- `window.location`
+- `window.open`
+
+Fetch the file with credentials and download the successful response through a
+temporary Blob URL instead. This is a browser-only helper: call it from an event
+handler, never during SSR or module initialization.
+
+```ts
+export async function downloadAuthenticatedFile(
+  url: string,
+  filename: string,
+): Promise<void> {
+  const downloadUrl = new URL(url, window.location.href)
+  if (
+    downloadUrl.origin !== window.location.origin
+    || !downloadUrl.pathname.startsWith('/api/')
+  ) {
+    throw new Error('Authenticated downloads require an app-local /api/... URL')
+  }
+
+  const response = await fetch(downloadUrl, {
+    credentials: 'include',
+  })
+
+  if (!response.ok) {
+    throw new Error(`Download failed (${response.status})`)
+  }
+
+  const blobUrl = URL.createObjectURL(await response.blob())
+  const anchor = document.createElement('a')
+
+  try {
+    anchor.href = blobUrl
+    anchor.download = filename
+    anchor.style.display = 'none'
+    document.body.appendChild(anchor)
+    anchor.click()
+  }
+  finally {
+    anchor.remove()
+    window.setTimeout(() => URL.revokeObjectURL(blobUrl), 0)
+  }
+}
+```
+
+Call the helper from a real Quanta button. The handler owns loading state and
+must catch and surface download errors through designed inline feedback or a
+toast.
+
+```tsx
+<Button
+  type="button"
+  disabled={isDownloading}
+  onClick={handleDownload}
+>
+  {isDownloading ? 'Downloading…' : 'Download'}
+</Button>
+```
+
+Requirements:
+
+- The protected server route must re-check the current user and authorize that
+  specific file. Return `401`/`403` for unauthenticated/forbidden requests;
+  never redirect a download fetch to an HTML login page. Serve the file with a
+  truthful `Content-Type` and, when the route owns the filename, matching
+  `Content-Disposition`.
+- Pass `credentials: 'include'`. The helper enforces a same-origin `/api/...`
+  URL; never weaken that check or pass it an untrusted arbitrary URL.
+- Check `response.ok` before reading the body.
+- Show loading and error states.
+- Remove every temporary element and revoke every object URL after the click has
+  had a browser task to start the download.
+- Do not nest a `<button>` inside an `<a>`.
+- Raw download links are allowed only for public static files or self-contained
+  signed URLs that require no session.
+- For large files, prefer a backend-generated short-lived signed URL with
+  `Content-Disposition: attachment` to avoid buffering the entire file in
+  browser memory.
+- Test downloads inside the Higgsfield iframe, not only with the app opened
+  directly. Test both newly generated files and previously saved files.
+- If a sandboxed host iframe blocks programmatic downloads, the host must grant
+  its download capability. Report that platform constraint; do not work around
+  it by navigating to the protected URL.
+
+For generated-media exports, also apply `references/fnf-sdk.md` → “Output and
+download format contract” so the downloaded bytes, MIME type, extension, and
+filename agree. A direct `getRawUrl()` link is safe only when it is public or a
+self-contained signed URL that needs no session; otherwise use the helper.
+
 ## Auth UI Rules
 
 - Signed-out state should show a clear sign-in action using the website's normal
@@ -176,7 +273,7 @@ feed/history surface automatically.
 The only exception is an offline/mock demo the user EXPLICITLY asked for — memory
 adapters only, never calling fnf.internal, apps-marketplace, media upload, or
 profile endpoints. Never choose a mock as the default: a real SDK app is
-end-to-end, with a real backend and D1 persistence (see SKILL.md rule 3a).
+end-to-end, with a real backend and D1 persistence (see references/app-flow.md rule 3a).
 
 Required flow:
 

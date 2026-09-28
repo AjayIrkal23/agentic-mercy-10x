@@ -1,10 +1,16 @@
 ---
 name: vite-react-best-practices
-description: "ALWAYS invoke when building, reviewing, or refactoring React applications built with Vite (SPA). Comprehensive React and Vite SPA performance, architecture, and deployment guidelines — covers Vite-specific build configurations, static hosting requirements, and core React performance patterns."
+description: Comprehensive React and Vite SPA performance, architecture, and deployment guidelines. Use
+  this skill when building, reviewing, or refactoring React applications built with Vite (SPA). Covers
+  Vite-specific build configurations, static hosting requirements, and core React performance patterns.
 license: MIT
 metadata:
   author: ant-gravity
-  version: "1.1.0"
+  version: 1.1.0
+paths:
+- '**/vite.config.*'
+- '**/index.html'
+- '**/src/main.{tsx,jsx}'
 ---
 
 # Vite React Best Practices
