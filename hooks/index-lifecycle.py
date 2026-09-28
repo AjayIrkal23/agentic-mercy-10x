@@ -387,7 +387,10 @@ def _dirty_sha(root: Path) -> str:
 def _probe_jcodemunch(root: Path, prior: dict) -> tuple:
     if not _which("jcodemunch-mcp"):
         return (UNAVAILABLE, {}, "jcodemunch-mcp not installed")
-    dbs = sorted(CODE_INDEX_DIR.glob(f"*-{root.name}*.db")) or \
+    # Exact `<owner>-<name>.db` first; the fuzzy globs matched sibling clones
+    # (SubStore ↔ SubStore-laneCI) and judged staleness from the wrong index.
+    dbs = sorted(CODE_INDEX_DIR.glob(f"*-{root.name}.db")) or \
+        sorted(CODE_INDEX_DIR.glob(f"*-{root.name}*.db")) or \
         sorted(CODE_INDEX_DIR.glob(f"*{root.name}*.db"))
     head_cp = _git(root, ["rev-parse", "HEAD"], timeout=5)
     head = head_cp.stdout.strip() if head_cp.returncode == 0 else None
@@ -520,11 +523,23 @@ def _build_jcodemunch(root: Path, incremental: bool, paths, cfg: dict) -> bool:
         return False
     to = cfg["build_timeouts_s"]["jcodemunch"]
     if incremental and paths and len(paths) <= cfg["incremental_file_cap"]:
-        ok = True
-        for pth in paths:
+        # Only CODE files go to `index-file` (md/json journal entries used to fail
+        # the surface); one bad path never marks the whole surface failed.
+        try:
+            from lib.code_files import is_code_file
+            code_paths = [p for p in paths if is_code_file(p)]
+        except Exception:
+            code_paths = list(paths)
+        if not code_paths:
+            return True
+        failed = 0
+        for pth in code_paths:
             cp = _run(["jcodemunch-mcp", "index-file", str(pth)], timeout=to)
-            ok = ok and cp.returncode == 0
-        return ok
+            if cp.returncode != 0:
+                failed += 1
+                _telem("index_file_fail", surface="jcodemunch", path=str(pth)[-120:],
+                       rc=cp.returncode)
+        return failed < len(code_paths)
     cp = _run(["jcodemunch-mcp", "index", str(root)], timeout=to)
     return cp.returncode == 0
 
@@ -570,6 +585,14 @@ def _build_dox(root: Path, incremental: bool, paths, cfg: dict) -> bool:
     # dox-child-scaffold.py PostToolUse hook, so incremental is a no-op here.
     if incremental:
         return True
+    # HOME and the agent-infra repo are never dox roots (D11); a "build" there
+    # is a successful no-op, not a failure to back off from.
+    try:
+        rp = Path(root).resolve()
+        if rp == HOME.resolve() or rp == (HOME / ".claude").resolve():
+            return True
+    except OSError:
+        pass
     cp = _run([_python_exe(), str(HOOK_DIR / "dox_engine.py"), "sweep", str(root)],
               timeout=cfg["build_timeouts_s"]["dox"])
     return cp.returncode == 0
@@ -687,7 +710,10 @@ def mode_session_start(payload: dict, cfg: dict) -> int:
                 lines.append(f"{surface}: UNAVAILABLE ({detail})")
         elif st == FRESH:
             rec["state"] = FRESH
-            rec["failures"] = 0
+            # A surface that never built successfully keeps its failure count so
+            # backoff can engage (the reset here hid 101 build_fail/day — B19).
+            if not (int(prior.get("failures", 0) or 0) > 0 and prior.get("built_at") is None):
+                rec["failures"] = 0
             lines.append(f"{surface} index: FRESH — `{ctx.name}`")
         else:  # STALE or MISSING
             failures = prior.get("failures", 0)
@@ -846,11 +872,13 @@ def mode_build(args, cfg: dict) -> int:
                 st, fp, _ = _PROBE[surface](root, prior, cfg)
             except Exception:  # noqa: BLE001
                 st, fp = FRESH, prior.get("fingerprint", {})
+            # Record what the re-probe actually says (a build that left the
+            # artifact MISSING must not be filed as FRESH — B5).
             state.setdefault("surfaces", {})[surface] = {
-                "state": FRESH, "fingerprint": fp,
+                "state": st, "fingerprint": fp,
                 "checked_at": int(time.time()), "built_at": int(time.time()),
                 "failures": 0}
-            _telem("build_ok", surface=surface, key=ctx.key,
+            _telem("build_ok", surface=surface, key=ctx.key, state=st,
                    incremental=bool(args.incremental))
         else:
             failures = int(prior.get("failures", 0)) + 1

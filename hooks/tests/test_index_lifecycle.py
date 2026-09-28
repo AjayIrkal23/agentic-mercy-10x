@@ -231,7 +231,26 @@ def test_build_refuses_mismatched_key(env):
     assert not il._state_path("WRONG-deadbeef").exists()
 
 
-def test_build_success_marks_fresh(env):
+def test_build_success_marks_fresh(env, monkeypatch):
+    _reset(env)
+    ctx = env["ctx"]
+    # The re-probe decides the recorded state: a build whose artifact probes FRESH
+    # is FRESH.
+    monkeypatch.setitem(il._PROBE, "graphify",
+                        lambda root, prior, cfg: (il.FRESH, {"graph_mtime": 1.0}, ""))
+
+    class A:
+        pass
+    a = A()
+    a.root, a.key = str(env["repo"]), ctx.key
+    a.surfaces, a.incremental, a.journal = "graphify", False, ""
+    il.mode_build(a, env["cfg"])
+    assert il._load_state(ctx)["surfaces"]["graphify"]["state"] == il.FRESH
+
+
+def test_build_success_records_reprobed_state(env):
+    """A 'successful' build that left the artifact MISSING is recorded MISSING, not
+    hard-coded FRESH (A03-B5) — the stubbed builder writes no graph.json."""
     _reset(env)
     ctx = env["ctx"]
 
@@ -241,7 +260,7 @@ def test_build_success_marks_fresh(env):
     a.root, a.key = str(env["repo"]), ctx.key
     a.surfaces, a.incremental, a.journal = "graphify", False, ""
     il.mode_build(a, env["cfg"])
-    assert il._load_state(ctx)["surfaces"]["graphify"]["state"] == il.FRESH
+    assert il._load_state(ctx)["surfaces"]["graphify"]["state"] == il.MISSING
 
 
 def test_build_failure_backoff(env, monkeypatch):
@@ -286,6 +305,15 @@ def test_failed_backoff_no_rebuild_until_fingerprint_change(env, monkeypatch):
 # --------------------------------------------------------------------------- #
 # probes fail open
 # --------------------------------------------------------------------------- #
+@pytest.mark.parametrize("root", [il.HOME, il.HOME / ".claude", il.HOME / ".codex",
+                                  str(il.HOME / ".claude" / ".." / ".claude")])
+def test_never_index_infra_dirs(root):
+    """$HOME / ~/.claude / ~/.codex are never indexed (all 4 surfaces incl.
+    jdocmunch no-op), even via an unnormalized path."""
+    assert il._is_never_index(root)
+    assert not il._is_never_index(il.HOME / "some-project")
+
+
 def test_probe_exception_fails_open_fresh(env, monkeypatch):
     def boom(root, prior, cfg):
         raise RuntimeError("probe blew up")

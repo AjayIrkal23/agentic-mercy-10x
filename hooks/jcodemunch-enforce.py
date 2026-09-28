@@ -111,15 +111,29 @@ def _index_building(payload: dict) -> bool:
 
 
 def _find_git_root(p: Path) -> Path | None:
-    cur = p if p.is_dir() else p.parent
-    for _ in range(30):
-        if (cur / ".git").exists():
-            return cur
-        parent = cur.parent
-        if parent == cur:
-            break
-        cur = parent
-    return None
+    """HOME-guarded (lib.code_files.git_root): `$HOME` and non-repos → None, so a
+    ~-rooted read is never told to `index_folder("/home/<user>")` (A03-B10)."""
+    try:
+        from lib.code_files import git_root, is_home  # noqa: E402
+    except Exception:
+        return None
+    root = git_root(p)
+    if root is None or is_home(root):
+        return None
+    return root
+
+
+def _gate2_exempt_root(root: Path | None) -> bool:
+    """Gate 2 never fires for HOME, non-repos, or the agent-infra repo (~/.claude)
+    — those are NEVER_INDEX roots in index-lifecycle, so demanding an index there
+    contradicts the system's own policy."""
+    if root is None:
+        return True
+    try:
+        rp = root.resolve()
+        return rp == Path.home().resolve() or rp == (Path.home() / ".claude").resolve()
+    except OSError:
+        return True
 
 
 def _sanitize(name: str) -> str:
@@ -474,8 +488,16 @@ def pre_tool_use() -> int:
     if _is_exempt(target, cfg):
         return 0
 
+    # A session that already used jcodemunch has satisfied the whole gate — this
+    # early return used to sit BELOW Gate 2, so "index missing" still blocked
+    # reads after jcodemunch had been consulted (A03-B10).
+    if _load_state(conversation_id).get("jcodemunch_calls", 0) > 0:
+        return 0
+
     # --- Gate 2: Index absent in strict_mode → nudge, but NEVER brick. ---
-    if not _check_index_exists(target) and _is_strict_mode(cfg):
+    # Skipped for HOME / non-repo / ~/.claude roots (NEVER_INDEX policy).
+    if (not _gate2_exempt_root(_find_git_root(Path(target)))
+            and not _check_index_exists(target) and _is_strict_mode(cfg)):
         # …unless index-lifecycle is already building it in the background —
         # then allow the read (never brick the agent on self-healing infra).
         if _index_building(payload):
@@ -574,10 +596,9 @@ def pre_tool_use() -> int:
 # ---------------------------------------------------------------------------
 
 
-_DEADCODE_TOOLS = (
-    "find_dead_code", "get_dead_code_v2", "find_unused_paths",
-    "get_blast_radius", "get_dependency_cycles",
-)
+# Only genuine dead-code audits satisfy Gate 5 (blast-radius / cycle lookups are
+# not audits and made the gate gameable — A03 §3.2).
+_DEADCODE_TOOLS = ("find_dead_code", "get_dead_code_v2", "find_unused_paths")
 
 
 def mcp_used() -> int:

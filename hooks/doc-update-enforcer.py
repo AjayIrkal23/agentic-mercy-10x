@@ -105,11 +105,27 @@ def _save_state(cid: str, state: dict) -> None:
 
 
 def _is_code_file(fp: str) -> bool:
+    """Shared classifier (lib.code_files); legacy ext/segment logic as fallback."""
+    try:
+        from lib.code_files import is_code_file
+        return is_code_file(fp)
+    except Exception:
+        pass
     norm = fp.replace("\\", "/")
     ext = os.path.splitext(fp)[1].lower()
     if ext in CODE_EXTENSIONS:
         return True
     return any(seg in norm for seg in CODE_PATH_SEGMENTS)
+
+
+def _in_repo(fp: str) -> bool:
+    """True when `fp` lives inside a git repo that is not `$HOME` (lib.code_files)."""
+    try:
+        from lib.code_files import git_root, is_home
+        root = git_root(fp)
+        return root is not None and not is_home(root)
+    except Exception:
+        return True  # uncertain → keep the old behaviour
 
 
 def _is_doc_file(fp: str) -> bool:
@@ -220,14 +236,18 @@ def main() -> int:
     # can require its local CLAUDE.md to be updated (Phase 7).
     cdir = _dir_of(norm)
     code_dirs = state.get("code_dirs", [])
-    if cdir and cdir not in code_dirs:
+    if cdir and cdir not in code_dirs and _in_repo(norm):  # dox is git-repos only
         code_dirs.append(cdir)
         state["code_dirs"] = code_dirs
 
-    if any(seg in norm for seg in BE_INDICATORS):
-        state["be_touched"] = True
-    if any(seg in norm for seg in FE_INDICATORS):
-        state["fe_touched"] = True
+    # BE/FE surface flags only inside a repo that carries the configured doc trees
+    # (`repo_markers`). Elsewhere the commit gate would demand server_docs/ or
+    # frontend_docs/ that the repo does not and should not have (A03-B12).
+    if any(m in norm for m in REPO_MARKERS):
+        if any(seg in norm for seg in BE_INDICATORS):
+            state["be_touched"] = True
+        if any(seg in norm for seg in FE_INDICATORS):
+            state["fe_touched"] = True
 
     _save_state(cid, state)
 

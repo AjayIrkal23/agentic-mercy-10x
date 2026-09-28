@@ -1,37 +1,53 @@
 #!/usr/bin/env python3
-"""PostToolUse(Write|Edit) hook: trigger semgrep reminder on security-sensitive files.
+"""PostToolUse(Write|Edit) hook: record security-sensitive files for the Stop gate.
 
-Fires when a Write/Edit touches files matching security-sensitive patterns
-(auth, session, middleware, password, token, upload, query, crypto).
-Reminds the agent to run semgrep scan before completing.
+Fires when a Write/Edit touches a file whose basename TOKENS (not substrings)
+name a security concern (auth, session, middleware, password, token, upload,
+crypto …) — exact tokens, plus prefix match on unambiguous stems so derived
+forms like authentication/sessions count — or whose path runs through a
+security directory, and appends it to
+``.state/<cid>.security-scan.json`` (Gate 3 in hard-completion-gate.py).
 
-Output: hookSpecificOutput with additionalContext reminder (PostToolUse format).
+Output: always ``{}`` — the semgrep nudge itself comes from mcp-post-hints.py.
 """
 from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
-SECURITY_PATTERNS = [
-    "auth", "login", "signin", "sign-in", "signup", "sign-up", "register",
-    "session", "password", "passwd", "passphrase", "pin",
-    "token", "refresh_token", "access_token", "api_key", "apikey",
-    "middleware", "upload", "file_upload", "multipart",
-    "crypto", "encrypt", "decrypt", "hash", "bcrypt", "argon",
-    "secret", "credential", "private_key", "cert",
-    "oauth", "jwt", "bearer", "oidc", "saml",
-    "cookie", "httponly", "secure_cookie", "samesite",
-    "permission", "access-control", "access_control", "rbac", "role",
-    "sanitiz", "escap", "inject", "query",
-    "cors", "csp", "helmet", "x-frame", "xss",
-    "rate_limit", "ratelimit", "throttle", "brute",
-    "csrf", "nonce", "origin_check",
-    "guard", "protect", "restrict", "whitelist", "blacklist", "allowlist",
-    "validate", "validator", "input_check",
-    "tls", "ssl", "https",
-]
+# Exact TOKENS of the basename (split on non-alphanumerics, lower-cased). The old
+# substring match flagged Spinner.tsx ("pin"), useQuery.ts ("query"), validators.go,
+# mapping.ts ("pin") … and every hit made Gate 3 a hard stop-block (A03-B9).
+SECURITY_TOKENS = frozenset({
+    "auth", "login", "signin", "signup", "register", "session", "password", "passwd",
+    "token", "refresh_token", "access_token", "api_key", "apikey", "middleware",
+    "upload", "multipart", "crypto", "encrypt", "decrypt", "bcrypt", "argon", "secret",
+    "credential", "private_key", "oauth", "jwt", "bearer", "oidc", "saml", "cookie",
+    "samesite", "permission", "rbac", "sanitize", "sanitizer", "cors", "csp", "helmet",
+    "xss", "csrf", "nonce", "ratelimit", "rate_limit", "throttle",
+})
+# Unambiguous stems matched as token PREFIXES so plurals / derived forms count
+# (authentication, sessions, permissions, tokens, oauth2, credentials, passwords).
+# Short ambiguous words (pin, query, role, validate) are never stems (Santa A1).
+SECURITY_STEMS = (
+    "auth", "session", "token", "permission", "credential", "passw", "oauth", "jwt",
+    "login", "signup", "csrf", "cors", "crypt", "secret", "acl", "rbac", "middleware",
+)
+_TOKEN_SPLIT = re.compile(r"[^a-z0-9]+")
+# camelCase → separate tokens ("refreshToken" → refresh, token; "RateLimit" → rate, limit).
+_CAMEL = re.compile(r"(?<=[a-z0-9])(?=[A-Z])")
+
+
+def _basename_tokens(basename: str) -> set:
+    stem = os.path.splitext(basename)[0]
+    stem = _CAMEL.sub("_", stem)
+    toks = {t for t in _TOKEN_SPLIT.split(stem.lower()) if t}
+    # snake_case compounds that are themselves tokens (refresh_token, api_key …)
+    toks |= {t for t in SECURITY_TOKENS if "_" in t and t in stem.lower()}
+    return toks
 
 SECURITY_PATH_SEGMENTS = [
     "/middleware/", "/auth/", "/security/", "/crypto/",
@@ -51,13 +67,11 @@ STATE_DIR = Path(__file__).resolve().parent / ".state"
 
 
 def _is_security_sensitive(fp: str) -> bool:
-    norm = fp.replace("\\", "/").lower()
-    basename = os.path.basename(norm)
-    if any(pat in basename for pat in SECURITY_PATTERNS):
+    norm = fp.replace("\\", "/")
+    toks = _basename_tokens(os.path.basename(norm))
+    if toks & SECURITY_TOKENS or any(t.startswith(SECURITY_STEMS) for t in toks):
         return True
-    if any(seg in norm for seg in SECURITY_PATH_SEGMENTS):
-        return True
-    return False
+    return any(seg in norm.lower() for seg in SECURITY_PATH_SEGMENTS)
 
 
 def _should_skip(fp: str) -> bool:
@@ -117,28 +131,9 @@ def main() -> int:
         security_files.append(rel_str)
     state["security_files"] = security_files
 
-    n = len(security_files)
-
-    if n >= 1 and not state.get("reminded"):
-        state["reminded"] = True
-        _save_state(cid, state)
-        msg = (
-            f"[SECURITY SCAN GATE] {n} security-sensitive file(s) modified: "
-            f"{', '.join(security_files[:5])}. "
-            f"Before completing: run `semgrep scan --config auto` on these files "
-            f"and apply OWASP checklist (owasp-security skill). "
-            f"Fix all HIGH/CRITICAL findings."
-        )
-        print(json.dumps({
-            "additionalContext": msg,
-        }))
-        return 0
-
-    if n >= 1 and state.get("reminded"):
-        _save_state(cid, state)
-        print("{}")
-        return 0
-
+    # Bookkeeping only (read by hard-completion-gate Gate 3). The model-facing
+    # nudge is mcp-post-hints.py's "call mcp__semgrep__semgrep_scan" line — one
+    # nudge per file, not two (the old CLI `semgrep scan` line here was a duplicate).
     _save_state(cid, state)
     print("{}")
     return 0

@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 """Track semgrep execution for security completion gate.
 
-post-tool-use (Shell): set semgrep_ran only after command completes successfully.
+post-tool-use (Shell): set semgrep_ran only after `semgrep scan|ci` completes
+successfully.
+post-tool-use (mcp__semgrep__*): any semgrep MCP tool call sets semgrep_ran (+ a
+findings count when the result is parseable) — the security-sentinel agent scans
+through the MCP, which the Bash-only match never credited (A03-B8).
 Legacy pre-tool-use mode kept for backward compatibility but does not set semgrep_ran.
 """
 from __future__ import annotations
@@ -65,8 +69,49 @@ def _shell_succeeded(payload: dict) -> bool:
     return True
 
 
+def _mcp_findings(payload: dict) -> int:
+    """Best-effort count of semgrep MCP findings from the tool result (0 if unknown)."""
+    tr = payload.get("tool_response") or payload.get("tool_result") or payload.get("result")
+    try:
+        if isinstance(tr, str):
+            tr = json.loads(tr)
+        if isinstance(tr, list):  # MCP content blocks
+            for block in tr:
+                if isinstance(block, dict) and isinstance(block.get("text"), str):
+                    try:
+                        tr = json.loads(block["text"])
+                        break
+                    except Exception:
+                        continue
+        if isinstance(tr, dict):
+            res = tr.get("results")
+            if isinstance(res, list):
+                return len(res)
+            for k in ("findings", "findings_count", "count"):
+                v = tr.get(k)
+                if isinstance(v, list):
+                    return len(v)
+                if isinstance(v, int):
+                    return v
+    except Exception:
+        pass
+    return 0
+
+
 def post_tool_use(payload: dict) -> int:
-    if not is_shell_tool(tool_name(payload)):
+    name = str(tool_name(payload) or "")
+    if name.startswith("mcp__semgrep__"):
+        cid = payload.get("conversation_id") or payload.get("session_id") or ""
+        if not cid:
+            return 0
+        state = _load_state(cid)
+        state["semgrep_ran"] = True
+        state["semgrep_command"] = name
+        state["semgrep_findings"] = max(int(state.get("semgrep_findings") or 0),
+                                        _mcp_findings(payload))
+        _save_state(cid, state)
+        return 0
+    if not is_shell_tool(name):
         return 0
     command = _command_from(payload)
     if not SEMGREP_RE.search(command) or FAKE_RE.search(command):

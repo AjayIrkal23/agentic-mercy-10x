@@ -1,27 +1,29 @@
 #!/usr/bin/env python3
-"""PostToolUse aggregator: one subprocess chain for doc + desloppify + security gates.
+"""PostToolUse aggregator: one dispatch link for the post-write side effects.
 
-Preserves the same reminders as doc-update-enforcer, desloppify-cleanup, and
-security-scan-gate — only reduces Python startup overhead.
+Runs the sub-chain IN PARALLEL (ThreadPoolExecutor) and merges the children's
+`additionalContext` in declaration order. Sequential execution summed the
+children's timeouts (30 s) past the 12 s link timeout, so one slow child killed
+every advisory (A03-B20). Doc-index refresh is owned by index-lifecycle
+(jdocmunch surface); the duplicate jdocmunch-reindex-hook was retired 2026-09-27.
 """
 from __future__ import annotations
 
 import json
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 HOOK_DIR = Path(__file__).resolve().parent
-# (script, timeout[, args]).  index-lifecycle post-write runs first: it journals
-# the touched path (active-repo only) and, at N=5 writes / T=45s, spawns ONE
-# detached incremental indexer — interim wiring, re-homed into dispatch.py by
-# P4-T7 (see HANDOFF-P4-registrations.md). It emits no additionalContext.
+# (script, timeout[, args]). index-lifecycle journals the touched path (active
+# repo only) and spawns ONE detached incremental indexer at N=5 writes / T=45s;
+# it emits no additionalContext.
 CHAIN: list[tuple] = [
     ("index-lifecycle.py", 8, ["post-write"]),
     ("dox-child-scaffold.py", 6),
     ("doc-update-enforcer.py", 5),
     ("security-scan-gate.py", 5),
-    ("jdocmunch-reindex-hook.py", 6),
 ]
 
 
@@ -35,7 +37,7 @@ def _merge(existing: str, add: str) -> str:
 
 
 def _run(script: str, payload_txt: str, timeout: int, args=None) -> str:
-    cmd = ["python3", str(HOOK_DIR / script)] + list(args or [])
+    cmd = [sys.executable or "python3", str(HOOK_DIR / script)] + list(args or [])
     try:
         proc = subprocess.run(
             cmd,
@@ -50,9 +52,14 @@ def _run(script: str, payload_txt: str, timeout: int, args=None) -> str:
         if not isinstance(blob, dict):
             return ""
         chunk = blob.get("additionalContext") or blob.get("additional_context")
+        if not isinstance(chunk, str):
+            hso = blob.get("hookSpecificOutput")
+            chunk = hso.get("additionalContext") if isinstance(hso, dict) else None
         if isinstance(chunk, str):
             return chunk
     except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError):
+        pass
+    except Exception:  # noqa: BLE001 — a child must never take the chain down
         pass
     return ""
 
@@ -61,22 +68,24 @@ def main() -> int:
     raw = sys.stdin.read()
     payload_txt = raw if raw.strip() else "{}"
 
-    aggregated = ""
-    for entry in CHAIN:
-        script, timeout = entry[0], entry[1]
-        args = entry[2] if len(entry) > 2 else None
-        chunk = _run(script, payload_txt, timeout, args)
-        if chunk:
-            aggregated = _merge(aggregated, chunk)
+    with ThreadPoolExecutor(max_workers=len(CHAIN)) as pool:
+        futures = [
+            pool.submit(_run, entry[0], payload_txt, entry[1], entry[2] if len(entry) > 2 else None)
+            for entry in CHAIN
+        ]
+        aggregated = ""
+        for fut in futures:  # declaration order, not completion order
+            try:
+                chunk = fut.result()
+            except Exception:  # noqa: BLE001
+                chunk = ""
+            if chunk:
+                aggregated = _merge(aggregated, chunk)
 
     if not aggregated.strip():
         print("{}")
         return 0
-
-    out = {
-        "additionalContext": aggregated,
-    }
-    print(json.dumps(out))
+    print(json.dumps({"additionalContext": aggregated}))
     return 0
 
 

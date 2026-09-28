@@ -25,7 +25,13 @@ NOTE: only covers Skill-TOOL pushes. Hooks that say "read this SKILL.md path"
 (fullstack-skills-reminder, ui-ux-stack-orchestrator) load by reading, not the Skill
 tool, so they never appear in the invocation telemetry and are intentionally NOT gated.
 
-Env: INVOKE_SUITE_GATE_MAX_NAGS (default 5), INVOKE_SUITE_GATE_OFF=1 to disable.
+v3 (2026-09-28): the gate only bites on turns that WROTE CODE. A pushed skill is
+enforced only when the current turn wrote at least one code file matching that
+skill's surface (skills-index `paths` globs, else its frontend/backend surface,
+else any code file). Pure chat / orchestration turns (no code writes, or only
+infra/docs writes) always pass. At most ONE nag per turn, then fail open.
+
+Env: INVOKE_SUITE_GATE_MAX_NAGS (default 1), INVOKE_SUITE_GATE_OFF=1 to disable.
 
 stdin:  Stop payload {conversation_id, transcript_path, stop_hook_active}
 stdout: {} to allow | {"decision":"block","reason":...} to re-nag
@@ -42,8 +48,78 @@ from pathlib import Path
 HOOK_DIR = Path(__file__).resolve().parent
 TELEMETRY_DIR = HOOK_DIR / ".telemetry"
 CONFIG_PATH = HOOK_DIR / "autonomous-skill-router.config.json"
-MAX_NAGS = int(os.environ.get("INVOKE_SUITE_GATE_MAX_NAGS", "5") or "5")
+MAX_NAGS = int(os.environ.get("INVOKE_SUITE_GATE_MAX_NAGS", "1") or "1")
 GRACE = timedelta(seconds=90)  # absorb push-vs-prompt ordering jitter
+SKILLS_INDEX = HOOK_DIR / "skills-index.json"
+
+if str(HOOK_DIR) not in sys.path:
+    sys.path.insert(0, str(HOOK_DIR))
+try:
+    from lib import turns as _turns  # noqa: E402
+except Exception:  # pragma: no cover - fail-open
+    _turns = None
+try:
+    from lib import code_files as _cf  # noqa: E402
+except Exception:  # pragma: no cover - fail-open
+    _cf = None
+
+_FE_EXT = (".tsx", ".jsx", ".vue", ".svelte", ".css", ".scss", ".html")
+_FE_SEGS = ("/client/", "/web/", "/frontend/", "/components/", "/pages/", "/ui/", "/hooks/")
+
+
+def _skill_meta() -> dict:
+    try:
+        sk = json.loads(SKILLS_INDEX.read_text(encoding="utf-8")).get("skills") or {}
+        return {_canon(k): v for k, v in sk.items() if isinstance(v, dict)}
+    except Exception:
+        return {}
+
+
+def _expand_braces(glob: str) -> list:
+    i = glob.find("{")
+    j = glob.find("}", i + 1)
+    if i == -1 or j == -1:
+        return [glob]
+    return [x for alt in glob[i + 1:j].split(",") for x in _expand_braces(glob[:i] + alt + glob[j + 1:])]
+
+
+def _is_fe(path: str) -> bool:
+    low = "/" + path.replace("\\", "/").lower()
+    return low.endswith(_FE_EXT) or any(s in low for s in _FE_SEGS)
+
+
+def skill_matches_writes(meta: dict, code_files: list) -> bool:
+    """True when a written code file falls in the skill's surface."""
+    import fnmatch
+    if not code_files:
+        return False
+    for g in meta.get("paths") or []:
+        for pat in _expand_braces(str(g)):
+            if any(fnmatch.fnmatch(f.replace("\\", "/"), pat) for f in code_files):
+                return True
+    surf = set(meta.get("surfaces") or [])
+    if "frontend" in surf and "backend" not in surf:
+        return any(_is_fe(f) for f in code_files)
+    if "backend" in surf and "frontend" not in surf:
+        return any(not _is_fe(f) for f in code_files)
+    return True
+
+
+def code_written_this_turn(transcript: str):
+    """Code files written this turn; None when unknowable (fail open)."""
+    if _turns is None or _cf is None or not transcript:
+        return None
+    files = _turns.turn_written_files(transcript)
+    if files is None:
+        return None
+    return [f for f in files if _cf.is_code_file(f)]
+
+# Any of these dispatched within the turn satisfies the IMPLEMENT category
+# (surface-routed implementors, not just the general implementation-engineer).
+IMPLEMENT_AGENTS = {
+    "implementation-engineer", "backend-implementor-specialist",
+    "frontend-implementor-specialist", "integrator-specialist",
+}
 
 
 def _safe_cid(cid: str) -> str:
@@ -55,27 +131,21 @@ def _canon(name: str) -> str:
 
 
 def _dt(s):
+    """ISO string → AWARE datetime (naive → UTC). None on failure."""
+    if _turns is not None:
+        return _turns.to_aware(s)
     try:
-        return datetime.fromisoformat(str(s).strip().replace("Z", "+00:00"))
+        dt = datetime.fromisoformat(str(s).strip().replace("Z", "+00:00"))
     except Exception:
         return None
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt
 
 
 def _turn_dt(transcript: str):
-    """Timestamp of the last real user prompt (turn boundary)."""
-    try:
-        last = None
-        for line in open(transcript, encoding="utf-8"):
-            if not line.strip():
-                continue
-            e = json.loads(line)
-            if e.get("type") == "user":
-                c = e.get("message", {}).get("content")
-                if isinstance(c, str) and c.strip():
-                    last = e.get("timestamp") or e.get("ts")
-        return _dt(last) if last else None
-    except Exception:
+    """Timestamp of the last real user prompt (turn boundary) — lib.turns."""
+    if _turns is None:
         return None
+    return _turns.last_user_turn_ts(transcript)
 
 
 def _pushed(cid: str):
@@ -133,6 +203,12 @@ def _artifact_roots(payload: dict) -> list:
         roots.append(str(Path.cwd()))
     except Exception:
         pass
+    # /invoke run folders hold the act artifacts (skills/invoke, 2026-09-27).
+    for r in list(roots):
+        try:
+            roots += [str(p) for p in sorted(Path(r).glob(".claude/runs/*/")) if p.is_dir()]
+        except Exception:
+            continue
     seen, out = set(), []
     for r in roots:
         if r not in seen:
@@ -165,8 +241,9 @@ def _artifact_exists_newer(roots: list, pattern: str, since) -> bool:
     return False
 
 
-def _agents_dispatched(cid: str) -> set:
-    """Every subagent_type dispatched this session (santa-method-writer telemetry)."""
+def _agents_dispatched(cid: str, since=None) -> set:
+    """subagent_types dispatched this session (santa-method-writer telemetry),
+    optionally only those with `ts` >= since (records without ts always count)."""
     p = TELEMETRY_DIR / f"{_safe_cid(cid)}.agent-dispatches.jsonl"
     out = set()
     if not p.is_file():
@@ -176,10 +253,26 @@ def _agents_dispatched(cid: str) -> set:
             r = json.loads(line)
         except Exception:
             continue
+        if since is not None:
+            rt = _dt(r.get("ts"))
+            if rt is not None and rt < since:
+                continue
         a = (r.get("agent") or "").strip()
         if a:
             out.add(a)
     return out
+
+
+def _category_satisfied(cat: str, agent: str, dispatched: set, roots: list,
+                        artifact: str, window) -> bool:
+    if agent in dispatched:
+        return True
+    if cat == "IMPLEMENT":
+        if dispatched & IMPLEMENT_AGENTS:
+            return True
+        if _artifact_exists_newer(roots, "IMPL-REPORT*.md", window):
+            return True
+    return _artifact_exists_newer(roots, _artifact_glob(artifact or ""), window)
 
 
 def _category_skill_canon(cat_cfg: dict) -> set:
@@ -259,6 +352,15 @@ def main() -> int:
     invoked = _invoked_since(cid, window)
     missing = sorted(e for e in expected if _canon(e) not in invoked)
 
+    # v3: enforce only on turns that wrote code in the skill's surface. No code
+    # writes (chat / orchestration / infra-only) or an unreadable transcript → pass.
+    if missing:
+        code_written = code_written_this_turn(transcript)
+        if not code_written:
+            sys.stdout.write("{}\n"); return 0
+        meta = _skill_meta()
+        missing = [m for m in missing if skill_matches_writes(meta.get(_canon(m), {}), code_written)]
+
     # v2: agent-backed categories are satisfied by WORK (artifact newer than the
     # invoke, or the agent dispatched this session) — drop their skill roster
     # from the missing set. Agent-less categories keep pure skill-load checking.
@@ -273,12 +375,9 @@ def main() -> int:
             if not agent:
                 continue
             if dispatched is None:
-                dispatched = _agents_dispatched(cid)
+                dispatched = _agents_dispatched(cid, window)
                 roots = _artifact_roots(payload)
-            ok = agent in dispatched
-            if not ok:
-                ok = _artifact_exists_newer(roots, _artifact_glob(cc.get("artifact") or ""), window)
-            if ok:
+            if _category_satisfied(c, agent, dispatched, roots, cc.get("artifact"), window):
                 satisfied |= _category_skill_canon(cc)
         if satisfied:
             missing = [m for m in missing if _canon(m) not in satisfied]

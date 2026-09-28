@@ -194,11 +194,32 @@ def _save_state(cid: str, state: dict) -> None:
 # ---------------------------------------------------------------------------
 
 def _fingerprint(cmd: str, pattern_name: str) -> str:
-    """Create a stable fingerprint for this command+pattern combo for ack tracking."""
-    # Use the first 80 chars of the command + pattern name — enough to distinguish
-    # "rm -rf src/" from "rm -rf tests/" without storing entire commands
-    key_part = re.sub(r"\s+", " ", cmd.strip())[:80]
-    return f"{pattern_name}::{key_part}"
+    """Stable fingerprint of the FULL whitespace-normalised command + pattern name.
+
+    The old 80-char prefix let `cd /long/path && rm -rf A` pre-authorise
+    `cd /long/path && rm -rf B` (A03-B14). Only the identical command re-run
+    matches now."""
+    import hashlib
+    norm = re.sub(r"\s+", " ", cmd.strip())
+    return f"{pattern_name}::{hashlib.sha256(norm.encode('utf-8', 'replace')).hexdigest()[:24]}"
+
+
+_HEREDOC_RE = re.compile(r"<<-?\s*(['\"]?)(\w+)\1[^\n]*\n.*?^\s*\2\s*$", re.S | re.M)
+_DQUOTE_RE = re.compile(r'"(?:\\.|[^"\\])*"')
+_SQUOTE_RE = re.compile(r"'[^']*'")
+
+
+def _strip_quoted(cmd: str) -> str:
+    """Remove heredoc bodies and single/double-quoted strings before matching, so
+    `git commit -m "switch from rm -rf to trash"` or a heredoc that merely
+    mentions `DROP TABLE` is not a destructive command."""
+    try:
+        s = _HEREDOC_RE.sub(" ", cmd)
+        s = _DQUOTE_RE.sub('""', s)
+        s = _SQUOTE_RE.sub("''", s)
+        return s
+    except Exception:
+        return cmd
 
 
 def _emit_deny(pattern_name: str, cmd: str) -> None:
@@ -253,8 +274,9 @@ def main() -> int:
         state = _load_state(cid)
         overridden = set(state.get("overridden_commands") or [])
 
+        scan = _strip_quoted(cmd)
         for pattern, name, suppress_fn in DANGEROUS_PATTERNS:
-            if not pattern.search(cmd):
+            if not pattern.search(scan):
                 continue
 
             # Check safe-suppression predicate

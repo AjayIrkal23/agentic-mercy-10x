@@ -1,46 +1,82 @@
 #!/usr/bin/env python3
 """Stop hook: hard completion gate using the Stop schema {"decision":"block","reason":...}.
 
-Replaces advisory-only stop-verification-gate.py and santa-method-review.py
-with a gate that actually blocks completion on first failure.
-
-Behavior:
-- First deny in a conversation: decision=block with specific instructions.
-- Second+ attempt: allow with followup_message warning (override accepted).
-- All-pass: output {} (silent allow).
+Behavior (2026-09-27 rework — A03-B6/B7/B8/B15, A14 §3):
+- `stop_hook_active` in the payload → {} (the harness is already re-running us
+  after a block; never chain-block).
+- User consent: the last user prompt is "stop" / "don't do anything" / "leave it" /
+  "no more changes" → {} (the user's word beats the gate).
+- At most ONE block per turn (turn = last real user prompt, `lib.turns`). The second
+  Stop in the same turn is allowed and emits a `systemMessage` naming the gates that
+  were forced past. A new turn starts fresh.
+- All-pass → {} (plus pass advisories once per session via `systemMessage`).
 
 Gate summary:
   Gate 1 (tests)     — advisory, always PASS (best-effort reminder only)
   Gate 2 (docs)      — HARD BLOCK — missing server_docs/frontend_docs/PROJECT_LINKAGES
-  Gate 3 (security)  — SEMI-HARD — semgrep not run on security-sensitive files
-  Gate 4 (santa)     — SEMI-HARD — adversarial review not dispatched for 3+ writes
-  Gate 5 (dead code) — SEMI-HARD — dead-code audit not recorded for 2+ writes
+  Gate 3 (security)  — SEMI-HARD — security-sensitive files changed and no scan evidence
+                       (semgrep CLI/MCP, a security-sentinel dispatch, or a fresh
+                       SECURITY-REPORT.md all count)
+  Gate 4 (santa)     — SEMI-HARD — review not dispatched for >= 3 unique code files
+  Gate 5 (dead code) — SEMI-HARD — dead-code audit not recorded for >= 3 unique code files
+
+Thresholds count UNIQUE code files (desloppify `code_files`, classified by
+`lib.code_files.is_code_file`), never raw write counts.
 
 State files read (all under STATE_DIR / {safe_cid}.*):
-  .desloppify.json    — code_writes count
+  .desloppify.json    — code_files (unique paths; legacy code_paths honoured)
   .doc-enforcer.json  — be_touched, fe_touched, be_docs_written, fe_docs_written, linkages_written
-  .security-scan.json — security_files list, reminded flag
+  .security-scan.json — security_files list, semgrep_ran
   .santa.json         — fired flag
+  .telemetry/{cid}.agent-dispatches.jsonl — subagent dispatches (santa-method-writer)
 
 Own state file:
-  .completion-gate.json — {"deny_count": N, "failed_gates": [...], "last_deny_time": null}
+  .completion-gate.json — {"turn_key": ..., "blocked_this_turn": bool, "failed_gates": [...]}
 """
 from __future__ import annotations
 
+import glob
 import json
+import os
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-STATE_DIR = Path(__file__).resolve().parent / ".state"
+HOOK_DIR = Path(__file__).resolve().parent
+STATE_DIR = HOOK_DIR / ".state"
+TELEMETRY_DIR = HOOK_DIR / ".telemetry"
 
-MIN_WRITES_SANTA = 2   # code_writes threshold to require santa method (code review)
-MIN_WRITES_DEAD  = 2   # code_writes threshold to require dead-code audit
+if str(HOOK_DIR) not in sys.path:
+    sys.path.insert(0, str(HOOK_DIR))
+try:
+    from lib.code_files import git_root as _lib_git_root, is_home as _is_home  # noqa: E402
+except Exception:  # pragma: no cover - fail-open
+    _lib_git_root = None
+    _is_home = None
+try:
+    from lib import turns as _turns  # noqa: E402
+except Exception:  # pragma: no cover - fail-open
+    _turns = None
 
-# Cursor config/hook paths — Santa adversarial review not required (verify-hooks.sh instead)
+MIN_FILES_SANTA = 3   # unique code files that require a Santa review
+MIN_FILES_DEAD = 3    # unique code files that require a dead-code audit
+
+# The user said stop — honour it. The WHOLE message must be consent clauses
+# ("stop", "Stop. Don't do anything else", "that's all"); "stop the server and fix X"
+# is a task, not consent (Santa P7).
+_CONSENT_CLAUSE = (r"(?:(?:ok(?:ay)?|please)[,\s]+)?"
+                   r"(?:stop(?:\s+(?:now|here|there))?|don'?t do anything(?:\s+else)?"
+                   r"|do nothing(?:\s+else)?|leave it(?:\s+there)?|no more changes"
+                   r"|that'?s (?:all|it|enough))")
+CONSENT_RE = re.compile(
+    rf"^\s*{_CONSENT_CLAUSE}(?:\s*[.,;!]+\s*{_CONSENT_CLAUSE})*\s*[.!]*\s*$", re.I)
+
+# Agents whose dispatch counts as the security scan having happened.
+SECURITY_AGENTS = {"security-sentinel"}
+
+# ~/.claude config/hook paths — Santa adversarial review not required there.
 _INFRA_PATH_MARKERS = (
-    # deduped (P4-T6): the ".claude/x/" forms are substrings of the "/.claude/x/"
-    # forms, so `marker in n` matches identically — one clean set, same behavior.
     ".claude/hooks/",
     ".claude/rules/",
     ".claude/scripts/",
@@ -61,17 +97,12 @@ def _is_infra_path(path: str) -> bool:
 def _is_infra_only_session(cid: str) -> bool:
     """True when every tracked code write is under ~/.claude config (hooks, rules, etc.)."""
     safe = _safe_cid(cid)
-    doc_path = STATE_DIR / f"{safe}.doc-enforcer.json"
-    doc_files = _load_json(doc_path).get("code_files", [])
+    doc_files = _load_json(STATE_DIR / f"{safe}.doc-enforcer.json").get("code_files", [])
     if doc_files:
         return all(_is_infra_path(str(f)) for f in doc_files)
-
-    deslop_path = STATE_DIR / f"{safe}.desloppify.json"
-    deslop = _load_json(deslop_path)
-    paths = deslop.get("code_paths") or []
+    paths = _code_files(cid)
     if paths:
         return all(_is_infra_path(str(p)) for p in paths)
-
     return False
 
 
@@ -87,7 +118,8 @@ def _load_json(path: Path) -> dict:
     if not path.is_file():
         return {}
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
     except Exception:
         return {}
 
@@ -97,51 +129,52 @@ def _save_json(path: Path, data: dict) -> None:
     path.write_text(json.dumps(data), encoding="utf-8")
 
 
+def _gate_state_path(cid: str) -> Path:
+    return STATE_DIR / f"{_safe_cid(cid)}.completion-gate.json"
+
+
 def _load_gate_state(cid: str) -> dict:
-    p = STATE_DIR / f"{_safe_cid(cid)}.completion-gate.json"
-    data = _load_json(p)
+    data = _load_json(_gate_state_path(cid))
     return {
-        "deny_count": data.get("deny_count", 0),
+        "turn_key": data.get("turn_key"),
+        "blocked_this_turn": bool(data.get("blocked_this_turn")),
         "failed_gates": data.get("failed_gates", []),
-        "last_deny_time": data.get("last_deny_time"),
         "pass_advisories_sent": bool(data.get("pass_advisories_sent")),
     }
 
 
 def _save_gate_state(cid: str, state: dict) -> None:
-    p = STATE_DIR / f"{_safe_cid(cid)}.completion-gate.json"
-    _save_json(p, state)
+    _save_json(_gate_state_path(cid), state)
 
 
-def _code_writes(cid: str) -> int:
-    p = STATE_DIR / f"{_safe_cid(cid)}.desloppify.json"
-    return _load_json(p).get("code_writes", 0)
+def _code_files(cid: str) -> list:
+    """Unique code files written this session (desloppify state)."""
+    st = _load_json(STATE_DIR / f"{_safe_cid(cid)}.desloppify.json")
+    raw = st.get("code_files") or st.get("code_paths") or []
+    seen, out = set(), []
+    for p in raw:
+        n = str(p).replace("\\", "/")
+        if n and n not in seen:
+            seen.add(n)
+            out.append(n)
+    return out
 
 
 def _git_root_of(path: str) -> "Path | None":
-    """Walk up from an absolute path to its enclosing git repo root."""
+    """HOME-guarded git root of an absolute path (lib.code_files)."""
     try:
-        cur = Path(path)
-        if not cur.is_absolute():
+        if not Path(path).is_absolute() or _lib_git_root is None:
             return None
-        cur = cur if cur.is_dir() else cur.parent
-        for _ in range(30):
-            if (cur / ".git").exists():
-                return cur
-            if cur.parent == cur:
-                break
-            cur = cur.parent
+        root = _lib_git_root(path)
+        if root is None or (_is_home and _is_home(root)):
+            return None
+        return root
     except Exception:
         return None
-    return None
 
 
 def _session_dox_repos(cid: str) -> list:
-    """Repos touched this session (via tracked code dirs) that carry a root CLAUDE.md.
-
-    Derives the repo from the actual dirs that were edited, so the dox requirement
-    fires even when the Stop payload omits workspace_roots.
-    """
+    """Repos touched this session (via tracked code dirs) that carry a root CLAUDE.md."""
     safe = _safe_cid(cid)
     st = _load_json(STATE_DIR / f"{safe}.doc-enforcer.json")
     roots = set()
@@ -152,20 +185,62 @@ def _session_dox_repos(cid: str) -> list:
     return sorted(roots)
 
 
+def _agents_dispatched(cid: str, since: "datetime | None" = None) -> set:
+    """subagent_types dispatched this session (optionally only since `since`)."""
+    p = TELEMETRY_DIR / f"{_safe_cid(cid)}.agent-dispatches.jsonl"
+    out: set = set()
+    if not p.is_file():
+        return out
+    try:
+        for line in p.read_text(encoding="utf-8").splitlines():
+            try:
+                r = json.loads(line)
+            except Exception:
+                continue
+            if since is not None and _turns is not None:
+                ts = _turns.to_aware(r.get("ts"))
+                if ts is not None and ts < since:
+                    continue
+            a = (r.get("agent") or "").strip()
+            if a:
+                out.add(a)
+    except Exception:
+        pass
+    return out
+
+
+def _report_newer_than(roots: list, pattern: str, since: "datetime | None") -> bool:
+    """True when a `pattern` file under a root or its `.claude/runs/*/` is newer than
+    `since` (any age when `since` is unknown)."""
+    for root in roots:
+        if not isinstance(root, str) or not root.strip():
+            continue
+        try:
+            candidates = glob.glob(os.path.join(root, pattern))
+            candidates += glob.glob(os.path.join(root, ".claude", "runs", "*", pattern))
+            for f in candidates:
+                if not os.path.isfile(f):
+                    continue
+                if since is None or os.path.getmtime(f) >= since.timestamp():
+                    return True
+        except Exception:
+            continue
+    return False
+
+
 # ---------------------------------------------------------------------------
 # Individual Gates
 # ---------------------------------------------------------------------------
 
-def gate1_tests(cid: str, code_writes: int) -> tuple[bool, str, str]:
+def gate1_tests(cid: str, n_files: int) -> tuple:
     """Gate 1: Tests — always PASS, advisory reminder only."""
-    if code_writes >= 3:
-        reminder = f"Reminder: {code_writes} code files written — verify tests ran."
-        return True, "Gate 1 (tests)", reminder
+    if n_files >= 3:
+        return True, "Gate 1 (tests)", f"Reminder: {n_files} code files written — verify tests ran."
     return True, "Gate 1 (tests)", ""
 
 
-def _repo_doc_expectations(workspace_roots: list) -> tuple[bool, bool, bool]:
-    """Return whether this session's workspace(s) define BE docs, FE docs, or linkages trees."""
+def _repo_doc_expectations(workspace_roots: list) -> tuple:
+    """Whether this session's workspace(s) define BE docs, FE docs, or linkages trees."""
     has_be = has_fe = has_link = False
     for root in workspace_roots:
         if not isinstance(root, str) or not root.strip():
@@ -180,15 +255,12 @@ def _repo_doc_expectations(workspace_roots: list) -> tuple[bool, bool, bool]:
     return has_be, has_fe, has_link
 
 
-def gate2_docs(cid: str, workspace_roots: list | None = None) -> tuple[bool, str, str]:
-    """Gate 2: Documentation — HARD when repo has doc trees; skip when absent (home/general)."""
-    p = STATE_DIR / f"{_safe_cid(cid)}.doc-enforcer.json"
-    st = _load_json(p)
-
+def gate2_docs(cid: str, workspace_roots: "list | None" = None) -> tuple:
+    """Gate 2: Documentation — HARD when repo has doc trees; skip when absent."""
+    st = _load_json(STATE_DIR / f"{_safe_cid(cid)}.doc-enforcer.json")
     code_files = st.get("code_files", [])
     if not code_files:
         return True, "Gate 2 (docs)", ""
-
     if _is_infra_only_session(cid):
         return True, "Gate 2 (docs)", ""
 
@@ -197,35 +269,28 @@ def gate2_docs(cid: str, workspace_roots: list | None = None) -> tuple[bool, str
 
     be_touched = st.get("be_touched", False)
     fe_touched = st.get("fe_touched", False)
-    be_docs = st.get("be_docs_written", False)
-    fe_docs = st.get("fe_docs_written", False)
-    linkages = st.get("linkages_written", False)
 
-    missing: list[str] = []
-    if be_touched and expect_be and not be_docs:
+    missing: list = []
+    if be_touched and expect_be and not st.get("be_docs_written", False):
         missing.append("server_docs/")
-    if fe_touched and expect_fe and not fe_docs:
+    if fe_touched and expect_fe and not st.get("fe_docs_written", False):
         missing.append("frontend_docs/")
-    if (be_touched or fe_touched) and expect_link and not linkages:
+    if (be_touched or fe_touched) and expect_link and not st.get("linkages_written", False):
         missing.append("PROJECT_LINKAGES.md")
 
-    # dox CLAUDE.md-tree requirement (Phase 7), ALWAYS evaluated: if code was edited
-    # in a repo that carries a root CLAUDE.md, at least one CLAUDE.md must be updated
-    # this session. Independent of the GO_UDP doc dirs above, and robust to a missing
-    # workspace_roots payload — the repo is derived from the dirs actually touched.
+    # dox CLAUDE.md-tree requirement (Phase 7): code edited in a GIT repo that carries
+    # a root CLAUDE.md → at least one CLAUDE.md must be updated this session. HOME
+    # (which has a CLAUDE.md but is not a repo) never counts.
     ws_has_dox = any(
-        isinstance(r, str) and r.strip() and (Path(r) / "CLAUDE.md").is_file()
+        isinstance(r, str) and r.strip() and _git_root_of(r) is not None
+        and (Path(r) / "CLAUDE.md").is_file()
         for r in roots
     )
-    touched_dox = _session_dox_repos(cid)
-    if (ws_has_dox or touched_dox) and not st.get("claude_md_written"):
-        missing.append(
-            "dox CLAUDE.md (Phase 7 — update the CLAUDE.md for the dir(s) you changed)"
-        )
+    if (ws_has_dox or _session_dox_repos(cid)) and not st.get("claude_md_written"):
+        missing.append("dox CLAUDE.md (Phase 7 — update the CLAUDE.md for the dir(s) you changed)")
 
     if not missing:
         return True, "Gate 2 (docs)", ""
-
     detail = (
         f"{len(code_files)} code file(s) written but docs not updated. "
         f"Missing: {', '.join(missing)}. "
@@ -235,55 +300,48 @@ def gate2_docs(cid: str, workspace_roots: list | None = None) -> tuple[bool, str
     return False, "Gate 2 (docs)", detail
 
 
-def gate3_security(cid: str) -> tuple[bool, str, str]:
-    """Gate 3: Security — semi-hard when auth/API files changed and semgrep not run."""
+def gate3_security(cid: str, roots: list, turn_ts: "datetime | None") -> tuple:
+    """Gate 3: Security — semi-hard when security-sensitive files changed and no
+    scan evidence exists: semgrep (CLI or MCP) ran, security-sentinel was
+    dispatched, or a SECURITY-REPORT.md newer than the turn exists."""
     if _is_infra_only_session(cid):
         return True, "Gate 3 (security)", ""
-
-    p = STATE_DIR / f"{_safe_cid(cid)}.security-scan.json"
-    st = _load_json(p)
+    st = _load_json(STATE_DIR / f"{_safe_cid(cid)}.security-scan.json")
     files = st.get("security_files", [])
     if not files:
         return True, "Gate 3 (security)", ""
 
-    semgrep_ran = st.get("semgrep_ran", False)
-    if semgrep_ran:
+    if st.get("semgrep_ran", False):
         findings = st.get("semgrep_findings", 0)
         if findings:
-            reminder = (
+            return True, "Gate 3 (security)", (
                 f"Semgrep reported {findings} finding(s) on security-sensitive files. "
-                "Resolve HIGH/CRITICAL before shipping."
-            )
-            return True, "Gate 3 (security)", reminder
+                "Resolve HIGH/CRITICAL before shipping.")
+        return True, "Gate 3 (security)", ""
+    if _agents_dispatched(cid) & SECURITY_AGENTS:
+        return True, "Gate 3 (security)", ""
+    if _report_newer_than(roots, "SECURITY-REPORT*.md", turn_ts):
         return True, "Gate 3 (security)", ""
 
     detail = (
-        f"{len(files)} security-sensitive file(s) modified but semgrep not verified. "
+        f"{len(files)} security-sensitive file(s) modified but no scan recorded. "
         "Fix: dispatch the security-sentinel specialist (Agent tool, subagent_type "
-        "\"security-sentinel\") or run /invoke-security — or run `semgrep scan --config auto` "
-        "on the changed auth/API files yourself, then retry."
+        "\"security-sentinel\") or run /invoke-security — or run semgrep "
+        "(`semgrep scan --config auto` or mcp__semgrep__semgrep_scan) on the changed "
+        "auth/API files yourself, then retry."
     )
     return False, "Gate 3 (security)", detail
 
 
-def gate4_santa(cid: str, code_writes: int) -> tuple[bool, str, str]:
-    """Gate 4: Santa Method — SEMI-HARD BLOCK if 3+ writes but review not done."""
-    if _is_infra_only_session(cid):
+def gate4_santa(cid: str, n_files: int) -> tuple:
+    """Gate 4: Santa Method — SEMI-HARD when >= MIN_FILES_SANTA unique code files
+    were written and no review was dispatched."""
+    if _is_infra_only_session(cid) or n_files < MIN_FILES_SANTA:
         return True, "Gate 4 (santa)", ""
-
-    if code_writes < MIN_WRITES_SANTA:
+    if _load_json(STATE_DIR / f"{_safe_cid(cid)}.santa.json").get("fired", False):
         return True, "Gate 4 (santa)", ""
-
-    p = STATE_DIR / f"{_safe_cid(cid)}.santa.json"
-    st = _load_json(p)
-    fired = st.get("fired", False)
-
-    if fired:
-        return True, "Gate 4 (santa)", ""
-
     detail = (
-        f"{code_writes} code file(s) written. "
-        "Santa Method adversarial review not dispatched. "
+        f"{n_files} code file(s) written. Santa Method adversarial review not dispatched. "
         "Fix: run /santa-review (or dispatch the santa-reviewer agent — Agent tool, "
         "subagent_type \"santa-reviewer\") to run the BREAKER + SIMPLIFIER + VERIFIER "
         "passes on the diff and confirm real bugs before completing."
@@ -292,24 +350,16 @@ def gate4_santa(cid: str, code_writes: int) -> tuple[bool, str, str]:
 
 
 def _deadcode_done(cid: str) -> bool:
-    """True once a dead-code audit signal was recorded (jcodemunch find_dead_code etc.)."""
-    p = STATE_DIR / f"{_safe_cid(cid)}.deadcode.json"
-    return bool(_load_json(p).get("fired", False))
+    return bool(_load_json(STATE_DIR / f"{_safe_cid(cid)}.deadcode.json").get("fired", False))
 
 
-def gate5_dead_code(cid: str, code_writes: int) -> tuple[bool, str, str]:
-    """Gate 5: Dead-code audit — SEMI-HARD BLOCK when 2+ writes but no audit recorded."""
-    if code_writes < MIN_WRITES_DEAD:
+def gate5_dead_code(cid: str, n_files: int) -> tuple:
+    """Gate 5: Dead-code audit — SEMI-HARD when >= MIN_FILES_DEAD unique code files
+    were written and no audit was recorded."""
+    if n_files < MIN_FILES_DEAD or _is_infra_only_session(cid) or _deadcode_done(cid):
         return True, "Gate 5 (dead code)", ""
-
-    if _is_infra_only_session(cid):
-        return True, "Gate 5 (dead code)", ""
-
-    if _deadcode_done(cid):
-        return True, "Gate 5 (dead code)", ""
-
     detail = (
-        f"{code_writes} code file(s) written but no dead-code audit recorded. "
+        f"{n_files} code file(s) written but no dead-code audit recorded. "
         "Fix: dispatch the deadcode-reaper specialist (Agent tool, subagent_type "
         "\"deadcode-reaper\") or run /invoke-clean — or run "
         "mcp__jcodemunch__find_dead_code / get_dead_code_v2 on your changes yourself."
@@ -317,74 +367,48 @@ def gate5_dead_code(cid: str, code_writes: int) -> tuple[bool, str, str]:
     return False, "Gate 5 (dead code)", detail
 
 
-def gate6_decision_capture(cid: str, code_writes: int) -> tuple[bool, str, str]:
-    """Gate 6: Decision capture — advisory only, always PASS.
-
-    Fires when code_writes >= 3 AND none of these are true:
-      - An ADR / CODEX.md / ARCHITECTURE.md write was detected
-      - A memory MCP write was recorded (memory-write.json fired=true)
-
-    Emits an advisory followup_message only — never blocks.
-    """
-    if code_writes < 3:
+def gate6_decision_capture(cid: str, n_files: int) -> tuple:
+    """Gate 6: Decision capture — advisory only, always PASS."""
+    if n_files < 3 or _is_infra_only_session(cid):
         return True, "Gate 6 (decision capture)", ""
-
-    if _is_infra_only_session(cid):
-        return True, "Gate 6 (decision capture)", ""
-
     safe = _safe_cid(cid)
-
-    # Check: did any ADR / decision doc get written?
-    doc_path = STATE_DIR / f"{safe}.doc-enforcer.json"
-    doc_state = _load_json(doc_path)
-    code_files = doc_state.get("code_files", [])
-
-    _ADR_PATTERNS = (
-        "docs/adr/",
-        "adr/",
-        "ADR-",
-        "ARCHITECTURE.md",
-        "CODEX.md",
-        "decisions.md",
-        "DECISIONS.md",
-    )
-    adr_written = any(
-        any(pattern.lower() in str(f).lower() for pattern in _ADR_PATTERNS)
-        for f in code_files
-    )
-    if adr_written:
+    code_files = _load_json(STATE_DIR / f"{safe}.doc-enforcer.json").get("code_files", [])
+    _ADR_PATTERNS = ("docs/adr/", "adr/", "ADR-", "ARCHITECTURE.md", "CODEX.md",
+                     "decisions.md", "DECISIONS.md")
+    if any(any(p.lower() in str(f).lower() for p in _ADR_PATTERNS) for f in code_files):
         return True, "Gate 6 (decision capture)", ""
-
-    # Check: did a memory MCP write occur?
-    memory_path = STATE_DIR / f"{safe}.memory-write.json"
-    memory_state = _load_json(memory_path)
-    if memory_state.get("fired", False):
+    if _load_json(STATE_DIR / f"{safe}.memory-write.json").get("fired", False):
         return True, "Gate 6 (decision capture)", ""
-
-    # No decision record written — emit advisory
-    reminder = (
-        f"{code_writes} file(s) changed but no decision record written. "
+    return True, "Gate 6 (decision capture)", (
+        f"{n_files} file(s) changed but no decision record written. "
         "Consider: update CODEX.md with any new patterns or decisions, "
-        "or call `mcp__memory__add_observations` to persist key facts."
-    )
-    return True, "Gate 6 (decision capture)", reminder
+        "or call `mcp__memory__add_observations` to persist key facts.")
 
 
 # ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
+def _roots(payload: dict) -> list:
+    roots = [r for r in (payload.get("workspace_roots") or []) if isinstance(r, str) and r.strip()]
+    cwd = payload.get("cwd")
+    if isinstance(cwd, str) and cwd.strip() and cwd not in roots:
+        roots.append(cwd)
+    return roots
+
+
 def main() -> int:
     try:
-        raw = sys.stdin.read() or "{}"
-        payload = json.loads(raw)
+        payload = json.loads(sys.stdin.read() or "{}")
     except Exception:
         sys.stdout.write("{}")
         return 0
 
-    # Stop payloads arrive with status 'completed', 'stopped', 'interrupted', or
-    # (commonly) no status field at all. Only skip for genuinely non-stop states;
-    # the original `!= "completed"` silently disabled the gate on every normal stop.
+    # Already re-running after our own block → never chain-block.
+    if payload.get("stop_hook_active"):
+        sys.stdout.write("{}")
+        return 0
+
     _status = payload.get("status")
     if _status not in (None, "", "completed", "stopped", "interrupted"):
         sys.stdout.write("{}")
@@ -396,141 +420,71 @@ def main() -> int:
         return 0
 
     try:
-        code_writes = _code_writes(cid)
+        transcript = payload.get("transcript_path") or payload.get("transcript") or ""
+        turn_ts, last_prompt = (None, None)
+        if _turns is not None:
+            turn_ts, last_prompt = _turns.last_user_turn(transcript)
+        if last_prompt and CONSENT_RE.search(last_prompt):
+            sys.stdout.write("{}")  # the user said stop — the gate yields
+            return 0
+        turn_key = turn_ts.isoformat() if turn_ts else "?"
+
+        code_files = _code_files(cid)
+        n_files = len(code_files)
+        roots = _roots(payload)
         gate_state = _load_gate_state(cid)
 
-        # Run all gates
-        workspace_roots = payload.get("workspace_roots") or []
         results = [
-            gate1_tests(cid, code_writes),
-            gate2_docs(cid, workspace_roots),
-            gate3_security(cid),
-            gate4_santa(cid, code_writes),
-            gate5_dead_code(cid, code_writes),
-            gate6_decision_capture(cid, code_writes),
+            gate1_tests(cid, n_files),
+            gate2_docs(cid, roots),
+            gate3_security(cid, roots, turn_ts),
+            gate4_santa(cid, n_files),
+            gate5_dead_code(cid, n_files),
+            gate6_decision_capture(cid, n_files),
         ]
-
-        # Separate hard failures from advisory reminders
-        hard_failures = [(ok, label, detail) for ok, label, detail in results if not ok]
-        advisories    = [detail for ok, label, detail in results if ok and detail]
+        hard_failures = [(label, detail) for ok, label, detail in results if not ok]
+        advisories = [detail for ok, label, detail in results if ok and detail]
 
         if not hard_failures:
-            # All gates pass — reset override counter; emit pass advisories once per session
-            gate_state["deny_count"] = 0
-            gate_state["failed_gates"] = []
             out: dict = {}
             if advisories and not gate_state.get("pass_advisories_sent"):
-                reminder_text = "\n".join(f"- {a}" for a in advisories)
-                out = {
-                    "followup_message": (
-                        f"Completion gate: all checks passed.\n\n{reminder_text}"
-                    ),
-                }
+                out = {"systemMessage": "Completion gate: all checks passed.\n"
+                       + "\n".join(f"- {a}" for a in advisories)}
                 gate_state["pass_advisories_sent"] = True
+            gate_state.update({"turn_key": turn_key, "blocked_this_turn": False,
+                               "failed_gates": []})
             _save_gate_state(cid, gate_state)
             sys.stdout.write(json.dumps(out))
             return 0
 
-        # There are hard failures
-        failed_labels = [label for ok, label, detail in hard_failures]
-        deny_count = gate_state.get("deny_count", 0)
+        failed_labels = [label for label, _ in hard_failures]
 
-        if deny_count >= 1:
-            # C-07 fix: capture prior failed gates BEFORE overwriting with current run's failures
-            original_failed = set(gate_state.get("failed_gates", []))
-
-            gate_state["deny_count"] = deny_count + 1
+        # Second Stop in the SAME turn → allow, say what was forced past.
+        if gate_state.get("turn_key") == turn_key and gate_state.get("blocked_this_turn"):
             gate_state["failed_gates"] = failed_labels
+            gate_state["override_ts"] = datetime.now(timezone.utc).isoformat()
             _save_gate_state(cid, gate_state)
-
-            # Patched: re-evaluate which gates resolved before granting override
-            if deny_count == 1:
-                current_failed = set(failed_labels)
-                resolved = original_failed - current_failed
-                still_failing = original_failed & current_failed
-
-                # Record override audit trail in gate state (read by breadcrumb enrichment)
-                gate_state["override_ts"] = datetime.now(timezone.utc).isoformat()
-                gate_state["override_still_failing"] = sorted(still_failing)
-                gate_state["override_resolved"] = sorted(resolved)
-                # C-08 fix: persist override fields — prior _save_gate_state ran before these
-                # were assigned, so they were never written to disk without this second save.
-                _save_gate_state(cid, gate_state)
-
-                advisory_text = ""
-                if advisories:
-                    advisory_text = "\n" + "\n".join(f"- {a}" for a in advisories)
-
-                if still_failing:
-                    skipped = ", ".join(sorted(still_failing))
-                    resolved_str = (
-                        f" ({', '.join(sorted(resolved))} resolved)" if resolved else ""
-                    )
-                    msg = (
-                        f"Completion gate: override accepted — no issues resolved. "
-                        f"Forced past: [{skipped}]{resolved_str}. "
-                        f"Override logged in gate state.{advisory_text}"
-                    )
-                else:
-                    msg = (
-                        f"Completion gate: override accepted "
-                        f"(all originally failing gates now pass). "
-                        f"Originally failed: [{', '.join(sorted(original_failed))}]."
-                        f"{advisory_text}"
-                    )
-
-                sys.stdout.write(json.dumps({"followup_message": msg}))
-                return 0
-
-            # Attempt 3+ with unfixed failures — deny again (no silent allow)
-            lines: list[str] = ["[COMPLETION GATE: STILL BLOCKED]", "", "Failed gates:"]
-            for ok, label, detail in hard_failures:
-                lines.append(f"- {label}: {detail}")
-            lines.append("")
-            lines.append("Fix the issues above before completing.")
-            reason = "\n".join(lines)
-            out = {
-                "decision": "block",
-                "reason": reason,
-            }
-            sys.stdout.write(json.dumps(out))
+            sys.stdout.write(json.dumps({
+                "systemMessage": "Completion gate override: " + ", ".join(failed_labels)}))
             return 0
 
-        # First denial — build deny reason
-        lines: list[str] = ["[COMPLETION GATE: BLOCKED]", "", "Failed gates:"]
-        for ok, label, detail in hard_failures:
-            lines.append(f"- {label}: {detail}")
-
+        # First Stop this turn with failures → block once.
+        lines = ["[COMPLETION GATE: BLOCKED]", "", "Failed gates:"]
+        lines += [f"- {label}: {detail}" for label, detail in hard_failures]
         if advisories:
-            lines.append("")
-            lines.append("Advisory reminders:")
-            for a in advisories:
-                lines.append(f"- {a}")
-
-        lines.append("")
-        lines.append(
-            "Fix the issues listed above, then try completing again. "
-            "The second attempt will be allowed with a warning."
-        )
-
-        reason = "\n".join(lines)
-
-        # Update state
-        gate_state["deny_count"] = 1
-        gate_state["failed_gates"] = failed_labels
-        gate_state["last_deny_time"] = datetime.now(timezone.utc).isoformat()
+            lines += ["", "Advisory reminders:"] + [f"- {a}" for a in advisories]
+        lines += ["", "Fix the issues listed above, then try completing again. "
+                  "This gate blocks at most once per turn; the next attempt is allowed "
+                  "with a note of what was skipped."]
+        gate_state.update({"turn_key": turn_key, "blocked_this_turn": True,
+                           "failed_gates": failed_labels,
+                           "last_deny_time": datetime.now(timezone.utc).isoformat()})
         _save_gate_state(cid, gate_state)
-
-        out = {
-            "decision": "block",
-            "reason": reason,
-        }
-        sys.stdout.write(json.dumps(out))
+        sys.stdout.write(json.dumps({"decision": "block", "reason": "\n".join(lines)}))
         return 0
 
     except Exception:
-        # Fail open — never block on an exception
-        sys.stdout.write("{}")
+        sys.stdout.write("{}")  # fail open — never block on an exception
         return 0
 
 

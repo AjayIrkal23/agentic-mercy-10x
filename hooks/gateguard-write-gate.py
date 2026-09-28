@@ -51,14 +51,15 @@ def _should_skip(file_path: str) -> bool:
 
 
 def _find_project_root(file_path: str) -> str:
-    current = os.path.dirname(file_path)
-    for _ in range(15):
-        if os.path.exists(os.path.join(current, ".git")):
-            return current
-        parent = os.path.dirname(current)
-        if parent == current:
-            break
-        current = parent
+    """HOME-guarded git root (lib.code_files); falls back to the file's own dir so a
+    ~-rooted write never greps the whole home tree (A03-B17)."""
+    try:
+        from lib.code_files import git_root, is_home
+        root = git_root(file_path)
+        if root is not None and not is_home(root):
+            return str(root)
+    except Exception:
+        pass
     return os.path.dirname(file_path)
 
 
@@ -281,8 +282,9 @@ def _transcript_has_token(transcript_path: str) -> bool:
     if not transcript_path or not os.path.isfile(transcript_path):
         return False
     try:
+        from collections import deque
         with open(transcript_path, encoding="utf-8", errors="replace") as f:
-            lines = f.readlines()[-_TRANSCRIPT_SCAN_LINES:]
+            lines = list(deque(f, maxlen=_TRANSCRIPT_SCAN_LINES))  # tail only, O(tail) memory
     except OSError:
         return False
     for line in reversed(lines):

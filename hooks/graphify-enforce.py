@@ -56,6 +56,43 @@ def _save_state(cid: str, state: dict):
     _state_path(cid).write_text(json.dumps(state))
 
 
+# Pre-tool reminders per session (the prompt-mode cap never applied here — A03-B21).
+PRE_TOOL_MAX_REMINDERS = 3
+# Bash broad-pattern hits need an explore keyword OTHER than these (every
+# `find .` contains "find"; "count" matched `wc -l`).
+_BASH_KEYWORD_EXCLUDE = {"find", "count"}
+_STALE_CACHE_TTL_S = 600
+
+
+def _session_id(hook_input: dict) -> str:
+    cid = str(hook_input.get("session_id") or hook_input.get("conversation_id") or "")
+    return "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
+
+
+def _graph_stale_cached(cid: str, root, graph) -> bool:
+    """Per-session cache of the `git log` staleness probe (was one subprocess per hit)."""
+    if not cid:
+        return _graph_stale(root, graph)
+    state = _load_state(cid)
+    cache = state.get("stale_cache") or {}
+    try:
+        mtime = graph.stat().st_mtime
+    except OSError:
+        mtime = 0
+    import time as _time
+    now = _time.time()
+    if (cache.get("graph_mtime") == mtime
+            and now - float(cache.get("checked_at") or 0) < _STALE_CACHE_TTL_S):
+        return bool(cache.get("stale"))
+    stale = _graph_stale(root, graph)
+    state["stale_cache"] = {"graph_mtime": mtime, "checked_at": now, "stale": stale}
+    try:
+        _save_state(cid, state)
+    except Exception:
+        pass
+    return stale
+
+
 # --------------------------------------------------------------------------- #
 # Graph resolution + freshness (open-repo scoped, git-root aware)
 # --------------------------------------------------------------------------- #
@@ -94,9 +131,9 @@ def _graph_stale(root: Path, graph: Path) -> bool:
         return False
 
 
-def _reminder(root: Path, graph: Path, *, compact: bool = False) -> str:
+def _reminder(root: Path, graph: Path, *, compact: bool = False, cid: str = "") -> str:
     lines = ["[Graphify] Architecture/dependency graph is available for this repo."]
-    if _graph_stale(root, graph):
+    if _graph_stale_cached(cid, root, graph):
         lines.append(f"  ⚠️ Graph looks STALE (older than the latest commit) — refresh: `graphify update {root}`")
     lines.append("  Use graphify BEFORE broad exploration / Explore agents:")
     lines.append('    MCP: mcp__graphify__query_graph "<q>" · get_neighbors "<node>" · god_nodes · shortest_path "<A>" "<B>" · graph_stats')
@@ -189,6 +226,22 @@ def handle_pre_tool_use():
     tool_name = compat_tool_name(hook_input)
     tool_input = hook_input.get("tool_input", {})
 
+    cid = _session_id(hook_input)
+    state = _load_state(cid) if cid else {}
+    if cid and int(state.get("pre_tool_reminders", 0)) >= PRE_TOOL_MAX_REMINDERS:
+        json.dump({"continue": True}, sys.stdout)
+        return
+
+    def _fire():
+        if cid:
+            st = _load_state(cid)
+            st["pre_tool_reminders"] = int(st.get("pre_tool_reminders", 0)) + 1
+            try:
+                _save_state(cid, st)
+            except Exception:
+                pass
+        _emit(_reminder(root, graph, compact=True, cid=cid), "PreToolUse")
+
     if is_agent_tool(tool_name):
         subagent_type = tool_input.get("subagent_type", "")
         prompt = tool_input.get("prompt", "")
@@ -199,7 +252,7 @@ def handle_pre_tool_use():
         all_keywords = config["arch_keywords"] + config["explore_keywords"]
 
         if subagent_type in ("Explore", "explore") or _has_keywords(combined, all_keywords):
-            _emit(_reminder(root, graph, compact=True), "PreToolUse")
+            _fire()
             return
 
     elif is_shell_tool(tool_name):
@@ -229,8 +282,10 @@ def handle_pre_tool_use():
         ]
         if any(re.search(p, command) for p in broad_patterns):
             config = _load_config()
-            if _has_keywords(command, config.get("explore_keywords", [])):
-                _emit(_reminder(root, graph, compact=True), "PreToolUse")
+            keywords = [k for k in config.get("explore_keywords", [])
+                        if k not in _BASH_KEYWORD_EXCLUDE]
+            if _has_keywords(command, keywords):
+                _fire()
                 return
 
     json.dump({"continue": True}, sys.stdout)

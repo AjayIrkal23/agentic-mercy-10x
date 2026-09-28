@@ -1,19 +1,21 @@
 {
+  "_comment": "Stack-neutral surface segments. A repo that needs project-specific paths overrides this file (see docs/project-templates/go-udp-rules.md section 2).",
   "frontend_path_segments": [
-    "UDP_PLATFORM/client",
-    "client/"
+    "client/",
+    "frontend/",
+    "apps/web/"
   ],
   "backend_path_segments": [
-    "UDP_PLATFORM/server",
-    "server/internal/",
-    "server/cmd/",
-    "server/pkg/"
+    "server/",
+    "backend/",
+    "internal/",
+    "cmd/",
+    "pkg/"
   ],
   "documentation_path_segments": [
+    "docs/",
     "server_docs/",
     "frontend_docs/",
-    "PROJECT_LINKAGES.md",
-    "UDP_PLATFORM/server/server_docs",
-    "UDP_PLATFORM/client/frontend_docs"
+    "PROJECT_LINKAGES.md"
   ]
 }

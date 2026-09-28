@@ -3,18 +3,25 @@
 
 Single source of truth for *creating* and *syncing* the dox documentation tree.
 Used by:
-  - dox-tree-guard.py   (SessionStart full sweep + prompt-path root stub)
+  - index-lifecycle.py   (SessionStart `dox` surface → `dox_engine.py sweep <repo>`)
   - dox-child-scaffold.py (PostToolUse: a write happened in dir X -> document X)
-  - the `dox_engine.py sweep <repo>` CLI (manual / agent-driven full sweep)
+  - the `dox_engine.py sweep|plan <repo>` CLI (manual / agent-driven full sweep)
+
+Scope (2026-09-27, D11): GIT REPOS ONLY. The root is resolved through the
+HOME-guarded `lib.code_files.git_root`; `$HOME`, non-repos and `exemptRepos`
+are refused. `documentAllDirs` defaults to FALSE (>= `significantDirThreshold`
+code files); a repo opts in via `<root>/.claude/dox.json` overrides.
 
 What it guarantees (the user contract):
-  * EVERY non-skipped directory in a repo carries a local `CLAUDE.md` (the real
-    doc) AND an `AGENTS.md` (a 1-line cross-tool pointer). `documentAllDirs` (default
-    true) drops the old ">=3 code files" significance gate so coverage is end-to-end.
-  * The ROOT `CLAUDE.md` carries an auto-synced index block listing every child doc,
-    nested by depth. The block lives between `<!-- dox:index:start -->` and
+  * Every documentable directory carries a local `CLAUDE.md` (the real doc) AND an
+    `AGENTS.md` (a 1-line cross-tool pointer).
+  * The ROOT `CLAUDE.md` carries an auto-synced index block listing the child docs
+    that have been fleshed out (template-only stubs are NOT indexed), capped at
+    `INDEX_MAX_LINES`. The block lives between `<!-- dox:index:start -->` and
     `<!-- dox:index:end -->` markers and is rebuilt from what is actually on disk.
   * The ROOT `AGENTS.md` points at that index.
+  * `sweep()` writes the `<root>/.claude/dox/data/.doxinit.json` sidecar that
+    index-lifecycle probes, so a swept repo is never re-swept on every session.
 
 Invariants:
   * Idempotent — a second sweep with no structural change writes nothing.
@@ -32,6 +39,18 @@ import os
 import sys
 from pathlib import Path
 
+_HOOKS = Path(__file__).resolve().parent
+if str(_HOOKS) not in sys.path:
+    sys.path.insert(0, str(_HOOKS))
+try:
+    from lib.code_files import git_root, is_home  # noqa: E402
+except Exception:  # pragma: no cover — lib missing → refuse everything (fail closed = no writes)
+    def git_root(path):  # type: ignore
+        return None
+
+    def is_home(root):  # type: ignore
+        return True
+
 # --------------------------------------------------------------------------- #
 # Constants
 # --------------------------------------------------------------------------- #
@@ -48,15 +67,26 @@ LEGACY_INDEX_PREFIX = "<!-- dox:index"  # old single-line marker (pre-sync)
 
 REFS_DIR = Path.home() / ".claude" / "skills" / "dox-doc-tree" / "references"
 
+# Sidecar written by sweep() and probed by index-lifecycle's `dox` surface.
+DATA_REL = Path(".claude") / "dox" / "data"
+SIDECAR_NAME = ".doxinit.json"
+SCHEMA_VERSION = 3
+REPO_OVERRIDE_REL = Path(".claude") / "dox.json"   # per-repo cfg overrides
+
+# The child template's untouched placeholder — a CLAUDE.md still carrying it has
+# never been fleshed out and is NOT listed in the root index.
+TEMPLATE_PLACEHOLDER = "<One or two lines"
+INDEX_MAX_LINES = 60
+
 DEFAULTS = {
     "enabled": True,
     "exemptRepos": [],
-    # New (end-to-end) behaviour ------------------------------------------------
-    "documentAllDirs": True,    # document EVERY non-skipped dir, not just "significant" ones
+    # Behaviour --------------------------------------------------------------------
+    "documentAllDirs": False,   # False: only dirs with >= significantDirThreshold code files
     "autoCreateChildren": True,  # session sweep auto-creates missing child docs
     "syncRootIndex": True,       # keep the root CLAUDE.md index block in sync
     "sweepMaxDepth": 12,         # how deep to descend (root = depth 0)
-    "maxSweepDirs": 500,         # safety cap on how many dirs one sweep documents
+    "maxSweepDirs": 300,         # safety cap on how many dirs one sweep documents
     # Absolute path prefixes (~ ok) that NEVER get dox docs, at any depth.
     # Used for roster-scanned dirs (~/.claude/{agents,commands,skills,plugins})
     # where stray CLAUDE.md/AGENTS.md files pollute Claude Code's skill/agent
@@ -81,24 +111,72 @@ SKIP_DIRS = {
     ".vscode", ".gradle", ".dart_tool", "Pods", ".terraform",
     "REFFER_ONLY_UDP_CODE_OLD",
     "attic", "backups",
+    # vendor / SDK / runtime trees (2026-09-27 — the ~/Android/Sdk sweep)
+    "Android", "Sdk", "res", "assets", "jniLibs", "snap", "Trash",
+    "site-packages", ".doc-index", "third_party", "external", "generated",
+    # ~/.claude runtime dirs — ephemeral, never documentation
+    "teams", "uploads", "shell-snapshots", "state", "telemetry", "session-env",
+    "rules",  # dox never writes into rules/ (native rules loader would ingest it)
+    ".cache",
 }
 
 
 # --------------------------------------------------------------------------- #
 # Config
 # --------------------------------------------------------------------------- #
-def load_cfg(config_path: "str | Path | None" = None) -> dict:
+def _merge_json(cfg: dict, path: "Path | None") -> None:
+    try:
+        if path and path.is_file():
+            user = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(user, dict):
+                cfg.update(user)
+    except Exception:
+        pass
+
+
+def load_cfg(config_path: "str | Path | None" = None, root: "Path | None" = None) -> dict:
+    """DEFAULTS ← global config file ← `<root>/.claude/dox.json` (per-repo opt-in)."""
     cfg = dict(DEFAULTS)
     if config_path:
+        _merge_json(cfg, Path(config_path))
+    if root is not None:
         try:
-            p = Path(config_path)
-            if p.is_file():
-                user = json.loads(p.read_text(encoding="utf-8"))
-                if isinstance(user, dict):
-                    cfg.update(user)
+            _merge_json(cfg, Path(root) / REPO_OVERRIDE_REL)
         except Exception:
             pass
     return cfg
+
+
+def is_exempt(root: "Path | None", cfg: dict) -> bool:
+    """True when `root` is listed in cfg['exemptRepos'] (~ ok). Never raises."""
+    if root is None:
+        return False
+    try:
+        rp = Path(root).resolve()
+    except Exception:
+        return False
+    for ex in (cfg.get("exemptRepos") or []):
+        try:
+            if rp == Path(os.path.expanduser(str(ex))).resolve():
+                return True
+        except Exception:
+            continue
+    return False
+
+
+def resolve_root(target: "str | Path", cfg: "dict | None" = None) -> "Path | None":
+    """The git root that owns `target`, or None when dox must not act there:
+    not a git repo, `$HOME` itself, or an exempt repo."""
+    root = git_root(target)
+    if root is None or is_home(root):
+        return None
+    # ~/.claude is agent infra, never a dox root — hard-coded so a caller that passes
+    # DEFAULTS (exemptRepos=[]) instead of the config file cannot sweep it.
+    if is_exempt(root, {"exemptRepos": ["~/.claude"]}):
+        return None
+    if cfg is not None and is_exempt(root, cfg):
+        return None
+    return root
 
 
 def _exts(cfg: dict) -> "set[str]":
@@ -150,7 +228,7 @@ def collect(root: Path, cfg: dict) -> dict:
     """
     root = root.resolve()
     exts = _exts(cfg)
-    document_all = bool(cfg.get("documentAllDirs", True))
+    document_all = bool(cfg.get("documentAllDirs", False))
     threshold = int(cfg.get("significantDirThreshold") or 3)
     max_depth = int(cfg.get("sweepMaxDepth") or 12)
     max_dirs = int(cfg.get("maxSweepDirs") or 500)
@@ -276,19 +354,46 @@ def root_pointer_text(cfg: dict) -> str:
 # --------------------------------------------------------------------------- #
 # Index rendering / sync
 # --------------------------------------------------------------------------- #
+def _is_template_only(doc: Path) -> bool:
+    """A child CLAUDE.md nobody has fleshed out (still carries the placeholder)."""
+    try:
+        return TEMPLATE_PLACEHOLDER in doc.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return True
+
+
+def curated_children(root: Path, dirs: "list[str]") -> "list[str]":
+    """Children worth indexing: a CLAUDE.md exists, it is NOT the untouched
+    template, and no path segment is a SKIP_DIR."""
+    out: "list[str]" = []
+    for rel in sorted(dirs):
+        if any(_is_skip_dir(part) for part in rel.split("/")):
+            continue
+        doc = root / rel / ROOT_DOC
+        if not doc.is_file() or _is_template_only(doc):
+            continue
+        out.append(rel)
+    return out
+
+
 def render_index(dirs: "list[str]") -> str:
-    """Nested markdown list of every documented dir, indented by depth."""
+    """Nested markdown list of the indexed dirs, indented by depth, capped at
+    INDEX_MAX_LINES entries (a 500-line index is worse than none)."""
     lines = [
         INDEX_START,
         "<!-- dox auto-syncs this block from the tree on disk; edit directories, not these lines -->",
     ]
+    dirs = sorted(dirs)
     if not dirs:
         lines.append("_No child directories documented yet._")
     else:
-        for rel in sorted(dirs):
+        for rel in dirs[:INDEX_MAX_LINES]:
             depth = rel.count("/")
             indent = "  " * depth
             lines.append(f"{indent}- [`{rel}/`]({rel}/{ROOT_DOC})")
+        extra = len(dirs) - INDEX_MAX_LINES
+        if extra > 0:
+            lines.append(f"_… +{extra} more documented dir(s) not listed (cap {INDEX_MAX_LINES})._")
     lines.append(INDEX_END)
     return "\n".join(lines)
 
@@ -381,7 +486,7 @@ def sync_root_index(root: Path, dirs: "list[str]", cfg: dict) -> bool:
         old = root_doc.read_text(encoding="utf-8")
     except OSError:
         return False
-    block = render_index(dirs)
+    block = render_index(curated_children(root, dirs))
     new = _splice_index(old, block)
     if new == old:
         return False
@@ -395,10 +500,30 @@ def sync_root_index(root: Path, dirs: "list[str]", cfg: dict) -> bool:
 # --------------------------------------------------------------------------- #
 # Orchestration
 # --------------------------------------------------------------------------- #
+def write_sidecar(root: Path, fp: str, collected: dict) -> bool:
+    """Persist `<root>/.claude/dox/data/.doxinit.json` (index-lifecycle's probe
+    target). Moved here from the retired dox-tree-guard.py. Never raises."""
+    try:
+        data = root / DATA_REL
+        data.mkdir(parents=True, exist_ok=True)
+        (data / SIDECAR_NAME).write_text(json.dumps({
+            "autoManaged": True,
+            "version": SCHEMA_VERSION,
+            "fingerprint": fp,
+            "documentedDirs": collected.get("dirs", []),
+            "missingChildren": collected.get("missing", []),
+        }, indent=2) + "\n", encoding="utf-8")
+        return True
+    except OSError:
+        return False
+
+
 def sweep(root: Path, cfg: dict, create: bool = True) -> dict:
-    """Full end-to-end pass: root + every dir gets docs, root index synced.
+    """Full end-to-end pass: root + every documentable dir gets docs, root index
+    synced, sidecar written.
 
     create=False -> dry run (report only; index reflects existing docs).
+    Refuses (empty summary, `refused` set) for `$HOME`, non-repos, exempt repos.
     """
     root = root.resolve()
     summary = {
@@ -408,7 +533,13 @@ def sweep(root: Path, cfg: dict, create: bool = True) -> dict:
         "index_synced": False,
         "total_dirs": 0,
         "truncated": False,
+        "refused": "",
     }
+    if resolve_root(root, cfg) != root:
+        summary["refused"] = "not a git repo / HOME / exempt"
+        summary["collected"] = {"dirs": [], "missing": [], "has_code": False, "truncated": False}
+        summary["fingerprint"] = ""
+        return summary
 
     rootinfo = ensure_root(root, cfg) if create else {"created": False}
     summary["root_created"] = bool(rootinfo.get("created"))
@@ -432,6 +563,8 @@ def sweep(root: Path, cfg: dict, create: bool = True) -> dict:
     summary["index_synced"] = sync_root_index(root, indexed, cfg)
     summary["fingerprint"] = fingerprint(collected)
     summary["collected"] = collected
+    if create:
+        summary["sidecar_written"] = write_sidecar(root, summary["fingerprint"], collected)
     return summary
 
 
@@ -439,6 +572,8 @@ def ensure_dir_documented(root: Path, target_dir: Path, cfg: dict) -> "list[str]
     """Document a single directory (used by the PostToolUse child-scaffold path),
     then re-sync the root index. Returns created basenames for `target_dir`."""
     root = root.resolve()
+    if resolve_root(root, cfg) != root:
+        return []
     try:
         rel = target_dir.resolve().relative_to(root).as_posix()
     except Exception:
@@ -449,6 +584,13 @@ def ensure_dir_documented(root: Path, target_dir: Path, cfg: dict) -> "list[str]
         return []
     if _under_skip_path(target_dir, _skip_paths(cfg)):
         return []
+    if not cfg.get("documentAllDirs", False):
+        try:
+            names = [f.name for f in target_dir.iterdir() if f.is_file()]
+        except OSError:
+            return []
+        if _count_code_files(str(target_dir), names, _exts(cfg)) < int(cfg.get("significantDirThreshold") or 3):
+            return []
     made = ensure_child(root, rel, cfg)
     if made and cfg.get("syncRootIndex", True):
         collected = collect(root, cfg)
@@ -460,31 +602,28 @@ def ensure_dir_documented(root: Path, target_dir: Path, cfg: dict) -> "list[str]
 # --------------------------------------------------------------------------- #
 # CLI
 # --------------------------------------------------------------------------- #
-def _git_root(start: Path) -> "Path | None":
-    cur = start if start.is_dir() else start.parent
-    for _ in range(30):
-        if (cur / ".git").exists():
-            return cur
-        if cur.parent == cur:
-            break
-        cur = cur.parent
-    return None
-
-
 def _cli(argv: "list[str]") -> int:
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(
-            "dox_engine — scaffold & sync the CLAUDE.md/AGENTS.md tree\n\n"
+            "dox_engine — scaffold & sync the CLAUDE.md/AGENTS.md tree (git repos only)\n\n"
             "Usage:\n"
-            "  dox_engine.py sweep [path]   create docs in every dir + sync root index\n"
+            "  dox_engine.py sweep [path]   create docs in documentable dirs + sync root index\n"
             "  dox_engine.py plan  [path]   dry run: list dirs that WOULD be documented\n"
         )
         return 0
 
     cmd = argv[0]
+    if cmd not in ("plan", "sweep"):
+        print(f"unknown command: {cmd}", file=sys.stderr)
+        return 2
     target = Path(argv[1]).resolve() if len(argv) > 1 else Path(os.getcwd())
-    root = _git_root(target) or target
-    cfg = load_cfg(Path(__file__).resolve().parent / "dox-tree-guard.config.json")
+    global_cfg = load_cfg(Path(__file__).resolve().parent / "dox-tree-guard.config.json")
+    root = resolve_root(target, global_cfg)
+    if root is None:
+        print(f"refusing: `{target}` is not inside a git repo, is HOME, or is an exempt repo",
+              file=sys.stderr)
+        return 2
+    cfg = load_cfg(Path(__file__).resolve().parent / "dox-tree-guard.config.json", root=root)
 
     if cmd == "plan":
         collected = collect(root, cfg)
@@ -508,9 +647,7 @@ def _cli(argv: "list[str]") -> int:
             print(f"  ⚠ truncated at maxSweepDirs={cfg.get('maxSweepDirs')}; "
                   "raise the cap to cover the rest")
         return 0
-
-    print(f"unknown command: {cmd}", file=sys.stderr)
-    return 2
+    return 2  # unreachable (cmd validated above)
 
 
 if __name__ == "__main__":

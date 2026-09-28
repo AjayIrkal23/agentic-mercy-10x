@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """tdd-guard-gate.py — run tdd-guard in WARN mode, scoped to the project.
 
-Invoked by tdd-guard-launcher.sh (only for active projects). Reads the hook
-payload on stdin and:
+Invoked by tdd_guard_launcher.py (only for active git projects; never HOME).
+Time-boxed to 7 s — the result is advisory, so a slow validator is dropped, not
+waited for. Reads the hook payload on stdin and:
 
   1. SCOPE — if the edited file is OUTSIDE the active project root, allow it
      silently (tdd-guard governs the project's own code, not ~/.claude infra,
@@ -104,7 +105,7 @@ def main() -> int:
     # 2. Run tdd-guard.
     try:
         proc = subprocess.run(
-            ["tdd-guard"], input=raw, capture_output=True, text=True, timeout=55
+            ["tdd-guard"], input=raw, capture_output=True, text=True, timeout=7
         )
         out, rc = proc.stdout, proc.returncode
     except Exception:

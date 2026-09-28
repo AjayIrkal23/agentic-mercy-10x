@@ -27,28 +27,22 @@ from tool_compat import is_write_tool, tool_name
 SCRIPT_DIR = Path(__file__).resolve().parent
 STATE_DIR = SCRIPT_DIR / ".state"
 
-# After this many code writes, trigger the cleanup reminder (matches mandatory protocol Phase 4b).
-# Lowered 8->3 so typical surgical sessions (2-5 files) still get the wrap-up nudge.
-WRITES_THRESHOLD = 8
-
-SKIP_EXTENSIONS = (
-    ".md", ".mdx", ".json", ".yaml", ".yml", ".toml", ".env",
-    ".lock", ".css", ".svg", ".png", ".jpg", ".gif",
-)
-
-
-def _is_code_file(file_path: str) -> bool:
-    if not file_path:
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+try:
+    from lib.code_files import is_code_file as _is_code_file  # noqa: E402
+except Exception:  # pragma: no cover - fail-open (count nothing)
+    def _is_code_file(path):  # type: ignore
         return False
-    for ext in SKIP_EXTENSIONS:
-        if file_path.endswith(ext):
-            return False
-    return True
+
+# After this many code writes, trigger the one-time wrap-up reminder (Phase 4b).
+# The Stop gates read `code_files` (unique paths), NOT this counter.
+WRITES_THRESHOLD = 8
 
 
 def _get_state(cid: str) -> dict:
     if not cid:
-        return {"code_writes": 0, "fired": False, "code_paths": []}
+        return {"code_writes": 0, "fired": False, "code_files": []}
     safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
     state_file = STATE_DIR / f"{safe}.desloppify.json"
     if state_file.is_file():
@@ -56,7 +50,7 @@ def _get_state(cid: str) -> dict:
             return json.loads(state_file.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, OSError):
             pass
-    return {"code_writes": 0, "fired": False, "code_paths": []}
+    return {"code_writes": 0, "fired": False, "code_files": []}
 
 
 def _save_state(cid: str, state: dict) -> None:
@@ -93,13 +87,15 @@ def main() -> int:
 
     state = _get_state(cid)
 
-    # Always count code writes — even after the reminder fired — so the completion
-    # gate's thresholds (santa/dead-code) see an accurate count.
+    # Always record — even after the reminder fired — so the completion gate's
+    # thresholds (santa/dead-code) see the UNIQUE code files touched this session.
     state["code_writes"] = state.get("code_writes", 0) + 1
-    paths = state.get("code_paths") or []
-    if file_path and file_path not in paths:
-        paths.append(file_path.replace("\\", "/"))
-    state["code_paths"] = paths[-50:]
+    files = state.get("code_files") or state.get("code_paths") or []
+    norm = file_path.replace("\\", "/")
+    if norm not in files:
+        files.append(norm)
+    state["code_files"] = files[-500:]
+    state.pop("code_paths", None)  # legacy key (renamed 2026-09-27)
     writes = state["code_writes"]
 
     if state.get("fired"):

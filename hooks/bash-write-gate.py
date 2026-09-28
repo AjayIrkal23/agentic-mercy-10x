@@ -321,14 +321,15 @@ def _stem_is_short(file_path: str) -> bool:
 # ---------------------------------------------------------------------------
 
 def _find_project_root(file_path: str) -> str:
-    current = os.path.dirname(os.path.abspath(file_path))
-    for _ in range(15):
-        if os.path.exists(os.path.join(current, ".git")):
-            return current
-        parent = os.path.dirname(current)
-        if parent == current:
-            break
-        current = parent
+    """HOME-guarded git root (lib.code_files); falls back to the file's own dir so a
+    ~-rooted target never greps the whole home tree."""
+    try:
+        from lib.code_files import git_root, is_home
+        root = git_root(file_path)
+        if root is not None and not is_home(root):
+            return str(root)
+    except Exception:
+        pass
     return os.path.dirname(os.path.abspath(file_path))
 
 

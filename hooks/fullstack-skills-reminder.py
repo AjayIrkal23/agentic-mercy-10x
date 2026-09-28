@@ -4,16 +4,28 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import sys
-import time
 from pathlib import Path
 
-# Smart router — selects 3 ranked skills instead of dumping all 20/15.
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+# Alias -> canonical resolution (alias stub skills no longer exist on disk).
+try:
+    from lib.skill_aliases import canonical as _canonical, collapse as _collapse
+except Exception:  # noqa: BLE001 — fail open: identity mapping
+    def _canonical(name: str) -> str:  # type: ignore[misc]
+        return name
+
+    def _collapse(names):  # type: ignore[misc]
+        return list(dict.fromkeys(names))
+
+# Smart router — selects 3 ranked skills instead of dumping the whole list.
 # Falls back gracefully if skill_router.py is missing or broken.
 try:
     import importlib.util as _ilu
-    _sr_path = Path(__file__).resolve().parent / "skill_router.py"
+    _sr_path = SCRIPT_DIR / "skill_router.py"
     _sr_spec = _ilu.spec_from_file_location("skill_router", _sr_path)
     _sr_mod = _ilu.module_from_spec(_sr_spec)  # type: ignore[arg-type]
     _sr_spec.loader.exec_module(_sr_mod)  # type: ignore[union-attr]
@@ -25,139 +37,98 @@ except Exception:
     _select_skills = None  # type: ignore[assignment]
     _format_compact = None  # type: ignore[assignment]
 
+# Canonical baseline sets (no aliases; every name is a real skills/<name>/SKILL.md).
+# Consumed here (manifest/telemetry), by gen-agent-skill-blocks.py (agent `skills:`
+# frontmatter) and by the weight updater (never weighted below baseline).
 FRONTEND_SKILLS = [
-    "agent-development",
-    "api-contract-standards",
-    "dead-code-and-change-audit",
-    "debug-investigation",
-    "domain-scaffold-patterns",
-    "frontend-api-standards",
-    "frontend-code-review",
-    "frontend-response-handling",
-    "frontend-server-data-patterns",
     "frontend-standards-always-follow",
     "frontend-structure-standards",
-    "project-reference-linkage",
-    "project-structure-map",
+    "frontend-response-handling",
+    "frontend-server-data-patterns",
     "react-hooks-patterns",
-    "scaffold-standards",
     "tailwind-design-system",
-    "tool-and-doc-selection",
-    "webapp-testing",
-    "architect-system-design",
-    "mcp-usage-standards",
-    "owasp-security",
-    "doubt-driven-development",
-    "iterative-retrieval",
-    "verification-loop",
-    # Extended frontend skills
+    "shadcn",
+    "motion-dev",
+    "design-taste-frontend",
     "frontend-ui-engineering",
     "vite-react-best-practices",
-    "browser-testing-with-devtools",
-    # Asset generation — Higgsfield (mandatory for all image/video/3D/audio assets)
+    "webapp-testing",
+    "api-contract-standards",
+    "scaffold-standards",
     "higgsfield-generate",
+    "owasp-security",
+    "architect-system-design",
+    "codebase-intel-first",
+    "project-reference-linkage",
+    "dead-code-and-change-audit",
+    "debug-investigation",
+    "doubt-driven-development",
+    "verification-loop",
+    "tool-and-doc-selection",
+    "mcp-usage-standards",
 ]
 
 BACKEND_SKILLS = [
+    "backend-standards-always-follow",
     "backend-api-standards",
     "api-contract-standards",
-    "backend-code-review",
+    "service-layer-standards",
     "backend-error-handling",
     "backend-performance-standards",
-    "backend-standards-always-follow",
-    "dead-code-and-change-audit",
-    "debug-investigation",
-    "domain-scaffold-patterns",
-    "project-reference-linkage",
-    "project-structure-map",
     "scaffold-standards",
-    "service-layer-standards",
-    "tool-and-doc-selection",
-    "architect-system-design",
-    "mcp-usage-standards",
-    "owasp-security",
-    "doubt-driven-development",
-    "forensic-complexity-trends",
-    "forensic-debt-quantification",
-    "eval-harness",
-    "source-driven-development",
-    # Extended backend skills
     "golang-patterns",
     "golang-testing",
     "postgres-patterns",
-    "api-and-interface-design",
-    "security-and-hardening",
+    "owasp-security",
+    "code-review-and-quality",
+    "tech-debt-audit",
+    "architect-system-design",
+    "codebase-intel-first",
+    "project-reference-linkage",
+    "dead-code-and-change-audit",
+    "debug-investigation",
+    "doubt-driven-development",
+    "source-driven-development",
+    "eval-harness",
+    "tool-and-doc-selection",
+    "mcp-usage-standards",
 ]
 
-# Matt Pocock engineering bundle — https://github.com/mattpocock/skills/tree/main/skills/engineering
-# Order: daily-driver flow (diagnose/grill/intake/architecture/setup → implementation → backlog)
-ENGINEERING_SKILLS = [
-    "diagnose",
-    "grill-with-docs",
-    "triage",
-    "improve-codebase-architecture",
-    "setup-matt-pocock-skills",
-    "tdd",
-    "to-issues",
-    "to-prd",
-    "zoom-out",
-]
-
-# ENGINEERING_EXTENDED: quality / shipping / workflow — appended selectively in _post() and _stop()
-QUALITY_SKILLS = [
+# Quality / shipping one-liners appended at Stop.
+QUALITY_SKILLS = _collapse([
     "performance-optimization",
-    "security-and-hardening",
+    "owasp-security",
     "code-simplification",
-    "debugging-and-error-recovery",
-]
+    "debug-investigation",
+])
 
-SHIPPING_SKILLS = [
+SHIPPING_SKILLS = _collapse([
     "ci-cd-and-automation",
     "git-workflow-and-versioning",
     "shipping-and-launch",
     "deprecation-and-migration",
-    "documentation-and-adrs",
+    "update-docs",
     "fix-lint-format",
-]
+])
 
-WORKFLOW_SKILLS = [
-    "workflow-orchestrator",
-    "planning-and-task-breakdown",
-    "context-engineering",
-    "code-execution-standard",
-    "spec-driven-development",
-    "incremental-implementation",
-    "codebase-start-point-guide",
-]
-
-# Segments used to detect context for ENGINEERING_EXTENDED one-liner
+# Segments used to detect context for the extended one-liner
 _AUTH_SEGMENTS = ["auth", "middleware", "session", "cookie", "guard", "jwt", "token"]
 _GO_SEGMENTS = [".go", "internal/", "cmd/", "pkg/", "server/"]
 _TEST_SEGMENTS = ["_test.go", ".test.", ".spec.", "__tests__", "test_"]
 
-DEFAULT_FE = ["UDP_PLATFORM/client", "client/", "frontend/", "apps/web"]
-DEFAULT_BE = [
-    "UDP_PLATFORM/server",
-    "server/",
-    "backend/",
-    "api/",
-    "internal/",
-    "cmd/",
-    "pkg/",
-]
-DEFAULT_DOC = [
-    "server_docs/",
-    "frontend_docs/",
-    "PROJECT_LINKAGES.md",
-    "UDP_PLATFORM/server/server_docs",
-    "UDP_PLATFORM/client/frontend_docs",
-]
+# Stack-neutral defaults; a repo overrides them in fullstack-skills-reminder.config.json.
+DEFAULT_FE = ["client/", "frontend/", "apps/web"]
+DEFAULT_BE = ["server/", "backend/", "api/", "internal/", "cmd/", "pkg/"]
+DEFAULT_DOC = ["docs/", "server_docs/", "frontend_docs/", "PROJECT_LINKAGES.md"]
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+NATIVE_PATHS_NOTE = (
+    "Native `paths:` will surface the rest as you read files; domain rules load from "
+    "~/.claude/rules/frontend.md and ~/.claude/rules/backend.md."
+)
+
 CONFIG_PATH = SCRIPT_DIR / "fullstack-skills-reminder.config.json"
 SKILL_ROOT = Path.home() / ".claude" / "skills"
 PLUGINS_ROOT = Path.home() / ".claude" / "plugins"
-UDP_PLATFORM_SEGMENTS = ["UDP_PLATFORM/"]
 
 
 def _discover_superpowers_skills_dir() -> Path | None:
@@ -179,31 +150,7 @@ def _discover_superpowers_skills_dir() -> Path | None:
 
 
 def _skill_resolved(name: str) -> str:
-    return str((SKILL_ROOT / name / "SKILL.md").resolve())
-
-
-def _udp_workspace_hit(ti: dict, roots: list[str]) -> bool:
-    paths = _paths_from(ti)
-    blob = _norm(json.dumps(ti))
-    if any(_path_hits_segments(p, roots, UDP_PLATFORM_SEGMENTS) for p in paths):
-        return True
-    return _matches_any("", blob, UDP_PLATFORM_SEGMENTS)
-
-
-def _maybe_udp_vertical_slice_nudge(st: dict, ti: dict, roots: list[str], fe_hit: bool, be_hit: bool, msg: str) -> str:
-    if st.get("udp_vertical_nudge_sent") or not (fe_hit or be_hit):
-        return msg
-    if not _udp_workspace_hit(ti, roots):
-        return msg
-    st["udp_vertical_nudge_sent"] = True
-    inc = _skill_resolved("incremental-implementation")
-    dca = _skill_resolved("dead-code-and-change-audit")
-    extra = (
-        "\n\n[Hook: GO_UDP vertical slice discipline — once per conversation]\n"
-        f"- Before the next slice, skim **`incremental-implementation`**: `{inc}` "
-        f"and **`dead-code-and-change-audit`**: `{dca}`.\n"
-    )
-    return msg + extra
+    return str((SKILL_ROOT / _canonical(name) / "SKILL.md").resolve())
 
 
 def _load_config() -> tuple[list[str], list[str], list[str]]:
@@ -305,7 +252,7 @@ def _surface_of_path(path: str, roots: list[str], fe_segs: list[str], be_segs: l
 
 
 def _skill_line(name: str) -> str:
-    return f"  - {(SKILL_ROOT / name / 'SKILL.md').resolve()}"
+    return f"  - {(SKILL_ROOT / _canonical(name) / 'SKILL.md').resolve()}"
 
 
 def _classify(ti: dict, roots: list[str], fe_segs: list[str], be_segs: list[str]):
@@ -328,23 +275,22 @@ def _doc_hit(ti: dict, roots: list[str], doc_segs: list[str]) -> bool:
 
 
 def _onb() -> str:
-    return f"  - {(SKILL_ROOT / 'codebase-start-point-guide' / 'SKILL.md').resolve()} (onboarding when repo defines doc order)."
+    return f"  - {(SKILL_ROOT / 'codebase-intel-first' / 'SKILL.md').resolve()} (orientation: index + graph before reading files)."
 
 
 def _engineering_lines() -> list[str]:
     return [
         "",
-        "[Hook: engineering workflow skills — mattpocock/skills]",
+        "[Hook: engineering workflow skills]",
         "**Invoke the matching skill when its trigger fires:**",
-        f"  - `/diagnose` → bug cause unknown, unexpected test failure, behavior != expectation: {_skill_resolved('diagnose')}",
-        f"  - `/tdd` → new service methods, user says test-first, bug that must not recur: {_skill_resolved('tdd')}",
+        f"  - `/debug-investigation` → bug cause unknown, unexpected test failure, behavior != expectation: {_skill_resolved('debug-investigation')}",
+        f"  - `/test-driven-development` → new service methods, user says test-first, bug that must not recur: {_skill_resolved('test-driven-development')}",
         f"  - `/grill-with-docs` → before finalizing plan touching >3 files or new domain concepts: {_skill_resolved('grill-with-docs')}",
         f"  - `/to-prd` → user wants PRD, large new feature: {_skill_resolved('to-prd')}",
         f"  - `/to-issues` → after plan/PRD approval, break into vertical issues: {_skill_resolved('to-issues')}",
-        f"  - `/improve-codebase-architecture` → refactoring, tech debt, structural changes: {_skill_resolved('improve-codebase-architecture')}",
-        f"  - `/zoom-out` → unfamiliar code area, need broader context: {_skill_resolved('zoom-out')}",
+        f"  - `/tech-debt-audit` → user-invoked whole-repo debt / architecture audit: {_skill_resolved('tech-debt-audit')}",
         f"  - `/triage` → processing external issues/bug reports: {_skill_resolved('triage')}",
-        f"  - First engineering workflow in repo: skim `tool-and-doc-selection` and `codebase-start-point-guide` before deep work.",
+        "  - First engineering workflow in repo: skim `tool-and-doc-selection` and `codebase-intel-first` before deep work.",
     ]
 
 
@@ -372,23 +318,6 @@ def _manifest_init(st: dict, surface: str, reminded: list[str]) -> None:
     already = set(reminded or [])
     st[key_pending] = [n for n in all_names if n not in already]
     st[key_reminded] = list(already)
-
-
-def _manifest_followup_lines(st: dict, surface: str, batch: int = 4) -> list[str]:
-    key_pending = f"manifest_pending_{surface}"
-    pending = st.get(key_pending)
-    if not isinstance(pending, list) or not pending:
-        return []
-    chunk = [n for n in pending[:batch] if isinstance(n, str)]
-    st[key_pending] = pending[len(chunk) :]
-    if not chunk:
-        return []
-    lines = [
-        f"[Hook: session skill manifest — {surface} ({len(chunk)} more mandatory skills)]",
-        "Also read (compact paths):",
-    ]
-    lines.extend(_skill_line(n) for n in chunk)
-    return lines
 
 
 def _remember_stop_skills(st: dict, surface: str, skills: list[dict]) -> None:
@@ -475,10 +404,10 @@ def _extended_category_oneliner(ti: dict, is_first_write: bool) -> str:
     """Return a single ≤100-char line referencing relevant ENGINEERING_EXTENDED categories.
 
     Rules (mutually inclusive — all matching categories are shown):
-    - auth/middleware/session path → Quality: security-and-hardening
+    - auth/middleware/session path → Quality: owasp-security
     - Go file path              → golang-patterns, golang-testing
     - test file path            → test-driven-development
-    - first write of session    → Workflow: workflow-orchestrator, incremental-implementation
+    - first write of session    → Workflow: workflow-orchestrator, code-execution-standard
     """
     paths = _paths_from(ti)
     blob_norm = _norm(json.dumps(ti)).lower()
@@ -488,7 +417,7 @@ def _extended_category_oneliner(ti: dict, is_first_write: bool) -> str:
     # Auth / security context
     auth_hit = any(seg in blob_norm for seg in _AUTH_SEGMENTS)
     if auth_hit:
-        parts.append("Quality: security-and-hardening, performance-optimization")
+        parts.append("Quality: owasp-security, performance-optimization")
 
     # Go file context
     go_hit = any(
@@ -507,11 +436,11 @@ def _extended_category_oneliner(ti: dict, is_first_write: bool) -> str:
         for p in paths
     ) or any(seg in blob_norm for seg in _TEST_SEGMENTS)
     if test_hit:
-        parts.append("Testing: test-driven-development, tdd")
+        parts.append("Testing: test-driven-development")
 
     # First write — workflow reference
     if is_first_write:
-        parts.append("Workflow: workflow-orchestrator, incremental-implementation")
+        parts.append("Workflow: workflow-orchestrator, code-execution-standard")
 
     if not parts:
         return ""
@@ -608,12 +537,12 @@ def _post(payload: dict) -> dict:
             else:
                 lines = [
                     "[Hook: mandatory skills — fullstack start]",
-                    "Touches **both** frontend and backend paths; read **every** skill below (shared names listed once):",
+                    "Touches **both** frontend and backend paths; baseline skills (shared names listed once):",
                     "",
                     *_fullstack_grouped_lines(),
                     "",
                     _onb(),
-                    "Rule: ~/.claude/rules/mandatory-skill-protocol.mdc (Project Rules when home folder open).",
+                    NATIVE_PATHS_NOTE,
                 ]
             lines = _attach_engineering_once(st, lines)
             ext = _extended_category_oneliner(ti, is_first_write=is_first)
@@ -634,10 +563,10 @@ def _post(payload: dict) -> dict:
         else:
             lines = [
                 "[Hook: mandatory skills — frontend start]",
-                "Read every frontend SKILL.md:",
-                *[_skill_line(n) for n in FRONTEND_SKILLS],
+                "Frontend baseline skills:",
+                *[_skill_line(n) for n in FRONTEND_SKILLS[:3]],
                 _onb(),
-                "Rule: ~/.claude/rules/mandatory-skill-protocol.mdc (Project Rules when home folder open).",
+                NATIVE_PATHS_NOTE,
             ]
         lines = _attach_engineering_once(st, lines)
         ext = _extended_category_oneliner(ti, is_first_write=True)
@@ -658,10 +587,10 @@ def _post(payload: dict) -> dict:
         else:
             lines = [
                 "[Hook: mandatory skills — backend start]",
-                "Read every backend SKILL.md:",
-                *[_skill_line(n) for n in BACKEND_SKILLS],
+                "Backend baseline skills:",
+                *[_skill_line(n) for n in BACKEND_SKILLS[:3]],
                 _onb(),
-                "Rule: ~/.claude/rules/mandatory-skill-protocol.mdc (Project Rules when home folder open).",
+                NATIVE_PATHS_NOTE,
             ]
         lines = _attach_engineering_once(st, lines)
         ext = _extended_category_oneliner(ti, is_first_write=True)
@@ -673,22 +602,8 @@ def _post(payload: dict) -> dict:
     if doc_lines and not doc_merged:
         out["additionalContext"] = "\n".join(_attach_engineering_once(st, list(doc_lines)))
 
-    ac_final = out.get("additionalContext")
-    manifest_lines: list[str] = []
-    if (ft and st.get("frontend_start_sent")) or st.get("fullstack_start_sent"):
-        manifest_lines.extend(_manifest_followup_lines(st, "frontend"))
-    if (bt and st.get("backend_start_sent")) or st.get("fullstack_start_sent"):
-        manifest_lines.extend(_manifest_followup_lines(st, "backend"))
-    if manifest_lines and not ac_final:
-        out["additionalContext"] = "\n".join(manifest_lines)
-        ac_final = out["additionalContext"]
-    elif manifest_lines and isinstance(ac_final, str):
-        out["additionalContext"] = ac_final + "\n\n" + "\n".join(manifest_lines)
-        ac_final = out["additionalContext"]
-
-    if isinstance(ac_final, str) and ac_final.strip():
-        out["additionalContext"] = _maybe_udp_vertical_slice_nudge(st, ti, roots, fe_hit, be_hit, ac_final)
-
+    # No per-write manifest batches: the first write carries top-3 + cross-cuts and
+    # native skill `paths:` frontmatter surfaces the rest as files are read.
     _save_state(cid, st)
     return out
 
@@ -803,15 +718,6 @@ def _stop(payload: dict) -> dict:
     # never ran. Stop always proceeds now; the effectiveness record below is what
     # feeds the self-tuning weight updater.
 
-    try:
-        from documentation_lifecycle_hook import stop_followup_message as _doc_stop_followup
-    except ImportError:
-        _doc_stop_followup = None  # type: ignore[assignment,misc]
-
-    life_msg = (
-        (_doc_stop_followup(payload) or "").strip() if callable(_doc_stop_followup) else ""
-    )
-
     verify_tail = _verification_close_followup_fragment()
 
     st = _load_state(cid)
@@ -873,15 +779,8 @@ def _stop(payload: dict) -> dict:
             ship_checks,
         ]
 
-    # Doc-only conversations: lifecycle marker merits Phase B nudge (+ same verification tail as FE/BE).
     if stop_lines is None:
-        if not life_msg:
-            return {}
-        fragments = [life_msg]
-        if verify_tail.strip():
-            fragments.append(verify_tail.lstrip("\n"))
-        _save_state(cid, st)
-        return {"followup_message": "\n\n---\n\n".join(fragments)}
+        return {}
 
     msg = "\n".join(stop_lines)
     if verify_tail.strip():
@@ -893,135 +792,11 @@ def _stop(payload: dict) -> dict:
     ):
         st["engineering_stop_nudge_sent"] = True
         msg += (
-            "\n\nEngineering: confirm `to-prd` / `to-issues` / `grill-with-docs` / `diagnose` if used this session."
+            "\n\nEngineering: confirm `to-prd` / `to-issues` / `grill-with-docs` / `debug-investigation` if used this session."
         )
-
-    if life_msg:
-        msg += "\n\n---\n\n" + life_msg
 
     _save_state(cid, st)
     return {"followup_message": msg}
-
-
-# ---------------------------------------------------------------------------
-# BeforeSubmit — UserPromptSubmit surface detection + skill injection
-# ---------------------------------------------------------------------------
-
-# Keyword clusters for surface detection from prompt text
-_PROMPT_FE_KEYWORDS = frozenset({
-    "component", "tsx", "jsx", "react", "vite", "frontend", "client",
-    "ui", "ux", "page", "hook", "store", "tailwind", "css", "html",
-    "button", "modal", "form", "layout", "responsive", "design",
-    "redux", "zustand", "context", "props", "state", "render",
-    "next.js", "nextjs", "remix", "sveltekit", "vue", "angular",
-})
-
-_PROMPT_BE_KEYWORDS = frozenset({
-    "service", "controller", "route", "endpoint", "api", "server",
-    "database", "migration", "query", "sql", "backend", "go", "golang",
-    "handler", "middleware", "auth", "jwt", "token", "session",
-    "postgres", "mysql", "redis", "queue", "worker", "grpc",
-    "fiber", "gin", "echo", "express", "fastify", "nest",
-    "schema", "model", "repository", "usecase", "domain",
-})
-
-_PROMPT_IMPL_VERBS = frozenset({
-    "implement", "build", "create", "add", "write", "make",
-    "refactor", "fix", "update", "migrate", "integrate",
-})
-
-
-def _infer_surface_from_prompt(prompt: str) -> tuple[bool, bool]:
-    """Return (is_fe, is_be) based on keyword presence in prompt."""
-    words = set(re.findall(r"\b\w+\b", prompt.lower()))
-    # Also check for compound patterns without word boundaries
-    prompt_lower = prompt.lower()
-
-    fe_score = len(words & _PROMPT_FE_KEYWORDS)
-    be_score = len(words & _PROMPT_BE_KEYWORDS)
-
-    # Boost scores for compound patterns
-    if any(s in prompt_lower for s in ("next.js", "react query", "rtk query", "tanstack")):
-        fe_score += 2
-    if any(s in prompt_lower for s in ("rest api", "grpc", "graphql", "sqlc", "pgx")):
-        be_score += 2
-
-    # Require at least 1 impl verb + 1 surface keyword for a confident signal
-    has_impl_verb = bool(words & _PROMPT_IMPL_VERBS)
-
-    is_fe = fe_score >= 1 and (has_impl_verb or fe_score >= 2)
-    is_be = be_score >= 1 and (has_impl_verb or be_score >= 2)
-
-    return is_fe, is_be
-
-
-def _before_submit(payload: dict) -> dict:
-    """UserPromptSubmit handler — inject top-3 skills before any Write if not yet surfaced."""
-    cid = payload.get("conversation_id") or payload.get("session_id") or ""
-    if not cid:
-        return {}
-
-    st = _load_state(cid)
-
-    # Skip if skills already surfaced by post-tool-use OR if before-submit already fired
-    if (
-        st.get("frontend_start_sent")
-        or st.get("backend_start_sent")
-        or st.get("fullstack_start_sent")
-        or st.get("before_submit_sent")
-    ):
-        return {}
-
-    # Extract prompt text
-    prompt = str(
-        payload.get("prompt")
-        or payload.get("message")
-        or payload.get("user_message")
-        or ""
-    )
-    if not prompt.strip():
-        return {}
-
-    is_fe, is_be = _infer_surface_from_prompt(prompt)
-
-    if not is_fe and not is_be:
-        return {}  # Not enough signal — don't inject
-
-    # Mark as sent (lighter flag — does NOT set frontend_start_sent)
-    st["before_submit_sent"] = True
-    _save_state(cid, st)
-
-    lines: list[str] = ["[Hook: pre-submit mandatory skills — surfaced before first write]"]
-
-    if is_fe and _SMART_ROUTER_AVAILABLE:
-        # Use a synthetic FE path to get router-selected skills
-        synthetic_path = "src/components/Feature.tsx"
-        fe_skills = _select_skills(synthetic_path, "frontend", is_first_write=True)
-        primary = [s["name"] for s in fe_skills if s.get("priority") != "CROSS-CUT"][:3]
-        if primary:
-            lines.append("FE (invoke before writing code):")
-            lines.extend(_skill_line(n) for n in primary)
-    elif is_fe:
-        lines.append("FE (invoke before writing code):")
-        for n in ["frontend-standards-always-follow", "project-reference-linkage", "architect-system-design"]:
-            lines.append(_skill_line(n))
-
-    if is_be and _SMART_ROUTER_AVAILABLE:
-        synthetic_path = "internal/service/service.go"
-        be_skills = _select_skills(synthetic_path, "backend", is_first_write=True)
-        primary = [s["name"] for s in be_skills if s.get("priority") != "CROSS-CUT"][:3]
-        if primary:
-            lines.append("BE (invoke before writing code):")
-            lines.extend(_skill_line(n) for n in primary)
-    elif is_be:
-        lines.append("BE (invoke before writing code):")
-        for n in ["backend-standards-always-follow", "project-reference-linkage", "service-layer-standards"]:
-            lines.append(_skill_line(n))
-
-    if len(lines) <= 1:
-        return {}  # Only the header line — nothing to inject
-
-    return {"additionalContext": "\n".join(lines)}
 
 
 def main() -> int:
@@ -1035,16 +810,10 @@ def main() -> int:
         return 0
     if mode == "post-tool-use":
         out = _post(payload)
-        event_name = "PostToolUse"
     elif mode == "stop":
         out = _stop(payload)
-        event_name = "Stop"
-    elif mode == "before-submit":
-        out = _before_submit(payload)
-        event_name = "UserPromptSubmit"
     else:
         out = {}
-        event_name = None
 
     print(json.dumps(out))
     return 0

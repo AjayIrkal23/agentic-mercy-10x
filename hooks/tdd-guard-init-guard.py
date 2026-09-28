@@ -36,6 +36,18 @@ import os
 import sys
 from pathlib import Path
 
+_HOOKS = Path(__file__).resolve().parent
+if str(_HOOKS) not in sys.path:
+    sys.path.insert(0, str(_HOOKS))
+try:
+    from lib.code_files import git_root, is_home  # noqa: E402
+except Exception:  # pragma: no cover - fail-open (no root → no-op)
+    def git_root(path):  # type: ignore
+        return None
+
+    def is_home(root):  # type: ignore
+        return True
+
 DATA_REL = Path(".claude") / "tdd-guard" / "data"
 CONFIG_NAME = "config.json"
 SIDECAR_NAME = ".autoinit.json"
@@ -80,15 +92,11 @@ def _emit(text: str) -> None:
 
 
 def _git_root(start: Path) -> Path | None:
-    cur = start if start.is_dir() else start.parent
-    for _ in range(25):
-        if (cur / ".git").exists():
-            return cur
-        parent = cur.parent
-        if parent == cur:
-            break
-        cur = parent
-    return None
+    """HOME-guarded (lib.code_files): `$HOME` and non-repos → None."""
+    root = git_root(start)
+    if root is None or is_home(root):
+        return None
+    return root
 
 
 def _find_root(payload: dict) -> Path | None:
@@ -96,7 +104,7 @@ def _find_root(payload: dict) -> Path | None:
     if isinstance(roots, list) and roots:
         p = Path(str(roots[0]))
         if p.is_dir():
-            return _git_root(p) or p
+            return _git_root(p)
     for key in ("cwd", "project_dir"):
         v = payload.get(key)
         if v and Path(str(v)).is_dir():

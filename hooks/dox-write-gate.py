@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
-"""dox-write-gate.py — PreToolUse hook on Write|Edit|MultiEdit|Bash.
+"""dox-write-gate.py — PreToolUse hook on Write|Edit|MultiEdit.
 
-Enforces the dox CLAUDE.md documentation tree at write time (companion to the
-auto-init dox-tree-guard.py). Two tiers:
-
-  Tier 1 (HARD deny): a CODE file is about to be written in a git repo that has NO
-          root CLAUDE.md. Blocks until the root is scaffolded. Override: re-issue the
-          exact same edit once (records a fingerprint, second attempt passes) — same
-          pattern as dangerous-bash-gate.py.
-  Tier 2 (soft ASK): root exists, but the target file's directory is "significant"
-          (>= threshold code files) and has no local CLAUDE.md. Prompts once per dir
-          per session to create one. Never a hard block. Toggle: config.softAskLocalDoc.
+Root gate for the dox CLAUDE.md documentation tree: a CODE file is about to be
+written in a GIT repo (HOME-guarded, never `$HOME`, never `exemptRepos`) that has
+NO root CLAUDE.md → HARD deny until the root is scaffolded. Override: re-issue the
+exact same edit once (records a fingerprint, second attempt passes) — same
+pattern as dangerous-bash-gate.py.
 
 ALWAYS ALLOWED (never gated): writes to docs/scaffold — *.md, CLAUDE.md, AGENTS.md,
 CODEX.md, and anything under a .claude/ directory. This keeps scaffolding (and the
@@ -30,25 +25,27 @@ STATE_DIR = SCRIPT_DIR / ".state"
 CONFIG_PATH = SCRIPT_DIR / "dox-write-gate.config.json"
 ROOT_DOC = "CLAUDE.md"
 
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+try:
+    from lib.code_files import git_root, is_home  # noqa: E402
+except Exception:  # pragma: no cover - fail-open (no root → allow)
+    def git_root(path):  # type: ignore
+        return None
+
+    def is_home(root):  # type: ignore
+        return True
+
 DEFAULTS = {
     "enabled": True,
     "exemptRepos": [],
-    "documentAllDirs": True,
-    "autoCreateChildren": True,
-    "significantDirThreshold": 3,
-    "softAskLocalDoc": True,
+    "documentAllDirs": False,
     "docFilenames": ["CLAUDE.md", "AGENTS.md", "CODEX.md"],
     "codeExtensions": [
         ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",
         ".py", ".go", ".rs", ".java", ".kt",
         ".rb", ".php", ".c", ".cpp", ".h", ".hpp", ".swift", ".scala",
     ],
-}
-
-SKIP_DIRS = {
-    ".git", "node_modules", "vendor", "dist", "build", ".next", "out",
-    "coverage", "testdata", ".venv", "venv", "__pycache__", ".claude",
-    "target", "bin", "obj", ".turbo", ".cache", "graphify-out", ".planning",
 }
 
 
@@ -116,27 +113,12 @@ def _deny(reason: str) -> int:
     return 0
 
 
-def _ask(reason: str) -> int:
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "ask",
-            "permissionDecisionReason": reason,
-        }
-    }))
-    return 0
-
-
 def _git_root(start: Path) -> "Path | None":
-    cur = start if start.is_dir() else start.parent
-    for _ in range(30):
-        if (cur / ".git").exists():
-            return cur
-        parent = cur.parent
-        if parent == cur:
-            break
-        cur = parent
-    return None
+    """HOME-guarded: `$HOME` and non-repos → None (lib.code_files)."""
+    root = git_root(start)
+    if root is None or is_home(root):
+        return None
+    return root
 
 
 def _abspath(file_path: str) -> Path:
@@ -176,37 +158,6 @@ def _is_exempt(root: Path, cfg: dict) -> bool:
     return False
 
 
-def _dir_is_significant(d: Path, cfg: dict) -> bool:
-    # documentAllDirs -> every directory deserves a local doc (end-to-end coverage).
-    if cfg.get("documentAllDirs", True):
-        return True
-    exts = set(cfg.get("codeExtensions") or DEFAULTS["codeExtensions"])
-    threshold = int(cfg.get("significantDirThreshold") or 3)
-    try:
-        n = sum(
-            1 for f in d.iterdir()
-            if f.is_file() and f.suffix.lower() in exts
-        )
-        return n >= threshold
-    except OSError:
-        return False
-
-
-def _bash_target(cmd: str, cfg: dict) -> str:
-    """Best-effort: detect a code file a shell command writes to (>, >>, tee).
-
-    Conservative — returns "" unless a code-extension path is clearly the write target.
-    """
-    exts = tuple(cfg.get("codeExtensions") or DEFAULTS["codeExtensions"])
-    import re
-    # redirections:  > path   >> path   | tee path
-    for m in re.finditer(r"(?:>>?|(?:\|\s*tee(?:\s+-a)?))\s+([^\s;&|]+)", cmd):
-        cand = m.group(1).strip().strip('"').strip("'")
-        if cand.lower().endswith(exts):
-            return cand
-    return ""
-
-
 # --------------------------------------------------------------------------- #
 # Main
 # --------------------------------------------------------------------------- #
@@ -224,7 +175,8 @@ def main() -> int:
         tool = str(payload.get("tool_name") or payload.get("tool") or "")
         ti = payload.get("tool_input") or {}
 
-        # Resolve the write target.
+        # Resolve the write target (Write/Edit only — the Bash redirect path was
+        # retired 2026-09-27: 5,318 runs, 0 denies).
         if tool in ("Write", "Edit", "MultiEdit", "StrReplace"):
             file_path = (
                 ti.get("file_path") or ti.get("path") or ti.get("target_file") or ""
@@ -232,8 +184,6 @@ def main() -> int:
             if isinstance(file_path, list):
                 file_path = str(file_path[0]) if file_path else ""
             file_path = str(file_path)
-        elif tool in ("Bash", "Shell"):
-            file_path = _bash_target(str(ti.get("command") or ""), cfg)
         else:
             return _allow()
 
@@ -256,7 +206,7 @@ def main() -> int:
         state = _load_state(cid)
         root_doc = root / ROOT_DOC
 
-        # ---- Tier 1: hard deny when no root CLAUDE.md exists ----
+        # ---- Root gate: hard deny when no root CLAUDE.md exists ----
         if not root_doc.exists():
             fp = f"missing-root::{abs_path}"
             if fp in set(state.get("overridden") or []):
@@ -273,12 +223,6 @@ def main() -> int:
                 "Override: re-issue this exact edit once to proceed anyway (logged)."
             )
 
-        # ---- Tier 2 REMOVED (P4-T3, audit §5 dead-code) ----
-        # The former soft-ask for a missing LOCAL CLAUDE.md was unreachable under
-        # the shipped config: `autoCreateChildren` defaults True, so the
-        # PostToolUse dox-child-scaffold/engine creates the local doc right after
-        # this write — interrupting with an ask was never correct. Root presence
-        # (Tier 1 above) is the only hard gate.
         return _allow()
 
     except Exception as exc:  # noqa: BLE001

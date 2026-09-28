@@ -1,10 +1,7 @@
 {
   "enabled": true,
-  "exemptRepos": [],
-
-  "documentAllDirs": true,
-  "significantDirThreshold": 3,
-  "softAskLocalDoc": true,
+  "exemptRepos": ["~/.claude"],
+  "documentAllDirs": false,
   "docFilenames": ["CLAUDE.md", "AGENTS.md", "CODEX.md"],
   "codeExtensions": [
     ".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs",

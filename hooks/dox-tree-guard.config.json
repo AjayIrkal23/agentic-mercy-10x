@@ -1,12 +1,22 @@
 {
+ "_about": "dox_engine.py config (D11, 2026-09-27): git repos only, HOME-guarded; documentAllDirs is a per-repo opt-in via <root>/.claude/dox.json; vendor/SDK/runtime dirs live in dox_engine.SKIP_DIRS.",
  "enabled": true,
- "exemptRepos": [],
- "documentAllDirs": true,
+ "exemptRepos": [
+  "~/.claude"
+ ],
+ "documentAllDirs": false,
  "autoCreateChildren": true,
  "syncRootIndex": true,
  "sweepMaxDepth": 12,
- "maxSweepDirs": 1400,
+ "maxSweepDirs": 300,
  "skipPaths": [
+  "~/Android",
+  "~/.claude/rules",
+  "~/.claude/teams",
+  "~/.claude/uploads",
+  "~/.claude/state",
+  "~/.claude/telemetry",
+  "~/.claude/shell-snapshots",
   "~/CODE_FILES/GO_UDP/REFERENCE_PRODUCTION_FRONTEND_BACKEND_USERDASHBOARD",
   "~/CODE_FILES/GO_UDP/AJAY EXPORT",
   "~/.claude/agents",

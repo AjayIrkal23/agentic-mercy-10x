@@ -5,9 +5,10 @@ The dox doctrine requires a `CLAUDE.md` + `AGENTS.md` in every directory, but th
 ROOT was the only thing auto-stubbed — child docs depended on the agent voluntarily
 running the dox-doc-tree skill, so they were rarely created.
 
-This hook closes that gap ADDITIVELY: when ANY file (default: any directory; with
-`documentAllDirs=false`, only code files in significant dirs) is written into a
-dox-active repo (root `CLAUDE.md` present), it documents that file's directory via
+This hook closes that gap ADDITIVELY: when a code file is written into a significant
+dir (>= `significantDirThreshold` code files; with the per-repo `documentAllDirs`
+opt-in, any file into any dir) of a dox-active GIT repo (root `CLAUDE.md` present;
+never `$HOME`, never `exemptRepos`), it documents that file's directory via
 `dox_engine.ensure_dir_documented` — creating a stub `CLAUDE.md` (`<!-- dox:child v1 -->`)
 + an `AGENTS.md` pointer and RE-SYNCING the root index — then nudges the agent to
 flesh them out (Phase 7).
@@ -63,17 +64,6 @@ def _save_state(cid: str, data: dict) -> None:
         pass
 
 
-def _git_root(start: Path) -> "Path | None":
-    cur = start if start.is_dir() else start.parent
-    for _ in range(30):
-        if (cur / ".git").exists():
-            return cur
-        if cur.parent == cur:
-            break
-        cur = cur.parent
-    return None
-
-
 def main() -> int:
     try:
         payload = json.load(sys.stdin)
@@ -100,22 +90,22 @@ def main() -> int:
         print("{}")
         return 0
 
-    cfg = dox_engine.load_cfg(CONFIG)
+    file_path = Path(norm)
+    d = file_path.parent
+    # HOME-guarded + exemptRepos-aware root (git repos only — D11).
+    root = dox_engine.resolve_root(file_path, dox_engine.load_cfg(CONFIG))
+    if root is None:
+        print("{}")
+        return 0
+    cfg = dox_engine.load_cfg(CONFIG, root=root)
     if cfg.get("enabled") is False:
         print("{}")
         return 0
 
-    document_all = bool(cfg.get("documentAllDirs", True))
+    document_all = bool(cfg.get("documentAllDirs", False))
     exts = dox_engine._exts(cfg)
-    # When NOT documenting all dirs, only react to code-file writes (legacy mode).
+    # When NOT documenting all dirs, only react to code-file writes.
     if not document_all and os.path.splitext(norm)[1].lower() not in exts:
-        print("{}")
-        return 0
-
-    file_path = Path(norm)
-    d = file_path.parent
-    root = _git_root(file_path)
-    if root is None:
         print("{}")
         return 0
 
