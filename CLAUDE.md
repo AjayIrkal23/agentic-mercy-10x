@@ -78,3 +78,4 @@ placeholders or stock URLs. Details and carve-outs: `rules/frontend.md`.
 - Code: `andrej-karpathy-skills:karpathy-guidelines` (think first, simplest thing,
   surgical diff, verifiable goal) and `ponytail` (the laziest solution that works).
 - Prose to me: `caveman` — terse, no filler, full technical accuracy.
+- All prose (chat, docs, commits, PRs): `no-ai-slop` — none of its banned words or patterns.

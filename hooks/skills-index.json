@@ -2,10 +2,10 @@
   "_meta": {
     "purpose": "Ranked-routing catalog: every local skill (metadata-first, aliases resolved) plus installed plugin skills as plugin:skill.",
     "generator": "build_skills_index.py",
-    "skill_count": 120,
+    "skill_count": 121,
     "plugin_count": 40,
     "alias_count": 24,
-    "checksum": "25a8a7bfa4bebd3b1814fc0f98bd04c02b38685efcbd694162497cccb421e678"
+    "checksum": "52bad9ec958925e3716e6cf577e6918548f809cf1456812ef383456f90e3a70c"
   },
   "aliases": {
     "api-and-interface-design": "api-contract-standards",
@@ -4413,6 +4413,35 @@
       "weight": 1.0,
       "source": "plugin",
       "plugin": "nateherk-design"
+    },
+    "no-ai-slop": {
+      "name": "no-ai-slop",
+      "description": "Edit drafts into sharper, more human writing while preserving the writer's personal voice, or detect AI-slop patterns without rewriting. Use when the user wants a draft clearer, more direct, more opinionated, or less AI-sounding, or asks whether writing reads as AI.",
+      "keywords": [
+        "ai slop",
+        "draft",
+        "edit writing",
+        "no-ai-slop",
+        "prose",
+        "rewrite",
+        "slop",
+        "sounds like ai",
+        "voice"
+      ],
+      "surfaces": [
+        "general"
+      ],
+      "intents": [
+        "general"
+      ],
+      "path_rules": [],
+      "paths": [],
+      "weight": 1.0,
+      "source": "metadata",
+      "category": "general",
+      "when_to_use": "Always active (core-skill-set.json, full) for every piece of prose written to the user or into files: chat, docs, commit messages, PR bodies. Explicit edit/detect when the user pastes a draft.",
+      "locked": true,
+      "provenance": "vendored-git"
     },
     "owasp-security": {
       "name": "owasp-security",

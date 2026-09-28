@@ -13,7 +13,9 @@ import sys
 _DIRECTIVE = (
     "ALWAYS-ON STYLE (outranks other style guidance): ponytail (laziest working "
     "solution: YAGNI, stdlib/native first, shortest diff) + caveman (ultra-compressed "
-    "prose to the user, full technical accuracy). Both apply to every response."
+    "prose to the user, full technical accuracy) + no-ai-slop (no banned words, binary "
+    "contrasts, colon reveals, puffery, fake-profound kickers, em-dash crutches in any "
+    "prose: chat, docs, commits, PRs). All three apply to every response."
 )
 
 

@@ -1,7 +1,7 @@
 {
   "_meta": {
     "purpose": "R10 provenance + baseline registry for vendored-git skills",
-    "count": 26,
+    "count": 27,
     "source_of_truth": "hooks/skills-sources.json (+ skills/<name>/.vendored.json)",
     "note": "Vendored skills are never hand-edited: change skills-sources.json (frontmatter_overrides/patches) and re-run vendor_skill.py. R10 (validate_skills.py / doctor / CI) re-hashes and FAILS on any local edit."
   },
@@ -289,6 +289,19 @@
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py modern-web-guidance",
     "hashBasis": "content-hash",
     "baselineHash": "1afaf8fdb49f15955f8302cc05a241c64292f98a75db5af2f30cb61cffd02bac",
+    "capturedAt": "2026-09-28"
+  },
+  "no-ai-slop": {
+    "family": "vendored-git",
+    "source": "https://github.com/petergyang/no-ai-slop.git",
+    "sourceType": "vendored-git",
+    "subpath": "skills/no-ai-slop",
+    "pinnedRef": "000650b156983f5159695b441477f4e63b25dc85",
+    "ref": "000650b156983f5159695b441477f4e63b25dc85",
+    "sha": "000650b156983f5159695b441477f4e63b25dc85",
+    "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py no-ai-slop",
+    "hashBasis": "content-hash",
+    "baselineHash": "77559106199196abd29290bfe2cb490fbf0c9fb79fd1ba07844a15ff814ae03c",
     "capturedAt": "2026-09-28"
   },
   "test-error-states": {

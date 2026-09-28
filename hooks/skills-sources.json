@@ -397,5 +397,23 @@
       }
     },
     "notes": "Tag v0.0.190 = sha 22ab18dfb50a (same pin as the claude-plugins-official listing). Upstream ships as a skills-only plugin; vendored as a skill instead so it is pinned + path-scoped. Reviewed npm CLI 0.0.190: search is offline (bundled MiniLM, allowRemoteModels=false); only network egress is Clearcut telemetry, disabled by DISABLE_TELEMETRY=1 (patched into every command). Sibling chrome-extensions skill not vendored (no extension work)."
+  },
+  "no-ai-slop": {
+    "repo": "https://github.com/petergyang/no-ai-slop.git",
+    "ref": "000650b156983f5159695b441477f4e63b25dc85",
+    "subpath": "skills/no-ai-slop",
+    "prune": ["agents"],
+    "frontmatter_overrides": {
+      "when_to_use": "Always active (core-skill-set.json, full) for every piece of prose written to the user or into files: chat, docs, commit messages, PR bodies. Explicit edit/detect when the user pastes a draft.",
+      "metadata": {
+        "category": "general",
+        "surfaces": ["general"],
+        "triggers": {
+          "keywords": ["slop", "ai slop", "no-ai-slop", "draft", "edit writing", "sounds like ai", "rewrite", "voice", "prose"],
+          "intents": ["general"]
+        }
+      }
+    },
+    "notes": "MIT, prose-only (SKILL.md + eval.md, no scripts). agents/openai.yaml is Codex-only (pruned). Always-on alongside caveman: caveman sets length, no-ai-slop bans the words/patterns."
   }
 }

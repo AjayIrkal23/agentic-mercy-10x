@@ -17,6 +17,11 @@
    "max_chars": 4000
   },
   {
+   "skill": "no-ai-slop",
+   "mode": "full",
+   "max_chars": 11000
+  },
+  {
    "skill": "mcp-usage-standards",
    "mode": "full",
    "max_chars": 4500
