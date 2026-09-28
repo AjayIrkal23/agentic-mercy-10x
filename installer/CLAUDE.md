@@ -24,13 +24,26 @@ re-check) happens automatically until the doctor reports 0 FAIL.
 2. **`ui.py`** — stdlib web server on `127.0.0.1`. Auto-starts the self-heal loop
    on boot (no button); serves `ui.html`; `/api/progress` streams every step,
    `/api/status` is the live preflight grid (from `verify.collect`).
-3. **`selfheal.py`** — the loop: install pass (`deps`) once → LF/R10 heal → doctor
-   → repair FAILs → repeat until 0 FAIL or `max_rounds`. Success == 0 doctor FAIL.
+3. **`selfheal.py`** — the loop: install pass once (prereqs → deps → `claude mcp add`
+   from `manifest.mcp_servers` → MCP env reconcile → marketplaces + plugins →
+   lean-ctx `config.toml` merge → render `settings.json` → post-steps) → doctor →
+   repair FAILs → repeat until 0 FAIL or `max_rounds`. Success == 0 doctor FAIL.
+4. **`--ci`** (`install.py --ci`): the same flow headless, no web UI; every network
+   step is planned (`WOULD-*`), local steps really run. Used by CI and the
+   fresh-machine rehearsal (sandbox `HOME`; `git init` the sandbox parent when it
+   lives inside this repo, or repo-scoped hooks will sweep the live tree).
 
 ## Local conventions
 
-- **UI only.** Never re-add CLI verbs (`install`/`update`/`doctor`/`verify`) to
-  the entry points — they were removed on purpose. Internal engine modules
+- **MCP source of truth** = `manifest.json.mcp_servers` → user-scope `~/.claude.json`.
+  The template has NO `mcpServers`. Secrets only via `env_from` (installer env).
+- **Never a "lean-ctx" string in settings.json/template** — lean-ctx ≥3.10 re-injects
+  hooks/statusLine/deny when it sees one. `render()` raises; doctor `settings-safety` FAILs.
+- **Never set `CLAUDE_CONFIG_DIR` to the default `~/.claude`** (`selfheal.pin_config_dir`):
+  the claude CLI would then write `~/.claude/.claude.json` instead of `~/.claude.json`.
+- **Counts are computed** (skills/agents), never pinned in the manifest.
+- **No CLI verbs.** Only `--ci`. Never re-add `install`/`update`/`doctor`/`verify`
+  verbs to the entry points — they were removed on purpose. Internal engine modules
   (`doctor`, `deps`, `verify`, `render`) stay importable; only the user-facing
   surface is UI. Unsupported entry-point arguments fail closed before the UI
   starts; run `python installer/doctor.py` for the read-only doctor.
@@ -55,7 +68,7 @@ re-check) happens automatically until the doctor reports 0 FAIL.
 | `selfheal.py` | install→repair→re-check loop; R10 heal (`git_restore_worktree` / `repair_r10_drift`) |
 | `ui.py` / `ui.html` | stdlib visual installer; auto-runs the loop on boot; live progress + status |
 | `deps.py` | idempotent deps/MCP/plugins/post-steps from `manifest.json` (post-step script = first `.py` arg — NOT `cmd[1]`; `{PYTHON}`→`py -3` shifts the index on Windows) |
-| `doctor.py` | 13-check health verifier (link-doctor, palette, R9/R10, mcp-roster, …); its 0-FAIL is the loop's success gate |
+| `doctor.py` | health verifier (link-doctor, render, settings-safety, lean-ctx-config, plugins-contract, generated-in-sync, R9/R10, mcp-roster, ollama …); `--ci` skips machine rows; its 0-FAIL is the loop's success gate |
 | `verify.py` | read-only workflow status → the UI's live preflight sections |
 | `detect.py`, `render.py`, `links.py`, `manifest.json` | env detection · settings.json render (equivalence gate) · skill links · install contract |
 
@@ -68,9 +81,13 @@ re-check) happens automatically until the doctor reports 0 FAIL.
 - `render-equivalence` / `interpreters` read via `read_text` (newline-normalized)
   → CRLF-immune. **Only R10 is byte-sensitive** — that is the sole line-ending
   repair target.
-- `git checkout -- .` in `git_restore_worktree` discards worktree edits to restore
-  pristine bundle bytes — intended for a fresh clone; user customizations belong
-  in overlays/user files, not tracked bundle files.
+- `git_restore_worktree` refuses a dirty tree and this repo itself; the heal loop
+  restores only CLEAN locked skill dirs. User customizations belong in
+  `settings.user.json`, never in tracked bundle files.
+- Render is SEMANTIC and carries Claude-managed keys (theme, tui, voice…) over; a
+  forced re-render writes `settings.json.bak-<ts>` first.
+- `.gitignore` rules must stay root-anchored (`/package-lock.json`, `/feedback/`):
+  vendored skills ship such files and R10 hashes them.
 
 ## Up / down
 

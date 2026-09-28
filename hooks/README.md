@@ -1,90 +1,68 @@
 # Hooks — dispatch architecture
 
-**Registry:** `~/.claude/settings.json` (the `hooks` block). After the 100x
-overhaul, that block holds **8 entries** — one `dispatch.py <event>` per Claude
-Code hook event — instead of 65 individual registrations. Every hook still lives
-in its own `.py`/`.js`/binary; `dispatch.py` only *orchestrates* them (Charter §3
-— orchestration, not fusion).
+**Registry:** `settings.template.json` (rendered to `settings.json` by
+`installer/render.py`). It registers `dispatch.py <event>` once for each of 12 events,
+plus `prompt_router/router.py` for UserPromptSubmit — 13 hook events in total. Every hook
+still lives in its own file; `dispatch.py` only orchestrates.
 
-## One dispatcher per event
+## Events and chains
 
-`settings.json` → for each event: `python3 ${HOME}/.claude/hooks/dispatch.py <event>`.
-The 8 events: `session-start`, `user-prompt-submit`, `pre-tool-use`,
-`post-tool-use`, `stop`, `subagent-stop`, `pre-compact`, `session-end`.
+`hooks/dispatch.config.json` → `chains.<event>` (ordered links) and `budgets.<event>`.
 
-The chain for each event is declared in **`hooks/dispatch.config.json`**
-(`chains.<event>` = ordered list of links; `budgets.<event>` = soft ms/char
-budget). Today: 8 events, 70 enabled links.
+| Event (`dispatch.py` arg) | Links |
+|---|---|
+| `session-start` | settings-permissions-selfheal, state-cleanup (async), session-start-aggregator, memory-load-on-start, session-lifecycle-start, ponytail-session, skills-index-guard (async) |
+| `pre-tool-use` | dangerous-bash-gate, first-write-skill-gate, gateguard-write-gate, dox-write-gate-write, bash-write-gate, blocking-doc-enforcer, jcm-gate-read, jcm-gate-leanctx, jdoc-doc-steer, tdd-guard-launcher-pre, graphify-enforce, opus-guard, workflow-model-guard |
+| `post-tool-use` | skill-invocation-tracker, fullstack-post, codex-capture, post-write-aggregator, desloppify-cleanup, santa-method-writer, security-semgrep-tracker, jcm-mcp-used, mcp-post-hints |
+| `post-tool-use-failure` | tool-failure-hint |
+| `stop` | hard-completion-gate, invoke-suite-gate, index-flush (async), session-lifecycle-stop (async), weights-loop (async) |
+| `subagent-start` | subagent-context |
+| `subagent-stop` | session-lifecycle-subagent |
+| `pre-compact` / `post-compact` | session-lifecycle-precompact / -postcompact |
+| `config-change` | permissions-deny-guard |
+| `teammate-idle` | teammate-idle-gate |
+| `session-end` | settings-permissions-selfheal-end, index-session-end |
 
 ## Link taxonomy
 
 | type | semantics |
 |------|-----------|
-| `gate` | sequential; first `deny` short-circuits the chain; **never budget-dropped** |
+| `gate` | sequential; first `deny`/block short-circuits; never budget-dropped |
 | `mutator` | sequential; each returns `updatedInput`, threaded to the next |
-| `advisory` | run in a `ThreadPoolExecutor` (parallel); `additionalContext` merged, priority-ordered |
-| `exec` | fire-and-forget side effects (telemetry, journals, detached builders) |
+| `advisory` | parallel; `additionalContext` merged in priority order |
+| `exec` | side effects; with `"async": true` spawned detached and never waited on |
 
-Per-link fields: `id`, `type`, `cmd` (with `{PY}`/`{HOOKS}`/`{NODE}` tokens
-resolved by `lib/platform.py`), optional `tools:` regex (replaces the old
-per-matcher registrations), `priority`, `timeout_ms`, and **`enabled: true|false`**.
+Per-link fields: `id`, `type`, `cmd` (`{PY}`/`{HOOKS}`/`{NODE}` tokens), optional
+`tools` regex (full-match on `tool_name`), `priority` (0 = never dropped), `timeout_ms`,
+`enabled`.
 
-## Guarantees (Charter §3)
+## Guarantees
 
-- **Per-link try/except isolation** — one link crashing logs to telemetry and the
-  chain continues; the dispatcher always emits valid JSON (fail-open).
-- **Per-link telemetry from day 1** — every fire logs `{ts, session, event,
-  link_id, ms, exit, chars_out, decision, budget_hit, error}` via
-  `lib/hook_telemetry.py` to `~/.claude/telemetry/hook-fires-*.jsonl` (14-day
-  retention, purged by the `state-cleanup` session-start exec link).
-- **Per-link enable flags** — flip `enabled:false` in `dispatch.config.json` to
-  disable one link without touching `settings.json`.
-- **Doctor fires synthetic events through every link** — `hooks/tools/link-doctor.py`
-  (folded into `installer/doctor.py`) sends a matching payload to each enabled
-  link and asserts exit 0 + parseable output + a telemetry line.
+- Per-link isolation, fail-open; the dispatcher always emits valid JSON.
+- Per-link telemetry via `lib/hook_telemetry.py` → `telemetry/hook-fires-*.jsonl`
+  (14-day retention, purged by `tools/state-cleanup.py`).
+- `CLAUDE_HOOK_DOCTOR=1` makes disk-writing links no-op; `tools/link-doctor.py` (run by
+  `installer/doctor.py`) fires a synthetic event through every enabled link.
 
-## Budgets
+## Prompt router
 
-Per-event budgets in `dispatch.config.json` are **soft**: overruns are logged,
-but gates and mandatory-trigger advisories are never dropped. The
-`user-prompt-submit` injection budget is `~24,000` tokens, priority-ordered
-(tier-0 gate-adjacent directives first) — the win is dedup + signal quality + one
-subprocess, not raw shrinkage.
+`prompt_router/router.py` classifies once, detects the surface, ranks ≤5 skills, adds
+availability-aware MCP lines and an agent suggestion, and emits
+`hookSpecificOutput.additionalContext`. Its trigger surface is frozen in
+`trigger-floor.json` (`build-trigger-floor.py --check` in CI). Details:
+[`prompt_router/CLAUDE.md`](prompt_router/CLAUDE.md).
 
-## Prompt router + trigger floor (router LIVE)
+## Generated config
 
-`user-prompt-submit` runs **`prompt_router/router.py` LIVE** (user-directed flip
-2026-07-12; the legacy injector set is retained only for flip-back).
-The router classifies once → ranks skills → priority-orders under the 24k budget →
-dedups via the session manifest. Its trigger surface is a **verbatim superset** of
-all four legacy taxonomies, frozen in **`hooks/trigger-floor.json`** (checksum-
-guarded; `build-trigger-floor.py --check` runs in CI — removals are impossible to
-merge). Cutover to router-only happened 2026-07-12 via `scripts/flip-router.py --router`;
-flip back with `scripts/flip-router.py --legacy` if a regression appears.
-
-## Flip / revert (one command each)
-
-- `scripts/flip-dispatch.py --legacy` — restore the byte-identical 65-registration
-  `settings.json` hooks block (revert the 65→8 rewrite).
-- `scripts/flip-dispatch.py --dispatch` — install the 8 dispatcher entries.
-- `scripts/flip-dispatch.py --status` — print which block is installed.
-- `scripts/flip-router.py --router|--legacy` — swap the UserPromptSubmit block
-  between the router and the snapshotted legacy prompt stack
-  (`hooks/legacy-prompt-stack.json`).
-
-Legacy hooks stay installed and runnable for 30 days after each cutover; nothing
-is atticked until the retention window closes (P7-T4).
-
-## Stacks in play
-
-jcodemunch (index + `jcodemunch-enforce`), graphify (graph + `graphify-enforce`),
-jdocmunch (doc index guard + reindex), lean-ctx (Bash `observe`/`rewrite`/
-`redirect`), tdd-guard (`tdd_guard_launcher.py`, warn mode), dox
-(`dox-tree-guard.py` + `dox-child-scaffold.py`), and the model-routing guards
-(`opus-guard.py`, `workflow-model-guard.py`) driven by `hooks/model-policy.json`.
+- `gen-invoke-skills.py` — `/invoke` skill family from `autonomous-skill-router.config.json`
+  + `model-policy.json`.
+- `gen-agent-skill-blocks.py` — agent `skills:` frontmatter.
+- `build-skills-index.py`, `build-trigger-floor.py` — catalogs.
+- `skills-sources.json` — vendored skill sources for `scripts/vendor_skill.py`;
+  `skills-provenance.json` is built from it (`scripts/build_provenance.py`).
 
 ## Index freshness (zero daemons)
 
-`index-lifecycle.py` journals writes inside the active repo (post-tool-use) and
-flushes a single detached incremental builder at N=5 writes / T=45s and at Stop —
-active-repo only, no persistent background processes.
+`index-lifecycle.py` journals writes in the active repo and flushes one detached
+incremental builder (jcodemunch, jdocmunch, graphify, dox) at N writes / T seconds and
+at Stop. `$HOME`, `~/.claude` and `~/.codex` are never indexed.

@@ -1,31 +1,25 @@
-<!-- dox:child v1 -->
-# `docs/` — local rules (dox)
+# `docs/` — local rules
 
-> Local doc for this directory only. Read after the root `CLAUDE.md`. Update this
-> file whenever you add, remove, or rename files here, or change a local convention.
+Repo-level documentation for `~/.claude`: changelog, ADRs, the directory index, skill
+precedence, project rule templates, and an archive of superseded docs.
 
-## What lives here
+## Conventions
 
-<One or two lines: the responsibility of this directory. What kind of files belong,
-what does NOT belong here.>
-
-## Local conventions
-
-- <e.g. naming pattern, file-size cap, import boundaries specific to this folder>
-- <e.g. "every X must register in Y" / "do not import from Z">
+- `CHANGELOG.md`: one dated section per upgrade — what changed and why.
+- `adr/NNNN-<slug>.md`: only decisions that are hard to reverse + surprising + a real trade-off.
+- `archive/<period>/`: superseded docs kept verbatim for history. Never "fix" them; they
+  legitimately name deleted scripts. Exclude `archive/` from stale-name greps.
+- `project-templates/`: rule files meant to be copied into other repos.
 
 ## Key files
 
 | File | Role |
 |------|------|
-| `<file>` | <what it does> |
-
-## Gotchas / fragile spots
-
-- <non-obvious thing that breaks if you're not careful>
+| `INDEX.md` | index of every local `CLAUDE.md` in `~/.claude` |
+| `CHANGELOG.md` | upgrade history |
+| `adr/0001-2026-09-28-upgrade-decisions.md` | D1–D18 consolidated |
+| `SKILL-HARMONIZATION.md` | which canonical skill wins in overlapping clusters |
 
 ## Up / down
 
-- Parent: [`../CLAUDE.md`](../CLAUDE.md)
-- Children: <links to deeper `*/CLAUDE.md`, or "none">
-- Related repo docs: <link to the numbered doc / CODEX.md section — link, don't restate>
+- Parent: [`../CLAUDE.md`](../CLAUDE.md) · Index: [`INDEX.md`](INDEX.md)

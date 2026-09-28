@@ -1,31 +1,43 @@
 <!-- dox:child v1 -->
 # `scripts/` — local rules (dox)
 
-> Local doc for this directory only. Read after the root `CLAUDE.md`. Update this
-> file whenever you add, remove, or rename files here, or change a local convention.
+> Local doc for this directory only. Update it when you add, remove, or rename a script.
 
 ## What lives here
 
-<One or two lines: the responsibility of this directory. What kind of files belong,
-what does NOT belong here.>
+Maintenance CLIs run by hand, by the installer's `post_steps`, or by CI. Not hooks —
+nothing here is registered in `dispatch.config.json`.
 
 ## Local conventions
 
-- <e.g. naming pattern, file-size cap, import boundaries specific to this folder>
-- <e.g. "every X must register in Y" / "do not import from Z">
+- Pure stdlib Python ≥ 3.10; `--check` / `--dry-run` modes exit non-zero on drift and
+  never write.
+- Skill tooling shares primitives through `skills_lib.py`; do not duplicate front-matter
+  parsing or R10 hashing.
 
 ## Key files
 
 | File | Role |
 |------|------|
-| `<file>` | <what it does> |
+| `vendor_skill.py` | vendor third-party skills from `hooks/skills-sources.json` (`<name> [--ref]`, `--all`, `--check`); backs `/invoke-update` |
+| `build_provenance.py` | R10 provenance registry → `hooks/skills-provenance.json` |
+| `build_skills_index.py` | the one skills-index generator (shim `hooks/build-skills-index.py`) |
+| `validate_skills.py` | skill validator R1..R12 (installer post-step; fails the install on a broken catalog) |
+| `skills_lib.py` | shared front-matter / trigger-token / hashing primitives |
+| `migrate_frontmatter.py` | one-shot native-frontmatter migration (2026-09-27), idempotent |
+| `model-mode.py` | per-repo subagent model mode: `opus|sonnet|fable|clear|status` |
+| `add-db-mcp.py` | add read-only Supabase/MongoDB MCP to a repo's `.mcp.json` from `templates/mcp/` |
+| `mcp_inventory.py` | print the live MCP inventory (user + project scope + plugins) |
+| `dox_cleanup.py` | one-shot removal of untouched dox stubs under `~` |
+| `grep_gates.py` | portability grep-gates (wrapped by `tests/test_portability_gate.py`) |
+| `install-graphify.sh` | graphify MCP install helper |
 
 ## Gotchas / fragile spots
 
-- <non-obvious thing that breaks if you're not careful>
+- `add-db-mcp.py` writes project scope only and never literal secrets (`${VAR}` only).
+- `model-mode.py` is per repo; the global `state/*-only-mode` flags affect every project.
 
 ## Up / down
 
 - Parent: [`../CLAUDE.md`](../CLAUDE.md)
-- Children: <links to deeper `*/CLAUDE.md`, or "none">
-- Related repo docs: <link to the numbered doc / CODEX.md section — link, don't restate>
+- Children: none

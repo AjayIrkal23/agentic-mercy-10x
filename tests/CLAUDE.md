@@ -1,31 +1,33 @@
 <!-- dox:child v1 -->
 # `tests/` — local rules (dox)
 
-> Local doc for this directory only. Read after the root `CLAUDE.md`. Update this
-> file whenever you add, remove, or rename files here, or change a local convention.
+> Local doc for this directory only. Update it when you add, remove, or rename tests.
 
 ## What lives here
 
-<One or two lines: the responsibility of this directory. What kind of files belong,
-what does NOT belong here.>
+Repo-level tests for the installer, doctor, settings template/render, skills catalog and
+portability. Hook unit tests live in `../hooks/tests/`. `fixtures/hook-events/*.json` are
+synthetic event payloads (one per event, incl. subagent-start, teammate-idle,
+post-tool-use-failure, post-compact, config-change).
 
 ## Local conventions
 
-- <e.g. naming pattern, file-size cap, import boundaries specific to this folder>
-- <e.g. "every X must register in Y" / "do not import from Z">
+- Run: `python3 -m pytest tests -q` (CI runs it on Ubuntu + Windows).
+- Tests must not touch the live `~/.claude`: sandbox `HOME`/`CLAUDE_CONFIG_DIR` and set
+  `CLAUDE_HOOK_DOCTOR=1`.
+- No PyYAML or other non-stdlib imports (the CI interpreter is bare).
 
 ## Key files
 
 | File | Role |
 |------|------|
-| `<file>` | <what it does> |
-
-## Gotchas / fragile spots
-
-- <non-obvious thing that breaks if you're not careful>
+| `test_installer.py`, `test_doctor.py` | installer + doctor smoke, read-only doctor in a sandbox |
+| `test_render_settings.py`, `test_template_contract.py` | render equivalence; template has no MCP block, no home literal, no "lean-ctx" |
+| `test_mcp_secret_transport.py` | secret-safe MCP registrations |
+| `test_validate_skills.py`, `test_vendor_sources.py` | skill validation; vendored skills match `skills-sources.json` + R10 |
+| `test_ci_portability.py`, `test_portability_gate.py` | CI-green regressions; portability grep-gates |
 
 ## Up / down
 
 - Parent: [`../CLAUDE.md`](../CLAUDE.md)
-- Children: <links to deeper `*/CLAUDE.md`, or "none">
-- Related repo docs: <link to the numbered doc / CODEX.md section — link, don't restate>
+- Children: none

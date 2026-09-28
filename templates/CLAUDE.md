@@ -1,31 +1,11 @@
-<!-- dox:child v1 -->
-# `templates/` — local rules (dox)
+# `templates/` — local rules
 
-> Local doc for this directory only. Read after the root `CLAUDE.md`. Update this
-> file whenever you add, remove, or rename files here, or change a local convention.
-
-## What lives here
-
-<One or two lines: the responsibility of this directory. What kind of files belong,
-what does NOT belong here.>
-
-## Local conventions
-
-- <e.g. naming pattern, file-size cap, import boundaries specific to this folder>
-- <e.g. "every X must register in Y" / "do not import from Z">
-
-## Key files
+Files copied into *other* repos, never loaded by `~/.claude` itself.
 
 | File | Role |
 |------|------|
-| `<file>` | <what it does> |
+| `mcp/db-readonly.mcp.json` | read-only Supabase / MongoDB MCP servers, project scope; installed by `scripts/add-db-mcp.py` |
 
-## Gotchas / fragile spots
-
-- <non-obvious thing that breaks if you're not careful>
-
-## Up / down
-
+- Pinned package versions; bump deliberately.
+- Secrets only as `${VAR}` placeholders — never literal tokens or connection strings.
 - Parent: [`../CLAUDE.md`](../CLAUDE.md)
-- Children: <links to deeper `*/CLAUDE.md`, or "none">
-- Related repo docs: <link to the numbered doc / CODEX.md section — link, don't restate>
