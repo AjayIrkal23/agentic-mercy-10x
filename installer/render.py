@@ -7,19 +7,20 @@ path tokens substituted for this OS. This makes one template serve Windows and
 Ubuntu, and makes ``git pull`` unable to clobber local settings deltas (they live
 in the gitignored user overlay + the gitignored rendered output).
 
-Tokens (kept to the three the plan specifies):
+Tokens:
     {{PYTHON}}      python invocation      (e.g. "python3", "py -3", or a Windows python.exe path)
     {{NODE}}        node interpreter       (e.g. "/usr/bin/node", "node")
     {{CLAUDE_DIR}}  the ~/.claude dir path (kept as the literal ``${HOME}/.claude``
                     on POSIX so Claude Code expands it; a concrete path on Windows)
+    {{LEANCTX}}     lean-ctx binary — supported, but the template must NOT use it:
+                    render() refuses any output containing "lean-ctx" (see below).
 
-The default tokens REPRODUCE the live literals, so ``render(tokenize(live)) ==
-live`` byte-for-byte (the P6-T3 equivalence gate). The installer overrides them
-with OS-detected values.
+The equivalence gate is SEMANTIC (parsed JSON, Claude-managed keys ignored), and a
+write carries the existing Claude-managed keys (theme, tui, voice …) over.
 
 CLI:
     render.py                      # render template(+overlay) -> settings.json
-    render.py --check              # prove render(template) == live settings.json
+    render.py --check              # prove render(template) semantically == live settings.json
     render.py --emit-template      # (re)generate settings.template.json from live
     render.py --out PATH --template PATH --user PATH --dry-run
 Pure stdlib. Windows+POSIX. Fail-loud on a broken template (a bad settings.json
@@ -42,6 +43,7 @@ _USER = _ROOT / "settings.user.json"
 # Ordered so the longest/most-specific literal is tokenized first.
 # (live literal, token) — tokenize replaces literal->token; render replaces token->value.
 _TOKEN_MAP = [
+    ("${HOME}/.local/bin/lean-ctx", "{{LEANCTX}}"),
     ("${HOME}/.claude", "{{CLAUDE_DIR}}"),
     ("python3 ", "{{PYTHON}} "),
     ("${HOME}/.local/bin/node", "{{NODE}}"),
@@ -53,7 +55,22 @@ _DEFAULT_SUBS = {
     "{{PYTHON}}": "python3",
     "{{NODE}}": "${HOME}/.local/bin/node",
     "{{CLAUDE_DIR}}": "${HOME}/.claude",
+    "{{LEANCTX}}": "${HOME}/.local/bin/lean-ctx",
 }
+
+# Keys Claude Code itself writes into settings.json (/config, /theme, voice …).
+# They are never rendered from the template and never compared: a re-render
+# carries the existing live values over instead of clobbering them.
+CLAUDE_MANAGED_KEYS = frozenset({
+    "tui", "voice", "voiceEnabled", "theme", "remoteControlAtStartup",
+    "agentPushNotifEnabled", "skipWorkflowUsageWarning", "autoCompactWindow",
+    "contextWindow", "effortLevel", "skipDangerousModePermissionPrompt",
+})
+
+# lean-ctx >= 3.10 re-injects its own hooks / statusLine / permissions.deny into
+# any settings.json that mentions it. The rendered file must never contain it
+# (the dispatch matcher spells the MCP prefix as the regex `mcp__lean.ctx__`).
+FORBIDDEN_SUBSTRING = "lean-ctx"
 
 
 def tokenize(text: str) -> str:
@@ -65,7 +82,9 @@ def tokenize(text: str) -> str:
 
 def substitute(text: str, subs: dict[str, str] | None = None) -> str:
     """Tokenized template text -> concrete settings text for this OS."""
-    subs = {**_DEFAULT_SUBS, **(subs or {})}
+    # accept detect()'s bare keys ("PYTHON") as well as "{{PYTHON}}"
+    subs = {**_DEFAULT_SUBS, **{(k if k.startswith("{{") else "{{" + k + "}}"): v
+                                for k, v in (subs or {}).items()}}
     for token, value in subs.items():
         text = text.replace(token, value)
     return text
@@ -94,6 +113,22 @@ def render(
     if user_path and Path(user_path).exists():
         overlay = json.loads(Path(user_path).read_text(encoding="utf-8"))
         data = deep_merge(data, overlay)
+    text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    if FORBIDDEN_SUBSTRING in text:
+        raise ValueError(f"rendered settings contain {FORBIDDEN_SUBSTRING!r} — lean-ctx would "
+                         "re-inject hooks/statusLine/deny; remove it from the template/overlay")
+    return text
+
+
+def carry_managed(text: str, existing: Path) -> str:
+    """Keep Claude-managed keys from an existing settings.json (user /config choices)."""
+    try:
+        old = json.loads(Path(existing).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return text
+    data = json.loads(text)
+    for k in CLAUDE_MANAGED_KEYS & set(old):
+        data[k] = old[k]
     return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
 
 
@@ -104,26 +139,32 @@ def emit_template(live_path: Path = _LIVE, out_path: Path = _TEMPLATE) -> str:
     return text
 
 
-def check_equivalence(live_path: Path = _LIVE, template_path: Path = _TEMPLATE) -> tuple[bool, str]:
-    """Prove the template plus local overlay equals live settings.json."""
-    live = Path(live_path).read_text(encoding="utf-8")
-    rendered_text = render(template_path, _USER)
-    if rendered_text == live:
-        return True, "render(template) == live settings.json (byte-identical)"
-    # fall back to semantic (parsed) comparison for a clearer diff signal
+def _diff_paths(a, b, path="") -> list[str]:
+    if isinstance(a, dict) and isinstance(b, dict):
+        out: list[str] = []
+        for k in sorted(set(a) | set(b)):
+            out += _diff_paths(a.get(k, "<absent>"), b.get(k, "<absent>"), f"{path}.{k}" if path else k)
+        return out
+    return [] if a == b else [path or "<root>"]
+
+
+def _normalized(data: dict) -> dict:
+    return {k: v for k, v in data.items() if k not in CLAUDE_MANAGED_KEYS}
+
+
+def check_equivalence(live_path: Path = _LIVE, template_path: Path = _TEMPLATE,
+                      user_path: Path | None = _USER) -> tuple[bool, str]:
+    """SEMANTIC check: parsed render(template ⊕ overlay) == parsed live settings.json,
+    ignoring the Claude-managed keys (Claude Code rewrites those itself)."""
     try:
-        same = json.loads(rendered_text) == json.loads(live)
-    except ValueError as exc:
-        return False, f"rendered template is not valid JSON: {exc}"
-    if same:
-        return True, "render(template) semantically identical to live (whitespace only)"
-    # find first differing line
-    a = rendered_text.splitlines()
-    b = live.splitlines()
-    for i, (x, y) in enumerate(zip(a, b), 1):
-        if x != y:
-            return False, f"first diff at line {i}:\n  rendered: {x!r}\n  live:     {y!r}"
-    return False, f"length differs: rendered {len(a)} lines vs live {len(b)} lines"
+        live = json.loads(Path(live_path).read_text(encoding="utf-8"))
+        rendered = json.loads(render(template_path, user_path))
+    except (OSError, ValueError) as exc:
+        return False, f"{type(exc).__name__}: {exc}"
+    diffs = _diff_paths(_normalized(rendered), _normalized(live))
+    if not diffs:
+        return True, "render(template) semantically equals live settings.json"
+    return False, f"{len(diffs)} differing key path(s): {diffs[:8]}"
 
 
 def main(argv: list[str]) -> int:
@@ -147,6 +188,8 @@ def main(argv: list[str]) -> int:
         return 0 if ok else 1
 
     text = render(args.template, args.user)
+    if args.out.exists():
+        text = carry_managed(text, args.out)
     if args.dry_run:
         sys.stdout.write(text)
         return 0

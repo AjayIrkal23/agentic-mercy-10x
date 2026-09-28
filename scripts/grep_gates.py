@@ -43,8 +43,8 @@ _SYSPLATFORM_EXEMPT = {
 # The LIVE dispatch chain no longer invokes any of them (all repointed to .py/.js
 # ports in P6-T2). Flip-back was retired 2026-07-14 (git is the recovery path);
 # discovery-skills-reminder.sh was deleted with the legacy UPS stack. No NEW .sh here.
-_LEGACY_SH_GRANDFATHER = {
-    "tdd-guard-launcher.sh",
+_LEGACY_SH_GRANDFATHER: set[str] = {
+    # tdd-guard-launcher.sh deleted 2026-09-27 (upgrade); the Python launcher is live.
     # graphify-runner.sh retired 2026-07-14 (tri-tool rework): the LIVE hook,
     # settings.json, AND ~/.claude.json all now point graphify's MCP at
     # graphify_launcher.py, and the .sh file is deleted. Entry removed.
@@ -87,9 +87,11 @@ def _scan_files() -> list[Path]:
                 if p.name.startswith("legacy-"):
                     continue
                 out.append(p)
-    single = ROOT / "install.py"
-    if single.exists():
-        out.append(single)
+    # install contract data: the shipped template/manifest/dispatch config
+    for single in (ROOT / "install.py", ROOT / "settings.template.json",
+                   ROOT / "installer" / "manifest.json", HOOKS / "dispatch.config.json"):
+        if single.exists():
+            out.append(single)
     return out
 
 

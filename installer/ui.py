@@ -1,26 +1,23 @@
 #!/usr/bin/env python3
-"""ui.py — the VISUAL installer server (`python install.py ui`).
+"""ui.py — the VISUAL installer server (`python install.py`, no arguments).
 
 A stdlib-only local web app: starts an http.server on 127.0.0.1:<free-port>, serves
-installer/ui.html, opens your browser, and exposes a small JSON API backed by the
-SAME engine as the CLI (detect / deps / verify). No Electron, no Node build, no
-extra installs — identical on Ubuntu and Windows.
+installer/ui.html, opens your browser, and auto-runs the self-heal loop. No
+Electron, no Node build — identical on Ubuntu and Windows. Headless / CI runs use
+`python install.py --ci` (bootstrap), which never starts this server.
 
 API:
   GET  /                -> ui.html
-  GET  /api/status      -> {env, target, candidates, sections, hard}   (live workflow status)
-  GET  /api/browse      -> native folder picker (subprocess tkinter; graceful fallback)
+  GET  /api/status      -> {env, target, sections, hard}   (live workflow status)
   GET  /api/progress    -> the running install job {running, done, ok, steps[]}
-  POST /api/target {path}   -> validate + select the .claude folder to install into
-  POST /api/install     -> start the real install in a background thread
+  POST /api/install     -> re-run the install (same-origin 127.0.0.1 only)
 
-Every install step streams into /api/progress so the UI shows them one-by-one.
-settings.json is rendered ONLY when absent (an existing one is never overwritten).
+The server shuts itself down ~15 s after the install finishes (the page keeps the
+final report). settings.json is rendered ONLY when absent or semantically broken.
 """
 from __future__ import annotations
 
 import json
-import os
 import sys
 import threading
 import time
@@ -72,7 +69,7 @@ def _run_install() -> None:
             return
         _JOB.update(running=True, done=False, ok=None, success=None, rounds=0, steps=[])
     try:
-        os.environ["CLAUDE_CONFIG_DIR"] = _STATE["target"]
+        _selfheal.pin_config_dir(_STATE["target"])
         res = _selfheal.self_heal(Path(_STATE["target"]),
                                   emit=lambda k, n, s: _append(k, n, s))
         with _LOCK:
@@ -90,7 +87,7 @@ def _run_install() -> None:
 
 
 def _status_payload() -> dict:
-    os.environ["CLAUDE_CONFIG_DIR"] = _STATE["target"]
+    _selfheal.pin_config_dir(_STATE["target"])
     env = _detect.detect()
     sections, hard = _verify.collect(env, target=Path(_STATE["target"]))
     return {
@@ -140,9 +137,19 @@ class _Handler(BaseHTTPRequestHandler):
         else:
             self._json({"error": "not found"}, 404)
 
+    def _same_origin(self) -> bool:
+        """Only our own page may trigger a mutating run (no cross-site POST)."""
+        port = self.server.server_address[1]
+        allowed = {f"127.0.0.1:{port}", f"localhost:{port}"}
+        origin = self.headers.get("Origin")
+        return (self.headers.get("Host") in allowed
+                and (origin is None or origin.split("://", 1)[-1] in allowed))
+
     def do_POST(self):  # noqa: N802
         p = self.path.split("?")[0]
-        if p == "/api/install":
+        if not self._same_origin():
+            self._json({"error": "forbidden"}, 403)
+        elif p == "/api/install":
             # idempotent re-run trigger; the loop self-guards against double-start.
             threading.Thread(target=_run_install, daemon=True).start()
             self._json({"started": True})
@@ -165,6 +172,18 @@ def main(argv=None) -> int:
     # Fully automatic: kick off the self-heal loop on boot so the user does
     # nothing — the browser just watches it run to 100%.
     threading.Thread(target=_run_install, daemon=True).start()
+
+    def _stop_when_done() -> None:  # never serve forever (the old CI-hang class)
+        while True:
+            time.sleep(1)
+            with _LOCK:
+                if _JOB["done"] and not _JOB["running"]:
+                    break
+        time.sleep(15)  # let the page poll the final report
+        print("  install finished — server stopped.")
+        srv.shutdown()
+
+    threading.Thread(target=_stop_when_done, daemon=True).start()
     try:
         webbrowser.open(url)
     except Exception:  # noqa: BLE001

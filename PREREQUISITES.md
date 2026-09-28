@@ -63,7 +63,7 @@ powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\agentic-mercy\install.
 ```
 
 `install.py`, `install-ui.py`, `install.sh`, and `install.ps1` are all the **same
-one automatic installer** — there is no CLI install path and nothing to configure.
+one automatic installer** — nothing to configure (the only flag is `--ci`).
 It opens a local web page (127.0.0.1, stdlib only — no Node/Electron) that
 **auto-runs** the whole install: a live panel shows prerequisites · privileges ·
 deps · MCP servers · plugins · wiring turning green as each step and repair round
@@ -79,12 +79,25 @@ report — **PREREQUISITES · DEPENDENCY BINARIES · MCP SERVERS · PLUGINS · W
 WIRING (router LIVE) · PALETTE**, with an exact fix command on every gap. Exit 0 =
 everything green.
 
+**What one click reproduces:** CLI deps (uv tools semgrep / `jcodemunch-mcp[openai]` /
+`jdocmunch-mcp[openai]` / graphifyy + the graphify serve venv; npm lean-ctx-bin,
+tdd-guard, pyright (symlinked into `~/.local/bin`), mmx-cli) → 15 user-scope MCP
+servers from `installer/manifest.json` (pinned versions, telemetry-off env) → 5
+marketplaces (autoUpdate on) + 12 plugins → `~/.config/lean-ctx/config.toml` merge
+(no hooks / rules / skill injection, no updates or telemetry, `shadow_mode=false`)
+→ rendered `settings.json` (never contains the string `lean-ctx`) → re-vendored
+skills, generated `/invoke` skills + agent skill blocks, indexes, validator → doctor
+0 FAIL. Headless / CI: `python3 install.py --ci` (network steps are only planned).
+
 ## The only things the installer can't do for you
 
-- **claude.ai connectors** — `higgsfield` and `penpot` are OAuth connectors: add
-  them in the **claude.ai → Connectors UI**, not via any CLI.
-- **API keys / secrets** — never shipped. Export `GITHUB_TOKEN` etc. in your shell
-  profile; `~/.claude.json` (per-machine) holds your MCP + credential config.
+- **OAuth MCPs** — `higgsfield` and `openart` are registered as HTTP MCPs; run
+  `/mcp` inside Claude Code once to authorize them.
+- **GitHub** — `gh auth login` once (the github MCP reads `gh auth token` at launch).
+- **Context7 key (optional)** — `export CONTEXT7_API_KEY=...` before installing.
+- **Semantic search (optional)** — install [ollama](https://ollama.com) and
+  `ollama pull all-minilm` (the doctor WARNs until present; search falls back to lexical).
+- **Escape hatch** — if a hook ever misbehaves: `claude --safe-mode`.
 
 > **Everything else is automatic**, including MCP-server + plugin registration
 > (on Windows the `claude` `.cmd` shim is run through the shell so it actually
@@ -95,5 +108,5 @@ everything green.
 
 ## Optional (only if you use them)
 
-`ripgrep` · `golangci-lint` (Go TDD) · the `ast-grep` MCP
-(`git clone` + `uv sync` in `ast-grep-mcp/`, offered by `install.sh`).
+`ripgrep` · `golangci-lint` (Go TDD) · a read-only DB MCP per project
+(`python3 ~/.claude/scripts/add-db-mcp.py`, template `templates/mcp/db-readonly.mcp.json`).

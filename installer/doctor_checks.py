@@ -10,11 +10,10 @@ RowWriter = Callable[[list, str, str, str], None]
 
 
 def check_palette(rows: list, root: Path, row: RowWriter, passed: str) -> None:
-    """Report live palette counts without treating manifest snapshots as policy."""
+    """Report live palette counts (computed from disk; never a pinned snapshot)."""
     skill_count = len(list((root / "skills").glob("*/SKILL.md")))
-    command_count = len(list((root / "commands").glob("*.md")))
-    row(rows, "palette-skills", passed, f"{skill_count} SKILL.md (derived from source)")
-    row(rows, "palette-commands", passed, f"{command_count} command files (derived from source)")
+    agent_count = len([p for p in (root / "agents").glob("*.md") if p.name not in ("CLAUDE.md", "AGENTS.md", "README.md")])
+    row(rows, "palette-skills", passed, f"{skill_count} SKILL.md, {agent_count} agents (derived from disk)")
 
 
 def _approved_locked_source(link: Path) -> bool:

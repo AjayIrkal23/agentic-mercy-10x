@@ -12,8 +12,10 @@ the single entry point does everything with **zero** user action:
      the target so every engine root resolves to ``~/.claude``;
   3. launch the visual installer, which auto-runs the self-heal loop to 100%.
 
-No CLI verbs, no prompts, no folder picker — UI only, fully automatic. Pure
-stdlib; Windows + POSIX.
+No CLI verbs, no prompts, no folder picker — fully automatic. The only flag is
+``--ci``: the same flow headless in the console, with every network step planned
+(WOULD-*) instead of run — for CI and fresh-machine rehearsals. Pure stdlib;
+Windows + POSIX.
 """
 from __future__ import annotations
 
@@ -33,8 +35,9 @@ from lib import platform as plat  # noqa: E402
 _GUARD = "AGENTIC_MERCY_RELOCATED"          # re-exec guard — never relocate twice
 _SKIP_COPY_DIRS = {".git", "__pycache__", "node_modules", ".venv", "venv"}
 # sentinel bundle items that prove a complete install is present at the target.
-_BUNDLE_ITEMS = ("skills", "hooks", "commands", "rules", "scripts", "installer",
+_BUNDLE_ITEMS = ("skills", "hooks", "agents", "rules", "scripts", "installer",
                  "settings.template.json", "install-ui.py")
+_HEADLESS_FLAGS = {"--ci"}  # network-free plan install, console only — never the web UI
 
 
 def canonical_target() -> Path:
@@ -126,15 +129,31 @@ def _launch_ui() -> int:
     return ui.main([])
 
 
+def _run_headless(ci: bool) -> int:
+    """Console self-heal (no web server). ``--ci`` = plan every network step."""
+    for _p in (str(Path(__file__).resolve().parents[1] / "installer"),
+               str(Path(__file__).resolve().parents[1] / "hooks")):
+        if _p not in sys.path:
+            sys.path.insert(0, _p)
+    import selfheal  # type: ignore
+    res = selfheal.self_heal(canonical_target(), ci=ci)
+    warns = [r for r in res["rows"] if r[1] == "WARN"]
+    print(f"\ninstall: {'SUCCESS' if res['success'] else 'INCOMPLETE'} in {res['rounds']} round(s); "
+          f"{len(res['fails'])} FAIL {sorted(res['fails'])}, {len(warns)} WARN")
+    return 0 if res["success"] else 1
+
+
 def main(argv=None) -> int:
     argv = [] if argv is None else list(argv)
-    if argv:
+    if any(a not in _HEADLESS_FLAGS for a in argv):
         print(
-            "install.py has no CLI verbs; run it without arguments. "
-            "For a read-only health check, run installer/doctor.py directly.",
+            "install.py takes no verbs; run it without arguments (visual installer) or "
+            "with --ci (headless, network-free plan). Health check: python3 installer/doctor.py; "
+            "status: python3 check.py.",
             file=sys.stderr,
         )
         return 2
+    headless = bool(argv)
 
     target = canonical_target()
 
@@ -149,9 +168,15 @@ def main(argv=None) -> int:
         # Restore the clone's worktree to pristine committed bytes FIRST, so a
         # Windows autocrlf-mangled checkout is fixed before we copy — the copied
         # bundle then lands byte-correct and R10 passes with no guessing.
+        # Guard: NEVER on a dirty clone (`checkout -- .` would discard edits);
+        # git_restore_worktree also refuses its own repo, so this may be a no-op.
         try:
             import selfheal  # type: ignore
-            if selfheal.git_restore_worktree(_SRC_ROOT):
+            if not (_SRC_ROOT / ".git").exists():
+                pass  # not a git checkout (tarball / copy) — nothing to restore
+            elif not selfheal.worktree_is_clean(_SRC_ROOT):
+                print("  Clone has uncommitted changes — skipping git restore.")
+            elif selfheal.git_restore_worktree(_SRC_ROOT):
                 print("  Restored pristine line endings in the clone (git).")
         except Exception:  # noqa: BLE001
             pass
@@ -159,15 +184,16 @@ def main(argv=None) -> int:
         # re-launch FROM the target so deps/doctor/render/selfheal all resolve
         # their _ROOT to ~/.claude and operate on the real install, not the clone.
         os.environ[_GUARD] = "1"
-        os.environ["CLAUDE_CONFIG_DIR"] = str(target)
+        if target.resolve() != (Path.home() / ".claude").resolve():
+            os.environ["CLAUDE_CONFIG_DIR"] = str(target)  # default target: leave unset
         entry = target / "install-ui.py"
         if entry.exists():
-            proc = subprocess.Popen([sys.executable, str(entry)], env=os.environ)
+            proc = subprocess.Popen([sys.executable, str(entry), *argv], env=os.environ)
             proc.wait()
             return proc.returncode
-        # extreme fallback: entry didn't copy — run the UI in place.
+        # extreme fallback: entry didn't copy — run in place.
 
-    return _launch_ui()
+    return _run_headless(ci="--ci" in argv) if headless else _launch_ui()
 
 
 if __name__ == "__main__":

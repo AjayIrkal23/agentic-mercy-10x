@@ -6,15 +6,15 @@ Answers "is my whole workflow installed and active?" in one report:
   · PRIVILEGES      ~/.claude user-owned + npm -g prefix writable (the sudo trap)
   · DEPENDENCIES    lean-ctx, tdd-guard, semgrep, jcodemunch-mcp, jdocmunch-mcp, graphify
   · MCP SERVERS     every manifest server vs `claude mcp list` (+ claude.ai connectors)
-  · PLUGINS         superpowers / ponytail / karpathy / mermaid vs `claude plugin list`
+  · PLUGINS         manifest plugins vs `claude plugin list --json` (exact ids)
   · WIRING          settings.json -> UserPromptSubmit=router.py (LIVE) + PreToolUse=dispatch.py
-  · PALETTE         skill + command counts vs the manifest
+  · PALETTE         skill + agent counts (derived from disk)
 
 `collect()` returns the report as STRUCTURED data (JSON-able) so both the CLI
 (`python check.py`) and the visual installer (installer/ui.py) render the same
 truth. Every gap carries an exact `fix` command. Read-only. Exit 0 = all green.
 
-Run:  python install.py verify   ·   python check.py   ·   python install.py ui
+Run:  python3 check.py
 """
 from __future__ import annotations
 
@@ -161,17 +161,18 @@ def collect(env, target: Path | None = None) -> tuple[list, int]:
             else:
                 _row(rows, MISS, nm, "not registered", " ".join(str(x) for x in s["add"]))
     for c in man.get("connectors", []):
-        _row(rows, CONN, c["id"], "claude.ai Connectors UI (not CLI)")
+        _row(rows, CONN, c["id"], c.get("note", "authorize via /mcp"))
     sections.append({"title": "MCP servers", "subtitle": f"registered · {src or 'claude mcp list'}", "rows": rows})
 
     # --- plugins ---
     rows = []
-    claude_ok, pl_txt = _claude_list(["plugin", "list"])
-    if claude_ok:
+    if shutil.which("claude"):
+        import deps  # type: ignore
+        have = deps.installed_plugins()
         for pl in man.get("plugins", {}).get("install", []):
-            _row(rows, OK if pl["id"] in pl_txt else WARN, pl["id"],
-                 "installed" if pl["id"] in pl_txt else "not installed",
-                 "" if pl["id"] in pl_txt else " ".join(pl["add"]))
+            ok = pl["id"] in have
+            _row(rows, OK if ok else WARN, pl["id"], "installed" if ok else "not installed",
+                 "" if ok else f"claude plugin install {pl['id']} --scope user")
     else:
         _row(rows, WARN, "marketplace plugins", "claude CLI absent — cannot check")
     # "manual" installs are LOCAL (a directory + materialized agents/skills), not
@@ -201,7 +202,7 @@ def collect(env, target: Path | None = None) -> tuple[list, int]:
         return " ".join(h.get("command", "") for g in sj.get(ev, []) for h in g.get("hooks", []))
     _row(rows, OK if "prompt_router/router.py" in _cmds("UserPromptSubmit") else MISS, "router LIVE",
          "UserPromptSubmit -> prompt_router/router.py",
-         "" if "prompt_router/router.py" in _cmds("UserPromptSubmit") else "python install.py install  (re-renders settings.json)")
+         "" if "prompt_router/router.py" in _cmds("UserPromptSubmit") else "python3 installer/render.py  (re-renders settings.json)")
     n_disp = sum(1 for ev in ("SessionStart", "PreToolUse", "PostToolUse", "Stop",
                               "SubagentStop", "PreCompact", "SessionEnd") if "dispatch.py" in _cmds(ev))
     _row(rows, OK if n_disp >= 7 else MISS, "dispatch chains", f"{n_disp}/7 events -> dispatch.py")
@@ -209,14 +210,13 @@ def collect(env, target: Path | None = None) -> tuple[list, int]:
          "router file", "hooks/prompt_router/router.py")
     sections.append({"title": "Workflow wiring", "subtitle": "router live + dispatch", "rows": rows})
 
-    # --- palette ---
+    # --- palette (counts derived from disk; the doctor owns correctness) ---
     rows = []
-    pal = man.get("palette", {})
     n_sk = len(list((root / "skills").glob("*/SKILL.md"))) if (root / "skills").is_dir() else 0
-    n_cmd = len(list((root / "commands").glob("*.md"))) if (root / "commands").is_dir() else 0
-    _row(rows, OK if n_sk >= pal.get("skill_bodies", 0) else WARN, "skills", f"{n_sk} SKILL.md (want >= {pal.get('skill_bodies')})")
-    _row(rows, OK if n_cmd == pal.get("command_files") else WARN, "commands", f"{n_cmd} files (want {pal.get('command_files')})")
-    sections.append({"title": "Palette", "subtitle": "skills + commands", "rows": rows})
+    n_ag = len([p for p in (root / "agents").glob("*.md") if p.name not in ("CLAUDE.md", "AGENTS.md", "README.md")])
+    _row(rows, OK if n_sk else MISS, "skills", f"{n_sk} SKILL.md")
+    _row(rows, OK if n_ag else MISS, "agents", f"{n_ag} agent definitions")
+    sections.append({"title": "Palette", "subtitle": "skills + agents", "rows": rows})
 
     hard = sum(1 for s in sections for r in s["rows"] if r["mark"] == MISS)
     return sections, hard
@@ -242,7 +242,7 @@ def main(argv: list[str] | None = None) -> int:
         print("SUMMARY: WORKFLOW ACTIVE — all required checks green. [WARN]=optional, [conn]=claude.ai UI.")
     else:
         print(f"SUMMARY: {hard} required gap(s) [MISS] above — run the fix command on each, then re-run. "
-              "(Or `python install.py install` to auto-install, or `python install.py ui` for the visual installer.)")
+              "(Or re-run the one-click installer: `python3 install.py`.)")
     return 1 if hard else 0
 
 

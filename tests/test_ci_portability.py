@@ -9,8 +9,8 @@ keep both legs green forever:
      with no PyYAML installed — PyYAML is an optional accelerant, not a hard dep;
   2. the installer's repo-local post-step scripts resolve against the installer's
      OWN repository root (_ROOT), so install-from-checkout works anywhere;
-  3. every expected MCP in the manifest roster is registered in settings.json, so
-     the doctor's mcp-roster probe passes when settings.json is the only source.
+  3. the manifest is the single MCP declaration (every roster name has a
+     `claude mcp add --scope user` recipe; the template has no mcpServers).
 
 Runs on ubuntu-latest AND windows-latest.
 """
@@ -139,21 +139,21 @@ def test_post_steps_resolve_repo_local_scripts_against_root():
 
 
 # --------------------------------------------------------------------------- #
-# 3. mcp-roster: every expected MCP is in settings.json (CI's only source)
+# 3. mcp-roster: the manifest is the ONLY MCP declaration (D13) — the template
+#    carries no mcpServers; every roster name has a `claude mcp add` recipe.
 # --------------------------------------------------------------------------- #
-def test_manifest_mcp_roster_all_registered_in_settings():
+def test_manifest_mcp_roster_all_have_add_recipes():
     manifest = json.loads((_ROOT / "installer" / "manifest.json").read_text(encoding="utf-8"))
     roster = manifest["doctor_probes"]["mcp_roster"]
-    settings = json.loads((_ROOT / "settings.json").read_text(encoding="utf-8"))
-    have = set((settings.get("mcpServers") or {}).keys())
-    missing = [m for m in roster if m not in have]
-    assert not missing, f"roster MCPs missing from settings.json: {missing}"
+    recipes = {s["name"]: s["add"] for s in manifest["mcp_servers"]}
+    for name in roster:
+        add = recipes.get(name)
+        assert add and add[:5] == ["claude", "mcp", "add", "--scope", "user"] and name in add, name
 
 
-def test_jdocmunch_registered_in_settings_and_template():
-    for f in ("settings.json", "settings.template.json"):
-        d = json.loads((_ROOT / f).read_text(encoding="utf-8"))
-        assert "jdocmunch" in (d.get("mcpServers") or {}), f"jdocmunch missing from {f}"
+def test_template_has_no_mcp_servers_block():
+    d = json.loads((_ROOT / "settings.template.json").read_text(encoding="utf-8"))
+    assert "mcpServers" not in d
 
 
 # --------------------------------------------------------------------------- #

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """check.py — one-command workflow tester (Windows + Ubuntu/macOS).
 
-Thin wrapper for `python install.py verify`: reports whether the whole ~/.claude
+Thin wrapper around installer/verify.py: reports whether the whole ~/.claude
 workflow is installed and active (prerequisites, dependency binaries, MCP servers,
-plugins, router-live wiring, skill/command palette) with an exact fix command per
-gap. Read-only. Exit 0 = all-green.
+plugins, router-live wiring, skill/agent palette) with an exact fix command per
+gap. Read-only. Exit 0 = all-green. Deep health: python3 installer/doctor.py.
 
     python check.py
 """

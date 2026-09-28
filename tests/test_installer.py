@@ -34,11 +34,13 @@ def test_manifest_valid_json_and_shape():
     assert m["min_python"] == "3.10"
     assert isinstance(m["deps"], list) and m["deps"]
     assert isinstance(m["mcp_servers"], list)
-    skill_count = len(list((_ROOT / "skills").glob("*/SKILL.md")))
-    command_count = len(list((_ROOT / "commands").glob("*.md")))
-    assert m["palette"]["skill_names"] == skill_count
-    assert m["palette"]["command_files"] == command_count
-    assert m["palette"]["historic_command_names"] == 139
+    assert "palette" not in m  # counts are computed from disk, never pinned
+    names = [s["name"] for s in m["mcp_servers"]]
+    assert names == m["doctor_probes"]["mcp_roster"]
+    assert not {"fetch", "ast-grep", "figma", "gbrain"} & set(names)
+    steps = [s["id"] for s in m["post_steps"]]
+    assert "gen-invoke-skills" in steps and "gen-invoke-commands" not in steps
+    assert m["externals"] == []
 
 
 def test_detect_returns_env():
@@ -81,14 +83,27 @@ def test_user_facing_entrypoint_rejects_cli_verbs(monkeypatch):
     assert launched == []
 
 
-def test_doctor_deterministic_checks_pass():
+def test_ci_flag_is_headless_never_the_web_ui(monkeypatch):
+    """--ci must run the console self-heal, never start the (blocking) web UI."""
+    bootstrap = _load("bootstrap", "installer/bootstrap.py")
+    launched: list[str] = []
+    monkeypatch.setattr(bootstrap, "_launch_ui", lambda: launched.append("ui") or 0)
+    monkeypatch.setattr(bootstrap, "_run_headless", lambda ci: launched.append(f"headless:{ci}") or 0)
+    monkeypatch.setattr(bootstrap, "_needs_relocate", lambda *a: False)
+    assert bootstrap.main(["--ci"]) == 0
+    assert launched == ["headless:True"]
+
+
+def test_doctor_deterministic_checks_pass(monkeypatch, tmp_path):
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("CLAUDE_HOOK_DOCTOR", "1")
     doctor = _load("doctor", "installer/doctor.py")
-    rows = doctor.run_doctor()
+    rows = doctor.run_doctor(ci=True)
     by_name = {n: (s, d) for n, s, d in rows}
-    # these must PASS on any faithful checkout
-    for check in ("interpreters", "render-equivalence", "palette-skills",
-                  "palette-commands", "command-resolution", "aliases", "locked-source-links"):
+    # these must PASS on any faithful checkout (render-equivalence SKIPs without settings.json)
+    for check in ("interpreters", "palette-skills", "aliases", "locked-source-links",
+                  "plugins-contract", "generated-in-sync"):
         assert by_name[check][0] == "PASS", f"{check}: {by_name[check]}"
-    # no check may hard-FAIL
+    assert by_name["render-equivalence"][0] in ("PASS", "SKIP")
     fails = [n for n, s, _ in rows if s == "FAIL"]
     assert not fails, f"doctor FAIL rows: {fails}"

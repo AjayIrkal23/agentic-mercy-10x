@@ -36,7 +36,8 @@ shell-snapshots/
 .audit/
 .backups/
 backups/
-agent-memory/
+# per-user subagent memory (written by agents with `memory:`), never shared
+/agent-memory/
 double-shot-latte/
 improvements/
 plans/
@@ -128,12 +129,14 @@ hooks/*.bak-*
 
 # --- 2026-09-27 upgrade ---
 node_modules/
-package-lock.json
+# root-anchored: vendored skills legitimately ship package-lock.json / feedback/
+# (R10 hashes them — an unanchored rule breaks R10 on every fresh clone)
+/package-lock.json
 .pytest_cache/
 memory/*.jsonl
 bridge-spawn/
 .codex/
-feedback/
+/feedback/
 gh-pr-status-cache.json
 stats-cache.json
 tdd-guard/

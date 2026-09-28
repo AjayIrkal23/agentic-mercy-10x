@@ -1,9 +1,9 @@
-"""test_doctor.py — the install-time doctor + its regression-detection (P6-T6).
+"""test_doctor.py — the install-time doctor + its regression-detection.
 
-Asserts the doctor is GREEN on a faithful checkout, that the model-routing and
-workflow-args checks hold, and — the P6-T6 acceptance bar — that the doctor
-actually catches a deliberately BROKEN dispatch link and a DELETED command
-(otherwise a green doctor would be worthless).
+Runs the doctor READ-ONLY: HOME and CLAUDE_CONFIG_DIR point at a tmp sandbox and
+CLAUDE_HOOK_DOCTOR=1, so no dispatch link can touch the real ~/.claude. Asserts
+the doctor is green on a faithful checkout and that link-doctor catches a
+deliberately broken dispatch link.
 """
 
 from __future__ import annotations
@@ -12,6 +12,8 @@ import importlib.util
 import json
 import sys
 from pathlib import Path
+
+import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
 for _p in (str(_ROOT / "installer"), str(_ROOT / "hooks"), str(_ROOT / "hooks" / "tools")):
@@ -27,25 +29,35 @@ def _load(name: str, rel: str):
     return mod
 
 
-def test_doctor_is_green():
+@pytest.fixture
+def sandbox_home(tmp_path, monkeypatch):
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(home / ".claude"))
+    monkeypatch.setenv("CLAUDE_HOOK_DOCTOR", "1")
+    return home
+
+
+def test_doctor_is_green(sandbox_home):
     doctor = _load("doctor", "installer/doctor.py")
     rows = doctor.run_doctor()
     fails = [(n, d) for n, s, d in rows if s == "FAIL"]
     assert not fails, f"doctor FAIL rows: {fails}"
-    # the T6-added checks must be present and PASS
     by = {n: s for n, s, _ in rows}
-    assert by.get("model-routing") == "PASS"
-    assert by.get("workflow-args") == "PASS"
-    assert by.get("hook-fixtures") == "PASS"
+    for name in ("model-routing", "workflow-args", "hook-fixtures", "settings-safety",
+                 "plugins-contract", "interpreters"):
+        assert by.get(name) == "PASS", (name, by.get(name))
+    # nothing machine-specific leaked in: sandbox has no ~/.claude.json / lean-ctx config
+    assert by.get("mcp-roster") == "WARN"
+    assert by.get("lean-ctx-config") in ("WARN", "PASS")
 
 
-def test_command_resolution_detects_a_deleted_command():
+def test_doctor_ci_skips_machine_rows(sandbox_home):
     doctor = _load("doctor", "installer/doctor.py")
-    # a historic name with neither a command file nor a translator entry is UNRESOLVED
-    unresolved = doctor.resolve_historic_commands(
-        ["invoke-audit", "invoke-deleted-xyz"], _ROOT / "commands", {"invoke-audit": ["audit"]})
-    assert "invoke-deleted-xyz" in unresolved
-    assert "invoke-audit" not in unresolved
+    by = {n: s for n, s, _ in doctor.run_doctor(ci=True)}
+    assert by["mcp-roster"] == "SKIP" and by["lean-ctx-config"] == "SKIP"
 
 
 def test_link_doctor_detects_a_broken_link(tmp_path):

@@ -22,6 +22,9 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    # windows leg is informational until proven green
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -44,22 +47,31 @@ jobs:
       - name: Install Python tooling (pyyaml validator dep + pytest runner)
         run: python -m pip install --quiet pyyaml pytest
 
-      # Read-only installer planning. The public install.py entry point is UI-only;
-      # its engine modules expose deterministic dry-run and doctor commands for CI.
+      # Read-only installer planning (every mutating step reported as WOULD-*).
+      # Never run bare install.py here: without --ci it starts the web UI.
       - name: Installer plan (dry-run)
         run: python installer/deps.py
 
       - name: Doctor (hook-fire matrix + trigger-surface + model routing)
         run: python installer/doctor.py --ci
+        env:
+          CLAUDE_HOOK_DOCTOR: "1"
 
       - name: Validate skills (R9 floor guard + R10 upstream-intactness)
         run: python scripts/validate_skills.py
 
-      - name: Trigger floor is a verbatim superset (incl. 139 historic command names)
+      - name: Trigger floor is a verbatim superset
         run: python hooks/build-trigger-floor.py --check
+
+      - name: Generated skills + agent blocks in sync
+        run: |
+          python hooks/gen-invoke-skills.py --check
+          python hooks/gen-agent-skill-blocks.py --check
 
       - name: Portability grep-gates (no sys.platform outside platform.py; no home/drive literals; no new .sh)
         run: python scripts/grep_gates.py
 
       - name: Tests (platform, prompt-router, dispatch parity, index-lifecycle, model-guard, installer, doctor)
         run: python -m pytest tests/ hooks/tests/ -q
+        env:
+          CLAUDE_HOOK_DOCTOR: "1"

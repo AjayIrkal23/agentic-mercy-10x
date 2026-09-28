@@ -11,6 +11,8 @@ manifest is the contract the doctor asserts). Pure stdlib; all OS branching via
 from __future__ import annotations
 
 import json
+import os
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -75,23 +77,47 @@ def _importable(module: str, env) -> bool:
     return cp.returncode == 0
 
 
+def _link_bins(names: list, env, dry_run: bool) -> str:
+    """POSIX: symlink npm -g binaries (nvm prefix) into ~/.local/bin so shells that
+    don't source nvm (Claude Code launched from a GUI) still find them."""
+    if env.os_name != "posix":
+        return ""
+    local_bin = Path.home() / ".local" / "bin"
+    done = []
+    for n in names:
+        src = shutil.which(n)
+        dst = local_bin / n
+        if not src or dst.exists() or dst.is_symlink() or Path(src).parent == local_bin:
+            continue
+        if dry_run:
+            done.append(f"would-link {n}")
+            continue
+        try:
+            local_bin.mkdir(parents=True, exist_ok=True)
+            dst.symlink_to(src)
+            done.append(f"linked {n}")
+        except OSError:
+            pass
+    return f" ({', '.join(done)})" if done else ""
+
+
 def install_deps(env, *, ci: bool = False, dry_run: bool = False) -> list[tuple[str, str]]:
     manifest = _load_manifest()
     results: list[tuple[str, str]] = []
     for dep in manifest.get("deps", []):
         did = dep["id"]
         which = dep.get("which")
-        if which and shutil.which(which):
-            results.append((did, "PRESENT"))
-            continue
         imp = dep.get("import")
-        if imp and _importable(imp, env):
-            results.append((did, "PRESENT"))
-            continue
-        if ci and dep.get("ci_stub"):
-            results.append((did, "SKIP(ci-stub)"))
+        exists = dep.get("exists")
+        if ((which and shutil.which(which)) or (imp and _importable(imp, env))
+                or (exists and Path(exists).expanduser().exists())):
+            results.append((did, "PRESENT" + _link_bins(dep.get("link_bins", []), env, dry_run)))
             continue
         install_cmd = dep.get(f"install_{env.os_name}") or dep.get("install")
+        if ci and dep.get("ci_stub"):
+            results.append((did, "SKIP(ci-stub)" if not dry_run or not install_cmd
+                            else f"WOULD-INSTALL: {' '.join(install_cmd)}"))
+            continue
         if not install_cmd:
             results.append((did, "MISSING(no-installer)" if not dep.get("optional") else "SKIP(optional-absent)"))
             continue
@@ -99,35 +125,192 @@ def install_deps(env, *, ci: bool = False, dry_run: bool = False) -> list[tuple[
             results.append((did, f"WOULD-INSTALL: {' '.join(install_cmd)}"))
             continue
         cp = plat.run(_sub(install_cmd, _exec_tokens(env)), timeout=600)
-        results.append((did, "INSTALLED" if cp.returncode == 0 else f"WARN(rc={cp.returncode})"))
+        ok = cp.returncode == 0
+        results.append((did, ("INSTALLED" + _link_bins(dep.get("link_bins", []), env, False))
+                        if ok else f"WARN(rc={cp.returncode})"))
     return results
+
+
+def user_config_file() -> Path:
+    """Claude Code's global config: $CLAUDE_CONFIG_DIR/.claude.json else ~/.claude.json."""
+    cfg = os.environ.get("CLAUDE_CONFIG_DIR")
+    if cfg and Path(cfg).resolve() != (Path.home() / ".claude").resolve():
+        return Path(cfg) / ".claude.json"
+    return Path.home() / ".claude.json"
+
+
+def registered_user_mcps() -> set[str]:
+    """Exact names of user-scope MCP servers (the only live MCP store, D13)."""
+    try:
+        d = json.loads(user_config_file().read_text(encoding="utf-8"))
+        return set((d.get("mcpServers") or {}).keys())
+    except (OSError, ValueError):
+        return set()
+
+
+def _mcp_argv(srv: dict, env) -> list[str]:
+    cmd = _sub(srv["add"], _exec_tokens(env))
+    extra: list[str] = []
+    for var in srv.get("env_from", []):
+        if os.environ.get(var):
+            extra += ["-e", f"{var}={os.environ[var]}"]
+    if extra:  # right after the server name (commander's -e is variadic)
+        i = cmd.index(srv["name"]) + 1
+        cmd[i:i] = extra
+    return cmd
+
+
+def _redact(cmd: list[str], srv: dict) -> str:
+    names = set(srv.get("env_from", []))
+    return " ".join(f"{c.split('=', 1)[0]}=***" if c.split("=", 1)[0] in names else c for c in cmd)
 
 
 def register_mcps(env, *, ci: bool = False, dry_run: bool = False) -> list[tuple[str, str]]:
     manifest = _load_manifest()
     results: list[tuple[str, str]] = []
-    if not env.claude_cli:
-        return [(s["name"], "SKIP(no-claude-cli)") for s in manifest.get("mcp_servers", [])]
-    # one listing to decide presence
-    listed = ""
-    lc = plat.run(["claude", "mcp", "list"], timeout=30)
-    if lc.returncode == 0:
-        listed = lc.stdout or ""
+    have = registered_user_mcps()
     for srv in manifest.get("mcp_servers", []):
         name = srv["name"]
-        if name in listed:
+        if name in have:
             results.append((name, "PRESENT"))
             continue
-        if ci and srv.get("ci_stub"):
-            results.append((name, "SKIP(ci-stub)"))
+        if srv.get("posix_only") and env.os_name != "posix":
+            results.append((name, "SKIP(posix-only)"))
             continue
-        cmd = _sub(srv["add"], _exec_tokens(env))
-        if dry_run:
-            results.append((name, f"WOULD-ADD: {' '.join(cmd)}"))
+        cmd = _mcp_argv(srv, env)
+        if dry_run or (ci and srv.get("ci_stub")):
+            results.append((name, f"WOULD-ADD: {_redact(cmd, srv)}"))
+            continue
+        if not env.claude_cli:
+            results.append((name, "SKIP(no-claude-cli)"))
             continue
         cp = plat.run(cmd, timeout=60)
         results.append((name, "ADDED" if cp.returncode == 0 else f"WARN(rc={cp.returncode})"))
     return results
+
+
+# --------------------------------------------------------------------------- #
+# lean-ctx config: merge the required keys, never clobber the rest of the file
+# --------------------------------------------------------------------------- #
+def leanctx_config_path() -> Path:
+    return Path.home() / ".config" / "lean-ctx" / "config.toml"
+
+
+def _toml_val(v) -> str:
+    return ("true" if v else "false") if isinstance(v, bool) else json.dumps(v)
+
+
+def _sections(lines: list[str]) -> list[tuple[str, int, int]]:
+    """[(section_name, start, end)] — '' is the top-level table before the first header."""
+    heads = [(i, m.group(1).strip()) for i, ln in enumerate(lines)
+             if (m := re.match(r"^\s*\[([^\[\]]+)\]\s*$", ln))]
+    out, prev_i, prev_name = [], 0, ""
+    for i, name in heads:
+        out.append((prev_name, prev_i, i))
+        prev_i, prev_name = i + 1, name
+    out.append((prev_name, prev_i, len(lines)))
+    return out
+
+
+def leanctx_required() -> dict:
+    """{table: {key: value}} from the manifest ('top' = root table)."""
+    cfg = _load_manifest().get("leanctx_config") or {}
+    return {k: v for k, v in cfg.items() if isinstance(v, dict)}
+
+
+def _tables(required: dict):
+    return [("" if t == "top" else t, ks) for t, ks in required.items()]
+
+
+def merge_leanctx_text(text: str, required: dict) -> str:
+    """Set required keys in the TOML text. ``required`` = {"top": {...}, "<table>": {...}};
+    'top' means the root table. Existing unrelated keys/comments are preserved."""
+    lines = text.splitlines()
+    for table, keys in _tables(required):
+        for key, val in keys.items():
+            want = f"{key} = {_toml_val(val)}"
+            sec = next((s for s in _sections(lines) if s[0] == table), None)
+            if sec is None:  # create the table at the end
+                lines += ["", f"[{table}]", want]
+                continue
+            _, start, end = sec
+            hit = next((i for i in range(start, end)
+                        if re.match(rf"^\s*{re.escape(key)}\s*=", lines[i])), None)
+            if hit is not None:
+                lines[hit] = want
+            else:
+                ins = end
+                while ins > start and not lines[ins - 1].strip():
+                    ins -= 1  # keep trailing blank lines after the key
+                lines.insert(ins, want)
+    return "\n".join(lines) + "\n"
+
+
+def leanctx_config_gaps(required: dict, path: Path | None = None) -> list[str] | None:
+    """None if the config file is absent, else the list of keys not at the required value."""
+    p = path or leanctx_config_path()
+    if not p.is_file():
+        return None
+    text = p.read_text(encoding="utf-8")
+    try:
+        import tomllib  # 3.11+
+        data = tomllib.loads(text)
+        return [f"{t or 'root'}.{k}" for t, ks in _tables(required) for k, v in ks.items()
+                if (data if not t else data.get(t, {})).get(k, object()) != v]
+    except ImportError:  # 3.10: re-merge and compare (whitespace-normalized)
+        norm = "\n".join(text.splitlines()) + "\n"
+        return [f"{t or 'root'}.{k}" for t, ks in _tables(required)
+                for k, v in ks.items() if merge_leanctx_text(norm, {t or "top": {k: v}}) != norm]
+    except ValueError as exc:  # tomllib.TOMLDecodeError
+        return [f"unparseable: {exc}"]
+
+
+def configure_lean_ctx(*, dry_run: bool = False) -> tuple[str, str]:
+    required = leanctx_required()
+    p = leanctx_config_path()
+    if leanctx_config_gaps(required, p) == []:
+        return ("lean-ctx-config", "PRESENT (compliant)")
+    if dry_run:
+        return ("lean-ctx-config", f"WOULD-WRITE {p}")
+    old = p.read_text(encoding="utf-8") if p.is_file() else ""
+    p.parent.mkdir(parents=True, exist_ok=True)
+    if old:  # recoverable copy before touching the user's config
+        p.with_name(p.name + ".bak-installer").write_text(old, encoding="utf-8")
+    p.write_text(merge_leanctx_text(old, required), encoding="utf-8")
+    return ("lean-ctx-config", "OK(merged)")
+
+
+def reconcile_mcp_env(*, dry_run: bool = False) -> list[tuple[str, str]]:
+    """For MCP servers already registered, add the manifest's literal ``-e K=V``
+    pairs that are missing/different (telemetry-off flags …) via the claude CLI
+    (remove + add-json of the SAME entry with env merged — nothing else changes).
+    Secrets (``env_from``) and existing extra env keys are never touched."""
+    try:
+        live = json.loads(user_config_file().read_text(encoding="utf-8")).get("mcpServers") or {}
+    except (OSError, ValueError):
+        return []
+    out: list[tuple[str, str]] = []
+    for srv in _load_manifest().get("mcp_servers", []):
+        name, add = srv["name"], srv["add"]
+        want = dict(add[i + 1].split("=", 1) for i, a in enumerate(add)
+                    if a == "-e" and "{" not in add[i + 1])
+        entry = live.get(name)
+        if not entry or not want:
+            continue
+        cur = entry.get("env") or {}
+        missing = {k: v for k, v in want.items() if cur.get(k) != v}
+        if not missing:
+            continue
+        if dry_run or not shutil.which("claude"):
+            out.append((name, f"WOULD-SET-ENV: {sorted(missing)}"))
+            continue
+        new = {**entry, "env": {**cur, **missing}}
+        plat.run(["claude", "mcp", "remove", "--scope", "user", name], timeout=60)
+        cp = plat.run(["claude", "mcp", "add-json", "--scope", "user", name, json.dumps(new)], timeout=60)
+        if cp.returncode != 0:  # never leave the server unregistered
+            plat.run(["claude", "mcp", "add-json", "--scope", "user", name, json.dumps(entry)], timeout=60)
+        out.append((name, f"ENV-SET {sorted(missing)}" if cp.returncode == 0 else f"WARN(rc={cp.returncode}, restored)"))
+    return out
 
 
 def run_post_steps(env, *, ci: bool = False, dry_run: bool = False) -> list[tuple[str, str]]:
@@ -136,6 +319,9 @@ def run_post_steps(env, *, ci: bool = False, dry_run: bool = False) -> list[tupl
     for step in manifest.get("post_steps", []):
         sid = step["id"]
         cmd = _sub(step["cmd"], _exec_tokens(env))
+        if ci and step.get("network"):
+            results.append((sid, f"WOULD-RUN(network): {' '.join(cmd)}"))
+            continue
         # The script path is the FIRST '.py' arg — NOT cmd[1]. On Windows the
         # {PYTHON} token expands to a multi-word launcher ('py -3'), so _sub emits
         # ['py','-3','<...>/x.py',...] and cmd[1] is '-3', not the script. Reading
@@ -180,6 +366,15 @@ def _present(root: Path, pat: str) -> bool:
     return (root / pat).exists()
 
 
+def installed_plugins() -> set[str]:
+    """Exact ``plugin@marketplace`` ids from ``claude plugin list --json``."""
+    cp = plat.run(["claude", "plugin", "list", "--json"], timeout=40)
+    try:
+        return {p["id"] for p in json.loads(cp.stdout or "[]") if isinstance(p, dict) and "id" in p}
+    except (ValueError, TypeError):
+        return set()
+
+
 def install_plugins(env, *, ci: bool = False, dry_run: bool = False) -> list[tuple[str, str]]:
     """Add plugin marketplaces + install the workbench plugins (via the claude
     CLI), then any manifest-declared local/manual packages. Idempotent: an
@@ -192,39 +387,37 @@ def install_plugins(env, *, ci: bool = False, dry_run: bool = False) -> list[tup
     target = Path(env.real_dir or str(plat.claude_dir()))
 
     # --- marketplace + CLI-installed plugins (need the claude CLI) ---
-    if not env.claude_cli:
+    plan = dry_run or ci
+    if not env.claude_cli and not plan:
         results.append(("marketplace-plugins", "SKIP(no-claude-cli)"))
-    elif ci:
-        results.append(("marketplace-plugins", "SKIP(ci-stub)"))
     else:
-        listed = ""
-        lm = plat.run(["claude", "plugin", "marketplace", "list"], timeout=30)
-        if lm.returncode == 0:
-            listed = lm.stdout or ""
+        try:
+            known = set(json.loads((target / "plugins" / "known_marketplaces.json")
+                                   .read_text(encoding="utf-8")))
+        except (OSError, ValueError):
+            known = set()
         for mk in plugins.get("marketplaces", []):
             mid = mk["id"]
-            if mid in listed:
+            if mid in known:
                 results.append((f"mkt:{mid}", "PRESENT"))
                 continue
-            if dry_run:
-                results.append((f"mkt:{mid}", f"WOULD-ADD: {' '.join(mk['add'][-1:])}"))
+            if plan:
+                results.append((f"mkt:{mid}", f"WOULD-ADD: {' '.join(mk['add'])}"))
                 continue
             cp = plat.run(_sub(mk["add"], tokens), timeout=90)
             results.append((f"mkt:{mid}", "ADDED" if cp.returncode == 0 else f"WARN(rc={cp.returncode})"))
 
-        plisted = ""
-        lp = plat.run(["claude", "plugin", "list"], timeout=30)
-        if lp.returncode == 0:
-            plisted = lp.stdout or ""
+        installed = installed_plugins() if env.claude_cli else set()
         for pl in plugins.get("install", []):
             pid = pl["id"]
-            if pid in plisted:
+            if pid in installed:
                 results.append((f"plugin:{pid}", "PRESENT"))
                 continue
-            if dry_run:
-                results.append((f"plugin:{pid}", f"WOULD-INSTALL: {pl['add'][-1]}"))
+            cmd = ["claude", "plugin", "install", pid, "--scope", "user"]
+            if plan:
+                results.append((f"plugin:{pid}", f"WOULD-INSTALL: {' '.join(cmd)}"))
                 continue
-            cp = plat.run(_sub(pl["add"], tokens), timeout=180)
+            cp = plat.run(cmd, timeout=180)
             results.append((f"plugin:{pid}", "INSTALLED" if cp.returncode == 0 else f"WARN(rc={cp.returncode})"))
 
     # --- local/manual installs need node, not the Claude CLI ---
@@ -258,11 +451,13 @@ def install_plugins(env, *, ci: bool = False, dry_run: bool = False) -> list[tup
 if __name__ == "__main__":
     from detect import detect  # type: ignore
 
-    e = detect()
+    e = detect()  # read-only plan: every mutating step is reported as WOULD-*
     for label, rows in [("prereqs", check_prereqs(e)),
                         ("deps", install_deps(e, dry_run=True)),
                         ("mcp", register_mcps(e, dry_run=True)),
+                        ("mcp-env", reconcile_mcp_env(dry_run=True)),
                         ("plugins", install_plugins(e, dry_run=True)),
+                        ("lean-ctx", [configure_lean_ctx(dry_run=True)]),
                         ("post", run_post_steps(e, dry_run=True))]:
         print(f"== {label} ==")
         for name, status in rows:

@@ -17,7 +17,7 @@
 #                                    graph belongs to the OPEN repo (git-remote
 #                                    identity) and fails open on a missing graph
 #   - hooks/graphify-enforce.py      pre-tool-use advisory + query-time freshness
-#   - hooks/graphify-index-guard.py  SessionStart freshness (via index-lifecycle.py)
+#   - hooks/index-lifecycle.py       SessionStart graph freshness
 #   - hooks/lib/repo_context.py      shared git-identity helpers
 #
 # Build a repo's graph any time with:  graphify update <repo-root>
