@@ -1,8 +1,11 @@
 ---
 name: domain-modeling
 description: Build and sharpen a project's domain model. Use when the user wants to pin down domain terminology or a ubiquitous language, record an architectural decision, or when another skill needs to maintain the domain model.
+when_to_use: Use when pinning down domain terminology, recording an architectural decision, or editing CONTEXT.md / docs/adr.
+paths:
+- '**/CONTEXT.md'
+- '**/docs/adr/**'
 ---
-
 # Domain Modeling
 
 Actively build and sharpen the project's domain model as you design. This is the *active* discipline — challenging terms, inventing edge-case scenarios, and writing the glossary and decisions down the moment they crystallise. (Merely *reading* `CONTEXT.md` for vocabulary is not this skill — that's a one-line habit any skill can do. This skill is for when you're changing the model, not just consuming it.)

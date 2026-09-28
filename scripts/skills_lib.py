@@ -4,9 +4,9 @@ skills_lib.py — shared primitives for the P5 skill consolidation toolchain.
 
 Home of: front-matter parse/emit, distinctive-trigger-word tokenisation +
 token-diff (the trigger-law proof), directory content hashing (R10),
-provenance family derivation (all from disk, never hardcoded), and skill
+vendored-git family derivation (from hooks/skills-sources.json), and skill
 enumeration. Imported by validate_skills.py, build_skills_index.py,
-build_provenance.py, migrate_frontmatter.py, apply_merge.py, make_alias.py.
+build_provenance.py, vendor_skill.py, migrate_frontmatter.py.
 
 Pure stdlib + PyYAML. No network, no external state.
 """
@@ -152,7 +152,8 @@ def token_diff(old_desc: str, new_desc: str, keywords) -> set[str]:
 # ---------------------------------------------------------------------------
 # Directory content hashing (R10 upstream-intactness)
 # ---------------------------------------------------------------------------
-_HASH_EXCLUDE_DIRS = {".git", ".git-upstream", "__pycache__", ".pytest_cache"}
+_HASH_EXCLUDE_DIRS = {".git", ".git-upstream", "__pycache__", ".pytest_cache",
+                      ".venv", "node_modules", ".img2threejs", ".vendored"}
 _HASH_EXCLUDE_SUFFIX = {".pyc", ".pyo"}
 
 
@@ -191,15 +192,17 @@ def sha256_text(text: str) -> str:
 # ---------------------------------------------------------------------------
 # Skill enumeration + provenance family derivation (ALL from disk)
 # ---------------------------------------------------------------------------
-VENDORED_DESIGN = ["impeccable", "taste-skill", "ui-ux-pro-max", "huashu-design",
-                   "design-extract"]
-EMBEDDED_GIT = {"vite-react-best-practices": "github.com/claudiocebpaz/vite-react-best-practices"}
-SKILLS_CLI = {"find-skills": "npx skills ecosystem"}
-# Installer-managed by NAME so classification survives P5-T12 materialization
-# (symlink -> real copy). Detection must not rely on the dir still being a symlink.
-INSTALLER_MANAGED = {"higgsfield-generate", "higgsfield-marketplace-cards",
-                     "higgsfield-product-photoshoot", "higgsfield-soul-id",
-                     "higgsfield-websites", "mmx-cli"}
+SOURCES_PATH = HOOKS_DIR / "skills-sources.json"
+
+
+def vendored_sources() -> dict:
+    """hooks/skills-sources.json entries (name -> {repo, ref, subpath, ...})."""
+    import json
+    try:
+        data = json.loads(SOURCES_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return {k: v for k, v in data.items() if not k.startswith("_") and isinstance(v, dict)}
 
 
 def skill_dirs() -> list[Path]:
@@ -220,23 +223,10 @@ def skill_names() -> list[str]:
 
 
 def derive_families() -> dict[str, str]:
-    """skill_name -> family, for the 128 upstream-locked skills only.
-
-    Families: installer-managed, vendored-design, embedded-git, skills-cli.
-    """
-    fam: dict[str, str] = {}
-    for d in skill_dirs():
-        n = d.name
-        if n in INSTALLER_MANAGED or (
-                d.is_symlink() and ".agents/skills" in (os.readlink(d) if d.is_symlink() else "")):
-            fam[n] = "installer-managed"
-        elif n in VENDORED_DESIGN:
-            fam[n] = "vendored-design"
-        elif n in EMBEDDED_GIT:
-            fam[n] = "embedded-git"
-        elif n in SKILLS_CLI:
-            fam[n] = "skills-cli"
-    return fam
+    """skill_name -> "vendored-git" for every on-disk skill declared in
+    hooks/skills-sources.json (the only locked family). Everything else is user."""
+    src = vendored_sources()
+    return {d.name: "vendored-git" for d in skill_dirs() if d.name in src}
 
 
 def locked_skills() -> set[str]:

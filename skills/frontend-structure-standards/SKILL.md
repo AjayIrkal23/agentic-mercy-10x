@@ -1,55 +1,19 @@
 ---
 name: frontend-structure-standards
-description: "ALWAYS invoke when frontend work needs decisions about folder layout, module boundaries, file decomposition, or where app-owned frontend types should live. MUST use to plan frontend component, hook, and module boundaries and organize maintainable frontend modules."
-disable-model-invocation: false
-schema: 1
-category: backend
-surfaces:
-- backend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 2585
-triggers:
-  keywords:
-  - app-owned
-  - boundaries
-  - component
-  - decisions
-  - decomposition
-  - file
-  - folder
-  - frontend
-  - hook
-  - layout
-  - live
-  - maintainable
-  - module
-  - modules
-  - needs
-  - organize
-  - plan
-  - should
-  - standards
-  - structure
-  - types
-  - work
-  paths:
-  - /router/
-  - /routes/
-  - /store/
-  - reducer.
-  - redux
-  - route.ts
-  - route.tsx
-  - routes.ts
-  - selector.
-  - slice.
-  - src/schemas/
-  - src/types/
-  intents:
-  - backend
+description: "Frontend folder layout, module boundaries, file decomposition, and where app-owned frontend types live: domain-first src/{pages,components,hooks,store,types} organization, route-page vs feature-component split, shared RTK Query base-api pattern."
+when_to_use: Use when deciding where a frontend file, component, hook, store slice, or type belongs, when splitting an oversized module, or when creating files under src/{components,pages,hooks,types,store,features}.
+paths:
+  - "**/src/{components,pages,hooks,types,store,features}/**"
+metadata:
+  schema: 1
+  category: frontend
+  surfaces: [frontend]
+  platforms: [linux, darwin, windows]
+  token-cost: 2585
+  triggers:
+    keywords: [folder layout, module boundaries, file decomposition, frontend types, src/types, src/pages, src/components, feature hooks, store slice, domain-first, structure]
+    paths: [/router/, /routes/, /store/, reducer., redux, route.ts, route.tsx, routes.ts, selector., slice., src/schemas/, src/types/]
+    intents: [implement, refactor]
 ---
 FRONTEND STRUCTURE STANDARDS
 
@@ -73,7 +37,7 @@ FRONTEND STRUCTURE STANDARDS
 
 3. PROJECT STRUCTURE
 
-Use domain-based organization. Confirmed against 3 reference codebases (site-sync-vista, MARKETING REPORT AUTOMATION, GO_UDP admin/user dashboards) — all React/Vite/Tailwind/Redux Toolkit, all domain-first.
+Use domain-based organization (feature/domain folders, not file-type folders) — the proven shape for React/Vite/Tailwind/Redux Toolkit apps. Follow the repo's existing layout when it already has one.
 
 Example:
 

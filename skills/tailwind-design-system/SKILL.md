@@ -1,38 +1,30 @@
 ---
 name: tailwind-design-system
-description: Use when implementing or revising Tailwind CSS v4 tokens, themes, utility conventions, or
-  component primitives in a Tailwind-based frontend.
-disable-model-invocation: false
-schema: 1
-category: frontend
-surfaces:
-- frontend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 589
-triggers:
-  keywords:
-  - component
-  - conventions
-  - css
-  - design
-  - frontend
-  - implementing
-  - primitives
-  - revising
-  - system
-  - tailwind
-  - tailwind-based
-  - themes
-  - tokens
-  - utility
-  paths: []
-  intents:
-  - frontend
+description: Tailwind CSS v4 tokens, themes (`@theme`), utility conventions, and component primitives in a Tailwind-based frontend — the token layer beneath shadcn components.
+when_to_use: Use when touching a CSS entry file, a tailwind/postcss config, components.json, or components/ui, and when defining or migrating design tokens, themes, or v3→v4 patterns.
+paths:
+  - "**/*.css"
+  - "**/tailwind.config.*"
+  - "**/postcss.config.*"
+  - "**/components.json"
+  - "**/components/ui/**"
+metadata:
+  schema: 1
+  category: frontend
+  surfaces: [frontend]
+  platforms: [linux, darwin, windows]
+  token-cost: 650
+  triggers:
+    keywords: [tailwind, tailwind v4, "@theme", tokens, design tokens, theme, dark mode, css variables, utilities, primitives, cva, components.json]
+    paths: [.css, tailwind.config, postcss.config, components.json, /components/ui/]
+    intents: [frontend, implement, design]
 ---
 # Tailwind Design System
+
+**Ownership split:** `shadcn` owns components (CLI, registry, `components/ui`); **this skill owns
+tokens** — `@theme`, semantic roles, utility conventions; `ui-styling` is the theming / dark-mode
+reference. Tailwind **v4 only** (CSS-first `@import "tailwindcss"` + `@theme`, no `tailwind.config.js`
+unless the repo is still on v3).
 
 ## Use When
 - A task changes Tailwind v4 tokens, themes, component primitives, or utility conventions.
@@ -55,6 +47,7 @@ triggers:
 - Non-Tailwind styling systems.
 
 ## Combine With
+- `shadcn` for adding/fixing components; `ui-styling` for dark-mode and CSS-variable theming recipes.
 - `frontend-ui-engineering` for visual direction and production-quality patterns.
 - `frontend-structure-standards` for component boundaries.
 - `tool-and-doc-selection` to route Tailwind/CVA/Radix questions to current docs.

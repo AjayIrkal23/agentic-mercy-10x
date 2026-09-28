@@ -1,40 +1,46 @@
 ---
 name: ci-cd-and-automation
-description: Automates CI/CD pipeline setup. Use when setting up or modifying build and deployment pipelines.
-  Use when you need to automate quality gates, configure test runners in CI, or establish deployment strategies.
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 2688
-triggers:
-  keywords:
-  - automate
-  - automates
-  - automation
-  - build
-  - ci/cd
-  - configure
-  - deployment
-  - establish
-  - gates
-  - modifying
-  - need
-  - pipeline
-  - pipelines
-  - quality
-  - runners
-  - setting
-  - setup
-  - strategies
-  - test
-  paths: []
-  intents:
+description: Automates CI/CD pipeline setup. Use when setting up or modifying build and deployment pipelines. Use when you need to automate quality gates, configure test runners in CI, or establish deployment strategies.
+when_to_use: Use when creating or changing CI/CD pipelines, Dockerfiles, Makefiles, or deployment automation.
+paths:
+- .github/workflows/**
+- '**/Dockerfile*'
+- '**/.gitlab-ci.yml'
+- '**/Makefile'
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 2688
+  triggers:
+    keywords:
+    - automate
+    - automates
+    - automation
+    - build
+    - ci/cd
+    - configure
+    - deployment
+    - establish
+    - gates
+    - modifying
+    - need
+    - pipeline
+    - pipelines
+    - quality
+    - runners
+    - setting
+    - setup
+    - strategies
+    - test
+    paths: []
+    intents:
+    - general
 ---
 # CI/CD and Automation
 
@@ -219,7 +225,7 @@ Agent fixes → pushes → CI runs again
 ```
 Lint failure → Agent runs `npm run lint --fix` and commits
 Type error  → Agent reads the error location and fixes the type
-Test failure → Agent follows debugging-and-error-recovery skill
+Test failure → Agent follows debug-investigation skill
 Build error → Agent checks config and dependencies
 ```
 

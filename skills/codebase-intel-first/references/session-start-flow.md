@@ -1,6 +1,6 @@
-# codebase-start-point-guide
+# Session start flow (repo onboarding)
 
-> Absorbed into `codebase-intel-first` (P5 consolidation). Method content preserved verbatim below.
+> Formerly its own skill; absorbed into `codebase-intel-first` (P5 consolidation). Method content preserved below.
 
 ---
 
@@ -82,7 +82,7 @@ Whenever request or response shapes may change:
 
 Never change one side of a contract without validating the other.
 
-**Example** of one possible doc pairing (yours may differ): see [references/examples/sample-doc-tree.md](references/examples/sample-doc-tree.md).
+**Example** of one possible doc pairing (yours may differ): the numbered `frontend_docs/` / `server_docs/` handbook layout is kept as a project template in `~/.claude/docs/project-templates/go-udp-rules.md`.
 
 ---
 
@@ -290,4 +290,4 @@ Use this template before implementation begins.
 
 ## References
 
-- [examples/sample-doc-tree.md](references/examples/sample-doc-tree.md) — one possible numbered `frontend_docs/` / `server_docs/` layout (illustrative)
+- `~/.claude/docs/project-templates/go-udp-rules.md` — one possible numbered `frontend_docs/` / `server_docs/` layout (project template, illustrative)

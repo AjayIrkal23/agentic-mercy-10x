@@ -1,55 +1,22 @@
 ---
 name: frontend-server-data-patterns
-description: "ALWAYS invoke when building or changing API-backed tables, lists, search screens, or frontend query-state flows with server-driven filtering, sorting, and pagination. MUST use to model API-backed frontend query state and define query-state and async UI behavior for a server-backed screen."
-disable-model-invocation: false
-schema: 1
-category: frontend
-surfaces:
-- frontend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 468
-triggers:
-  keywords:
-  - api-backed
-  - async
-  - behavior
-  - building
-  - changing
-  - data
-  - define
-  - filtering
-  - flows
-  - frontend
-  - lists
-  - model
-  - pagination
-  - patterns
-  - query
-  - query-state
-  - screen
-  - screens
-  - search
-  - server
-  - server-backed
-  - server-driven
-  - sorting
-  - state
-  - tables
-  paths:
-  - .hook.
-  - /api-client
-  - /api/
-  - /hooks/use
-  - /src/hooks/
-  - api.js
-  - api.ts
-  - use-
-  - useHook
-  intents:
-  - frontend
+description: "Frontend query state for server-backed screens: the query object as source of truth, server-driven filtering/sorting/pagination/search, and the loading/empty/error/success states for API-backed tables, lists, and search pages."
+when_to_use: Use when building or changing an API-backed table, list, or search screen, a use*-data hook, or a queries/ module with server-driven filter, sort, or pagination.
+paths:
+  - "**/hooks/use*.{ts,tsx}"
+  - "**/*Table*.tsx"
+  - "**/*List*.tsx"
+  - "**/queries/**"
+metadata:
+  schema: 1
+  category: frontend
+  surfaces: [frontend]
+  platforms: [linux, darwin, windows]
+  token-cost: 468
+  triggers:
+    keywords: [table, list, search screen, query state, query object, server-driven, filtering, sorting, pagination, async ui, loading state, empty state, api-backed]
+    paths: [/hooks/use, /src/hooks/, /queries/, Table, List, use-]
+    intents: [frontend, implement]
 ---
 # Frontend Server Data Patterns
 

@@ -1,54 +1,53 @@
 ---
 name: code-execution-standard
-description: Use when scope and root cause are already understood and the task is implementing a safe,
-  validated, known-scope change.
-disable-model-invocation: false
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 1040
-triggers:
-  keywords:
-  - already
-  - amount
-  - big
-  - cause
-  - change
-  - changes
-  - code
-  - delivers
-  - execution
-  - feature
-  - feels
-  - file
-  - implement
-  - implementing
-  - incrementally
-  - known-scope
-  - land
-  - large
-  - once
-  - root
-  - safe
-  - safely
-  - scope
-  - standard
-  - step
-  - task
-  - too
-  - touches
-  - understood
-  - validated
-  - validation
-  - write
-  paths: []
-  intents:
+description: Use when scope and root cause are already understood and the task is implementing a safe, validated, known-scope change.
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 1040
+  triggers:
+    keywords:
+    - already
+    - amount
+    - big
+    - cause
+    - change
+    - changes
+    - code
+    - delivers
+    - execution
+    - feature
+    - feels
+    - file
+    - implement
+    - implementing
+    - incrementally
+    - known-scope
+    - land
+    - large
+    - once
+    - root
+    - safe
+    - safely
+    - scope
+    - standard
+    - step
+    - task
+    - too
+    - touches
+    - understood
+    - validated
+    - validation
+    - write
+    paths: []
+    intents:
+    - general
 ---
 # Code Execution Standard
 
@@ -77,8 +76,8 @@ Choose the touched surface first:
 
 If the prompt is asking for a code change, treat it as implementation and activate this shell before editing, even when the prompt does not explicitly mention mode selection.
 
-- Backend-only: load the mandatory Backend Core Compliance Set before editing: `backend-standards-always-follow`, `service-layer-standards`, `backend-api-standards`, `backend-error-handling`, and `backend-performance-standards`. Preserve `api-contract-standards` for envelope/contract work, `domain-scaffold-patterns` for new domain/feature skeleton planning, and `scaffold-standards` for concrete backend skeleton details.
-- Frontend-only: select and load the matching Build Web Apps plugin skill when available, then load the mandatory Frontend Core Compliance Set: `build-web-apps:frontend-app-builder` for new/redesign/visual surfaces or `build-web-apps:react-best-practices` for React/Vite/UI/code work, plus `frontend-standards-always-follow`, `frontend-structure-standards`, `frontend-response-handling`, `frontend-server-data-patterns`, `frontend-api-standards`, and `react-hooks-patterns`.
+- Backend-only: load the mandatory Backend Core Compliance Set before editing: `backend-standards-always-follow`, `service-layer-standards`, `backend-api-standards`, `backend-error-handling`, and `backend-performance-standards`. Preserve `api-contract-standards` for envelope/contract work and `scaffold-standards` for new domain/feature skeletons.
+- Frontend-only: select and load the matching Build Web Apps plugin skill when available, then load the mandatory Frontend Core Compliance Set: `build-web-apps:frontend-app-builder` for new/redesign/visual surfaces or `build-web-apps:react-best-practices` for React/Vite/UI/code work, plus `frontend-standards-always-follow`, `frontend-structure-standards`, `frontend-response-handling`, `frontend-server-data-patterns`, and `react-hooks-patterns`.
 - Cross-surface: load the matching Build Web Apps plugin plus Frontend Core Compliance Set and Backend Core Compliance Set, then only the preserved add-ons required by the actual files and contracts being changed.
 
 Use `project-reference-linkage` for linked modules and shared contracts.

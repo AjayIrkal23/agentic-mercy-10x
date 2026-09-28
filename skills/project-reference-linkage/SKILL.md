@@ -1,43 +1,44 @@
 ---
 name: project-reference-linkage
-description: "ALWAYS invoke to understand the directory structure and cross-module relationships across components, feature hooks, frontend API layers, controllers, routes, schemas, and store slices — global project navigation and linkage standards."
-disable-model-invocation: false
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 1431
-triggers:
-  keywords:
-  - api
-  - components
-  - controllers
-  - cross-module
-  - directory
-  - feature
-  - frontend
-  - global
-  - hooks
-  - layers
-  - linkage
-  - navigation
-  - project
-  - reference
-  - relationships
-  - routes
-  - schemas
-  - slices
-  - standards
-  - store
-  - structure
-  - understand
-  paths: []
-  intents:
+description: 'Cross-module navigation: how components, hooks, API layers, controllers, routes, schemas, and store slices link across a project.'
+when_to_use: Use when you need the directory structure and cross-layer relationships of a repo before changing a shared surface.
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 1431
+  triggers:
+    keywords:
+    - api
+    - components
+    - controllers
+    - cross-module
+    - directory
+    - feature
+    - frontend
+    - global
+    - hooks
+    - layers
+    - linkage
+    - navigation
+    - project
+    - reference
+    - relationships
+    - routes
+    - schemas
+    - slices
+    - standards
+    - store
+    - structure
+    - understand
+    paths: []
+    intents:
+    - general
 ---
 ## Use When
 

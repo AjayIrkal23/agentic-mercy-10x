@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 """
-Tailwind CSS Configuration Generator
+Tailwind CSS Configuration Generator — DEPRECATED (Tailwind v3 only).
+
+Generates a v3-style tailwind.config.js/ts. Tailwind v4 projects define tokens in CSS
+(`@import "tailwindcss"` + `@theme`) and need no config file; do not run this for v4.
+Kept only for legacy v3 repositories.
 
 Generate tailwind.config.js/ts with custom theme configuration.
 Supports colors, fonts, spacing, breakpoints, and plugin recommendations.

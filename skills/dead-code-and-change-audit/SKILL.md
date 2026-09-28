@@ -1,52 +1,51 @@
 ---
 name: dead-code-and-change-audit
-description: "ALWAYS invoke on every task and every code change — always-on code hygiene that detects dead code, stale references, orphaned logic, unused imports, unused files, broken linkages, and partial refactors. Enforces continuous cleanup so no dead code is left behind. MUST use to audit code changes for dead code, stale references, orphaned logic, and partial refactors."
-disable-model-invocation: false
-schema: 1
-category: review
-surfaces:
-- backend
-- frontend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 2213
-triggers:
-  keywords:
-  - always-on
-  - audit
-  - behind
-  - broken
-  - change
-  - changes
-  - cleanup
-  - code
-  - continuous
-  - dead
-  - detect
-  - enforces
-  - every
-  - files
-  - hygiene
-  - imports
-  - left
-  - linkages
-  - logic
-  - orphaned
-  - partial
-  - refactors
-  - references
-  - runs
-  - skill
-  - stale
-  - task
-  - unused
-  paths:
-  - .claude/hooks/
-  - .claude/rules/
-  intents:
-  - review
+description: 'Change-scoped hygiene audit: dead code, stale references, orphaned logic, unused imports and files, broken linkages, and partial refactors left behind by a change.'
+when_to_use: Use after any code change to audit what the diff orphaned; deletions stay scoped to your own changes.
+metadata:
+  schema: 1
+  category: review
+  surfaces:
+  - backend
+  - frontend
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 2213
+  triggers:
+    keywords:
+    - always-on
+    - audit
+    - behind
+    - broken
+    - change
+    - changes
+    - cleanup
+    - code
+    - continuous
+    - dead
+    - detect
+    - enforces
+    - every
+    - files
+    - hygiene
+    - imports
+    - left
+    - linkages
+    - logic
+    - orphaned
+    - partial
+    - refactors
+    - references
+    - runs
+    - skill
+    - stale
+    - task
+    - unused
+    paths: []
+    intents:
+    - review
 ---
 # DEAD CODE AND CHANGE AUDIT
 

@@ -1,28 +1,16 @@
 ---
 name: slides
 argument-hint: "[topic] [slide-count]"
+description: "HTML slide decks: Chart.js data slides, design-token-driven layouts, responsive slide structure, copywriting formulas, and slide strategy. For .pptx files use anthropic-skills:pptx instead."
+when_to_use: Use when the deliverable is an HTML presentation; route .pptx/.potx requests to anthropic-skills:pptx and Artifact decks to the Slides artifact type.
 metadata:
   author: claudekit
   version: "1.0.0"
-description: "ALWAYS invoke when creating HTML presentations or slide decks — Chart.js data slides, design-token-driven layouts, responsive slide structure, copywriting formulas, and contextual slide strategy."
-keywords:
-  - slide
-  - slides
-  - slide deck
-  - deck
-  - presentation
-  - pitch deck
-  - keynote
-  - powerpoint alternative
-  - html presentation
-  - chart.js
-  - data slide
-  - slide layout
-  - speaker notes
-surfaces:
-  - frontend
-intents:
-  - DESIGN
+  category: design
+  surfaces: [frontend]
+  triggers:
+    keywords: [slide, slides, slide deck, deck, presentation, pitch deck, html presentation, chart.js, data slide, slide layout, speaker notes]
+    intents: [design]
 ---
 
 # Slides

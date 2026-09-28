@@ -1,42 +1,45 @@
 ---
 name: golang-testing
-description: "ALWAYS invoke when writing or reviewing Go test files, adding table-driven tests, benchmarks, fuzz targets, or reviewing test coverage in a Go service. MUST apply before any `_test.go` file is created or modified."
-disable-model-invocation: false
-schema: 1
-category: testing
-surfaces:
-- backend
-- frontend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 4106
-triggers:
-  keywords:
-  - adding
-  - apply
-  - benchmarks
-  - coverage
-  - created
-  - file
-  - files
-  - fuzz
-  - golang
-  - modified
-  - reviewing
-  - service
-  - table-driven
-  - targets
-  - test
-  - test.go
-  - testing
-  - tests
-  - writing
-  paths: []
-  intents:
-  - testing
-origin: ECC
+description: 'Go testing: table-driven tests, benchmarks, fuzz targets, test helpers, and coverage review.'
+when_to_use: Use before creating or modifying any _test.go file, or when reviewing Go test coverage.
+paths:
+- '**/*_test.go'
+metadata:
+  schema: 1
+  category: testing
+  surfaces:
+  - backend
+  - frontend
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 4106
+  origin: ECC
+  triggers:
+    keywords:
+    - adding
+    - apply
+    - benchmarks
+    - coverage
+    - created
+    - file
+    - files
+    - fuzz
+    - golang
+    - modified
+    - reviewing
+    - service
+    - table-driven
+    - targets
+    - test
+    - test.go
+    - testing
+    - tests
+    - writing
+    paths: []
+    intents:
+    - testing
 ---
 # Go Testing Patterns
 

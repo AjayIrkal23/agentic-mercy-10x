@@ -1,9 +1,9 @@
 ---
 name: lean-ctx
-description: Context Engineering for AI Agents — 83 MCP tools, 10 read modes, 95+ shell patterns, tree-sitter AST for 27 languages. Compresses LLM context by up to 99%. Use when reading files, running shell commands, searching code, or exploring directories. Auto-installs if not present.
+description: Local context tooling for AI agents. Use it to select, shape, reuse, recover, and inspect context before inference when reading files, running shell commands, searching code, or exploring directories.
 ---
 
-# lean-ctx — Context Engineering for AI Agents
+# lean-ctx — Local Context SDK for AI Agents
 
 ## Setup
 
@@ -48,14 +48,14 @@ lean-ctx ls src/
 | `lines:N-M` | Specific range |
 | `auto` | System selects optimal |
 
-Re-reads cost ~13 tokens. fresh=true bypasses cache.
+Re-reads may use the local cache. Set `fresh=true` to bypass it.
 Redundant JSON (arrays of like objects) is crushed losslessly into a compact
 `_defaults` + per-row form; if a slice was dropped, recover it with
 `ctx_expand(id, json_path=… | search=…)`.
 
 ## File Editing
 
-Anchored editing saves output tokens: `ctx_read(mode="anchored")` → `ctx_patch(path, op, line, hash, new_text)`.
+Anchored editing keeps an exact, source-addressable view: `ctx_read(mode="anchored")` → `ctx_patch(path, op, line, hash, new_text)`.
 Never reproduce old text byte-for-byte; batch via `ops:[…]`; `op=create` writes new files.
 Stale anchor → CONFLICT with fresh anchors (retry once). Native Edit/StrReplace stay fine;
 `ctx_edit` (str_replace) is the legacy fallback via ctx_call/power profile.
@@ -64,7 +64,7 @@ Stale anchor → CONFLICT with fresh anchors (retry once). Native Edit/StrReplac
 
 Architecture: ctx_symbol, ctx_callgraph, ctx_impact, ctx_architecture, ctx_routes, ctx_smells, ctx_quality
   ↳ "What breaks if I change this file/class/type?" → ctx_impact (file-level blast radius; resolves same-package/namespace type usage with no import for C#, Java, Go and Kotlin). "Who calls this function?" → ctx_callgraph (symbol-level). "How navigable / how much is complexity costing me?" → ctx_quality (navigability score + token quality tax).
-Multi-agent: ctx_agent, ctx_share, ctx_task, ctx_handoff, ctx_workflow
+Experimental local collaboration (explicit opt-in only): ctx_agent, ctx_share, ctx_task, ctx_handoff, ctx_workflow
 Verify: ctx_benchmark, ctx_verify, ctx_proof, ctx_review
 Batch: ctx_fill, ctx_execute, ctx_expand, ctx_pack
 

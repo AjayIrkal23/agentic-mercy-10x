@@ -1,50 +1,20 @@
 ---
 name: react-hooks-patterns
-description: "ALWAYS invoke when implementing or reviewing React component state, effects, refs, reducers, memoization, or custom hook extraction."
-disable-model-invocation: false
-schema: 1
-category: frontend
-surfaces:
-- frontend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 460
-triggers:
-  keywords:
-  - component
-  - custom
-  - effects
-  - extraction
-  - hook
-  - hooks
-  - implementing
-  - memoization
-  - patterns
-  - react
-  - reducers
-  - refs
-  - reviewing
-  - state
-  paths:
-  - .hook.
-  - .jsx
-  - .tsx
-  - /components/
-  - /hooks/use
-  - /pages/
-  - /src/hooks/
-  - /store/
-  - /views/
-  - reducer.
-  - redux
-  - selector.
-  - slice.
-  - use-
-  - useHook
-  intents:
-  - frontend
+description: "React component state, effects, refs, reducers, memoization, and custom-hook extraction — including React 19 hooks (use, useActionState, useOptimistic, useFormStatus) and React Compiler-aware memoization guidance."
+when_to_use: Use when implementing or reviewing useState/useReducer/useEffect/useRef logic, extracting a custom hook, checking effect safety or stale closures, or adopting React 19 Actions hooks.
+paths:
+  - "**/hooks/**/*.{ts,tsx}"
+  - "**/use*.{ts,tsx}"
+metadata:
+  schema: 1
+  category: frontend
+  surfaces: [frontend]
+  platforms: [linux, darwin, windows]
+  token-cost: 700
+  triggers:
+    keywords: [hook, hooks, useState, useReducer, useEffect, useRef, useMemo, useCallback, custom hook, stale closure, derived state, useActionState, useOptimistic, useFormStatus, "use()", React Compiler, memoization]
+    paths: [.hook., /hooks/use, /src/hooks/, use-, useHook, reducer., slice., selector.]
+    intents: [frontend, implement, review]
 ---
 # React Hooks Patterns
 
@@ -82,6 +52,15 @@ triggers:
 3. Do not store derived state that can be computed from current inputs.
 4. Treat `useMemo` and `useCallback` as conditional tools, not defaults.
 5. Extract a custom hook when logic becomes reusable or hard to read inline.
+
+## React 19
+
+- **`use(promise | context)`** reads a promise or context during render and may be called conditionally (unlike other hooks); pair promises with `<Suspense>`. Prefer `use(Ctx)` over `useContext` in new code.
+- **Actions.** Pass an async function to `<form action>` or `startTransition`. `useActionState(action, initial)` → `[state, formAction, isPending]` owns submit state and errors; `useFormStatus()` reads the parent form's pending state from a child; `useOptimistic(value, reducer)` shows the expected result until the action settles and rolls back on error. No hand-rolled `isSubmitting` state.
+- **Refs.** `ref` is a plain prop — no `forwardRef`; ref callbacks may return a cleanup function.
+- **Memoization is conditional.** With the React Compiler on (`babel-plugin-react-compiler` via the Vite `react()` plugin's `babel` option), do not hand-write `useMemo`/`useCallback`/`memo` — keep them only when the compiler is off or a profiler shows a hot path. Never memoize "to be safe".
+- **Context.** Render `<Ctx value={…}>` directly (no `.Provider`).
+- **Document metadata / resources.** `<title>`, `<meta>`, `<link>` render anywhere and hoist to `<head>`; `preload`/`preinit` from `react-dom` for fonts and scripts.
 
 ## Output Contract
 - The chosen hook pattern and why it fits.

@@ -1,63 +1,63 @@
 ---
 name: grill-with-docs
-description: "ALWAYS invoke when the user wants to stress-test a plan against their project's language and documented decisions — a grilling session that challenges your plan against the existing domain model, sharpens terminology, and updates documentation (CONTEXT.md, ADRs) inline as decisions crystallise."
-schema: 1
-category: docs
-surfaces:
-- docs
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 772
-triggers:
-  keywords:
-  - adrs
-  - against
-  - challenges
-  - context.md
-  - crystallise
-  - decisions
+description: Stress-tests a plan against the project's domain language and documented decisions, sharpens terminology, and updates CONTEXT.md/ADRs inline as decisions crystallise.
+when_to_use: Use when the user wants a plan grilled against existing docs and the domain model before implementation.
+metadata:
+  schema: 1
+  category: docs
+  surfaces:
   - docs
-  - documentation
-  - documented
-  - domain
-  - existing
-  - grill
-  - grilling
-  - inline
-  - language
-  - model
-  - plan
-  - project
-  - session
-  - sharpens
-  - stress-test
-  - terminology
-  - updates
-  - user
-  - wants
-  paths: []
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 772
+  triggers:
+    keywords:
+    - adrs
+    - against
+    - challenges
+    - context.md
+    - crystallise
+    - decisions
+    - docs
+    - documentation
+    - documented
+    - domain
+    - existing
+    - grill
+    - grilling
+    - inline
+    - language
+    - model
+    - plan
+    - project
+    - session
+    - sharpens
+    - stress-test
+    - terminology
+    - updates
+    - user
+    - wants
+    paths: []
+    intents:
+    - docs
   intents:
-  - docs
-keywords:
-- grill
-- grill me
-- stress-test
-- stress test
-- challenge the plan
-- challenge this plan
-- domain model
-- ubiquitous language
-- sharpen terminology
-- context.md
-- adr
-intents:
-- PLAN
-- SPEC
-- REVIEW
-surfaces:
-- docs
+  - PLAN
+  - SPEC
+  - REVIEW
+  keywords:
+  - grill
+  - grill me
+  - stress-test
+  - stress test
+  - challenge the plan
+  - challenge this plan
+  - domain model
+  - ubiquitous language
+  - sharpen terminology
+  - context.md
+  - adr
 ---
 <what-to-do>
 

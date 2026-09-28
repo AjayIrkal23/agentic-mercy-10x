@@ -1,39 +1,46 @@
 ---
 name: backend-api-standards
-description: "ALWAYS invoke when a backend task needs strict list or search endpoint rules for filtering, sorting, pagination, stable response shapes, or query validation."
-disable-model-invocation: false
-schema: 1
-category: backend
-surfaces:
-- backend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 962
-triggers:
-  keywords:
-  - api
+description: 'Rules for list and search endpoints: filtering, sorting, pagination, stable response shapes, and query validation.'
+when_to_use: Use when adding or changing a REST endpoint, route handler, or controller, especially list/search with pagination.
+paths:
+- '**/routes/**'
+- '**/handlers/**'
+- '**/controllers/**'
+- '**/*.routes.ts'
+metadata:
+  schema: 1
+  category: backend
+  surfaces:
   - backend
-  - endpoint
-  - filtering
-  - list
-  - needs
-  - pagination
-  - query
-  - response
-  - rules
-  - search
-  - shapes
-  - sorting
-  - stable
-  - standards
-  - strict
-  - task
-  - validation
-  paths: []
-  intents:
-  - backend
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 962
+  triggers:
+    keywords:
+    - api
+    - backend
+    - endpoint
+    - filtering
+    - list
+    - needs
+    - pagination
+    - query
+    - response
+    - rest
+    - rules
+    - search
+    - shapes
+    - sorting
+    - stable
+    - standards
+    - strict
+    - task
+    - validation
+    paths: []
+    intents:
+    - backend
 ---
 # Backend API Standards
 

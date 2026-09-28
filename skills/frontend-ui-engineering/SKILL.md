@@ -1,47 +1,19 @@
 ---
 name: frontend-ui-engineering
-description: Builds production-quality UIs. Use when building or modifying user-facing interfaces. Use
-  when creating components, implementing layouts, managing state, or when the output needs to look and
-  feel production-quality rather than AI-generated.
-schema: 1
-category: frontend
-surfaces:
-- frontend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 2615
-triggers:
-  keywords:
-  - ai-generated
-  - building
-  - builds
-  - components
-  - creating
-  - engineering
-  - feel
-  - frontend
-  - implementing
-  - interfaces
-  - layouts
-  - look
-  - managing
-  - modifying
-  - needs
-  - output
-  - production-quality
-  - rather
-  - state
-  - uis
-  - user-facing
-  paths:
-  - /components/
-  - /layout/
-  - /pages/
-  - /views/
-  intents:
-  - frontend
+description: Production-quality UI components and layouts — composition, state placement, design-system adherence (no "AI aesthetic"), WCAG 2.2 AA accessibility, responsive design, and loading/empty/error states.
+when_to_use: Use when building or modifying user-facing components, pages, or layouts, or when the output must look production-grade rather than generated.
+paths:
+  - "**/components/**/*.{tsx,jsx}"
+metadata:
+  schema: 1
+  category: frontend
+  surfaces: [frontend]
+  platforms: [linux, darwin, windows]
+  token-cost: 2800
+  triggers:
+    keywords: [ui, component, layout, page, accessibility, wcag, a11y, responsive, empty state, loading state, skeleton, design system, ai aesthetic, production quality]
+    paths: [/components/, /layout/, /pages/, /views/]
+    intents: [frontend, implement, design]
 ---
 # Frontend UI Engineering
 
@@ -202,9 +174,17 @@ Don't skip heading levels. Don't use heading styles for non-heading content.
 - Ensure sufficient contrast (4.5:1 for normal text, 3:1 for large text)
 - Don't rely solely on color to convey information (use icons, text, or patterns too)
 
-## Accessibility (WCAG 2.1 AA)
+## Accessibility (WCAG 2.2 AA)
 
 Every component must meet these standards:
+
+### WCAG 2.2 additions (new since 2.1)
+
+- **Focus not obscured (2.4.11):** a focused element is never fully hidden behind sticky headers, toasts, or cookie banners — set `scroll-margin-top` / offset the sticky region.
+- **Target size minimum (2.5.8):** interactive targets are at least 24×24 CSS px or have 24 px spacing to neighbours; icon-only buttons get an explicit `min-h-6 min-w-6` (prefer 44×44 on touch).
+- **Dragging alternatives (2.5.7):** every drag interaction (reorder, slider, kanban) has a single-pointer alternative — move up/down buttons, a numeric input, or a menu.
+- **Consistent help (3.2.6) and redundant entry (3.3.7):** help/contact links stay in the same place across pages; never ask for the same information twice in one flow (autofill or carry it forward).
+- **Accessible authentication (3.3.8):** no cognitive test (puzzle, transcription) as the only login path; allow paste and password managers.
 
 ### Keyboard Navigation
 
@@ -334,7 +314,7 @@ function useToggleTask() {
 
 ## See Also
 
-For detailed accessibility requirements, follow WCAG 2.1 AA guidelines. Key checks: keyboard navigation, focus management, color contrast (4.5:1 body text, 3:1 large text), ARIA labels, semantic HTML landmarks, and `prefers-reduced-motion` support.
+For detailed accessibility requirements, follow WCAG 2.2 AA guidelines. Key checks: keyboard navigation, focus management (visible and not obscured), 24 px minimum target size, color contrast (4.5:1 body text, 3:1 large text), ARIA labels, semantic HTML landmarks, drag alternatives, and `prefers-reduced-motion` support. Audit with `mcp__browser-tools-mcp__runAccessibilityAudit` or axe-core.
 
 ## Common Rationalizations
 

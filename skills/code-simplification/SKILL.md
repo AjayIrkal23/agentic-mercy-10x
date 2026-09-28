@@ -1,39 +1,41 @@
 ---
 name: code-simplification
-description: "ALWAYS invoke when refactoring code for clarity without changing behavior — simplifies code for clarity. MUST use when code works but is harder to read, maintain, or extend than it should be, or when reviewing code that has accumulated unnecessary complexity."
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 3301
-triggers:
-  keywords:
-  - accumulated
-  - behavior
-  - changing
-  - clarity
-  - code
-  - complexity
-  - extend
-  - harder
-  - has
-  - maintain
-  - read
-  - refactoring
-  - reviewing
-  - should
-  - simplification
-  - simplifies
-  - unnecessary
-  - without
-  - works
-  paths: []
-  intents:
+description: 'Simplifies working code for clarity without changing behavior: removes accidental complexity, dead flexibility, and over-abstraction.'
+when_to_use: Use when code works but is harder to read, maintain, or extend than it should be, or a review flags unnecessary complexity.
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 3301
+  triggers:
+    keywords:
+    - accumulated
+    - behavior
+    - changing
+    - clarity
+    - code
+    - complexity
+    - extend
+    - harder
+    - has
+    - maintain
+    - read
+    - refactoring
+    - reviewing
+    - should
+    - simplification
+    - simplifies
+    - unnecessary
+    - without
+    - works
+    paths: []
+    intents:
+    - general
 ---
 # Code Simplification
 

@@ -1,13 +1,20 @@
 ---
 name: kokonutui
-description: Invoke ONLY when the user EXPLICITLY says "KokonutUI" / "kokonut" / "kokonut ui". ON-DEMAND block source — NOT a default, NOT auto-fired. Do NOT invoke for generic "build a component/page/dashboard" requests — those stay with shadcn + . KokonutUI is 100+ design-forward, animated React/TS components & blocks built ON shadcn/ui + Tailwind v4 + Motion, installed via the shadcn CLI registry (`npx shadcn@latest add @kokonutui/<name>`). When invoked, RECONCILE every pulled component to 's palette/tokens/motion defaults before ship — its trendy/gradient/overshoot aesthetic must never override the design authority. Docs via Context7 `/websites/kokonutui`.
+description: On-demand KokonutUI block source — invoke ONLY when the user explicitly says "KokonutUI" / "kokonut" / "kokonut ui". Not a default and never auto-fired for generic component/page/dashboard requests (those stay with shadcn + design-taste-frontend). 100+ animated React/TS components and blocks built on shadcn/ui + Tailwind v4 + Motion, installed via the shadcn CLI registry (`npx shadcn@latest add @kokonutui/<name>`); every pulled block is reconciled to the project's tokens and the motion-dev craft bar before ship. Docs via Context7 `/websites/kokonutui`.
+when_to_use: Only when the user names KokonutUI / kokonut explicitly; never for a generic UI request.
+metadata:
+  category: frontend
+  surfaces: [frontend]
+  triggers:
+    keywords: [kokonutui, kokonut, "kokonut ui", "@kokonutui"]
+    intents: [implement, design]
 ---
 
 # KokonutUI — on-demand block source (explicit mention only)
 
 **Trigger rule:** use this skill **only** when the user names KokonutUI / kokonut / kokonut ui.
 It is NOT part of the default frontend stack and must never fire on a generic UI prompt.
-Generic component/page building stays with **shadcn** (component layer) + **** (authority).
+Generic component/page building stays with **shadcn** (component layer) + **`design-taste-frontend`** (design authority).
 
 ## What it is
 
@@ -28,18 +35,18 @@ npx shadcn@latest add @kokonutui/<component>            # e.g. @kokonutui/partic
 ```
 
 Requires **Tailwind v4** (`@import "tailwindcss"`). Many components use **Motion** — which is your
-adopted React motion engine ([[motion-dev]]), so its animations fit the stack.
+adopted React motion engine (`motion-dev`), so its animations fit the stack.
 
-## GUARDRAIL — reconcile to  before ship (non-negotiable)
+## GUARDRAIL — reconcile to the design authority before ship (non-negotiable)
 
-KokonutUI leans trendy/gradient/animated.  is the **design authority** ([[ui-ux-playbook]]).
+KokonutUI leans trendy/gradient/animated. `design-taste-frontend` is the **design authority**.
 A pulled component is a **starting point, not an endorsement**:
-- Map its colors to the **`tailwind-design-system` `@theme` tokens** — never let it introduce a 2nd palette or decorative gradients  bans.
-- Apply 's **no-bounce default** — strip overshoot/spring unless the motion is gesture-released.
-- Any motion it ships still passes the **``** gate.
-- Cards/layout still obey  bans (cards must earn their place, no identical card grids).
+- Map its colors to the **`tailwind-design-system` `@theme` tokens** — never let it introduce a 2nd palette or the decorative gradients `design-taste-frontend` bans.
+- Apply the **no-bounce default** from the `motion-dev` craft bar — strip overshoot/spring unless the motion is gesture-released.
+- Any motion it ships still passes the **`motion-dev` craft bar** (easing, ≤300 ms UI, interruptible, reduced-motion, transform/opacity only).
+- Cards/layout still obey the `design-taste-frontend` bans (cards must earn their place, no identical card grids).
 
-If a KokonutUI block conflicts with ,  wins — adapt the block, don't ship it raw.
+If a KokonutUI block conflicts with `design-taste-frontend`, `design-taste-frontend` wins — adapt the block, don't ship it raw.
 
 ## Docs
 
@@ -47,6 +54,6 @@ Context7 **`/websites/kokonutui`** (or repo `/kokonut-labs/kokonutui`). Human: h
 
 ## When NOT to use it
 
-- Any prompt that doesn't name KokonutUI → don't invoke (shadcn +  own it).
+- Any prompt that doesn't name KokonutUI → don't invoke (shadcn + `design-taste-frontend` own it).
 - Base primitives / forms / accessible components → shadcn directly.
 - Motion authoring → `motion-dev` / `animejs-motion`. Asset pixels → Higgsfield.

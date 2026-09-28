@@ -2,44 +2,25 @@
 name: design
 argument-hint: "[design-type] [context]"
 license: MIT
+description: "Identity and marketing-asset design: logo generation (55 styles), corporate identity programs (50 deliverables, CIP mockups), icon design (15 styles, SVG), banner design (22 styles for social/ads/web/print), and social photo sets. Broader identity scope than component UI work; pixels come from Higgsfield."
+when_to_use: Use for logos, wordmarks, corporate identity/CIP mockups, SVG icon sets, banners, and social-media image sets — not for app component UI.
 metadata:
   author: claudekit
   version: "2.1.0"
-description: "ALWAYS invoke for identity and marketing-asset design work: logo generation (55 styles), corporate identity programs (50 deliverables, CIP mockups), icon design (15 styles, SVG), banner design (22 styles for social/ads/web/print), and social photo sets. Broader identity scope than component UI work."
-keywords:
-  - logo
-  - logo design
-  - logotype
-  - wordmark
-  - brand mark
-  - corporate identity
-  - cip
-  - identity program
-  - mockup
-  - mockups
-  - icon design
-  - svg icon
-  - icon set
-  - social photo
-  - social media image
-  - letterhead
-  - business card
-  - stationery
-  - brand collateral
-surfaces:
-  - frontend
-intents:
-  - DESIGN
+  category: design
+  surfaces: [frontend]
+  triggers:
+    keywords: [logo, logo design, logotype, wordmark, brand mark, corporate identity, cip, identity program, mockup, mockups, icon design, svg icon, icon set, social photo, social media image, letterhead, business card, stationery, brand collateral]
+    intents: [design]
 ---
 
-> **ASSET GENERATION — HIGGSFIELD, NOT GEMINI (standing user directive, overrides this skill).**
-> This skill's upstream image paths call the Gemini / Imagen / Nano-Banana APIs and expect
-> `HIGGSFIELD_MCP (no key needed)` plus the `higgsfield-generate` / `higgsfield-generate` skills. **None of those are configured
-> here.** Every raster, video, 3D, or audio asset MUST instead be generated through Higgsfield
-> (`mcp__higgsfield__generate_image` / `generate_video` / `generate_3d` / `generate_audio`, skill
-> `higgsfield-generate`). Use this skill for its *art direction, specs, styles, and layout
-> reasoning*; hand the actual pixel generation to Higgsfield. See
-> `~/.claude/rules/higgsfield-frontend-mandate.md`.
+> **Assets: Higgsfield MCP (`higgsfield-generate`) is configured and mandatory.** Every raster,
+> video, 3D, or audio asset is generated through `mcp__higgsfield__generate_image` /
+> `generate_video` / `generate_3d` / `generate_audio`. The Gemini scripts under `scripts/`
+> (`logo/generate.py`, `cip/generate.py`, `icon/generate.py`) are legacy and must not be run —
+> use this skill for its *art direction, specs, styles, and layout reasoning* (the `search.py`
+> helpers are fine), then hand pixel generation to Higgsfield. SVG icons are text: write them
+> directly, no image API. See `~/.claude/rules/higgsfield-frontend-mandate.md`.
 
 # Design
 
@@ -92,14 +73,11 @@ python3 ~/.claude/skills/design/scripts/logo/search.py "healthcare medical" --do
 
 **ALWAYS** generate output logo images with white background.
 
-```bash
-python3 ~/.claude/skills/design/scripts/logo/generate.py --brand "TechFlow" --style minimalist --industry tech
-python3 ~/.claude/skills/design/scripts/logo/generate.py --prompt "coffee shop vintage badge" --style vintage
-```
+Take the brief from `search.py --design-brief` and call `mcp__higgsfield__generate_image`
+(GPT Image 2 for wordmarks/text, Nano Banana 2 for marks). `scripts/logo/generate.py` is a
+legacy Gemini path — do not run it.
 
-**IMPORTANT:** When scripts fail, try to fix them directly.
-
-After generation, **ALWAYS** ask user about HTML preview via `AskUserQuestion`. If yes, invoke `/` for gallery.
+After generation, **ALWAYS** ask the user about an HTML preview via `AskUserQuestion`. If yes, build a simple HTML gallery page of the variants.
 
 ## CIP Design (Built-in)
 
@@ -122,21 +100,13 @@ python3 ~/.claude/skills/design/scripts/cip/search.py "office reception" --domai
 
 ### CIP: Generate Mockups
 
-```bash
-# With logo (RECOMMENDED)
-python3 ~/.claude/skills/design/scripts/cip/generate.py --brand "TopGroup" --logo /path/to/logo.png --deliverable "business card" --industry "consulting"
+Compose each deliverable prompt from `search.py --cip-brief` plus the logo, then call
+`mcp__higgsfield__generate_image` with the logo as a reference image (upload it via
+`media_upload_widget` first). One call per deliverable; a full set = business card, letterhead,
+envelope, signage, and two office mockups. `scripts/cip/generate.py` is a legacy Gemini path —
+do not run it.
 
-# Full CIP set
-python3 ~/.claude/skills/design/scripts/cip/generate.py --brand "TopGroup" --logo /path/to/logo.png --industry "consulting" --set
-
-# Pro model (4K text)
-python3 ~/.claude/skills/design/scripts/cip/generate.py --brand "TopGroup" --logo logo.png --deliverable "business card" --model pro
-
-# Without logo
-python3 ~/.claude/skills/design/scripts/cip/generate.py --brand "TechFlow" --deliverable "business card" --no-logo-prompt
-```
-
-Models: Higgsfield `generate_image` — `nano_banana_2` (default, fast) or `gpt_image_2` / Nano Banana Pro (`--pro`, higher fidelity)
+Models: Higgsfield `generate_image` — `nano_banana_2` (default, fast) or `gpt_image_2` / Nano Banana Pro (higher text fidelity, 4K)
 
 ### CIP: Render HTML Presentation
 
@@ -164,16 +134,16 @@ Load `references/slides-create.md` for the creation workflow.
 
 ## Banner Design (Built-in)
 
-22 art direction styles across social, ads, web, print. Uses `frontend-design`, `higgsfield-generate`, `higgsfield-generate`, `chrome-devtools` skills.
+22 art direction styles across social, ads, web, print. Uses `design-taste-frontend`, plugin `frontend-design`, `higgsfield-generate`, and a browser screenshot (Playwright MCP).
 
 Load `references/banner-sizes-and-styles.md` for complete sizes and styles reference.
 
 ### Banner: Workflow
 
 1. **Gather requirements** via `AskUserQuestion` — purpose, platform, content, brand, style, quantity
-2. **Research** — Activate ``, browse Pinterest for references
-3. **Design** — Create HTML/CSS banner with `frontend-design`, generate visuals with `higgsfield-generate`/`higgsfield-generate`
-4. **Export** — Screenshot to PNG at exact dimensions via `chrome-devtools`
+2. **Research** — Activate `design-taste-frontend`, browse Pinterest for references
+3. **Design** — Create HTML/CSS banner with plugin `frontend-design`, generate visuals with `higgsfield-generate`
+4. **Export** — Screenshot to PNG at exact dimensions via Playwright MCP `browser_take_screenshot`
 5. **Present** — Show all options side-by-side, iterate on feedback
 
 ### Banner: Quick Size Reference
@@ -211,27 +181,10 @@ Load `references/banner-sizes-and-styles.md` for complete sizes and styles refer
 
 ## Icon Design (Built-in)
 
-15 styles, 12 categories. the active model generates SVG text output.
-
-### Icon: Generate Single Icon
-
-```bash
-python3 ~/.claude/skills/design/scripts/icon/generate.py --prompt "settings gear" --style outlined
-python3 ~/.claude/skills/design/scripts/icon/generate.py --prompt "shopping cart" --style filled --color "#6366F1"
-python3 ~/.claude/skills/design/scripts/icon/generate.py --name "dashboard" --category navigation --style duotone
-```
-
-### Icon: Generate Batch Variations
-
-```bash
-python3 ~/.claude/skills/design/scripts/icon/generate.py --prompt "cloud upload" --batch 4 --output-dir ./icons
-```
-
-### Icon: Multi-size Export
-
-```bash
-python3 ~/.claude/skills/design/scripts/icon/generate.py --prompt "user profile" --sizes "16,24,32,48" --output-dir ./icons
-```
+15 styles, 12 categories. Icons are SVG **text**: write them directly (24×24 viewBox, `currentColor`,
+1.5–2 px stroke for outlined, one `<path>` per icon where possible) and export sizes with
+`width`/`height` attributes. `scripts/icon/generate.py` is a legacy Gemini path — do not run it.
+Load `references/icon-design.md` for style rules per category.
 
 ### Icon: Top Styles
 
@@ -249,7 +202,7 @@ python3 ~/.claude/skills/design/scripts/icon/generate.py --prompt "user profile"
 
 ## Social Photos (Built-in)
 
-Multi-platform social image design: HTML/CSS → screenshot export. Uses ``, `brand`, `design-system`, `chrome-devtools` skills.
+Multi-platform social image design: HTML/CSS → screenshot export. Uses `design-taste-frontend`, `brand`, `tailwind-design-system` tokens, and a browser screenshot (Playwright MCP).
 
 Load `references/social-photos-design.md` for sizes, templates, best practices.
 
@@ -258,9 +211,9 @@ Load `references/social-photos-design.md` for sizes, templates, best practices.
 1. **Orchestrate** — `project-management` skill for TODO tasks; parallel subagents for independent work
 2. **Analyze** — Parse prompt: subject, platforms, style, brand context, content elements
 3. **Ideate** — 3-5 concepts, present via `AskUserQuestion`
-4. **Design** — `/ckm:brand` → `/ckm:design-system` → randomly invoke `/ck:` OR `/ck:frontend-design`; HTML per idea × size
-5. **Export** — `chrome-devtools` or Playwright screenshot at exact px (2x deviceScaleFactor)
-6. **Verify** — Use Chrome MCP or `chrome-devtools` skill to visually inspect exported designs; fix layout/styling issues and re-export
+4. **Design** — `brand` → `tailwind-design-system` tokens → `design-taste-frontend` or plugin `frontend-design`; HTML per idea × size
+5. **Export** — Playwright MCP screenshot at exact px (2x deviceScaleFactor)
+6. **Verify** — Inspect the exported PNGs (Read the image); fix layout/styling issues and re-export
 7. **Report** — Summary to `plans/reports/` with design decisions
 8. **Organize** — Invoke `assets-organizing` skill to sort output files and reports
 
@@ -277,8 +230,8 @@ Load `references/social-photos-design.md` for sizes, templates, best practices.
 
 ### Complete Brand Package
 
-1. **Logo** → `scripts/logo/generate.py` → Generate logo variants
-2. **CIP** → `scripts/cip/generate.py --logo ...` → Create deliverable mockups
+1. **Logo** → brief from `scripts/logo/search.py` → Higgsfield `generate_image` → logo variants
+2. **CIP** → brief from `scripts/cip/search.py` → Higgsfield `generate_image` with the logo as reference → deliverable mockups
 3. **Presentation** → Load `references/slides-create.md` → Build pitch deck
 
 ### New Design System
@@ -314,13 +267,13 @@ Load `references/social-photos-design.md` for sizes, templates, best practices.
 | Script | Purpose |
 |--------|---------|
 | `scripts/logo/search.py` | Search logo styles, colors, industries |
-| `scripts/logo/generate.py` | Generate logos via Higgsfield `generate_image` |
+| `scripts/logo/generate.py` | LEGACY (Gemini) — do not run; use Higgsfield `generate_image` |
 | `scripts/logo/core.py` | BM25 search engine for logo data |
 | `scripts/cip/search.py` | Search CIP deliverables, styles, industries |
-| `scripts/cip/generate.py` | Generate CIP mockups via Higgsfield `generate_image` |
+| `scripts/cip/generate.py` | LEGACY (Gemini) — do not run; use Higgsfield `generate_image` |
 | `scripts/cip/render-html.py` | Render HTML presentation from CIP mockups |
 | `scripts/cip/core.py` | BM25 search engine for CIP data |
-| `scripts/icon/generate.py` | Generate SVG icons with the active model (text output, no image API) |
+| `scripts/icon/generate.py` | LEGACY (Gemini) — do not run; write SVG directly |
 
 ## Prerequisites
 
@@ -333,14 +286,10 @@ python3 --version || python --version
 
 ## Setup
 
-```bash
-# No API key needed — image generation goes through the Higgsfield MCP connector.
-pip install google-genai pillow
-```
-
-> **Note for Windows:** Use `python` instead of `pip` where needed (e.g., `python -m pip install ...`).
+No setup: image generation goes through the Higgsfield MCP connector, and the `search.py` /
+`render-html.py` helpers need only Python 3 (stdlib). Do not install `google-genai`.
 
 ## Integration
 
-**External sub-skills:** brand, design-system, ui-styling
-**Related Skills:** frontend-design, , higgsfield-generate, chrome-devtools
+**External sub-skills:** brand, tailwind-design-system (tokens), ui-styling
+**Related Skills:** design-taste-frontend, frontend-design (plugin), higgsfield-generate

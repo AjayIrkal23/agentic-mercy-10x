@@ -1,42 +1,44 @@
 ---
 name: planning-and-task-breakdown
-description: "ALWAYS invoke when you have a spec or clear requirements and need to break work into ordered, implementable tasks. MUST use when a task feels too large to start, when you need to estimate scope, or when parallel work is possible."
-schema: 1
-category: planning
-surfaces:
-- planning
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 1876
-triggers:
-  keywords:
-  - break
-  - breakdown
-  - breaks
-  - clear
-  - estimate
-  - feels
-  - have
-  - implementable
-  - large
-  - need
-  - ordered
-  - parallel
+description: Breaks a spec or clear requirements into ordered, implementable, verifiable tasks with scope estimates.
+when_to_use: Use when a task feels too large to start, when scope needs estimating, or when parallel work is possible.
+metadata:
+  schema: 1
+  category: planning
+  surfaces:
   - planning
-  - possible
-  - requirements
-  - scope
-  - spec
-  - start
-  - task
-  - tasks
-  - too
-  - work
-  paths: []
-  intents:
-  - planning
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 1876
+  triggers:
+    keywords:
+    - break
+    - breakdown
+    - breaks
+    - clear
+    - estimate
+    - feels
+    - have
+    - implementable
+    - large
+    - need
+    - ordered
+    - parallel
+    - planning
+    - possible
+    - requirements
+    - scope
+    - spec
+    - start
+    - task
+    - tasks
+    - too
+    - work
+    paths: []
+    intents:
+    - planning
 ---
 # Planning and Task Breakdown
 

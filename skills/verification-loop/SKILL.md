@@ -1,28 +1,30 @@
 ---
 name: verification-loop
-description: "MUST use before claiming any work complete, fixed, or passing — a comprehensive verification system for Claude Code sessions."
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 592
-triggers:
-  keywords:
-  - claude
-  - code
-  - comprehensive
-  - loop
-  - sessions
-  - system
-  - verification
-  paths: []
-  intents:
+description: 'Verification before claiming done: run the real build, tests, lint, and checks and read the output. Evidence before assertions.'
+when_to_use: Use before claiming any work complete, fixed, or passing.
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
-origin: ECC
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 592
+  origin: ECC
+  triggers:
+    keywords:
+    - claude
+    - code
+    - comprehensive
+    - loop
+    - sessions
+    - system
+    - verification
+    paths: []
+    intents:
+    - general
 ---
 # Verification Loop Skill
 

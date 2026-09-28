@@ -1,64 +1,65 @@
 ---
 name: workflow-orchestrator
-description: "ALWAYS invoke when work spans multiple phases, domains, or specialist roles and needs explicit sequencing, ownership, and quality gates across Architect, Code, and Debug modes."
-disable-model-invocation: false
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 783
-triggers:
-  keywords:
-  - agent
-  - architect
-  - break
-  - choosing
-  - code
-  - complex
-  - cursor
-  - debug
-  - domains
-  - execution
-  - explicit
-  - first
-  - frontend/backend
-  - gates
-  - implement
-  - implementation
-  - include
-  - mandatory
-  - mode
-  - modes
-  - multiple
-  - need
-  - needs
-  - orchestrator
-  - ordering
-  - ownership
-  - phases
-  - plan
-  - planning
-  - quality
-  - roles
-  - route
-  - routing
-  - sequencing
-  - skill
-  - skills
-  - spans
-  - specialist
-  - stacks
-  - superpowers
-  - triggers
-  - work
-  - workflow
-  paths: []
-  intents:
+description: 'Coordination shell for multi-phase work: identifies touched surfaces and routes each phase to Architect, Code, or Debug mode with explicit ownership and quality gates.'
+when_to_use: Use when work spans multiple phases, domains, or specialist roles.
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 783
+  triggers:
+    keywords:
+    - agent
+    - architect
+    - break
+    - choosing
+    - code
+    - complex
+    - cursor
+    - debug
+    - domains
+    - execution
+    - explicit
+    - first
+    - frontend/backend
+    - gates
+    - implement
+    - implementation
+    - include
+    - mandatory
+    - mode
+    - modes
+    - multiple
+    - need
+    - needs
+    - orchestrator
+    - ordering
+    - ownership
+    - phases
+    - plan
+    - planning
+    - quality
+    - roles
+    - route
+    - routing
+    - sequencing
+    - skill
+    - skills
+    - spans
+    - specialist
+    - stacks
+    - superpowers
+    - triggers
+    - work
+    - workflow
+    paths: []
+    intents:
+    - general
 ---
 # Workflow Orchestrator
 
@@ -68,7 +69,7 @@ This is the coordination shell.
 
 It does not assume a mixed frontend/backend plan by default. It identifies the touched surfaces, then routes each phase to the right mode and domain stack.
 
-**Canonical orchestrator for this machine:** Use this skill as the single master workflow router in Cursor. If your setup also ships a separate `agent-skills-orchestrator` skill (from the Everything Claude Code bundle), do not treat both as mandatory "first skill" in the same task unless you merge their content yourself. Prefer `plan-exec-stack-guide` for plan vs execution and Superpowers paths.
+**Canonical orchestrator for this machine:** this skill is the single workflow router. If your setup also ships a separate `agent-skills-orchestrator` skill, do not treat both as the mandatory "first skill" in the same task unless you merge their content yourself. Plan-vs-execution stack ordering lives in `references/stack-ordering.md`.
 
 ## Use When
 

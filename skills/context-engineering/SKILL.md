@@ -1,49 +1,51 @@
 ---
 name: context-engineering
-description: "ALWAYS invoke when starting a new session, when agent output quality degrades, when switching between tasks, or when you need to configure rules files and context for a project — optimizes agent context setup."
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 2574
-triggers:
-  keywords:
-  - agent
-  - arbitrary
-  - auto-compaction
-  - compaction
-  - configure
-  - context
-  - degrades
-  - engineering
-  - files
-  - intervals
-  - logical
-  - manual
-  - need
-  - optimizes
-  - output
-  - phases
-  - preserve
-  - project
-  - quality
-  - rather
-  - rules
-  - session
-  - setup
-  - starting
-  - suggests
-  - switching
-  - task
-  - tasks
-  - through
-  paths: []
-  intents:
+description: 'Optimizes agent context setup: rules files, project context layout, compaction points, and what to load when.'
+when_to_use: Use when starting on a new project, when output quality degrades, when switching tasks, or when configuring CLAUDE.md/rules for a repo.
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 2574
+  triggers:
+    keywords:
+    - agent
+    - arbitrary
+    - auto-compaction
+    - compaction
+    - configure
+    - context
+    - degrades
+    - engineering
+    - files
+    - intervals
+    - logical
+    - manual
+    - need
+    - optimizes
+    - output
+    - phases
+    - preserve
+    - project
+    - quality
+    - rather
+    - rules
+    - session
+    - setup
+    - starting
+    - suggests
+    - switching
+    - task
+    - tasks
+    - through
+    paths: []
+    intents:
+    - general
 ---
 # Context Engineering
 
@@ -114,7 +116,7 @@ Create a rules file that persists across sessions. This is the highest-leverage 
 ```
 
 **Equivalent files for other tools:**
-- `.cursorrules` or `.claude/rules/*.md` (Cursor)
+- `.claude/rules/*.md` (Claude Code; `paths:` frontmatter scopes a rule to matching files)
 - `.windsurfrules` (Windsurf)
 - `.github/copilot-instructions.md` (GitHub Copilot)
 - `AGENTS.md` (OpenAI Codex)

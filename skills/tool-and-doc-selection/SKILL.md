@@ -1,44 +1,44 @@
 ---
 name: tool-and-doc-selection
-description: "ALWAYS invoke when deciding which source of truth to consult among workspace files, local docs, installed docs tools, MCP integrations, or web search. MUST use to choose the right local or external source for this task."
-schema: 1
-category: docs
-surfaces:
-- docs
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 582
-triggers:
-  keywords:
-  - among
-  - choose
-  - consult
-  - deciding
-  - doc
+description: Chooses the right source of truth (workspace files, local docs, installed doc tools, MCP integrations, or web search) and keeps evidence retrieval disciplined.
+when_to_use: Use when deciding which docs or tools to consult for a task, before reaching for web search.
+metadata:
+  schema: 1
+  category: docs
+  surfaces:
   - docs
-  - external
-  - files
-  - installed
-  - integrations
-  - local
-  - mcp
-  - right
-  - search
-  - selection
-  - source
-  - task
-  - tool
-  - tools
-  - truth
-  - web
-  - workspace
-  paths:
-  - .claude/hooks/
-  - .claude/rules/
-  intents:
-  - docs
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 582
+  triggers:
+    keywords:
+    - among
+    - choose
+    - consult
+    - deciding
+    - doc
+    - docs
+    - external
+    - files
+    - installed
+    - integrations
+    - local
+    - mcp
+    - right
+    - search
+    - selection
+    - source
+    - task
+    - tool
+    - tools
+    - truth
+    - web
+    - workspace
+    paths: []
+    intents:
+    - docs
 ---
 # Tool And Doc Selection
 

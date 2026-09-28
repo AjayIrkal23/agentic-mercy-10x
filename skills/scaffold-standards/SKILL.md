@@ -1,49 +1,53 @@
 ---
 name: scaffold-standards
-description: "ALWAYS invoke when scaffolding a new backend or full-stack domain, a route/controller/service/schema skeleton, or a standard list and CRUD feature structure."
-disable-model-invocation: false
-schema: 1
-category: backend
-surfaces:
-- backend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 1908
-triggers:
-  keywords:
+description: 'Minimum skeleton for a new backend or full-stack domain: route/controller/service/schema files and a standard list/CRUD feature structure per stack.'
+when_to_use: Use when scaffolding a new domain, route, controller, service, or schema, or a standard CRUD feature.
+paths:
+- '**/routes/**'
+- '**/router/**'
+metadata:
+  schema: 1
+  category: backend
+  surfaces:
   - backend
-  - crud
-  - domain
-  - entry
-  - feature
-  - file
-  - frontend
-  - full-stack
-  - implementation
-  - list
-  - minimum
-  - plan
-  - planning
-  - points
-  - route/controller/service/schema
-  - scaffold
-  - scaffolding
-  - skeleton
-  - skeletons
-  - standard
-  - standards
-  - structure
-  - tree
-  paths:
-  - /router/
-  - /routes/
-  - route.ts
-  - route.tsx
-  - routes.ts
-  intents:
-  - backend
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 1908
+  triggers:
+    keywords:
+    - backend
+    - crud
+    - domain
+    - entry
+    - feature
+    - file
+    - frontend
+    - full-stack
+    - implementation
+    - list
+    - minimum
+    - plan
+    - planning
+    - points
+    - route/controller/service/schema
+    - scaffold
+    - scaffolding
+    - skeleton
+    - skeletons
+    - standard
+    - standards
+    - structure
+    - tree
+    paths:
+    - /router/
+    - /routes/
+    - route.ts
+    - route.tsx
+    - routes.ts
+    intents:
+    - backend
 ---
 # Scaffold Standards
 
@@ -62,7 +66,7 @@ Use it when consistency of file layout, naming, and build order matters more tha
 
 ## Backend Skeleton
 
-Pick the block matching the repo's actual stack — confirmed against 3 reference codebases (site-sync-vista = Fastify/TS, MARKETING REPORT AUTOMATION = FastAPI/Python, GO_UDP/UDP_PLATFORM = Go/chi). Don't force one stack's file-naming onto another.
+Pick the block matching the repo's actual stack (Fastify/TS, FastAPI/Python, or Go/chi — detect it from `package.json`, `pyproject.toml`, or `go.mod`). Don't force one stack's file-naming onto another.
 
 ### Node/TypeScript (Fastify/Express style)
 

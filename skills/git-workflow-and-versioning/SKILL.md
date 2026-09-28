@@ -1,38 +1,40 @@
 ---
 name: git-workflow-and-versioning
-description: "ALWAYS invoke when making any code change — structures git workflow practices. MUST use when committing, branching, resolving conflicts, or when you need to organize work across multiple parallel streams."
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 2508
-triggers:
-  keywords:
-  - branching
-  - change
-  - code
-  - committing
-  - conflicts
-  - git
-  - making
-  - multiple
-  - need
-  - organize
-  - parallel
-  - practices
-  - resolving
-  - streams
-  - structures
-  - versioning
-  - work
-  - workflow
-  paths: []
-  intents:
+description: 'Git workflow practices: atomic commits, branching, conflict resolution, and organizing parallel streams of work.'
+when_to_use: Use when committing, branching, rebasing, resolving conflicts, or planning parallel work streams.
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 2508
+  triggers:
+    keywords:
+    - branching
+    - change
+    - code
+    - committing
+    - conflicts
+    - git
+    - making
+    - multiple
+    - need
+    - organize
+    - parallel
+    - practices
+    - resolving
+    - streams
+    - structures
+    - versioning
+    - work
+    - workflow
+    paths: []
+    intents:
+    - general
 ---
 # Git Workflow and Versioning
 

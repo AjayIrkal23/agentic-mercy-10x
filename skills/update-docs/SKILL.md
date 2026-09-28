@@ -1,90 +1,90 @@
 ---
 name: update-docs
-description: Use before substantive coding when you must read repo documentation first (Phase A); after
-  implementation to sync Markdown/PR docs (Phase B), including GO_UDP (`server_docs` / `frontend_docs`
-  / PROJECT_LINKAGES). Also use when the user asks to update documentation for code changes, check docs
-  for a PR, sync docs with code, scaffold docs for a feature, review docs completeness, or mentions docs
-  folders, MDX, changelogs, README impact, or "what documentation is affected". For Next.js monorepo work,
-  see references/upstream-nextjs/. Optional split client/server example in references/examples/. GO_UDP
-  mapping in references/go-udp-documentation-lifecycle.md.
-schema: 1
-category: backend
-surfaces:
-- backend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 1216
-triggers:
-  keywords:
-  - affected
-  - agents
-  - apis
-  - architectural
-  - asks
-  - changelogs
-  - changes
-  - changing
-  - check
-  - client/server
-  - code
-  - codebase
-  - coding
-  - completeness
-  - context
-  - decisions
-  - docs
-  - documentation
-  - engineers
-  - example
-  - feature
-  - features
-  - first
-  - folders
-  - frontend_docs
-  - future
-  - go_udp
-  - impact
-  - implementation
-  - including
-  - making
-  - mapping
-  - markdown/pr
-  - mdx
-  - mentions
-  - monorepo
-  - must
-  - need
-  - next.js
-  - optional
-  - phase
-  - project_linkages
-  - public
-  - read
-  - readme
-  - record
-  - records
-  - references/examples
-  - references/go-udp-documentation-lifecycle.md
-  - references/upstream-nextjs
-  - repo
-  - review
-  - scaffold
-  - see
-  - server_docs
-  - shipping
-  - split
-  - substantive
-  - sync
-  - understand
-  - update
-  - user
-  - will
-  - work
-  paths: []
-  intents:
+description: 'Documentation lifecycle: read repo docs before substantive coding (Phase A) and sync Markdown/MDX, changelogs, READMEs, and PR docs after implementation (Phase B). Stack-neutral; Next.js monorepo mapping in references/.'
+when_to_use: Use when asked what docs a change affects, to sync docs with code, to scaffold docs for a feature, or when editing docs/, *_docs/, or README files.
+paths:
+- '**/docs/**'
+- '**/*_docs/**'
+- '**/README.md'
+metadata:
+  schema: 1
+  category: backend
+  surfaces:
   - backend
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 1216
+  triggers:
+    keywords:
+    - affected
+    - agents
+    - apis
+    - architectural
+    - asks
+    - changelogs
+    - changes
+    - changing
+    - check
+    - client/server
+    - code
+    - codebase
+    - coding
+    - completeness
+    - context
+    - decisions
+    - docs
+    - documentation
+    - engineers
+    - example
+    - feature
+    - features
+    - first
+    - folders
+    - frontend_docs
+    - future
+    - go_udp
+    - impact
+    - implementation
+    - including
+    - making
+    - mapping
+    - markdown/pr
+    - mdx
+    - mentions
+    - monorepo
+    - must
+    - need
+    - next.js
+    - optional
+    - phase
+    - project_linkages
+    - public
+    - read
+    - readme
+    - record
+    - records
+    - references/examples
+    - references/go-udp-documentation-lifecycle.md
+    - references/upstream-nextjs
+    - repo
+    - review
+    - scaffold
+    - see
+    - server_docs
+    - shipping
+    - split
+    - substantive
+    - sync
+    - understand
+    - update
+    - user
+    - will
+    - work
+    paths: []
+    intents:
+    - backend
 ---
 # Update documentation
 
@@ -96,15 +96,14 @@ Many repositories expect **documentation before implementation** plus **explicit
 
 ### Phase A — Read (pre-implementation)
 
-- Open the repo **`AGENTS.md`** (or equivalent onboarding doc) whenever it exists at the workspace root.
-- **GO_UDP monorepo:** follow Phase A paths in **[references/go-udp-documentation-lifecycle.md](references/go-udp-documentation-lifecycle.md)** and the authoritative repo file `.claude/documentation-lifecycle.md`.
+- Open the repo **`AGENTS.md`** / root **`CLAUDE.md`** (or equivalent onboarding doc) whenever it exists at the workspace root; a repo's own `.claude/` may carry a documentation-lifecycle checklist with its mandatory reading order — follow it when present.
 - Narrow scope to the playbook + domain READMEs for the stacks you touch (server vs client); do not read the entire tree blindly—follow the project's mandatory reading order.
 
 ### Phase B — Sync (post-change)
 
-Continue with **Workflow §1–§5** below. For GO_UDP explicitly map diffs → **`UDP_PLATFORM/server/server_docs/`**, **`UDP_PLATFORM/client/frontend_docs/`**, **`PROJECT_LINKAGES.md`**, and audit taxonomy (**`UDP_PLATFORM/server/internal/types/audit/actions.go`**) when routes change — see **[references/go-udp-documentation-lifecycle.md](references/go-udp-documentation-lifecycle.md)**.
+Continue with **Workflow §1–§5** below. Map each behavioral diff to the doc tree that owns it (server docs for contracts/routes/domain behavior, client docs for routing/state/API layering, a cross-layer linkage doc when paths or domains change, and any audit/action taxonomy the repo keeps next to its routes).
 
-**Also for GO_UDP:** (**1**) Mandatory **Cursor Plan mode → Agent mode** for substantive multi-file work (see repo **Plan gate** in `.claude/documentation-lifecycle.md`). (**2**) After behavioral edits, **`dead-code-and-change-audit`** and **`fix-lint-format`** on touched surfaces where applicable. (**3**) Before handoff: Superpowers **`verification-before-completion`**, skim **`code-review-and-quality`**; then **`using-agent-skills`** for any leftover relevant skills.
+**Handoff:** (**1**) Plan before substantive multi-file work (`plan-mode-gate`). (**2**) After behavioral edits, **`dead-code-and-change-audit`** and **`fix-lint-format`** on touched surfaces where applicable. (**3**) Before handoff: Superpowers **`verification-before-completion`**, skim **`code-review-and-quality`**; then **`using-agent-skills`** for any leftover relevant skills.
 
 Hooks and `.claude/rules` may remind you at session start/stop but **cannot replace** Phase A/B.
 
@@ -158,10 +157,9 @@ If multiple packages exist (e.g. `client/` and `server/`), run the relevant comm
 - [ ] New options / routes / errors are documented
 - [ ] Cross-links updated when navigation or filenames changed
 - [ ] Lint/format passes for the doc toolchain in this repo
-- **GO_UDP:** **[references/go-udp-documentation-lifecycle.md](references/go-udp-documentation-lifecycle.md)** — Phase B + **Handoff** complete ( **`update-docs`** mapping, **`dead-code-and-change-audit`** / **`fix-lint-format`** as needed, **`verification-before-completion`**, skim **`code-review-and-quality`**, **`using-agent-skills`** sweep; substantive work preceded by **Plan mode** per repo checklist)
+- [ ] Repo-specific lifecycle checklist (if the repo ships one under `.claude/`) — Phase B + Handoff complete
 
 ## References
 
-- [references/go-udp-documentation-lifecycle.md](references/go-udp-documentation-lifecycle.md) — GO_UDP read/sync checklist (mirror of repo `.claude/documentation-lifecycle.md`)
-- [examples/sample-monorepo-docs-map.md](references/examples/sample-monorepo-docs-map.md) — optional placeholder pattern for split layouts
+- [examples/sample-monorepo-docs-map.md](references/examples/sample-monorepo-docs-map.md) — optional placeholder pattern for split layouts (project-specific trees belong in that repo's `.claude/`; see `~/.claude/docs/project-templates/`)
 - [upstream-nextjs/](references/upstream-nextjs/) — Next.js maintainer-oriented conventions (vendored)

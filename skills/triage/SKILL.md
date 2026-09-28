@@ -1,55 +1,55 @@
 ---
 name: triage
-description: "ALWAYS invoke when the user wants to create an issue, triage issues, review incoming bugs or feature requests, prepare issues for an AFK agent, or manage issue workflow — triages issues through a state machine driven by triage roles."
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 1147
-triggers:
-  keywords:
-  - afk
-  - agent
-  - bugs
-  - create
-  - driven
-  - feature
-  - incoming
-  - issue
-  - issues
-  - machine
-  - manage
-  - prepare
-  - requests
-  - review
-  - roles
-  - state
-  - through
-  - triage
-  - user
-  - wants
-  - workflow
-  paths: []
-  intents:
+description: 'Triages issues through a state machine driven by triage roles: intake, classification, and preparation for an AFK agent.'
+when_to_use: Use when the user wants to create, triage, or prepare issues, or review incoming bugs and feature requests.
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
-keywords:
-- triage
-- triage issues
-- triage the backlog
-- incoming bugs
-- feature requests
-- issue workflow
-- label the issue
-- prioritize issues
-intents:
-- REVIEW
-- PLAN
-surfaces:
-- general
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 1147
+  triggers:
+    keywords:
+    - afk
+    - agent
+    - bugs
+    - create
+    - driven
+    - feature
+    - incoming
+    - issue
+    - issues
+    - machine
+    - manage
+    - prepare
+    - requests
+    - review
+    - roles
+    - state
+    - through
+    - triage
+    - user
+    - wants
+    - workflow
+    paths: []
+    intents:
+    - general
+  intents:
+  - REVIEW
+  - PLAN
+  keywords:
+  - triage
+  - triage issues
+  - triage the backlog
+  - incoming bugs
+  - feature requests
+  - issue workflow
+  - label the issue
+  - prioritize issues
 ---
 # Triage
 

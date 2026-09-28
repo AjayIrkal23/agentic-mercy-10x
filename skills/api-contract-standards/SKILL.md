@@ -1,59 +1,70 @@
 ---
 name: api-contract-standards
-description: "ALWAYS invoke when backend response envelopes, list metadata, error shapes, versioning, or the separation between table, card, and summary contracts are being defined or reviewed."
-disable-model-invocation: false
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 642
-triggers:
-  keywords:
-  - api
-  - apis
-  - backend
-  - boundaries
-  - card
-  - contract
-  - contracts
-  - creating
-  - defined
-  - defining
-  - design
-  - designing
-  - endpoints
-  - envelopes
-  - error
-  - establishing
-  - frontend
-  - graphql
-  - guides
-  - interface
-  - list
-  - metadata
-  - module
-  - modules
-  - public
-  - response
-  - rest
-  - reviewed
-  - separation
-  - shapes
-  - stable
-  - standards
-  - summary
-  - table
-  - type
-  - versioning
-  paths:
-  - src/schemas/
-  - src/types/
-  intents:
+description: Backend response envelopes, list metadata, error shapes, versioning, and the separation between table, card, and summary contracts.
+when_to_use: 'Use when defining or reviewing an API contract: envelope, pagination metadata, error shape, OpenAPI/GraphQL/gRPC schema, DTO or shared types.'
+paths:
+- '**/schemas/**'
+- '**/types/**'
+- '**/dto/**'
+- '**/*.proto'
+- '**/openapi*.{yaml,yml,json}'
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 642
+  triggers:
+    keywords:
+    - api
+    - apis
+    - backend
+    - boundaries
+    - card
+    - contract
+    - contracts
+    - creating
+    - defined
+    - defining
+    - design
+    - designing
+    - endpoint
+    - endpoints
+    - envelope
+    - envelopes
+    - error
+    - establishing
+    - frontend
+    - graphql
+    - grpc
+    - guides
+    - interface
+    - list
+    - metadata
+    - module
+    - modules
+    - openapi
+    - public
+    - response
+    - rest
+    - reviewed
+    - separation
+    - shapes
+    - stable
+    - standards
+    - summary
+    - table
+    - type
+    - versioning
+    paths:
+    - src/schemas/
+    - src/types/
+    intents:
+    - general
 ---
 ## Use When
 

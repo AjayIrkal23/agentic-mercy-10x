@@ -1,26 +1,36 @@
 ---
 name: animejs-motion
-description: ALWAYS invoke for SVG animation (line-draw/morph), standalone timelines, and non-React or "sprinkle" motion — anime.js v4 is the engine for these. In React app UI, `motion-dev` (Motion) is PRIMARY for layout/exit/gestures/scroll; reach here for SVG (`svg.createDrawable`/`morphTo`/`createMotionPath`), imperative `createTimeline` sequences, `createDraggable`, and non-React pages. MUST use v4 ESM API (`import { animate } from 'animejs'`) — never v3 `anime({})`. Pull exact API from Context7 `/websites/animejs`. Not for React layout/exit animations (Motion), CSS-only hover/focus (native CSS), or asset pixels (Higgsfield).
+description: anime.js v4 engine for SVG animation (line-draw/morph/motion path), standalone timelines, draggables, and non-React or "sprinkle" motion. In React app UI, `motion-dev` is primary for layout/exit/gestures/scroll; reach here for `svg.createDrawable`/`morphTo`/`createMotionPath`, imperative `createTimeline` sequences, `createDraggable`, and non-React pages. v4 ESM API only (`import { animate } from 'animejs'`), never v3 `anime({})`. Pull exact API from Context7 `/websites/animejs`. Not for React layout/exit animations (Motion), CSS-only hover/focus (native CSS), or asset pixels (Higgsfield).
+when_to_use: Use when animating SVG (draw, morph, motion paths), sequencing a standalone timeline, adding drag/physics outside React, or animating a non-React page; or when a file imports `animejs`.
+paths:
+  - "**/*.svg"
+  - "**/*anim*.{js,ts,tsx}"
+metadata:
+  category: frontend
+  surfaces: [frontend]
+  triggers:
+    keywords: [animejs, anime.js, createTimeline, createDrawable, morphTo, createMotionPath, createDraggable, createScope, stagger, onScroll, svg animation, line draw]
+    intents: [implement, design]
 ---
 
 # anime.js (v4) — SVG / timeline / standalone motion engine
 
 **Standing directive:** anime.js v4 is the engine for **SVG animation, standalone timelines, and
-non-React / "sprinkle" motion**. For **React app UI**, Motion ([[motion-dev]]) is PRIMARY
-(layout, exit/`AnimatePresence`, gestures, scroll). Split routing: [[motion-engine-mandate]].
+non-React / "sprinkle" motion**. For **React app UI**, Motion (`motion-dev`) is PRIMARY
+(layout, exit/`AnimatePresence`, gestures, scroll). Split routing: `rules/frontend.md`.
 Reach here for: `svg.createDrawable`/`morphTo`/`createMotionPath`, imperative `createTimeline`
 sequences, `createDraggable`, non-React pages. Not Framer Motion, not GSAP, not hand-rolled rAF.
 
 ## Where it sits in the stack
 
 ```
-        DECIDES the motion   (should it move? easing? duration? physical or not?)
-  → Motion / anime.js  IMPLEMENTS it        (Motion = React UI · anime.js = SVG/timeline/standalone)
-    →   GATES it           (Block/Approve on the motion diff before ship)
+  design-taste-frontend    DECIDES the motion   (should it move? easing? duration? physical or not?)
+  → Motion / anime.js      IMPLEMENTS it        (Motion = React UI · anime.js = SVG/timeline/standalone)
+    → motion-dev craft bar GATES it             (easing / duration / interruptibility / reduced-motion, before ship)
 ```
 
 Motion + anime.js are the motion counterpart to Higgsfield (asset pixels).
-Emil/ own *whether and how* to move; the engines are *how you write it*.
+`design-taste-frontend` and the `motion-dev` craft bar own *whether and how* to move; the engines are *how you write it*.
 
 ## Docs — Context7 first, no local copy
 
@@ -87,14 +97,14 @@ utils.$('.item');                 // scoped querySelectorAll
 
 ## Craft mandates (inherited — do not relitigate)
 
-- **Motion default = no bounce** (). `spring({ bounce })`/overshoot ONLY for
+- **Motion default = no bounce** (`motion-dev` craft bar). `spring({ bounce })`/overshoot ONLY for
   *gesture-released* motion the user physically imparted (drag-to-dismiss, flick, swipe →
   `createDraggable` + `releaseEase: spring(...)`). A card that merely fades in must not overshoot.
 - **Respect `prefers-reduced-motion`** — gate/shorten motion:
   ```js
   if (!matchMedia('(prefers-reduced-motion: reduce)').matches) animate(/* ... */);
   ```
-- Every motion that ships still passes the **``** gate (easing/duration/interruptibility/a11y).
+- Every motion that ships still passes the **`motion-dev` craft bar** (easing/duration/interruptibility/a11y).
 
 ## When NOT to use it
 

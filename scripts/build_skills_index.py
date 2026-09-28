@@ -1,198 +1,304 @@
 #!/usr/bin/env python3
 """
-build_skills_index.py — P5-T1 canonical skills indexer (supersedes the P1-T5
-bootstrap builder).
+build_skills_index.py — the ONE skills-index generator (hooks/skills-index.json).
 
-Merges, into hooks/skills-index.json covering ALL 218 skill names:
-  - direct schema-v1 front-matter for the 90 user-authored skills
-  - hooks/skills-index-overrides.json 'skills' entries for the 128 locked ones
-    (a locked skill with no override entry falls back to its native
-    name/description only — never any deeper parse)
-  - hooks/skill-aliases.json (alias -> canonical) so every alias resolves
+Called via the shim hooks/build-skills-index.py (dispatch session-start
+``skills-index-guard --hook``, installer post_steps, selfheal) or directly.
 
-Deterministic: same inputs -> same bytes (a content hash lands in _meta).
+Per local skill (every skills/*/SKILL.md):
+  routing metadata comes from frontmatter ``metadata:`` (sanctioned home:
+  ``metadata.triggers.{keywords,paths,intents}``, ``category``, ``surfaces``,
+  ``platforms``, ``links``, ``requires``) with fallback to the legacy top-level
+  keys; native ``paths:`` is read too. Descriptions are tokenised ONLY when no
+  keywords exist anywhere (``source`` records which path produced the keywords:
+  ``metadata`` | ``frontmatter-legacy`` | ``description``).
+Plugin skills: every ``plugins/installed_plugins.json`` entry is scanned for
+  ``<installPath>/skills/*/SKILL.md`` → ``plugin:skill`` entries, ``source:"plugin"``.
+Aliases: hooks/skill-aliases.json is emitted as a top-level ``aliases`` map; alias
+  names never get their own entry (stubs are gone) but floor path rules that still
+  name an alias are attributed to the canonical.
 
---emit-legacy-configs regenerates skill_router.config.json + the routing
-sections of fullstack/ui-ux configs from the index, each gated behind a
-trigger-floor superset check (P5-T10). Inert until trigger-floor.json exists.
+Output shape stays compatible with prompt_router/select.py and the session-start
+aggregator: ``skills[name] = {name, description, keywords, surfaces, intents,
+path_rules, weight, source, ...}``.
+
+Flags: --hook (rebuild if stale, print {}), --check, --force. Deterministic bytes.
 """
 from __future__ import annotations
 
-import argparse
+import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
 import skills_lib as sl
 
-OVERRIDES = sl.HOOKS_DIR / "skills-index-overrides.json"
-ALIASES = sl.HOOKS_DIR / "skill-aliases.json"
-FLOOR = sl.HOOKS_DIR / "trigger-floor.json"
-INDEX = sl.HOOKS_DIR / "skills-index.json"
+_HOOKS = sl.HOOKS_DIR
+if str(_HOOKS) not in sys.path:
+    sys.path.insert(0, str(_HOOKS))
+try:
+    from lib.skill_aliases import canonical as _canonical, load as _load_aliases
+except Exception:  # noqa: BLE001 — never crash a session-start hook
+    def _canonical(name: str) -> str:  # type: ignore[misc]
+        return name
+
+    def _load_aliases() -> dict:  # type: ignore[misc]
+        return {}
+
+FLOOR = _HOOKS / "trigger-floor.json"
+INDEX = _HOOKS / "skills-index.json"
+ALIASES = _HOOKS / "skill-aliases.json"
+INSTALLED_PLUGINS = sl.CLAUDE_DIR / "plugins" / "installed_plugins.json"
+
+# Legacy top-level custom keys (pre-2026-09-27) that now live under ``metadata:``.
+LEGACY_META_KEYS = ("schema", "triggers", "surfaces", "category", "platforms",
+                    "token-cost", "keywords", "intents", "origin", "requires",
+                    "model-hint", "links", "version")
+
+_STOP = {
+    "the", "and", "for", "with", "when", "use", "used", "using", "this", "that",
+    "from", "into", "your", "you", "are", "any", "all", "not", "but", "via",
+    "per", "our", "its", "was", "were", "has", "have", "will", "can", "may",
+    "skill", "skills", "alias", "of", "a", "an", "to", "in", "on", "or", "is",
+    "it", "be", "as", "by", "at", "we", "do", "get", "set", "new", "code",
+    "work", "task", "file", "files", "user", "before", "after", "over",
+    "always", "must", "invoke", "mandatory",
+}
 
 
 def _load(p: Path) -> dict:
-    if not p.exists():
-        return {}
     try:
-        return json.loads(p.read_text())
-    except json.JSONDecodeError:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
         return {}
 
 
-def _infer_category(name: str, body: str) -> str:
-    n = body.lower()
-    if name.startswith("backend-") or "go_udp" in n:
-        return "backend"
-    if name.startswith("frontend-") or "tailwind" in name or "react" in name:
-        return "frontend"
-    if "debug" in name or "diagnos" in name:
-        return "debug"
-    if "review" in name or "audit" in name:
-        return "review"
-    if "test" in name or "tdd" in name:
-        return "testing"
-    if "security" in name or "owasp" in name:
-        return "security"
-    return "general"
-
-
-def build() -> dict:
-    overrides = _load(OVERRIDES)
-    ov_skills = overrides.get("skills", {}) or {}
-    aliases = {k: v for k, v in _load(ALIASES).items() if not k.startswith("_")}
-    locked = sl.locked_skills()
-    provenance = _load(sl.HOOKS_DIR / "skills-provenance.json")
-
-    entries: dict = {}
-    for d in sl.skill_dirs():
-        name = d.name
-        fm, body, ok = sl.read_frontmatter(d / "SKILL.md")
-        desc = str(fm.get("description", "")) if ok else ""
-        is_locked = name in locked
-        entry: dict = {
-            "name": name,
-            "description": desc,
-            "locked": is_locked,
-            "provenance": provenance.get(name, {}).get("family") if is_locked else "self",
-        }
-        if is_locked and name in ov_skills:
-            # sidecar routing metadata (never parsed from the locked body)
-            entry.update({k: v for k, v in ov_skills[name].items()
-                          if k in ("triggers", "category", "surfaces", "platforms",
-                                   "links", "requires", "model-hint", "token-cost",
-                                   "lead-of", "member-of", "exec-note")})
-        elif not is_locked:
-            for k in ("triggers", "category", "surfaces", "platforms", "links",
-                      "requires", "model-hint", "token-cost", "alias_of"):
-                if k in fm:
-                    entry[k] = fm[k]
-            entry.setdefault("category", _infer_category(name, body))
-            entry.setdefault("token-cost", sl.estimate_token_cost(d))
-        entries[name] = entry
-
-    # weave aliases: an alias entry points at its canonical
-    for alias, canonical in aliases.items():
-        if alias in entries:
-            entries[alias]["alias_of"] = canonical
-
-    payload = {"skills": dict(sorted(entries.items()))}
-    blob = json.dumps(payload, sort_keys=True, separators=(",", ":"))
-    payload = {
-        "_meta": {
-            "purpose": "P5-T1 canonical skills index (all 218 names rankable)",
-            "count": len(entries),
-            "bodyBearing": len([e for e in entries.values() if not e.get("alias_of")]),
-            "aliases": len(aliases),
-            "locked": len([e for e in entries.values() if e.get("locked")]),
-            "contentHash": sl.sha256_text(blob),
-        },
-        **payload,
-    }
-    return payload
-
-
-def _floor_referenced_skills(floor: dict) -> set[str]:
-    out: set[str] = set()
-    for ent in floor.get("entries", []) or []:
-        val = ent.get("value") if isinstance(ent, dict) else None
-        if isinstance(val, dict):
-            out |= set(val.get("skills", []) or [])
+def skill_meta(fm: dict) -> dict:
+    """Routing metadata: ``metadata:`` first, legacy top-level keys as fallback."""
+    meta = fm.get("metadata") if isinstance(fm.get("metadata"), dict) else {}
+    out = dict(meta)
+    for k in LEGACY_META_KEYS:
+        if k not in out and k in fm:
+            out[k] = fm[k]
     return out
 
 
-def superset_check(candidate_rules: list[dict], floor: dict) -> set[str]:
-    """Return floor-referenced skills the candidate config would DROP (empty = ok)."""
-    floor_skills = _floor_referenced_skills(floor)
-    cand_skills: set[str] = set()
-    for r in candidate_rules:
-        cand_skills |= set(r.get("skills", []) or [])
-    aliases = {k: v for k, v in _load(ALIASES).items() if not k.startswith("_")}
-    # an alias resolves to its canonical, so a canonical in the candidate covers the alias
-    covered = cand_skills | {a for a, c in aliases.items() if c in cand_skills}
-    return floor_skills - covered
+def _tokenize(text: str) -> list[str]:
+    words = re.findall(r"[a-zA-Z][a-zA-Z0-9\-]{2,}", (text or "").lower())
+    out: list[str] = []
+    seen: set[str] = set()
+    for w in words:
+        if w in _STOP or w in seen:
+            continue
+        seen.add(w)
+        out.append(w)
+    return out
 
 
-def emit_legacy_configs(apply: bool = False) -> int:
-    if not FLOOR.exists():
-        print("--emit-legacy-configs: trigger-floor.json absent — INERT until P1-T3 "
-              "lands the floor (self-activates).", file=sys.stderr)
-        return 3
+def _floor_skill_map() -> dict[str, dict]:
+    """canonical skill -> {path_rules, surfaces, intents, keywords} from trigger-floor.json."""
+    out: dict[str, dict] = {}
     floor = _load(FLOOR)
-    idx = _load(INDEX).get("skills", {}) or {}
-    # Build candidate path/keyword rules from front-matter triggers.
-    candidate_rules = []
-    for name, e in idx.items():
-        trig = e.get("triggers", {}) or {}
-        paths = trig.get("paths", []) or []
-        if paths:
-            candidate_rules.append({"id": f"gen_{name}", "paths": paths, "skills": [name]})
-    # Union the floor's own path_route skill sets so generation is a provable superset.
-    for ent in floor.get("entries", []) or []:
-        val = ent.get("value") if isinstance(ent, dict) else None
-        if isinstance(val, dict) and val.get("skills"):
-            candidate_rules.append({"id": ent.get("source_key", "floor"),
-                                    "skills": val["skills"],
-                                    "match": val.get("match", {})})
-    dropped = superset_check(candidate_rules, floor)
-    generated = {
-        "_generated_from": "skills-index",
-        "_meta": {"superset_of": "trigger-floor.json", "dropped": sorted(dropped)},
-        "rules": candidate_rules,
+
+    def slot(name: str) -> dict:
+        return out.setdefault(_canonical(name), {"path_rules": [], "surfaces": set(),
+                                                "intents": set(), "keywords": set()})
+
+    for e in floor.get("entries", []) or []:
+        if not isinstance(e, dict):
+            continue
+        val = e.get("value") if isinstance(e.get("value"), dict) else {}
+        if e.get("kind") == "path_route":
+            rid = str(val.get("id", ""))
+            surface = "frontend" if rid.startswith("fe_") else ("backend" if rid.startswith("be_") else "")
+            m = val.get("match", {}) or {}
+            for sk in val.get("skills", []) or []:
+                d = slot(sk)
+                if m and m not in d["path_rules"]:
+                    d["path_rules"].append(m)
+                if surface:
+                    d["surfaces"].add(surface)
+                for kw in (m.get("path_contains_any", []) or []) + (m.get("filename_contains_any", []) or []):
+                    d["keywords"].add(str(kw).strip("/.").lower())
+        elif e.get("kind") == "cross_cutting":
+            group = val.get("group", "")
+            for sk in val.get("skills", []) or []:
+                d = slot(sk)
+                if group == "debug":
+                    d["intents"].add("DEBUG")
+                elif group == "verification":
+                    d["intents"].update({"REVIEW", "TEST", "QA"})
+                elif group == "implementation":
+                    d["intents"].update({"IMPLEMENT", "SPEC", "PLAN"})
+    return out
+
+
+def _entry(name: str, fm: dict, floor_map: dict, *, source_kind: str | None = None,
+           locked: bool = False, provenance: str | None = None) -> dict:
+    desc = fm.get("description", "")
+    if isinstance(desc, list):
+        desc = " ".join(str(x) for x in desc)
+    desc = str(desc or "")
+    meta = skill_meta(fm)
+    trig = meta.get("triggers") if isinstance(meta.get("triggers"), dict) else {}
+    fl = floor_map.get(name, {})
+
+    meta_block = fm.get("metadata") if isinstance(fm.get("metadata"), dict) else {}
+    meta_trig = meta_block.get("triggers") if isinstance(meta_block.get("triggers"), dict) else {}
+    if meta_trig.get("keywords"):
+        keywords = [str(x).lower() for x in meta_trig["keywords"]]
+        source = "metadata"
+    elif trig.get("keywords") or meta.get("keywords"):
+        keywords = [str(x).lower() for x in (trig.get("keywords") or meta.get("keywords") or [])]
+        source = "frontmatter-legacy"
+    else:
+        derived = set(_tokenize(desc)[:25]) | set(_tokenize(name)) | set(fl.get("keywords", set()))
+        keywords = sorted(derived)
+        source = "description"
+    if source_kind:
+        source = source_kind
+
+    surfaces = set(meta.get("surfaces") or []) | set(fl.get("surfaces", set()))
+    intents = set(trig.get("intents") or meta.get("intents") or []) | set(fl.get("intents", set()))
+    paths = fm.get("paths") if isinstance(fm.get("paths"), list) else (
+        [fm["paths"]] if isinstance(fm.get("paths"), str) else [])
+    entry: dict = {
+        "name": name,
+        "description": desc,
+        "keywords": sorted(set(keywords)),
+        "surfaces": sorted(surfaces),
+        "intents": sorted(intents),
+        "path_rules": fl.get("path_rules", []),
+        "paths": [str(p) for p in paths],
+        "weight": 1.0,
+        "source": source,
     }
-    if dropped:
-        print(f"--emit-legacy-configs: ABORT — {len(dropped)} floor rules would drop: "
-              f"{sorted(dropped)[:8]}", file=sys.stderr)
-        return 1
-    preview_dir = sl.CLAUDE_DIR / "vendor" / "generated-configs"
-    preview_dir.mkdir(parents=True, exist_ok=True)
-    (preview_dir / "skill_router.config.generated.json").write_text(
-        json.dumps(generated, indent=2) + "\n", encoding="utf-8")
-    print(f"--emit-legacy-configs: superset OK ({len(candidate_rules)} rules, 0 dropped); "
-          f"preview -> vendor/generated-configs/skill_router.config.generated.json")
-    if apply:
-        print("--apply: live hooks/ config swap is OWNED by P4/P7 (hooks/** outside P5 "
-              "write scope) — see HANDOFF. Preview written; not swapping.", file=sys.stderr)
-    return 0
+    for k in ("category", "platforms", "links", "requires"):
+        if meta.get(k):
+            entry[k] = meta[k]
+    if fm.get("when_to_use"):
+        entry["when_to_use"] = str(fm["when_to_use"])
+    if fm.get("disable-model-invocation") in (True, "true", "yes", "on", 1):
+        entry["hidden"] = True
+    if locked:
+        entry["locked"] = True
+        if provenance:
+            entry["provenance"] = provenance
+    return entry
 
 
-def main() -> int:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--emit-legacy-configs", action="store_true")
-    ap.add_argument("--apply", action="store_true", help="(P4/P7 only) swap live configs")
-    ap.add_argument("--check", action="store_true", help="assert index count == 218")
-    args = ap.parse_args()
-    if args.emit_legacy_configs:
-        return emit_legacy_configs(apply=args.apply)
+def _plugin_skill_files() -> list[tuple[str, Path]]:
+    """[(plugin_short_name, SKILL.md path)] for every installed plugin skill."""
+    out: list[tuple[str, Path]] = []
+    plugins = _load(INSTALLED_PLUGINS).get("plugins") or {}
+    for key, installs in plugins.items():
+        short = str(key).split("@", 1)[0]
+        for inst in installs if isinstance(installs, list) else []:
+            root = Path(str((inst or {}).get("installPath") or ""))
+            if not root.is_dir():
+                continue
+            for md in sorted((root / "skills").glob("*/SKILL.md")):
+                out.append((short, md))
+    return out
+
+
+def build() -> dict:
+    floor_map = _floor_skill_map()
+    locked = sl.locked_skills()
+    provenance = _load(_HOOKS / "skills-provenance.json")
+    aliases = _load_aliases()
+
+    entries: dict[str, dict] = {}
+    for d in sl.skill_dirs():
+        name = d.name
+        if name in aliases:  # a stale stub — the alias map resolves it, never index it
+            continue
+        fm, _body, ok = sl.read_frontmatter(d / "SKILL.md")
+        if not ok:
+            fm = {"description": ""}
+        is_locked = name in locked
+        entries[name] = _entry(
+            name, fm, floor_map, locked=is_locked,
+            provenance=(provenance.get(name, {}) or {}).get("family") if is_locked else None)
+
+    for short, md in _plugin_skill_files():
+        fm, _body, ok = sl.read_frontmatter(md)
+        if not ok:
+            continue
+        key = f"{short}:{md.parent.name}"
+        entries[key] = _entry(key, fm, floor_map, source_kind="plugin")
+        entries[key]["plugin"] = short
+
+    skills = dict(sorted(entries.items()))
+    canon = json.dumps(skills, sort_keys=True, ensure_ascii=False)
+    n_local = sum(1 for e in skills.values() if e.get("source") != "plugin")
+    return {
+        "_meta": {
+            "purpose": "Ranked-routing catalog: every local skill (metadata-first, aliases resolved) "
+                       "plus installed plugin skills as plugin:skill.",
+            "generator": "build_skills_index.py",
+            "skill_count": n_local,
+            "plugin_count": len(skills) - n_local,
+            "alias_count": len(aliases),
+            "checksum": hashlib.sha256(canon.encode("utf-8")).hexdigest(),
+        },
+        "aliases": dict(sorted(aliases.items())),
+        "skills": skills,
+    }
+
+
+def write_index() -> dict:
     payload = build()
-    INDEX.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
-    n = payload["_meta"]["count"]
-    print(f"wrote {INDEX.name}: {n} skills "
-          f"({payload['_meta']['bodyBearing']} bodies + {payload['_meta']['aliases']} aliases, "
-          f"{payload['_meta']['locked']} locked)")
-    if args.check and n != 218:
-        print(f"CHECK FAIL: expected 218, got {n}", file=sys.stderr)
-        return 1
+    INDEX.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return payload
+
+
+def _is_stale() -> bool:
+    if not INDEX.exists():
+        return True
+    try:
+        idx_mtime = INDEX.stat().st_mtime
+    except OSError:
+        return True
+    candidates = [ALIASES, INSTALLED_PLUGINS]
+    candidates += [d / "SKILL.md" for d in sl.skill_dirs()]
+    candidates += [md for _s, md in _plugin_skill_files()]
+    for p in candidates:
+        try:
+            if p.exists() and p.stat().st_mtime > idx_mtime:
+                return True
+        except OSError:
+            continue
+    return False
+
+
+def main(argv: list[str] | None = None) -> int:
+    argv = list(sys.argv[1:] if argv is None else argv)
+    if "--hook" in argv:
+        try:
+            if _is_stale():
+                write_index()
+        except Exception:  # noqa: BLE001
+            pass
+        print("{}")
+        return 0
+    if "--check" in argv:
+        idx = _load(INDEX)
+        n_idx = int((idx.get("_meta") or {}).get("skill_count") or
+                    sum(1 for e in (idx.get("skills") or {}).values() if e.get("source") != "plugin"))
+        aliases = _load_aliases()
+        n_disk = sum(1 for d in sl.skill_dirs() if d.name not in aliases)
+        ok = n_idx == n_disk
+        print(f"index local skills: {n_idx}  on-disk SKILL.md: {n_disk}  {'OK' if ok else 'MISMATCH'}")
+        return 0 if ok else 1
+    if "--force" in argv or _is_stale() or not argv:
+        payload = write_index()
+        m = payload["_meta"]
+        print(f"wrote {INDEX.name}: {m['skill_count']} local + {m['plugin_count']} plugin skills, "
+              f"{m['alias_count']} aliases, checksum {m['checksum'][:16]}")
+    else:
+        print("skills-index.json up to date")
     return 0
 
 

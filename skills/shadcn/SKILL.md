@@ -1,57 +1,22 @@
 ---
 name: shadcn
-description: Manages shadcn components and projects — adding, searching, fixing, debugging, styling, and
-  composing UI. Provides project context, component docs, and usage examples. Applies when working with
-  shadcn/ui, component registries, presets, --preset codes, or any project with a components.json file.
-  Also triggers for "shadcn init", "create an app with --preset", or "switch to --preset".
+description: Manages shadcn components and projects — adding, searching, fixing, debugging, styling, and composing UI. Provides project context, component docs, and usage examples. Applies when working with shadcn/ui, component registries, presets, --preset codes, or any project with a components.json file. Also triggers for "shadcn init", "create an app with --preset", or "switch to --preset".
+when_to_use: Use when a project has components.json or files under components/ui, when adding or fixing shadcn components, or when the user mentions shadcn, a registry, or a --preset.
 user-invocable: false
-allowed-tools: Bash(npx shadcn@latest *), Bash(pnpm dlx shadcn@latest *), Bash(bunx --bun shadcn@latest
-  *)
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 4948
-triggers:
-  keywords:
-  - adding
-  - app
-  - applies
-  - codes
-  - component
-  - components
-  - components.json
-  - composing
-  - context
-  - create
-  - debugging
-  - docs
-  - examples
-  - file
-  - fixing
-  - init
-  - manages
-  - preset
-  - presets
-  - project
-  - projects
-  - provides
-  - registries
-  - searching
-  - shadcn
-  - shadcn/ui
-  - styling
-  - switch
-  - triggers
-  - usage
-  - working
-  paths: []
-  intents:
-  - general
+allowed-tools: Bash(npx shadcn@latest *), Bash(pnpm dlx shadcn@latest *), Bash(bunx --bun shadcn@latest *)
+paths:
+  - "**/components.json"
+  - "**/components/ui/**"
+metadata:
+  schema: 1
+  category: frontend
+  surfaces: [frontend]
+  platforms: [linux, darwin, windows]
+  token-cost: 4948
+  triggers:
+    keywords: [shadcn, shadcn/ui, components.json, registry, registries, preset, --preset, "shadcn init", "shadcn add", radix, components/ui]
+    paths: [components.json, /components/ui/]
+    intents: [implement, design]
 ---
 # shadcn/ui
 

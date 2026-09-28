@@ -1,54 +1,52 @@
 ---
 name: plan-mode-gate
-description: Mandatory pre-flight gate for ALL planning and implementation work. Enforces superpowers
-  discipline, jcodemunch codebase analysis, sequential thinking decomposition, and Context7 documentation
-  lookup before any code changes. Use before EnterPlanMode, before writing any plan, and before direct
-  implementation. This skill governs both Plan Mode and Code Mode.
-version: 1.0.0
-schema: 1
-category: planning
-surfaces:
-- planning
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 2898
-triggers:
-  keywords:
-  - analysis
-  - both
-  - changes
-  - code
-  - codebase
-  - context7
-  - decomposition
-  - direct
-  - discipline
-  - documentation
-  - enforces
-  - enterplanmode
-  - gate
-  - governs
-  - implementation
-  - jcodemunch
-  - lookup
-  - mandatory
-  - mode
-  - plan
-  - planning
-  - pre-flight
-  - sequential
-  - skill
-  - superpowers
-  - thinking
-  - work
-  - writing
-  paths: []
-  intents:
-  - planning
+description: 'Pre-flight gate for planning and implementation: superpowers discipline, jcodemunch codebase analysis, sequential-thinking decomposition, and Context7 lookup before code changes.'
+when_to_use: Use before entering plan mode, before writing a plan, and before direct implementation of a multi-file change.
 license: MIT
 metadata:
+  schema: 1
+  category: planning
+  surfaces:
+  - planning
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 2898
+  triggers:
+    keywords:
+    - analysis
+    - both
+    - changes
+    - code
+    - codebase
+    - context7
+    - decomposition
+    - direct
+    - discipline
+    - documentation
+    - enforces
+    - enterplanmode
+    - gate
+    - governs
+    - implementation
+    - jcodemunch
+    - lookup
+    - mandatory
+    - mode
+    - plan
+    - planning
+    - pre-flight
+    - sequential
+    - skill
+    - superpowers
+    - thinking
+    - work
+    - writing
+    paths: []
+    intents:
+    - planning
+  version: 1.0.0
   author: rohithambar
   tags:
   - planning
@@ -66,11 +64,11 @@ This is a **rigid skill**. Follow it exactly. Do not adapt away from the discipl
 Skipping any gate produces incomplete plans, incorrect implementations, and wasted effort.
 </RIGID-SKILL>
 
-## Cursor adaptation (local port)
+## Local adaptation
 
 - **Canonical first router:** read **`workflow-orchestrator`** before this gate so lifecycle routing stays single-source.
-- **jcodemunch / blast-radius:** MANDATORY-first for all code work per `~/.claude/rules/codebase-intel-first.md` — run the jcodemunch symbol index + graphify graph BEFORE reading/grepping. Use the MCP tools (plan_turn / assemble_task_context / get_blast_radius), then Superpowers discipline.
-- **Automation:** a **`sessionStart`** hook injects a short reminder via **`~/.claude/hooks/session-plan-gate-hint.py`**. For manual JSON from the repo root: `node ~/.claude/skills/plan-mode-gate/scripts/plan-mode-check.js`. Optional post-edit reminder (not wired to Cursor **`preToolUse`** by default): `node ~/.claude/skills/plan-mode-gate/scripts/code-mode-check.js`.
+- **jcodemunch / blast-radius:** code intelligence first for all code work (skill `codebase-intel-first`) — run the jcodemunch symbol index + graphify graph BEFORE reading/grepping. Use the MCP tools (plan_turn / assemble_task_context / get_blast_radius), then Superpowers discipline.
+- **Manual checks:** from the repo root, `node ~/.claude/skills/plan-mode-gate/scripts/plan-mode-check.js` (plan gate JSON) and `node ~/.claude/skills/plan-mode-gate/scripts/code-mode-check.js` (post-edit reminder). Neither is wired to a hook by default.
 
 ## Purpose
 
@@ -256,7 +254,7 @@ Only after all gates pass and design is approved:
 - Offer execution choice: subagent-driven vs inline
 - If subagent-driven → `subagent-driven-development`
 - If inline → `executing-plans`
-- If multi-phase → reference `strategic-compact` for compaction points
+- If multi-phase → reference `context-engineering` for compaction points
 
 ### Step 6: ExitPlanMode
 - Present plan to user

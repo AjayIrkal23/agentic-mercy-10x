@@ -2,45 +2,32 @@
 name: ui-styling
 argument-hint: "[component or layout]"
 license: MIT
+description: "Theming and dark-mode reference for shadcn/ui + Radix + Tailwind CSS v4 UIs — CSS-variable themes, dark mode, responsive layout, accessible primitives, and component usage patterns. shadcn owns components, tailwind-design-system owns tokens; this skill is the theming/dark-mode reference."
+when_to_use: Use when implementing dark mode, CSS-variable theming, or accessible Radix/shadcn component patterns in a Tailwind v4 project.
+paths:
+  - "**/*.css"
+  - "**/tailwind.config.*"
+  - "**/postcss.config.*"
+  - "**/components.json"
+  - "**/components/ui/**"
 metadata:
   author: claudekit
   version: "1.0.0"
-description: "ALWAYS invoke when implementing UI with shadcn/ui, Radix UI, or Tailwind CSS — components (dialog, dropdown, form, table, sheet, command), theming and dark mode, responsive layout, accessible primitives, and consistent styling patterns. The component-implementation layer beneath the design craft stack."
-keywords:
-  - shadcn
-  - shadcn/ui
-  - radix
-  - radix ui
-  - tailwind
-  - tailwind css
-  - component library
-  - dialog
-  - dropdown
-  - popover
-  - command palette
-  - data table
-  - form component
-  - sheet
-  - dark mode
-  - theme
-  - theming
-  - css variables
-  - accessible component
-  - headless ui
-  - responsive layout
-  - utility classes
-  - variant
-  - cva
-  - class variance
-surfaces:
-  - frontend
-intents:
-  - DESIGN
+  category: frontend
+  surfaces: [frontend]
+  triggers:
+    keywords: [shadcn, radix, tailwind, dark mode, theme, theming, css variables, next-themes, dialog, dropdown, popover, command palette, data table, sheet, cva, accessible component, responsive layout]
+    intents: [design, implement]
 ---
 
 # UI Styling Skill
 
 Comprehensive skill for creating beautiful, accessible user interfaces combining shadcn/ui components, Tailwind CSS utility styling, and canvas-based visual design systems.
+
+**Ownership:** `shadcn` owns components (CLI, registry, `components/ui`); `tailwind-design-system`
+owns tokens and `@theme`; this skill is the theming / dark-mode / accessible-primitives reference.
+Tailwind **v4 only**: tokens live in CSS (`@import "tailwindcss"` + `@theme`) — never generate a
+`tailwind.config.js` for a v4 project.
 
 ## Reference
 
@@ -210,7 +197,7 @@ Covers:
 
 ## Tailwind Customization
 
-**Config file structure, custom utilities, plugins, and theme extensions.**
+**CSS-first (v4) `@theme` tokens, custom utilities, variants, and layer organization.** (The `require()` plugin and `tailwind.config.js` examples in the reference are v3-only; `@container` queries are built into v4.)
 
 See: `references/tailwind-customization.md`
 
@@ -248,11 +235,8 @@ Add shadcn/ui components with dependency handling:
 python scripts/shadcn_add.py button card dialog
 ```
 
-### tailwind_config_gen.py
-Generate tailwind.config.js with custom theme:
-```bash
-python scripts/tailwind_config_gen.py --colors brand:blue --fonts display:Inter
-```
+### tailwind_config_gen.py (deprecated — v3 only)
+Generates a Tailwind **v3** `tailwind.config.js`. Do not use in v4 projects: define tokens in CSS with `@theme` (see `references/tailwind-customization.md` and `tailwind-design-system`). Kept only for legacy v3 repos.
 
 ## Best Practices
 
@@ -284,7 +268,7 @@ python scripts/tailwind_config_gen.py --colors brand:blue --fonts display:Inter
 
 **Automation**
 - `scripts/shadcn_add.py` - Component installation
-- `scripts/tailwind_config_gen.py` - Config generation
+- `scripts/tailwind_config_gen.py` - Config generation (v3 only, deprecated)
 
 ## Common Patterns
 

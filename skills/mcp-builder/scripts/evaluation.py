@@ -6,6 +6,7 @@ This script evaluates MCP servers by running test questions against them using C
 import argparse
 import asyncio
 import json
+import os
 import re
 import sys
 import time
@@ -220,9 +221,12 @@ TASK_TEMPLATE = """
 async def run_evaluation(
     eval_path: Path,
     connection: Any,
-    model: str = "claude-3-7-sonnet-20250219",
+    model: str | None = None,
 ) -> str:
     """Run evaluation with MCP server tools."""
+    model = model or os.environ.get("ANTHROPIC_MODEL")
+    if not model:
+        raise SystemExit("No model: pass -m/--model or set ANTHROPIC_MODEL (no baked-in default; model ids retire).")
     print("🚀 Starting Evaluation")
 
     client = Anthropic()
@@ -321,7 +325,7 @@ Examples:
 
     parser.add_argument("eval_file", type=Path, help="Path to evaluation XML file")
     parser.add_argument("-t", "--transport", choices=["stdio", "sse", "http"], default="stdio", help="Transport type (default: stdio)")
-    parser.add_argument("-m", "--model", default="claude-3-7-sonnet-20250219", help="Claude model to use (default: claude-3-7-sonnet-20250219)")
+    parser.add_argument("-m", "--model", default=None, help="Claude model to use (default: $ANTHROPIC_MODEL; required when the env var is unset)")
 
     stdio_group = parser.add_argument_group("stdio options")
     stdio_group.add_argument("-c", "--command", help="Command to run MCP server (stdio only)")

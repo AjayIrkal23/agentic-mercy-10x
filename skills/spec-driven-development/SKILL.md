@@ -1,42 +1,41 @@
 ---
 name: spec-driven-development
-description: Creates specs before coding. Use when starting a new project, feature, or significant change
-  and no specification exists yet. Use when requirements are unclear, ambiguous, or only exist as a vague
-  idea.
-schema: 1
-category: planning
-surfaces:
-- planning
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 1916
-triggers:
-  keywords:
-  - ambiguous
-  - change
-  - coding
-  - creates
-  - development
-  - driven
-  - exist
-  - exists
-  - feature
-  - idea
-  - project
-  - requirements
-  - significant
-  - spec
-  - specification
-  - specs
-  - starting
-  - unclear
-  - vague
-  - yet
-  paths: []
-  intents:
+description: Creates specs before coding. Use when starting a new project, feature, or significant change and no specification exists yet. Use when requirements are unclear, ambiguous, or only exist as a vague idea.
+metadata:
+  schema: 1
+  category: planning
+  surfaces:
   - planning
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 1916
+  triggers:
+    keywords:
+    - ambiguous
+    - change
+    - coding
+    - creates
+    - development
+    - driven
+    - exist
+    - exists
+    - feature
+    - idea
+    - project
+    - requirements
+    - significant
+    - spec
+    - specification
+    - specs
+    - starting
+    - unclear
+    - vague
+    - yet
+    paths: []
+    intents:
+    - planning
 ---
 # Spec-Driven Development
 
@@ -196,7 +195,7 @@ Break the plan into discrete, implementable tasks:
 
 ### Phase 4: Implement
 
-Execute tasks one at a time following `incremental-implementation` and `test-driven-development` skills. Use `context-engineering` to load the right spec sections and source files at each step rather than flooding the agent with the entire spec.
+Execute tasks one at a time following `code-execution-standard` and `test-driven-development` skills. Use `context-engineering` to load the right spec sections and source files at each step rather than flooding the agent with the entire spec.
 
 ## Keeping the Spec Alive
 

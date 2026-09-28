@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "purpose": "P5-T6 permanent alias->canonical map (trigger law). Consumed by select.py / skill_router.py / fullstack-skills-reminder.py \u2014 an alias hit surfaces the canonical and logs alias telemetry. No sunset.",
+    "purpose": "Permanent alias->canonical skill-name map. Alias stub directories were deleted 2026-09-27; this map is resolved at runtime by hooks/lib/skill_aliases.py (canonical/collapse), which fullstack-skills-reminder.py, skill_router.py, scripts/build_skills_index.py, the prompt router and the session-start aggregator import. No sunset.",
     "schema": 1
   },
   "debugging-and-error-recovery": "debug-investigation",

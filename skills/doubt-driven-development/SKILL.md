@@ -1,54 +1,55 @@
 ---
 name: doubt-driven-development
-description: "MUST use to subject every non-trivial decision to a fresh-context adversarial review before it stands. ALWAYS invoke when correctness matters more than speed, when working in unfamiliar code, when stakes are high (production, security-sensitive logic, irreversible operations), or any time a confident output would be cheaper to verify now than to debug later."
-disable-model-invocation: false
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 4001
-triggers:
-  keywords:
-  - adversarial
-  - cheaper
-  - code
-  - confident
-  - correctness
-  - debug
-  - decision
-  - development
-  - doubt
-  - driven
-  - every
-  - fresh-context
-  - high
-  - irreversible
-  - later
-  - logic
-  - matters
-  - non-trivial
-  - now
-  - operations
-  - output
-  - production
-  - review
-  - security-sensitive
-  - speed
-  - stakes
-  - stands
-  - subjects
-  - time
-  - unfamiliar
-  - verify
-  - working
-  - would
-  paths: []
-  intents:
+description: Fresh-context adversarial review of non-trivial decisions before they stand; cheaper to verify now than to debug later.
+when_to_use: 'Use when correctness matters more than speed: unfamiliar code, production or security-sensitive logic, irreversible operations.'
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 4001
+  triggers:
+    keywords:
+    - adversarial
+    - cheaper
+    - code
+    - confident
+    - correctness
+    - debug
+    - decision
+    - development
+    - doubt
+    - driven
+    - every
+    - fresh-context
+    - high
+    - irreversible
+    - later
+    - logic
+    - matters
+    - non-trivial
+    - now
+    - operations
+    - output
+    - production
+    - review
+    - security-sensitive
+    - speed
+    - stakes
+    - stands
+    - subjects
+    - time
+    - unfamiliar
+    - verify
+    - working
+    - would
+    paths: []
+    intents:
+    - general
 ---
 # Doubt-Driven Development
 
@@ -272,7 +273,7 @@ If 3 cycles is "obviously insufficient" because the artifact is large: the artif
 - **`code-review-and-quality` / `/review`**: complementary. `/review` is post-hoc PR verdict; doubt-driven is in-flight per-decision. Use both.
 - **`source-driven-development`**: SDD verifies *facts about frameworks* against official docs. Doubt-driven verifies *your reasoning about the artifact*. SDD checks the API exists; doubt-driven checks you used it correctly under the contract.
 - **`test-driven-development`**: TDD's RED step is doubt made concrete — a failing test is a disproof attempt. When TDD applies, that failing test *is* the doubt step for behavioral claims.
-- **`debugging-and-error-recovery`**: when the reviewer surfaces a real failure mode, drop into the debugging skill to localize and fix.
+- **`debug-investigation`**: when the reviewer surfaces a real failure mode, drop into the debugging skill to localize and fix.
 - **Repo orchestration rules** (`references/orchestration-patterns.md`): this skill orchestrates from the main session. A persona calling another persona is anti-pattern B — see Loading Constraints above.
 
 ## Verification

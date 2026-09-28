@@ -1,39 +1,23 @@
 ---
 name: brand
 argument-hint: "[update|review|create] [args]"
+description: "Brand voice, visual identity, messaging frameworks, and brand consistency — tone of voice, branded content, marketing copy, style guides, and brand-compliance review of existing assets."
+when_to_use: Use for brand voice/tone, visual-identity standards, messaging frameworks, style guides, and brand-consistency reviews; asset pixels go to Higgsfield.
 metadata:
   author: claudekit
   version: "1.0.0"
-description: "ALWAYS invoke for brand voice, visual identity, messaging frameworks, and brand consistency — tone of voice, branded content, marketing copy, style guides, and brand-compliance review of existing assets."
-keywords:
-  - brand voice
-  - tone of voice
-  - brand identity
-  - visual identity
-  - messaging
-  - messaging framework
-  - brand guidelines
-  - style guide
-  - brand consistency
-  - brand compliance
-  - branded content
-  - marketing copy
-  - tagline
-  - positioning
-  - brand assets
-surfaces:
-  - frontend
-intents:
-  - DESIGN
+  category: design
+  surfaces: [frontend]
+  triggers:
+    keywords: [brand voice, tone of voice, brand identity, visual identity, messaging, messaging framework, brand guidelines, style guide, brand consistency, brand compliance, branded content, marketing copy, tagline, positioning, brand assets]
+    intents: [design]
 ---
 
-> **ASSET GENERATION — HIGGSFIELD, NOT GEMINI (standing user directive, overrides this skill).**
-> This skill's upstream image paths call the Gemini / Imagen / Nano-Banana APIs and expect
-> `HIGGSFIELD_MCP (no key needed)` plus the `higgsfield-generate` / `higgsfield-generate` skills. **None of those are configured
-> here.** Every raster, video, 3D, or audio asset MUST instead be generated through Higgsfield
-> (`mcp__higgsfield__generate_image` / `generate_video` / `generate_3d` / `generate_audio`, skill
-> `higgsfield-generate`). Use this skill for its *art direction, specs, styles, and layout
-> reasoning*; hand the actual pixel generation to Higgsfield. See
+> **Assets: Higgsfield MCP (`higgsfield-generate`) is configured and mandatory.** Every raster,
+> video, 3D, or audio asset is generated through `mcp__higgsfield__generate_image` /
+> `generate_video` / `generate_3d` / `generate_audio`. Any Gemini / Imagen path in this skill's
+> `scripts/` is legacy and must not be run. Use this skill for its *voice, identity, messaging,
+> and consistency reasoning*; hand pixel generation to Higgsfield. See
 > `~/.claude/rules/higgsfield-frontend-mandate.md`.
 
 # Brand

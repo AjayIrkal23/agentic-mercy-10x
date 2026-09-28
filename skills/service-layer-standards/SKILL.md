@@ -1,46 +1,50 @@
 ---
 name: service-layer-standards
-description: "ALWAYS invoke when any backend API, route, controller, schema, service, contract, persistence, auth, validation, worker, queue, integration, or server behavior task is requested."
-disable-model-invocation: false
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 1028
-triggers:
-  keywords:
-  - api
-  - auth
-  - backend
-  - behavior
-  - contract
-  - controller
-  - integration
-  - layer
-  - persistence
-  - queue
-  - requested
-  - route
-  - schema
-  - server
-  - service
-  - standards
-  - task
-  - validation
-  - worker
-  paths:
-  - /models/
-  - controller
-  - internal/
-  - internal/models/
-  - server/
-  - service
-  intents:
+description: 'Service-layer rules for backend business logic: boundaries between routes, controllers, services, and persistence; where validation and transactions live.'
+when_to_use: Use when adding or changing code under service/ or services/, or deciding where business logic lives.
+paths:
+- '**/service/**'
+- '**/services/**'
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 1028
+  triggers:
+    keywords:
+    - api
+    - auth
+    - backend
+    - behavior
+    - contract
+    - controller
+    - integration
+    - layer
+    - persistence
+    - queue
+    - requested
+    - route
+    - schema
+    - server
+    - service
+    - standards
+    - task
+    - validation
+    - worker
+    paths:
+    - /models/
+    - controller
+    - internal/
+    - internal/models/
+    - server/
+    - service
+    intents:
+    - general
 ---
 # Service Layer Standards
 

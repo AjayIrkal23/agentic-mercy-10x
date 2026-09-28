@@ -1,89 +1,97 @@
 ---
 name: skill-linkage-story
-description: "ALWAYS invoke when onboarding to this config or debugging missing skill reminders — the end-to-end story of how Claude Code hooks inject skills from sessionStart through stop (sessionStart, beforeSubmit, preToolUse, postToolUse, stop)."
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 580
-triggers:
-  keywords:
-  - beforesubmit
-  - config
-  - cursor
-  - debugging
-  - end-to-end
-  - hooks
-  - inject
-  - linkage
-  - missing
-  - onboarding
-  - posttooluse
-  - pretooluse
-  - reminders
-  - sessionstart
-  - skill
-  - skills
-  - stop
-  - story
-  - through
-  paths: []
-  intents:
+description: 'How skills reach the model in this setup: dispatch.py events, the prompt router, native paths: activation, write-time reminders, and stop gates.'
+when_to_use: Use when onboarding to this ~/.claude config or debugging a skill reminder that did not appear.
+paths:
+- '**/.claude/hooks/**'
+- '**/.claude/agents/**'
+- '**/.claude/skills/**'
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
+  platforms:
+  - linux
+  - darwin
+  - windows
+  triggers:
+    keywords:
+    - hooks
+    - dispatch
+    - prompt-router
+    - paths
+    - skill
+    - reminder
+    - missing
+    - linkage
+    - onboarding
+    - sessionstart
+    - userpromptsubmit
+    - pretooluse
+    - posttooluse
+    - stop
+    paths: []
+    intents:
+    - general
 ---
-# Skill Linkage Story — Hook → Skill E2E
+# Skill Linkage Story — how a skill reaches the model
 
-## 1. sessionStart
+Every layer is declared in `~/.claude/hooks/dispatch.config.json` (one `dispatch.py <event>`
+per Claude Code event) or in native skill/rule frontmatter. Skill names everywhere are
+**canonical**; old alias names resolve at runtime through `hooks/lib/skill_aliases.py`
+(`hooks/skill-aliases.json`). There are no alias stub directories.
 
-| Hook | Injects |
-|------|---------|
-| `session-start-aggregator.py` | Plan gate hint, doc lifecycle, graphify/jcodemunch guards, lifecycle routing path, Superpowers roster, MCP names |
-| `session-lifecycle.py` | GSD resume breadcrumb, fe/be touched from prior session |
+## 1. SessionStart — `dispatch.py session-start`
 
-**Skills implied:** `plan-mode-gate`, `using-superpowers`, `mcp-usage-standards`, `codebase-start-point-guide`
-
-## 2. beforeSubmitPrompt
-
-| Hook | Injects |
-|------|---------|
-| `ui-ux-stack-orchestrator.py` | Full 6-skill UI stack + Impeccable context + designlang hints on UI prompts |
-| `token-stack-prompt-reminder.py` | jcodemunch/graphify/ast-grep routing on code-intent prompts |
-
-## 3. preToolUse
-
-| Hook | Effect |
+| Link | Effect |
 |------|--------|
-| `blocking-doc-enforcer.py` | **Deny** git commit if docs missing |
-| `gateguard-write-gate.py` | Importer/signature checks on bulk writes |
-| GSD guards | Prompt injection / workflow protection |
+| `session-start-aggregator.py` | Injects the always-active core set from `hooks/core-skill-set.json` (body digests for `codebase-intel-first`, `project-reference-linkage`, `caveman`, `mcp-usage-standards`, `verification-loop`; pointers for the rest), MCP roster, plan-gate hint |
+| `memory-load-on-start.py` | Top memory entities for the repo |
+| `skills-index-guard` (`build-skills-index.py --hook`) | Rebuilds `hooks/skills-index.json` when any SKILL.md, the alias map, or the plugin list is newer |
 
-## 4. postToolUse (Write/StrReplace)
+## 2. UserPromptSubmit — `prompt_router/router.py` (single process)
 
-| Hook | Injects |
-|------|---------|
-| `fullstack-skills-reminder.py` | **First Write:** path-ranked skills + cross_cutting; **session manifest** batches remaining 28 FE / 27 BE slugs on later writes |
-| `skill_router.py` | Ranked MUST/SHOULD/REFERENCE paths |
-| `doc-update-enforcer.py` | Doc update reminder (debounced per surface) |
-| `desloppify-cleanup.py` | De-sloppify @8 writes |
-| `security-scan-gate.py` | Semgrep reminder on auth/API paths |
-| `santa-method-writer.py` | Marks Santa complete on code-reviewer Task |
-| `ui-ux-stack-orchestrator.py` | Post-UI-write audit reminder |
+classify (word-boundary intents) → surface (repo stack fingerprint + prompt paths) →
+rank ≤5 skills from `skills-index.json` (metadata keywords, aliases collapsed, plugin
+skills as `plugin:skill`) → ≤1 deep body → MCP routes → agent suggestion → model advice →
+`hookSpecificOutput.additionalContext`.
 
-## 5. stop
+## 3. Reading files — native activation (no hook)
 
-| Hook | Effect |
+- Skill frontmatter `paths:` (rule-style globs) surfaces file-bound skills as matching
+  files are read: `golang-patterns` on `**/*.go`, `postgres-patterns` on `**/*.sql` and
+  `**/migrations/**`, `backend-api-standards` on `**/routes/**`, `owasp-security` on
+  `**/auth/**`, FE skills on `**/*.tsx` etc. `when_to_use:` sharpens the trigger.
+- Path-scoped rules: `rules/frontend.md`, `rules/backend.md`, `rules/claude-infra.md`
+  load only when their `paths:` match; `rules/0*.md` are always on.
+
+## 4. Writes — `dispatch.py pre-tool-use` / `post-tool-use`
+
+| Link | Effect |
 |------|--------|
-| `fullstack-skills-reminder.py` | Re-verify skills from first Write |
-| `hard-completion-gate.py` | Gate 2 docs hard; Gate 3 security semi-hard; Gate 4 Santa semi-hard |
-| `session-lifecycle.py` | Save breadcrumb for next session |
+| `first-write-skill-gate.py` (pre) | Blocks the first code write until the surface's baseline skills were read |
+| `dangerous-bash-gate`, `dox-write-gate`, `gateguard-write-gate`, `tdd-guard-gate` (pre) | Safety gates; tdd-guard is advisory |
+| `fullstack-skills-reminder.py post-tool-use` | **Once per surface:** top-3 skills for the written path (`skill_router.py` + `skill_router.config.json`, first matching rule wins, aliases collapsed) + cross-cuts, then "native `paths:` will surface the rest". No per-write manifest batches. |
+| `post-write-aggregator.py` | doc-update reminder, desloppify @8 writes, security-scan reminder, trackers |
 
-## Debugging missing skills
+## 5. Agent spawn — `Agent` tool
 
-1. Confirm path hits FE/BE segments in `fullstack-skills-reminder.py`.
-2. Check `skill_router.config.json` rule order (first match wins).
-3. Verify `frontend_start_sent` / `backend_start_sent` in `.state/{cid}.fullstack-skills.json`.
-4. Read [`agent-lifecycle-routing.md`](../../rules/agent-lifecycle-routing.md) for rule IDs.
+`opus-guard.py` aligns the `[model]` label with `model:`; a `SubagentStart` hook injects the
+write protocol. Specialist agents preload their skill sets through `skills:` frontmatter
+(rendered by `hooks/gen-agent-skill-blocks.py` from `FRONTEND_SKILLS` / `BACKEND_SKILLS`
+in `fullstack-skills-reminder.py`).
+
+## 6. Stop — `dispatch.py stop`
+
+`hard-completion-gate.py` (docs / security / Santa / dead-code gates, ≤1 block per turn)
+and the reminder's re-verify line (skills captured at first write).
+
+## Debugging a missing skill reminder
+
+1. Is the name canonical? `python3 ~/.claude/hooks/lib/skill_aliases.py`; look the alias up in `hooks/skill-aliases.json`.
+2. Is it indexed? `python3 ~/.claude/hooks/build-skills-index.py --check`, then grep `hooks/skills-index.json`.
+3. Should it have surfaced natively? Check the skill's `paths:` globs against the file you read.
+4. Write-time: `skill_router.config.json` rule order (first match wins); state flags `frontend_start_sent` / `backend_start_sent` in `hooks/.state/<cid>.fullstack.json`.
+5. Did the link fire? `telemetry/hook-fires-<date>.jsonl`.
+6. Frontmatter sane? `python3 ~/.claude/scripts/validate_skills.py` (R11: custom keys under `metadata:`; R12: `paths:` globs).

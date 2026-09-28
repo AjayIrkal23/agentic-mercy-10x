@@ -1,80 +1,82 @@
 ---
 name: code-review-and-quality
-description: "MUST use before merging any change — conducts multi-axis code review. ALWAYS invoke when reviewing code written by yourself, another agent, or a human, or when you need to assess code quality across multiple dimensions before it enters the main branch."
-schema: 1
-category: review
-surfaces:
-- backend
-- frontend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 3484
-triggers:
-  keywords:
-  - adapt
-  - agent
-  - another
-  - applying
-  - asks
-  - assess
-  - backend/service/api/database/migrations
-  - branch
-  - change
-  - changes
-  - checklist
-  - code
-  - commands
-  - conducts
-  - correctness
-  - dimensions
-  - e.g
-  - enters
-  - etc
-  - file
-  - files
-  - focused
-  - focuses
+description: Multi-axis code review (correctness, design, security, performance, maintainability) with quality gates before a change enters the main branch.
+when_to_use: Use when reviewing code written by you, another agent, or a human, or before merging any change.
+metadata:
+  schema: 1
+  category: review
+  surfaces:
+  - backend
   - frontend
-  - human
-  - impact
-  - lint
-  - local/staged
-  - main
-  - maintainability
-  - merging
-  - multi-axis
-  - multiple
-  - need
-  - npm
-  - pending-change
-  - preflight
-  - quality
-  - references
-  - remote
-  - repo
-  - requests
-  - review
-  - reviewing
-  - reviews
-  - rules
-  - scripts
-  - security
-  - server
-  - server-side
-  - support
-  - test
-  - tests
-  - trigger
-  - tsx
-  - user
-  - while
-  - written
-  - yourself
-  paths: []
-  intents:
-  - review
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 3484
+  triggers:
+    keywords:
+    - adapt
+    - agent
+    - another
+    - applying
+    - asks
+    - assess
+    - backend/service/api/database/migrations
+    - branch
+    - change
+    - changes
+    - checklist
+    - code
+    - commands
+    - conducts
+    - correctness
+    - dimensions
+    - e.g
+    - enters
+    - etc
+    - file
+    - files
+    - focused
+    - focuses
+    - frontend
+    - human
+    - impact
+    - lint
+    - local/staged
+    - main
+    - maintainability
+    - merging
+    - multi-axis
+    - multiple
+    - need
+    - npm
+    - pending-change
+    - preflight
+    - quality
+    - references
+    - remote
+    - repo
+    - requests
+    - review
+    - reviewing
+    - reviews
+    - rules
+    - scripts
+    - security
+    - server
+    - server-side
+    - support
+    - test
+    - tests
+    - trigger
+    - tsx
+    - user
+    - while
+    - written
+    - yourself
+    paths: []
+    intents:
+    - review
 ---
 # Code Review and Quality
 
@@ -131,7 +133,7 @@ Does the change fit the system's design?
 
 ### 4. Security
 
-For detailed security guidance, see `security-and-hardening`. Does the change introduce vulnerabilities?
+For detailed security guidance, see `owasp-security`. Does the change introduce vulnerabilities?
 
 - Is user input validated and sanitized?
 - Are secrets kept out of code, logs, and version control?

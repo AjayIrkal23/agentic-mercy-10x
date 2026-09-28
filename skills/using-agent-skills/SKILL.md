@@ -1,37 +1,39 @@
 ---
 name: using-agent-skills
-description: "ALWAYS invoke when starting a session or when you need to discover which skill applies to the current task — discovers and invokes agent skills. This is the meta-skill that governs how all other skills are discovered and invoked."
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 2332
-triggers:
-  keywords:
-  - agent
-  - applies
-  - current
-  - discover
-  - discovered
-  - discovers
-  - governs
-  - invoked
-  - invokes
-  - meta-skill
-  - need
-  - other
-  - session
-  - skill
-  - skills
-  - starting
-  - task
-  paths: []
-  intents:
+description: 'Meta-skill: how to discover which skill applies to the current task and invoke it before starting work.'
+when_to_use: Use at session start or whenever you are unsure which skill applies.
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 2332
+  triggers:
+    keywords:
+    - agent
+    - applies
+    - current
+    - discover
+    - discovered
+    - discovers
+    - governs
+    - invoked
+    - invokes
+    - meta-skill
+    - need
+    - other
+    - session
+    - skill
+    - skills
+    - starting
+    - task
+    paths: []
+    intents:
+    - general
 ---
 # Using Agent Skills
 
@@ -41,7 +43,7 @@ Agent Skills is a collection of engineering workflow skills organized by develop
 
 ## Hooks, rules, and linkage story
 
-Cursor injects context via **`~/.claude/settings.json (hooks key)`** (`sessionStart`, `beforeSubmitPrompt`, `postToolUse` on `Write`, `stop`). Always-on routing is reinforced by **`~/.claude/rules/plan-exec-unified-stack.md`** and **`agent-lifecycle-routing.md`**.
+Claude Code injects context through the hooks registered in **`~/.claude/settings.json`** (`SessionStart`, `UserPromptSubmit` via the prompt router, `PreToolUse`/`PostToolUse` via `hooks/dispatch.py`, `Stop`) and through native skill `paths:` frontmatter that surfaces file-bound skills as matching files are read. Routing references live in **`~/.claude/skills/workflow-orchestrator/references/`** (`stack-ordering.md`, `agent-lifecycle-routing.md`).
 
 Read **`skill-linkage-story`** when you need the full spine (Superpowers + agent skills + hooks): [`~/.claude/skills/skill-linkage-story/SKILL.md`](../skill-linkage-story/SKILL.md) → [`references/graph-and-stories.md`](../skill-linkage-story/references/graph-and-stories.md), [`references/hooks-rules-e2e.md`](../skill-linkage-story/references/hooks-rules-e2e.md).
 
@@ -57,21 +59,21 @@ Task arrives
     ├── Vague idea/need refinement? ──→ idea-refine
     ├── New project/feature/change? ──→ spec-driven-development
     ├── Have a spec, need tasks? ──────→ planning-and-task-breakdown
-    ├── Implementing code? ────────────→ incremental-implementation (+ Superpowers `executing-plans`, `subagent-driven-development`; hook: **`plan-exec-stack-hint` execution mode**)
-    │   ├── UI work? ─────────────────→ frontend-standards-always-follow (+ `vite-react-best-practices`, `frontend-ui-engineering`, `` / `taste-skill` when polish matters; UI hook overlay when paths match)
-    │   ├── API work? ────────────────→ api-and-interface-design
+    ├── Implementing code? ────────────→ code-execution-standard (+ Superpowers `executing-plans`, `subagent-driven-development`)
+    │   ├── UI work? ─────────────────→ frontend-standards-always-follow (+ `vite-react-best-practices`, `frontend-ui-engineering`, `design-taste-frontend` when polish matters; native `paths:` surfaces them as files are read)
+    │   ├── API work? ────────────────→ api-contract-standards
     │   ├── Need better context? ─────→ context-engineering
     │   ├── Need doc-verified code? ───→ source-driven-development
     │   └── Stakes high / unfamiliar code? ──→ doubt-driven-development
-    ├── Writing/running tests? ───────→ tdd (+ local `test-driven-development` slug if installed; + Superpowers `test-driven-development` when keywords hit)
-    │   └── Browser-based? ───────────→ browser-testing-with-devtools
-    ├── Something broke? ─────────────→ debugging-and-error-recovery (procedural recovery) → diagnose → debug-investigation (+ Superpowers `systematic-debugging` when prompts match)
-    ├── Reviewing code? ───────────────→ code-review-and-quality
-    │   ├── Security concerns? ───────→ security-and-hardening
+    ├── Writing/running tests? ───────→ test-driven-development (+ Superpowers `test-driven-development` when keywords hit)
+    │   └── Browser-based? ───────────→ webapp-testing
+    ├── Something broke? ─────────────→ debug-investigation (+ Superpowers `systematic-debugging` when prompts match)
+    ├── Reviewing code? ───────────────→ code-review-and-quality (adversarial: `santa-review`)
+    │   ├── Security concerns? ───────→ owasp-security
     │   └── Performance concerns? ────→ performance-optimization
     ├── Committing/branching? ─────────→ git-workflow-and-versioning
     ├── CI/CD pipeline work? ──────────→ ci-cd-and-automation
-    ├── Writing docs/ADRs? ───────────→ documentation-and-adrs
+    ├── Writing docs/ADRs? ───────────→ update-docs
     └── Deploying/launching? ─────────→ shipping-and-launch
 ```
 
@@ -165,7 +167,7 @@ These are the subtle errors that look like productivity but create problems:
 
 2. **Skills are workflows, not suggestions.** Follow the steps in order. Don't skip verification steps.
 
-3. **Multiple skills can apply.** A feature implementation might involve `idea-refine` → `spec-driven-development` → `planning-and-task-breakdown` → `incremental-implementation` → `tdd` → `code-review-and-quality` → `shipping-and-launch` in sequence.
+3. **Multiple skills can apply.** A feature implementation might involve `idea-refine` → `spec-driven-development` → `planning-and-task-breakdown` → `code-execution-standard` → `test-driven-development` → `code-review-and-quality` → `shipping-and-launch` in sequence.
 
 4. **When in doubt, start with a spec.** If the task is non-trivial and there's no spec, begin with `spec-driven-development`.
 
@@ -179,16 +181,16 @@ For a complete feature, the typical skill sequence is:
 3.  planning-and-task-breakdown → Break into verifiable chunks
 4.  context-engineering         → Load the right context
 5.  source-driven-development   → Verify against official docs
-6.  incremental-implementation  → Build slice by slice
+6.  code-execution-standard     → Build slice by slice
 7.  doubt-driven-development    → Cross-examine non-trivial decisions in-flight
-8.  tdd                         → Prove each slice works
+8.  test-driven-development     → Prove each slice works
 9.  code-review-and-quality     → Review before merge
 10. git-workflow-and-versioning → Clean commit history
-11. documentation-and-adrs      → Document decisions
+11. update-docs                 → Document decisions
 12. shipping-and-launch         → Deploy safely
 ```
 
-Not every task needs every skill. A bug fix might only need: `diagnose` → `debug-investigation` → `tdd` → `code-review-and-quality`.
+Not every task needs every skill. A bug fix might only need: `debug-investigation` → `test-driven-development` → `code-review-and-quality`.
 
 ## Quick Reference
 
@@ -197,19 +199,19 @@ Not every task needs every skill. A bug fix might only need: `diagnose` → `deb
 | Define | idea-refine | Refine ideas through structured divergent and convergent thinking |
 | Define | spec-driven-development | Requirements and acceptance criteria before code |
 | Plan | planning-and-task-breakdown | Decompose into small, verifiable tasks |
-| Build | incremental-implementation | Thin vertical slices, test each before expanding |
+| Build | code-execution-standard | Thin vertical slices, test each before expanding |
 | Build | source-driven-development | Verify against official docs before implementing |
 | Build | doubt-driven-development | Adversarial fresh-context review of every non-trivial decision |
 | Build | context-engineering | Right context at the right time |
-| Build | frontend-standards-always-follow | Frontend baseline (hooks may also list deeper FE stack skills) |
-| Build | api-and-interface-design | Stable interfaces with clear contracts |
-| Verify | tdd | Failing test first, then make it pass |
-| Verify | browser-testing-with-devtools | Chrome DevTools MCP for runtime verification |
-| Verify | diagnose / debug-investigation | Reproduce → localize → fix → guard |
+| Build | frontend-standards-always-follow | Frontend baseline (native `paths:` surfaces the deeper FE stack) |
+| Build | api-contract-standards | Stable interfaces with clear contracts |
+| Verify | test-driven-development | Failing test first, then make it pass |
+| Verify | webapp-testing | Real-browser runtime verification |
+| Verify | debug-investigation | Reproduce → localize → fix → guard |
 | Review | code-review-and-quality | Five-axis review with quality gates |
-| Review | security-and-hardening | OWASP prevention, input validation, least privilege |
+| Review | owasp-security | OWASP prevention, input validation, least privilege |
 | Review | performance-optimization | Measure first, optimize only what matters |
 | Ship | git-workflow-and-versioning | Atomic commits, clean history |
 | Ship | ci-cd-and-automation | Automated quality gates on every change |
-| Ship | documentation-and-adrs | Document the why, not just the what |
+| Ship | update-docs | Document the why, not just the what |
 | Ship | shipping-and-launch | Pre-launch checklist, monitoring, rollback plan |

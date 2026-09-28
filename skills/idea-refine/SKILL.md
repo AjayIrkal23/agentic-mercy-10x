@@ -1,46 +1,46 @@
 ---
 name: idea-refine
-description: "ALWAYS invoke when the user says \"idea-refine\" or \"ideate\" — refines ideas through structured divergent and convergent thinking."
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 2000
-triggers:
-  keywords:
-  - convergent
-  - divergent
-  - idea
-  - idea-refine
-  - ideas
-  - ideate
-  - iteratively
-  - refine
-  - refines
-  - structured
-  - thinking
-  - through
-  - trigger
-  paths: []
-  intents:
+description: Refines ideas through structured divergent and convergent thinking.
+when_to_use: Use when the user says 'idea-refine' or 'ideate', or a need is too vague to spec.
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
-keywords:
-- refine this idea
-- refine the idea
-- ideate
-- refine ideas
-- divergent
-- convergent
-- shape this idea
-intents:
-- PLAN
-- SPEC
-surfaces:
-- general
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 2000
+  triggers:
+    keywords:
+    - convergent
+    - divergent
+    - idea
+    - idea-refine
+    - ideas
+    - ideate
+    - iteratively
+    - refine
+    - refines
+    - structured
+    - thinking
+    - through
+    - trigger
+    paths: []
+    intents:
+    - general
+  intents:
+  - PLAN
+  - SPEC
+  keywords:
+  - refine this idea
+  - refine the idea
+  - ideate
+  - refine ideas
+  - divergent
+  - convergent
+  - shape this idea
 ---
 # Idea Refine
 

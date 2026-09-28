@@ -1,39 +1,44 @@
 ---
 name: backend-performance-standards
-description: "ALWAYS invoke when reviewing backend query efficiency, file-size pressure, repeated DB work, scaling risk, or safe optimization boundaries."
-disable-model-invocation: false
-schema: 1
-category: backend
-surfaces:
-- backend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 264
-triggers:
-  keywords:
+description: Backend query efficiency, repeated DB work, file-size pressure, scaling risk, and safe optimization boundaries.
+when_to_use: Use when reviewing repositories, stores, SQL, or hot paths for N+1 queries, missing indexes, or scaling risk.
+paths:
+- '**/repository/**'
+- '**/store/**'
+- '**/*.sql'
+metadata:
+  schema: 1
+  category: backend
+  surfaces:
   - backend
-  - boundaries
-  - efficiency
-  - file-size
-  - optimization
-  - performance
-  - pressure
-  - query
-  - repeated
-  - reviewing
-  - risk
-  - safe
-  - scaling
-  - standards
-  - work
-  paths:
-  - cmd/
-  - internal/
-  - server/
-  intents:
-  - backend
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 264
+  triggers:
+    keywords:
+    - backend
+    - boundaries
+    - efficiency
+    - file-size
+    - optimization
+    - performance
+    - pressure
+    - query
+    - repeated
+    - reviewing
+    - risk
+    - safe
+    - scaling
+    - standards
+    - work
+    paths:
+    - cmd/
+    - internal/
+    - server/
+    intents:
+    - backend
 ---
 # Backend Performance Standards
 

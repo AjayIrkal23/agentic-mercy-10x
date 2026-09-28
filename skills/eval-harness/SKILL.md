@@ -1,36 +1,37 @@
 ---
 name: eval-harness
-description: "ALWAYS invoke when evaluating Claude Code sessions — formal evaluation framework implementing eval-driven development (EDD) principles."
-disable-model-invocation: false
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 1573
-triggers:
-  keywords:
-  - claude
-  - code
-  - development
-  - edd
-  - eval
-  - eval-driven
-  - evaluation
-  - formal
-  - framework
-  - harness
-  - implementing
-  - principles
-  - sessions
-  paths: []
-  intents:
+description: 'Eval-driven development for Claude Code sessions: pass/fail criteria, pass@k reliability metrics, and regression suites for prompt or agent changes.'
+when_to_use: Use when defining or running evaluations of agent behavior, prompts, or skills.
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
-origin: ECC
-tools: Read, Write, Edit, Bash, Grep, Glob
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 1573
+  origin: ECC
+  triggers:
+    keywords:
+    - claude
+    - code
+    - development
+    - edd
+    - eval
+    - eval-driven
+    - evaluation
+    - formal
+    - framework
+    - harness
+    - implementing
+    - principles
+    - sessions
+    paths: []
+    intents:
+    - general
 ---
 # Eval Harness Skill
 

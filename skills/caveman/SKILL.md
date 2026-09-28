@@ -1,61 +1,60 @@
 ---
 name: caveman
-description: 'ALWAYS-ON ultra-compressed communication mode for user-facing text output ONLY. Cuts token
-  usage ~75% by dropping filler, articles, and pleasantries while keeping full technical accuracy. Does
-  NOT affect: code output, model reasoning, skill routing, hook processing, subagent prompts, or any operational
-  logic. This skill is mandatory and always active — no trigger phrase needed.'
-schema: 1
-category: general
-surfaces:
-- general
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 698
-triggers:
-  keywords:
-  - accuracy
-  - active
-  - affect
-  - always
-  - always-on
-  - articles
-  - caveman
-  - code
-  - communication
-  - cuts
-  - dropping
-  - filler
-  - full
-  - hook
-  - keeping
-  - logic
-  - mandatory
-  - mode
-  - model
-  - needed
-  - operational
-  - output
-  - phrase
-  - pleasantries
-  - processing
-  - prompts
-  - reasoning
-  - routing
-  - skill
-  - subagent
-  - technical
-  - text
-  - token
-  - trigger
-  - ultra-compressed
-  - usage
-  - user-facing
-  - while
-  paths: []
-  intents:
+description: 'Ultra-compressed communication mode for user-facing text only: drops filler, articles and pleasantries (~75% fewer tokens) while keeping full technical accuracy. Never affects code output, reasoning, routing, or subagent prompts.'
+when_to_use: Always active for user-facing prose; no trigger phrase needed.
+metadata:
+  schema: 1
+  category: general
+  surfaces:
   - general
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 698
+  triggers:
+    keywords:
+    - accuracy
+    - active
+    - affect
+    - always
+    - always-on
+    - articles
+    - caveman
+    - code
+    - communication
+    - cuts
+    - dropping
+    - filler
+    - full
+    - hook
+    - keeping
+    - logic
+    - mandatory
+    - mode
+    - model
+    - needed
+    - operational
+    - output
+    - phrase
+    - pleasantries
+    - processing
+    - prompts
+    - reasoning
+    - routing
+    - skill
+    - subagent
+    - technical
+    - text
+    - token
+    - trigger
+    - ultra-compressed
+    - usage
+    - user-facing
+    - while
+    paths: []
+    intents:
+    - general
 ---
 # Caveman Mode (ALWAYS-ON)
 

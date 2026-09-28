@@ -1,111 +1,37 @@
 ---
 name: frontend-standards-always-follow
-description: "ALWAYS invoke when any web/frontend UI, React, Next.js, Vite, dashboard, component, CSS, client data, hook, state, styling, browser UX, or frontend performance work is requested. MUST apply this always-on frontend baseline after the matching Build Web Apps plugin skill for any web/frontend task."
-disable-model-invocation: false
-schema: 1
-category: frontend
-surfaces:
-- frontend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 1188
-triggers:
-  keywords:
-  - always
-  - always-on
-  - apply
-  - apps
-  - baseline
-  - browser
-  - build
-  - client
-  - component
-  - css
-  - dashboard
-  - data
-  - follow
-  - frontend
-  - hook
-  - matching
-  - next.js
-  - performance
-  - plugin
-  - react
-  - requested
-  - skill
-  - standards
-  - state
-  - styling
-  - task
-  - vite
-  - web
-  - web/frontend
-  - work
-  paths:
-  - .hook.
-  - .jsx
-  - .spec.
-  - .test.
-  - .tsx
-  - /auth/
-  - /components/
-  - /guard/
-  - /hooks/use
-  - /login/
-  - /pages/
-  - /router/
-  - /routes/
-  - /src/hooks/
-  - /store/
-  - /views/
-  - __tests__
-  - _test.ts
-  - _test.tsx
-  - protected
-  - reducer.
-  - redux
-  - route.ts
-  - route.tsx
-  - routes.ts
-  - selector.
-  - session
-  - slice.
-  - src/schemas/
-  - src/types/
-  - use-
-  - useHook
-  intents:
-  - frontend
+description: "Always-on frontend baseline for any web UI, React, Next.js, Vite, dashboard, component, CSS, client-data, hook, state, styling, browser-UX, or frontend-performance work: route/component split, styling ownership layers, type ownership, 250-line file cap, reuse-first. Load this baseline; companion skills surface via their own paths."
+when_to_use: Use at the start of any frontend task and whenever a .tsx/.jsx file, a src CSS file, or a Vite/Next config is touched.
+paths:
+  - "**/*.{tsx,jsx}"
+  - "**/src/**/*.css"
+  - "**/vite.config.*"
+  - "**/next.config.*"
+metadata:
+  schema: 1
+  category: frontend
+  surfaces: [frontend]
+  platforms: [linux, darwin, windows]
+  token-cost: 1188
+  triggers:
+    keywords: [frontend, react, next.js, vite, component, css, styling, hook, state, dashboard, browser ux, client data, frontend performance, baseline]
+    paths: [.tsx, .jsx, /components/, /pages/, /hooks/, /store/, /routes/, /router/, /views/, src/types/, src/schemas/, slice., reducer., selector., use-]
+    intents: [frontend, implement, refactor]
 ---
 # Frontend Standards Always Follow
 
-> ## 🔒 MANDATORY COMPANION BUNDLE — load ALL now, every time, no exceptions
->
-> Reading this skill is the trigger. Before doing ANY frontend work you MUST
-> immediately `Skill`-invoke **all** of the following, end to end. Not "when the
-> surface is touched" — **always**, as a set, the moment this baseline loads:
->
-> 1. `frontend-structure-standards`
-> 2. `frontend-api-standards`
-> 3. `frontend-response-handling`
-> 4. `frontend-server-data-patterns`
-> 5. `frontend-code-review`
-> 6. `frontend-ui-engineering`
-> 7. `react-hooks-patterns`
-> 8. `tailwind-design-system`
-> 9. `browser-testing-with-devtools`
-> 10. `vite-react-best-practices`
->
-> This is non-negotiable. Do not skip, defer, or sample a subset. If any one is
-> not yet loaded this turn, load it now before writing frontend code.
+> **Baseline first.** Load this skill at the start of any frontend task. Companion skills
+> surface natively via their own `paths:` as you touch matching files — do not bulk-load them:
+> `frontend-structure-standards` (src layout) · `frontend-response-handling` (API modules) ·
+> `frontend-server-data-patterns` (tables/lists/queries) · `react-hooks-patterns` (hooks) ·
+> `tailwind-design-system` + `shadcn` (CSS/tokens/components) · `motion-dev` (motion) ·
+> `frontend-ui-engineering` (components) · `webapp-testing` (specs/e2e) ·
+> `vite-react-best-practices` (Vite config) · `modern-web-guidance` (native HTML/CSS/web-platform
+> features + Baseline support — search it before adding JS or a dependency) · `code-review-and-quality` (review).
 
 ## Overview
 
-This is the always-on frontend baseline.
-
-Apply it immediately after the matching Build Web Apps plugin skill for any frontend task. The companion bundle above is NAMED (trigger pointers); load each companion's body LAZILY, only when the task needs it — not all in full every time.
+This is the always-on frontend baseline. Apply it to any frontend task; the companion list above is a map, not a bundle to preload.
 
 ## Always Apply
 
@@ -145,7 +71,7 @@ Apply it immediately after the matching Build Web Apps plugin skill for any fron
 - `frontend-response-handling` for API parsing, normalized errors, and backend-driven list behavior.
 - `frontend-server-data-patterns` for tables, lists, search, and query-state flows.
 - `react-hooks-patterns` for complex local state, effects, refs, reducers, or custom hook extraction.
-- `tailwind-design-system`, ``, `frontend-ui-engineering`, or `` only when the task explicitly needs them.
+- `tailwind-design-system`, `shadcn`, `frontend-ui-engineering`, or `motion-dev` only when the task explicitly needs them.
 
 ## Completion Checklist
 

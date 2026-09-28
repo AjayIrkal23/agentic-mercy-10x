@@ -1,63 +1,69 @@
 ---
 name: owasp-security
-description: "ALWAYS invoke when reviewing code for security vulnerabilities, implementing authentication/authorization, handling user input, or discussing web application security. Covers OWASP Top 10:2025, ASVS 5.0, LLM Top 10 (2025), and Agentic AI security (2026)."
-disable-model-invocation: false
-schema: 1
-category: security
-surfaces:
-- backend
-- frontend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 5324
-triggers:
-  keywords:
-  - '2025'
-  - '2026'
-  - '5.0'
-  - accepts
-  - against
-  - agentic
-  - application
-  - asvs
-  - authentication
-  - authentication/authorization
-  - building
-  - code
-  - covers
-  - data
-  - discussing
-  - external
-  - feature
-  - handling
-  - hardens
-  - implementing
-  - input
-  - integrations
-  - interacts
-  - llm
-  - manages
-  - owasp
-  - reviewing
-  - security
-  - services
-  - sessions
-  - storage
-  - third-party
-  - top
-  - untrusted
-  - user
-  - vulnerabilities
-  - web
-  paths:
-  - /api-client
-  - /api/
-  - api.js
-  - api.ts
-  intents:
-  - security
+description: 'Security review and hardening: OWASP Top 10:2025, ASVS 5.0, LLM Top 10 (2025), and Agentic AI security (2026) across auth, input handling, sessions, and secrets.'
+when_to_use: Use when reviewing for vulnerabilities, implementing authentication/authorization, handling user input, or touching auth, session, or middleware files.
+paths:
+- '**/auth/**'
+- '**/middleware/**'
+- '**/*auth*.{go,ts,py}'
+- '**/*session*.{go,ts,py}'
+metadata:
+  schema: 1
+  category: security
+  surfaces:
+  - backend
+  - frontend
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 5324
+  triggers:
+    keywords:
+    - '2025'
+    - '2026'
+    - '5.0'
+    - accepts
+    - against
+    - agentic
+    - application
+    - asvs
+    - authentication
+    - authentication/authorization
+    - building
+    - code
+    - covers
+    - data
+    - discussing
+    - external
+    - feature
+    - handling
+    - hardens
+    - implementing
+    - input
+    - integrations
+    - interacts
+    - llm
+    - manages
+    - owasp
+    - reviewing
+    - security
+    - services
+    - sessions
+    - storage
+    - third-party
+    - top
+    - untrusted
+    - user
+    - vulnerabilities
+    - web
+    paths:
+    - /api-client
+    - /api/
+    - api.js
+    - api.ts
+    intents:
+    - security
 ---
 # OWASP Security Best Practices Skill
 

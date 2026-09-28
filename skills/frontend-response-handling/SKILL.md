@@ -1,74 +1,21 @@
 ---
 name: frontend-response-handling
-description: "ALWAYS invoke when frontend API work needs success parsing, normalized error handling, or backend-driven list, filter, sort, and pagination behavior."
-disable-model-invocation: false
-schema: 1
-category: frontend
-surfaces:
-- frontend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 792
-triggers:
-  keywords:
-  - api
-  - backend
-  - backend-driven
-  - behavior
-  - calls
-  - conform
-  - contracts
-  - error
-  - errors
-  - fetch
-  - flows
-  - frontend
-  - frontend-response-handling
-  - handle
-  - handling
-  - have
-  - implementing
-  - instead
-  - layer
-  - layers
-  - limit
-  - list
-  - list/query
-  - must
-  - needs
-  - normalization
-  - normalize
-  - normalized
-  - page
-  - parse
-  - parsing
-  - prefer
-  - query
-  - raw
-  - response
-  - responses
-  - sdk
-  - sortby
-  - sortorder
-  - success
-  - success/error
-  - work
-  - wrappers
-  - yet
-  paths:
-  - /api-client
-  - /api/
-  - /auth/
-  - /guard/
-  - /login/
-  - api.js
-  - api.ts
-  - protected
-  - session
-  intents:
-  - frontend
+description: "Canonical frontend API integration: success-envelope parsing, one normalized error shape, and backend-driven list/filter/sort/pagination behavior across the API module, store/query layer, and component boundaries."
+when_to_use: Use when writing or reviewing frontend API modules, fetch/SDK wrappers, query layers, thunks, or any code that parses backend responses or maps transport errors.
+paths:
+  - "**/api/**/*.{ts,tsx}"
+  - "**/*api*.{ts,js}"
+  - "**/services/**/*.ts"
+metadata:
+  schema: 1
+  category: frontend
+  surfaces: [frontend]
+  platforms: [linux, darwin, windows]
+  token-cost: 792
+  triggers:
+    keywords: [api module, fetch, sdk wrapper, response envelope, normalized error, NormalizedApiError, success parsing, error handling, query layer, thunk, pagination, sortBy, sortOrder, backend-driven]
+    paths: [/api-client, /api/, api.js, api.ts, /services/]
+    intents: [frontend, implement]
 ---
 # Frontend Response Handling
 

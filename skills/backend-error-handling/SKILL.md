@@ -1,34 +1,39 @@
 ---
 name: backend-error-handling
-description: "ALWAYS invoke when defining backend error taxonomy, centralized handler behavior, safe logging, redaction, or client-safe error mapping."
-disable-model-invocation: false
-schema: 1
-category: backend
-surfaces:
-- backend
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 482
-triggers:
-  keywords:
+description: Backend error taxonomy, centralized handler behavior, safe logging, redaction, and client-safe error mapping.
+when_to_use: Use when defining error types, middleware error handlers, logging or redaction, or how errors map to HTTP responses.
+paths:
+- '**/errors/**'
+- '**/middleware/**'
+- '**/*error*.{go,ts,py}'
+metadata:
+  schema: 1
+  category: backend
+  surfaces:
   - backend
-  - behavior
-  - centralized
-  - client-safe
-  - defining
-  - error
-  - handler
-  - handling
-  - logging
-  - mapping
-  - redaction
-  - safe
-  - taxonomy
-  paths: []
-  intents:
-  - backend
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 482
+  triggers:
+    keywords:
+    - backend
+    - behavior
+    - centralized
+    - client-safe
+    - defining
+    - error
+    - handler
+    - handling
+    - logging
+    - mapping
+    - redaction
+    - safe
+    - taxonomy
+    paths: []
+    intents:
+    - backend
 ---
 # Backend Error Handling
 

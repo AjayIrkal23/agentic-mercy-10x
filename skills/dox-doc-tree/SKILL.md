@@ -1,59 +1,60 @@
 ---
 name: dox-doc-tree
-description: MANDATORY before code work in any git repo. Establishes and maintains the dox CLAUDE.md documentation
-  tree — read root→target before editing, follow local rules, update the local CLAUDE.md after edits.
-  Use when a repo's dox tree is missing or incomplete, when scaffolding project docs, when SessionStart
-  reports a missing/stubbed dox root, or before editing code in an undocumented directory. Code writes
-  are hard-gated until a root CLAUDE.md exists.
-schema: 1
-category: docs
-surfaces:
-- docs
-platforms:
-- linux
-- darwin
-- windows
-token-cost: 2209
-triggers:
-  keywords:
-  - claude.md
-  - code
-  - directory
-  - doc
+description: 'Establishes and maintains the dox CLAUDE.md documentation tree: read root to target before editing, follow local rules, update the local CLAUDE.md after edits.'
+when_to_use: Use when a repo's CLAUDE.md tree is missing or stubbed, when scaffolding project docs, or before editing code in an undocumented directory.
+paths:
+- '**/CLAUDE.md'
+- '**/AGENTS.md'
+metadata:
+  schema: 1
+  category: docs
+  surfaces:
   - docs
-  - documentation
-  - dox
-  - editing
-  - edits
-  - establishes
-  - exists
-  - follow
-  - git
-  - hard-gated
-  - incomplete
-  - local
-  - maintains
-  - mandatory
-  - missing
-  - missing/stubbed
-  - project
-  - read
-  - repo
-  - reports
-  - root
-  - rules
-  - scaffolding
-  - sessionstart
-  - target
-  - tree
-  - undocumented
-  - until
-  - update
-  - work
-  - writes
-  paths: []
-  intents:
-  - docs
+  platforms:
+  - linux
+  - darwin
+  - windows
+  token-cost: 2209
+  triggers:
+    keywords:
+    - claude.md
+    - code
+    - directory
+    - doc
+    - docs
+    - documentation
+    - dox
+    - editing
+    - edits
+    - establishes
+    - exists
+    - follow
+    - git
+    - hard-gated
+    - incomplete
+    - local
+    - maintains
+    - mandatory
+    - missing
+    - missing/stubbed
+    - project
+    - read
+    - repo
+    - reports
+    - root
+    - rules
+    - scaffolding
+    - sessionstart
+    - target
+    - tree
+    - undocumented
+    - until
+    - update
+    - work
+    - writes
+    paths: []
+    intents:
+    - docs
 ---
 # dox — the CLAUDE.md documentation tree
 
@@ -176,10 +177,11 @@ dox is the **per-directory local-rules layer**. It is distinct from:
 - **Engine** (`dox_engine.py`): the shared scaffolder — `collect` (which dirs),
   `sweep` (create all docs + sync index), `ensure_dir_documented` (one dir). Also a CLI:
   `dox_engine.py sweep|plan <repo>`.
-- **SessionStart** (`dox-tree-guard.py session`): runs a full **sweep** — stubs a missing
-  root, creates `CLAUDE.md` + `AGENTS.md` in **every** directory, syncs the root index,
-  writes a fingerprint sidecar at `<repo>/.claude/dox/data/.doxinit.json`. Silent when the
-  structure is unchanged. Never overwrites existing docs or hand-written prose.
+- **Sweep** (`index-lifecycle.py` → `dox_engine.py sweep <root>`, active git repo only):
+  stubs a missing root, creates `CLAUDE.md` + `AGENTS.md` in documented directories
+  (every directory only when the repo opts in via `.claude/dox.json`), syncs the root
+  index, writes the fingerprint sidecar. `$HOME` and `~/.claude` are never swept. Never
+  overwrites existing docs or hand-written prose.
 - **PostToolUse** (`dox-child-scaffold.py`, chained in `post-write-aggregator.py`):
   the moment you write a file into an undocumented directory, it creates that dir's
   `CLAUDE.md` + `AGENTS.md` and re-syncs the root index.
