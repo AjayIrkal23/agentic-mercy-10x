@@ -1,8 +1,9 @@
 """test_render_settings.py — settings.json render equivalence + overlay (P6-T3).
 
 Proves:
-  * render(settings.template.json) == live settings.json byte-for-byte (the
-    template is a faithful tokenization — no hook registration drift);
+  * render(settings.template.json) semantically == live settings.json (Claude-
+    managed keys ignored; skipped on a fresh checkout without settings.json);
+  * render refuses any "lean-ctx" substring and carries managed keys over;
   * a user overlay deep-merges with the user winning and base keys preserved;
   * every rendered hook command is interpreter-tokenized (no bare ``python3``/
     ``/usr/bin/node`` survives in the template — Windows portability).
@@ -33,10 +34,41 @@ def test_template_exists_and_valid_json():
     json.loads(_load_render().substitute(tmpl.read_text(encoding="utf-8")))
 
 
-def test_render_equals_live_byte_for_byte():
+def test_render_semantically_equals_live():
+    if not (_ROOT / "settings.json").exists():
+        import pytest
+        pytest.skip("settings.json not rendered (fresh checkout / CI)")
     r = _load_render()
     ok, msg = r.check_equivalence()
     assert ok, msg
+
+
+def test_semantic_check_ignores_claude_managed_keys(tmp_path):
+    r = _load_render()
+    live = json.loads(r.render(user_path=None))
+    live.update({"tui": "fullscreen", "theme": "dark-ansi", "voice": {"enabled": True}})
+    p = tmp_path / "settings.json"
+    p.write_text(json.dumps(live, indent=4))
+    ok, msg = r.check_equivalence(live_path=p, user_path=None)
+    assert ok, msg
+    live["env"]["EXTRA"] = "1"
+    p.write_text(json.dumps(live))
+    ok, msg = r.check_equivalence(live_path=p, user_path=None)
+    assert not ok and "env.EXTRA" in msg
+
+
+def test_render_refuses_lean_ctx_and_carries_managed_keys(tmp_path):
+    import pytest
+    r = _load_render()
+    overlay = tmp_path / "user.json"
+    overlay.write_text(json.dumps({"statusLine": {"command": "lean-ctx statusline"}}))
+    with pytest.raises(ValueError):
+        r.render(user_path=overlay)
+    old = tmp_path / "settings.json"
+    old.write_text(json.dumps({"theme": "dark-ansi", "tui": "fullscreen", "env": {"X": "stale"}}))
+    data = json.loads(r.carry_managed(r.render(user_path=None), old))
+    assert data["theme"] == "dark-ansi" and data["tui"] == "fullscreen"
+    assert "X" not in data["env"]  # only managed keys are carried
 
 
 def test_template_has_no_bare_interpreter_literals():
@@ -51,17 +83,13 @@ def test_template_has_no_bare_interpreter_literals():
     assert "python3 ${HOME}/.claude/hooks/dispatch.py" in rendered
 
 
-def test_user_overlay_deep_merges_user_wins():
+def test_user_overlay_deep_merges_user_wins(tmp_path):
     r = _load_render()
     tmpl = _ROOT / "settings.template.json"
-    import tempfile
-
-    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False) as fh:
-        json.dump({"env": {"SCRATCH": "kept"}, "theme": "light"}, fh)
-        user_path = Path(fh.name)
-    text = r.render(template_path=tmpl, user_path=user_path)
-    data = json.loads(text)
-    assert data["env"]["SCRATCH"] == "kept"          # overlay key merged
-    assert data["theme"] == "light"                   # user wins over base "dark"
-    assert data["model"] == "opus[1m]"                # base preserved
-    assert "SessionStart" in data["hooks"]            # hooks block intact
+    user_path = tmp_path / "settings.user.json"
+    user_path.write_text(json.dumps({"env": {"SCRATCH": "kept"}, "theme": "light"}))
+    data = json.loads(r.render(template_path=tmpl, user_path=user_path))
+    assert data["env"]["SCRATCH"] == "kept"                         # overlay key merged
+    assert data["theme"] == "light"                                 # user wins over base "dark"
+    assert data["env"]["CLAUDE_CODE_SUBAGENT_MODEL"] == "sonnet"    # base preserved
+    assert "SessionStart" in data["hooks"]                          # hooks block intact

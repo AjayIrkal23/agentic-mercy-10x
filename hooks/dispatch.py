@@ -26,12 +26,19 @@ What the orchestration layer adds on top of the old N-registrations-per-event:
 Link types (declared per link):
   gate      sequential; may emit ``permissionDecision: deny|ask``; first deny/ask
             short-circuits the chain; NEVER budget-dropped.
-  mutator   sequential; may emit ``updatedInput`` (opus-guard, workflow-model-guard,
-            lean-ctx rewrite/redirect); threaded forward into later links.
+  mutator   sequential; may emit ``updatedInput`` (opus-guard, workflow-model-guard);
+            threaded forward into later links. Only a Bash ``command`` with control
+            characters is dropped (the harness rejects it); Agent/Workflow prompts
+            legitimately contain newlines and always pass through.
   advisory  run in a ThreadPool in parallel; ``additionalContext`` merged in
             priority order; skipped once the ms budget is blown.
-  exec      fire-and-forget side effect (journals, trackers, lean-ctx observe);
-            output ignored (still telemetered).
+  exec      side effect (journals, trackers); output ignored (still telemetered).
+            Waited on (bounded by ``timeout_ms``) unless the link sets
+            ``"async": true`` — then it is spawned detached and never waited on.
+
+Top-level ``{"decision":"block"}`` from a gate short-circuits Stop, ConfigChange and
+TeammateIdle (TeammateIdle exits 2 with the reason on stderr to keep the teammate
+working). A Stop gate's ``systemMessage`` is passed through when nothing blocks.
 
 Fail-open at every level: any internal error prints ``{}`` (allow) so a broken
 dispatcher can never brick a session.
@@ -71,7 +78,20 @@ _EVENT_NAME = {
     "subagent-stop": "SubagentStop",
     "pre-compact": "PreCompact",
     "session-end": "SessionEnd",
+    "subagent-start": "SubagentStart",
+    "post-compact": "PostCompact",
+    "config-change": "ConfigChange",
+    "teammate-idle": "TeammateIdle",
+    "post-tool-use-failure": "PostToolUseFailure",
 }
+
+# events whose gates answer with a top-level {"decision":"block","reason":...}
+_TOP_LEVEL_BLOCK_EVENTS = ("stop", "config-change", "teammate-idle")
+# events whose harness schema rejects hookSpecificOutput. PostCompact stdout only
+# reaches the user as a display message — post-compaction state is re-injected
+# from SessionStart(source=="compact") instead (session-lifecycle.py).
+_NO_HSO_EVENTS = ("SessionEnd", "PreCompact", "PostCompact", "Stop", "SubagentStop",
+                  "ConfigChange", "TeammateIdle")
 
 # Defaults if the config omits a budget for an event (SOFT — advisory-only).
 _DEFAULT_BUDGET = {"ms": 2500, "chars": 4000}
@@ -80,9 +100,13 @@ _DEFAULT_BUDGET = {"ms": 2500, "chars": 4000}
 # --------------------------------------------------------------------------- #
 # helpers
 # --------------------------------------------------------------------------- #
+_CUR_TOOL = ""  # set per dispatch(); stamped on every telemetry row
+
+
 def _telemeter(event: str, link_id: str, **fields) -> None:
     if _tel is None:
         return
+    fields.setdefault("tool", _CUR_TOOL)
     try:
         _tel.record(event, link_id, **fields)
     except Exception:  # noqa: BLE001
@@ -114,9 +138,29 @@ def _link_matches(link: dict, tool: str) -> bool:
     if not pat:
         return True  # no tool filter -> always applies (session/stop/etc.)
     try:
-        return re.search(pat, tool) is not None
+        return re.fullmatch(f"(?:{pat})", tool) is not None
     except re.error:
         return True  # a bad regex must not silently drop a trigger
+
+
+def _spawn_async(link: dict, event: str, payload_text: str, sid: str) -> None:
+    """Fire-and-forget: detached child, payload on stdin, never waited on."""
+    lid = link.get("id", "?")
+    try:
+        proc = subprocess.Popen(  # noqa: S603 - trusted internal command lists
+            _resolve_cmd(link.get("cmd", [])), stdin=subprocess.PIPE,
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            start_new_session=True, text=True,
+        )
+        try:
+            proc.stdin.write(payload_text)
+            proc.stdin.close()
+        except (BrokenPipeError, OSError):
+            pass
+        _telemeter(event, lid, decision="spawned", session=sid, type="exec")
+    except Exception as exc:  # noqa: BLE001
+        _telemeter(event, lid, decision="error", session=sid, type="exec",
+                   error=f"{type(exc).__name__}: {exc}"[:300])
 
 
 def _run_link(link: dict, event: str, payload_text: str, sid: str):
@@ -219,9 +263,11 @@ def _has_hidden_control_chars(obj) -> bool:
 # main dispatch
 # --------------------------------------------------------------------------- #
 def dispatch(event: str, payload: dict, cfg: dict) -> dict:
+    global _CUR_TOOL
     event_name = _EVENT_NAME.get(event, event)
     sid = str(payload.get("session_id") or payload.get("session") or "")
     tool = _tool_name(payload)
+    _CUR_TOOL = tool
 
     chain = (cfg.get("chains", {}) or {}).get(event, []) or []
     budget = (cfg.get("budgets", {}) or {}).get(event, _DEFAULT_BUDGET)
@@ -231,12 +277,10 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
     # split links by type, preserving declared order, applying enable + tool filter
     active = [ln for ln in chain
               if ln.get("enabled", True) and _link_matches(ln, tool)]
-    for ln in chain:
-        if not ln.get("enabled", True):
-            _telemeter(event, ln.get("id", "?"), decision="disabled", session=sid)
 
     contexts: list[tuple[int, str]] = []
     updated_input = None
+    system_message = ""     # Stop gates may emit a non-blocking systemMessage
     payload_text = json.dumps(payload, ensure_ascii=False)
     t_start = time.perf_counter()
 
@@ -247,16 +291,18 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
         typ = ln.get("type", "advisory")
         if typ == "gate":
             parsed, _ = _run_link(ln, event, payload_text, sid)
-            if (
-                event == "stop"
-                and isinstance(parsed, dict)
-                and parsed.get("decision") == "block"
-            ):
-                return {
-                    "decision": "block",
-                    "reason": str(parsed.get("reason") or ""),
-                }
-            dec, reason = _extract_decision(parsed) if event != "stop" else (None, None)
+            if event in _TOP_LEVEL_BLOCK_EVENTS and isinstance(parsed, dict):
+                if parsed.get("decision") == "block":
+                    _telemeter(event, "_dispatch", decision="block", session=sid,
+                               note=f"short-circuit@{ln.get('id')}")
+                    return {
+                        "decision": "block",
+                        "reason": str(parsed.get("reason") or ""),
+                    }
+                if parsed.get("systemMessage") and not system_message:
+                    system_message = str(parsed["systemMessage"])
+            dec, reason = ((None, None) if event in _TOP_LEVEL_BLOCK_EVENTS
+                           else _extract_decision(parsed))
             if dec is not None:
                 # short-circuit: emit the deny/ask decision now
                 _telemeter(event, "_dispatch", decision=dec, session=sid,
@@ -273,14 +319,18 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
             parsed, _ = _run_link(ln, event, payload_text, sid)
             ui = _extract_updated_input(parsed)
             if ui is not None:
-                if _has_hidden_control_chars(ui):
-                    # a rewrite that would fail the harness updatedInput schema
-                    # (control chars) is DROPPED — the original, already-accepted
-                    # input runs unmodified. (e.g. lean-ctx wrapping a multi-line
-                    # Bash command preserves newlines the validator rejects.)
+                if tool == "Bash" and _has_hidden_control_chars(
+                        ui.get("command") if isinstance(ui, dict) else ui):
+                    # A Bash `command` rewrite with control chars fails the harness
+                    # approval check — DROP it; the original command runs unmodified.
+                    # Only Bash: Agent/Workflow prompts legitimately carry newlines
+                    # (dropping those made opus-guard inert, A01-B1).
                     _telemeter(event, ln.get("id", "?"), decision="mutation-dropped",
-                               session=sid, note="control-chars-in-updatedInput")
+                               session=sid, note="control-chars-in-bash-command")
                 else:
+                    # A mutator's own permissionDecision:"allow" is NOT forwarded:
+                    # the harness applies a bare updatedInput (hookUpdatedInput) and
+                    # the normal permission flow still runs (Santa P2).
                     updated_input = ui
                     # thread the mutation forward
                     newp = dict(payload)
@@ -294,9 +344,12 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
         else:  # advisory
             advisory_links.append(ln)
 
-    # ---- pass 2: execs (fire-and-forget, but telemetered) ----------------- #
+    # ---- pass 2: execs (async ones detached; the rest bounded by timeout) -- #
     for ln in exec_links:
-        _run_link(ln, event, payload_text, sid)
+        if ln.get("async"):
+            _spawn_async(ln, event, payload_text, sid)
+        else:
+            _run_link(ln, event, payload_text, sid)
 
     # ---- pass 3: advisory links in a ThreadPool, budget-aware ------------- #
     over_budget = (time.perf_counter() - t_start) * 1000.0 > ms_budget
@@ -342,16 +395,15 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
         _telemeter(event, "_dispatch", decision="budget-overrun",
                    ms=total_ms, budget_hit=True, session=sid)
 
-    # Stop accepts only an explicit top-level block. Advisory text and the
-    # permissionDecision schema belong to other hook events.
-    if event == "stop":
-        return {}
+    # Stop accepts only a top-level block or a systemMessage. Advisory text and
+    # the permissionDecision schema belong to other hook events.
+    if event in ("stop", "teammate-idle"):
+        return {"systemMessage": system_message} if system_message else {}
 
-    # Harness schema: hookSpecificOutput is invalid for SessionEnd/PreCompact,
-    # and an empty one (no additionalContext/updatedInput) fails validation
-    # elsewhere — emit it only when there is real content for an event that
-    # accepts it.
-    if event_name in ("SessionEnd", "PreCompact") or (not merged and updated_input is None):
+    # Harness schema: hookSpecificOutput is invalid for several events, and an
+    # empty one (no additionalContext/updatedInput) fails validation elsewhere —
+    # emit it only when there is real content for an event that accepts it.
+    if event_name in _NO_HSO_EVENTS or (not merged and updated_input is None):
         return {}
     out: dict = {"hookSpecificOutput": {"hookEventName": event_name}}
     if merged:
@@ -381,6 +433,10 @@ def main(argv: list[str]) -> int:
             print("{}")
             return 0
         result = dispatch(event, payload, cfg)
+        if event == "teammate-idle" and result.get("decision") == "block":
+            # exit 2 + stderr = keep the teammate working (TeammateIdle contract)
+            print(result.get("reason") or "expected artifact missing", file=sys.stderr)
+            return 2
         print(json.dumps(result, ensure_ascii=False))
         return 0
     except Exception:  # noqa: BLE001 - the dispatcher must never brick a session

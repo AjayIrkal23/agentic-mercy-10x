@@ -1,746 +1,86 @@
 {
-  "_about": "The ONE ordered chain map for dispatch.py (P4-T1, Charter \u00a73). Every legacy settings.json hook is a LINK here (still its own file, run as a subprocess). Registered once per event in settings.json after the P4-T7 cutover. Link types: gate|mutator|advisory|exec. tools = regex on tool_name (replaces the 19 PreToolUse matchers). enabled toggles a link off without deleting it. priority 0 = mandatory-trigger advisory (never budget-dropped); higher = droppable only when gates already blew the wall budget. timeout_ms is per-link.",
-  "_router_mode": "router",
-  "_router_mode_note": "LIVE: settings.json routes UserPromptSubmit to prompt_router/router.py directly (user-directed early flip 2026-07-12, commit c865377). This dispatch user-prompt-submit chain is NO LONGER invoked on prompts \u2014 retained only for flip-back via scripts/flip-dispatch.py --legacy. The router is a provable superset (classify/select consume the entire trigger-floor.json).",
+  "_about": "The ONE ordered chain map for dispatch.py. Every hook is a LINK here (its own file, run as a subprocess); settings.json registers dispatch.py once per event. Link types: gate|mutator|advisory|exec. exec links with \"async\": true are spawned detached and never waited on. tools = regex FULL-matched against tool_name. enabled toggles a link off without deleting it. priority 0 = mandatory advisory (never budget-dropped); higher = droppable once gates blew the wall budget. timeout_ms is per-link. Links that write to disk no-op when CLAUDE_HOOK_DOCTOR is set.",
   "budgets": {
-    "session-start": {
-      "ms": 2500,
-      "chars": 60000,
-      "_raised": "2026-07-18: was 3500 \u2014 smaller than one skill body; user authorized 60-70k"
-    },
-    "user-prompt-submit": {
-      "ms": 1500,
-      "chars": 24000
-    },
-    "pre-tool-use": {
-      "ms": 2000,
-      "chars": 8000,
-      "_raised": "2026-07-19: was 4000 \u2014 gate messages + skill blocks were competing for it."
-    },
-    "post-tool-use": {
-      "ms": 1500,
-      "chars": 12000,
-      "_raised": "2026-07-19: was 4000 \u2014 a realistic fullstack first write measured 88.3% of it, and overflow silently cut the priority-1 design advisories. User authorized a 70k session budget; 12k here is cheap insurance."
-    },
-    "stop": {
-      "ms": 2500,
-      "chars": 4000
-    },
-    "subagent-stop": {
-      "ms": 1000,
-      "chars": 2000
-    },
-    "pre-compact": {
-      "ms": 800,
-      "chars": 2000
-    },
-    "session-end": {
-      "ms": 1000,
-      "chars": 0
-    }
+    "session-start": {"ms": 2500, "chars": 60000},
+    "pre-tool-use": {"ms": 2000, "chars": 8000},
+    "post-tool-use": {"ms": 1500, "chars": 12000},
+    "post-tool-use-failure": {"ms": 800, "chars": 1500},
+    "stop": {"ms": 2500, "chars": 4000},
+    "subagent-start": {"ms": 800, "chars": 3000},
+    "subagent-stop": {"ms": 1000, "chars": 2000},
+    "pre-compact": {"ms": 800, "chars": 2000},
+    "post-compact": {"ms": 1500, "chars": 6000},
+    "config-change": {"ms": 1500, "chars": 500},
+    "teammate-idle": {"ms": 1500, "chars": 1000},
+    "session-end": {"ms": 1000, "chars": 0}
   },
   "chains": {
     "session-start": [
-      {
-        "id": "settings-permissions-selfheal",
-        "type": "exec",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/settings-permissions-selfheal.py"
-        ],
-        "timeout_ms": 3000,
-        "priority": 0,
-        "enabled": true,
-        "_new": "2026-07-19: repairs permissions.deny when the rendered settings.json drifts from settings.template.json. Claude Code flushes a session's in-memory permission state to disk on EXIT, so a session started before a permissions change rewrites the old values on teardown and every session opened afterwards inherits them. Runs FIRST so the repair lands before anything else reads settings."
-      },
-      {
-        "id": "state-cleanup",
-        "type": "exec",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/tools/state-cleanup.py"
-        ],
-        "timeout_ms": 5000,
-        "priority": 0,
-        "enabled": true,
-        "_new": "P4-T1: 14d telemetry + 24h state purge"
-      },
-      {
-        "id": "tdd-guard-launcher",
-        "type": "advisory",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/tdd_guard_launcher.py"
-        ],
-        "timeout_ms": 20000,
-        "priority": 0,
-        "enabled": true,
-        "_reg": 1,
-        "_port": "P6-T2: bash launcher ported to py (parity-verified); bash original kept for 30-day flip-back only"
-      },
-      {
-        "id": "ponytail-session",
-        "type": "advisory",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/ponytail-caveman-guard.py",
-          "session-start"
-        ],
-        "timeout_ms": 5000,
-        "priority": 1,
-        "enabled": true,
-        "_reg": 2
-      },
-      {
-        "id": "session-start-aggregator",
-        "type": "advisory",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/session-start-aggregator.py"
-        ],
-        "timeout_ms": 45000,
-        "priority": 0,
-        "enabled": true,
-        "_reg": 3,
-        "_note": "kept WHOLE (Charter \u00a73: own file); carries index-lifecycle session-start + MCP-roster/superpowers merge internally"
-      },
-      {
-        "id": "memory-bootstrap-guard",
-        "type": "advisory",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/memory-bootstrap-guard.py"
-        ],
-        "timeout_ms": 12000,
-        "priority": 1,
-        "enabled": true,
-        "_reg": 4
-      },
-      {
-        "id": "memory-load-on-start",
-        "type": "advisory",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/memory-load-on-start.py"
-        ],
-        "timeout_ms": 10000,
-        "priority": 1,
-        "enabled": true,
-        "_reg": 5
-      },
-      {
-        "id": "session-lifecycle-start",
-        "type": "exec",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/session-lifecycle.py",
-          "session-start"
-        ],
-        "timeout_ms": 10000,
-        "priority": 1,
-        "enabled": true,
-        "_reg": 6
-      },
-      {
-        "id": "leanctx-observe-start",
-        "type": "exec",
-        "cmd": [
-          "lean-ctx",
-          "hook",
-          "observe"
-        ],
-        "timeout_ms": 5000,
-        "priority": 2,
-        "enabled": false,
-        "_reg": 7,
-        "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
-      },
-      {
-        "id": "skills-index-guard",
-        "type": "exec",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/build-skills-index.py",
-          "--hook"
-        ],
-        "timeout_ms": 10000,
-        "priority": 2,
-        "enabled": true,
-        "_new": "2026-07-18: rebuild skills-index.json when any SKILL.md is newer (mtime no-op otherwise); fixes silently-stale ranked-routing catalog"
-      }
+      {"id": "settings-permissions-selfheal", "type": "exec", "cmd": ["{PY}", "{HOOKS}/settings-permissions-selfheal.py"], "timeout_ms": 3000, "enabled": true, "_note": "runs FIRST: repairs a permissions.deny that drifted from settings.template.json"},
+      {"id": "state-cleanup", "type": "exec", "async": true, "cmd": ["{PY}", "{HOOKS}/tools/state-cleanup.py"], "timeout_ms": 5000, "enabled": true},
+      {"id": "session-start-aggregator", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/session-start-aggregator.py"], "timeout_ms": 45000, "priority": 0, "enabled": true},
+      {"id": "memory-load-on-start", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/memory-load-on-start.py"], "timeout_ms": 5000, "priority": 1, "enabled": true},
+      {"id": "session-lifecycle-start", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/session-lifecycle.py", "session-start"], "timeout_ms": 10000, "priority": 1, "enabled": true},
+      {"id": "ponytail-session", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/ponytail-caveman-guard.py", "session-start"], "timeout_ms": 5000, "priority": 2, "enabled": true},
+      {"id": "skills-index-guard", "type": "exec", "async": true, "cmd": ["{PY}", "{HOOKS}/build-skills-index.py", "--hook"], "timeout_ms": 10000, "enabled": true, "_note": "rebuilds skills-index.json when any SKILL.md is newer (mtime no-op otherwise)"}
     ],
-    "user-prompt-submit": [],
     "pre-tool-use": [
-      {
-        "id": "dangerous-bash-gate",
-        "type": "gate",
-        "tools": "Bash",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/dangerous-bash-gate.py"
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 27,
-        "_order": "DANGER FIRST"
-      },
-      {
-        "id": "first-write-skill-gate",
-        "type": "gate",
-        "tools": "Write|Edit|MultiEdit",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/first-write-skill-gate.py"
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 22
-      },
-      {
-        "id": "gateguard-write-gate",
-        "type": "gate",
-        "tools": "Write|Edit|MultiEdit",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/gateguard-write-gate.py"
-        ],
-        "timeout_ms": 8000,
-        "enabled": true,
-        "_reg": 23
-      },
-      {
-        "id": "dox-write-gate-write",
-        "type": "gate",
-        "tools": "Write|Edit|MultiEdit",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/dox-write-gate.py"
-        ],
-        "timeout_ms": 6000,
-        "enabled": true,
-        "_reg": 26
-      },
-      {
-        "id": "dox-write-gate-bash",
-        "type": "gate",
-        "tools": "Bash",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/dox-write-gate.py"
-        ],
-        "timeout_ms": 6000,
-        "enabled": true,
-        "_reg": 28
-      },
-      {
-        "id": "bash-write-gate",
-        "type": "gate",
-        "tools": "Bash",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/bash-write-gate.py"
-        ],
-        "timeout_ms": 6000,
-        "enabled": true,
-        "_reg": 29
-      },
-      {
-        "id": "blocking-doc-enforcer",
-        "type": "gate",
-        "tools": "Bash",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/blocking-doc-enforcer.py"
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 33
-      },
-      {
-        "id": "jcm-gate-read",
-        "type": "gate",
-        "tools": "Read|Grep|Glob",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/jcodemunch-enforce.py",
-          "pre-tool-use"
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 34
-      },
-      {
-        "id": "jcm-gate-leanctx",
-        "type": "gate",
-        "tools": "mcp__lean-ctx__ctx_read|mcp__lean-ctx__ctx_search|mcp__lean-ctx__ctx_multi_read",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/jcodemunch-enforce.py",
-          "pre-tool-use"
-        ],
-        "timeout_ms": 3000,
-        "enabled": true,
-        "_reg": 37
-      },
-      {
-        "id": "jdoc-doc-steer",
-        "type": "advisory",
-        "tools": "Read|mcp__lean-ctx__ctx_read",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/jdocmunch-enforce.py",
-          "pre-tool-use"
-        ],
-        "timeout_ms": 4000,
-        "enabled": true,
-        "_new": "2026-07-14 tri-tool: doc-set read advisory (jcode-parity for docs); steers whole-file .md/.rst/.adoc reads to jDocMunch section tools when the repo has a ~/.doc-index index."
-      },
-      {
-        "id": "tdd-guard-launcher-pre",
-        "type": "gate",
-        "tools": "Write|Edit|MultiEdit|TodoWrite",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/tdd_guard_launcher.py"
-        ],
-        "timeout_ms": 60000,
-        "enabled": true,
-        "_reg": 20,
-        "_note": "warn-mode; advisory in practice. Ported to tdd_guard_launcher.py in P6-T2 (parity-verified); bash original kept for 30-day flip-back."
-      },
-      {
-        "id": "graphify-enforce",
-        "type": "advisory",
-        "tools": "Task|Agent|Bash",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/graphify-enforce.py",
-          "pre-tool-use"
-        ],
-        "timeout_ms": 5000,
-        "priority": 0,
-        "enabled": true,
-        "_reg": 21
-      },
-      {
-        "id": "opus-guard",
-        "type": "mutator",
-        "tools": "Agent",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/opus-guard.py"
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 35
-      },
-      {
-        "id": "workflow-model-guard",
-        "type": "mutator",
-        "tools": "Workflow",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/workflow-model-guard.py"
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 36
-      },
-      {
-        "id": "leanctx-rewrite",
-        "type": "mutator",
-        "tools": "Bash",
-        "cmd": [
-          "lean-ctx",
-          "hook",
-          "rewrite"
-        ],
-        "timeout_ms": 5000,
-        "enabled": false,
-        "_reg": 30,
-        "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
-      },
-      {
-        "id": "leanctx-redirect",
-        "type": "mutator",
-        "tools": "Bash",
-        "cmd": [
-          "lean-ctx",
-          "hook",
-          "redirect"
-        ],
-        "timeout_ms": 5000,
-        "enabled": false,
-        "_reg": 31,
-        "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
-      },
-      {
-        "id": "ponytail-pretool",
-        "type": "advisory",
-        "tools": ".*",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/ponytail-caveman-guard.py",
-          "pre-tool-use"
-        ],
-        "timeout_ms": 5000,
-        "priority": 2,
-        "enabled": false,
-        "_reg": 19,
-        "_note": "deny-all DEFUSED to advisory in P4-T8 (Charter \u00a77 brick-risk removal). Run as advisory here so any residual deny is not enforced.",
-        "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
-      }
+      {"id": "dangerous-bash-gate", "type": "gate", "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/dangerous-bash-gate.py"], "timeout_ms": 5000, "enabled": true, "_order": "DANGER FIRST"},
+      {"id": "first-write-skill-gate", "type": "gate", "tools": "Write|Edit|MultiEdit|NotebookEdit", "cmd": ["{PY}", "{HOOKS}/first-write-skill-gate.py"], "timeout_ms": 5000, "enabled": true},
+      {"id": "gateguard-write-gate", "type": "gate", "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/gateguard-write-gate.py"], "timeout_ms": 8000, "enabled": true},
+      {"id": "dox-write-gate-write", "type": "gate", "tools": "Write|Edit|MultiEdit|NotebookEdit", "cmd": ["{PY}", "{HOOKS}/dox-write-gate.py"], "timeout_ms": 6000, "enabled": true},
+      {"id": "bash-write-gate", "type": "gate", "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/bash-write-gate.py"], "timeout_ms": 6000, "enabled": true},
+      {"id": "blocking-doc-enforcer", "type": "gate", "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/blocking-doc-enforcer.py"], "timeout_ms": 5000, "enabled": true},
+      {"id": "jcm-gate-read", "type": "gate", "tools": "Read|Grep|Glob", "cmd": ["{PY}", "{HOOKS}/jcodemunch-enforce.py", "pre-tool-use"], "timeout_ms": 5000, "enabled": true},
+      {"id": "jcm-gate-leanctx", "type": "gate", "tools": "mcp__lean-ctx__ctx_read|mcp__lean-ctx__ctx_search|mcp__lean-ctx__ctx_multi_read", "cmd": ["{PY}", "{HOOKS}/jcodemunch-enforce.py", "pre-tool-use"], "timeout_ms": 3000, "enabled": true},
+      {"id": "jdoc-doc-steer", "type": "advisory", "tools": "Read|mcp__lean-ctx__ctx_read", "cmd": ["{PY}", "{HOOKS}/jdocmunch-enforce.py", "pre-tool-use"], "timeout_ms": 4000, "priority": 1, "enabled": true},
+      {"id": "tdd-guard-launcher-pre", "type": "advisory", "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/tdd_guard_launcher.py"], "timeout_ms": 8000, "priority": 2, "enabled": true, "_note": "warn-mode advisory, 8 s cap (D10); never a gate"},
+      {"id": "graphify-enforce", "type": "advisory", "tools": "Task|Agent|Bash", "cmd": ["{PY}", "{HOOKS}/graphify-enforce.py", "pre-tool-use"], "timeout_ms": 5000, "priority": 1, "enabled": true},
+      {"id": "opus-guard", "type": "mutator", "tools": "Agent|Task", "cmd": ["{PY}", "{HOOKS}/opus-guard.py"], "timeout_ms": 5000, "enabled": true},
+      {"id": "workflow-model-guard", "type": "mutator", "tools": "Workflow", "cmd": ["{PY}", "{HOOKS}/workflow-model-guard.py"], "timeout_ms": 5000, "enabled": true}
     ],
     "post-tool-use": [
-      {
-        "id": "skill-invocation-tracker",
-        "type": "exec",
-        "tools": "Skill|Read",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/skill-invocation-tracker.py"
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 38
-      },
-      {
-        "id": "ponytail-post-skill",
-        "type": "exec",
-        "tools": "Skill",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/ponytail-caveman-guard.py",
-          "post-skill"
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 39
-      },
-      {
-        "id": "fullstack-post",
-        "type": "advisory",
-        "tools": "Write|Edit|MultiEdit",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/fullstack-skills-reminder.py",
-          "post-tool-use"
-        ],
-        "timeout_ms": 10000,
-        "priority": 0,
-        "enabled": true,
-        "_reg": 40
-      },
-      {
-        "id": "codex-capture",
-        "type": "exec",
-        "tools": "Write|Edit|MultiEdit",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/codex-capture.py"
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 41,
-        "_note": "KEEP separate exec (Charter \u00a73, P4-T6 \u2014 not folded)."
-      },
-      {
-        "id": "post-write-aggregator",
-        "type": "advisory",
-        "tools": "Write|Edit|MultiEdit",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/post-write-aggregator.py"
-        ],
-        "timeout_ms": 12000,
-        "priority": 0,
-        "enabled": true,
-        "_reg": 42,
-        "_note": "kept WHOLE; carries index-lifecycle post-write + dox scaffold + doc-enforcer chain internally"
-      },
-      {
-        "id": "uiux-post",
-        "type": "advisory",
-        "tools": "Write|Edit|MultiEdit",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/ui-ux-stack-orchestrator.py",
-          "post-tool-use"
-        ],
-        "timeout_ms": 15000,
-        "priority": 1,
-        "enabled": false,
-        "_disabled": "2026-09-27: script retired 2026-07-19 (only ui-ux-stack-orchestrator.py.bak-emil-20260719 remains); the link exited 2 on every fire.",
-        "_reg": 43
-      },
-      {
-        "id": "desloppify-cleanup",
-        "type": "advisory",
-        "tools": "Write|Edit|MultiEdit",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/desloppify-cleanup.py"
-        ],
-        "timeout_ms": 10000,
-        "priority": 1,
-        "enabled": true,
-        "_reg": 45
-      },
-      {
-        "id": "santa-method-writer",
-        "type": "exec",
-        "tools": "Task|Agent",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/santa-method-writer.py"
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 46
-      },
-      {
-        "id": "security-semgrep-tracker",
-        "type": "exec",
-        "tools": "Bash",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/security-semgrep-tracker.py",
-          "post-tool-use"
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 47
-      },
-      {
-        "id": "leanctx-observe-post",
-        "type": "exec",
-        "tools": "Bash",
-        "cmd": [
-          "lean-ctx",
-          "hook",
-          "observe"
-        ],
-        "timeout_ms": 5000,
-        "enabled": false,
-        "_reg": 48,
-        "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
-      },
-      {
-        "id": "jcm-mcp-used",
-        "type": "exec",
-        "tools": "mcp__jcodemunch__.*",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/jcodemunch-enforce.py",
-          "mcp-used"
-        ],
-        "timeout_ms": 3000,
-        "enabled": true,
-        "_reg": 51
-      }
+      {"id": "skill-invocation-tracker", "type": "exec", "tools": "Skill|Read", "cmd": ["{PY}", "{HOOKS}/skill-invocation-tracker.py"], "timeout_ms": 5000, "enabled": true},
+      {"id": "fullstack-post", "type": "advisory", "tools": "Write|Edit|MultiEdit|NotebookEdit", "cmd": ["{PY}", "{HOOKS}/fullstack-skills-reminder.py", "post-tool-use"], "timeout_ms": 10000, "priority": 0, "enabled": true},
+      {"id": "codex-capture", "type": "advisory", "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/codex-capture.py"], "timeout_ms": 5000, "priority": 2, "enabled": true},
+      {"id": "post-write-aggregator", "type": "advisory", "tools": "Write|Edit|MultiEdit|NotebookEdit", "cmd": ["{PY}", "{HOOKS}/post-write-aggregator.py"], "timeout_ms": 20000, "priority": 0, "enabled": true, "_note": "carries index-lifecycle post-write + dox scaffold + doc-enforcer chain internally"},
+      {"id": "desloppify-cleanup", "type": "advisory", "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/desloppify-cleanup.py"], "timeout_ms": 10000, "priority": 1, "enabled": true},
+      {"id": "santa-method-writer", "type": "exec", "tools": "Task|Agent", "cmd": ["{PY}", "{HOOKS}/santa-method-writer.py"], "timeout_ms": 5000, "enabled": true},
+      {"id": "security-semgrep-tracker", "type": "exec", "tools": "Bash|mcp__semgrep__.*", "cmd": ["{PY}", "{HOOKS}/security-semgrep-tracker.py", "post-tool-use"], "timeout_ms": 5000, "enabled": true},
+      {"id": "jcm-mcp-used", "type": "exec", "tools": "mcp__jcodemunch__.*", "cmd": ["{PY}", "{HOOKS}/jcodemunch-enforce.py", "mcp-used"], "timeout_ms": 3000, "enabled": true},
+      {"id": "mcp-post-hints", "type": "advisory", "tools": "Write|Edit|MultiEdit|NotebookEdit", "cmd": ["{PY}", "{HOOKS}/mcp-post-hints.py"], "timeout_ms": 3000, "priority": 1, "enabled": true, "_note": "call-X-now MCP hints after writes: semgrep (security files), context7 (new imports), reticle/playwright (FE edit + app running), postgres-patterns (migrations), jcodemunch blast radius (>3 files); deduped per session"}
+    ],
+    "post-tool-use-failure": [
+      {"id": "tool-failure-hint", "type": "advisory", "tools": "Edit|Write|Bash", "cmd": ["{PY}", "{HOOKS}/tool-failure-hint.py"], "timeout_ms": 3000, "priority": 0, "enabled": true}
     ],
     "stop": [
-      {
-        "id": "hard-completion-gate",
-        "type": "gate",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/hard-completion-gate.py"
-        ],
-        "timeout_ms": 15000,
-        "enabled": true,
-        "_reg": 52
-      },
-      {
-        "id": "invoke-suite-gate",
-        "type": "gate",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/invoke-suite-gate.py"
-        ],
-        "timeout_ms": 15000,
-        "enabled": true,
-        "_reg": 59,
-        "_note": "second Stop gate link (Charter \u00a73 \u2014 NOT absorbed into hard-completion-gate)."
-      },
-      {
-        "id": "index-flush",
-        "type": "exec",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/index-lifecycle.py",
-          "flush"
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_new": "HANDOFF P3-T4: drain pending write journal at Stop (Spec B 2.5)."
-      },
-      {
-        "id": "fullstack-stop",
-        "type": "advisory",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/fullstack-skills-reminder.py",
-          "stop"
-        ],
-        "timeout_ms": 15000,
-        "priority": 0,
-        "enabled": true,
-        "_reg": 53
-      },
-      {
-        "id": "session-memory-writer",
-        "type": "exec",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/session-memory-writer.py"
-        ],
-        "timeout_ms": 12000,
-        "enabled": true,
-        "_reg": 54
-      },
-      {
-        "id": "session-learning-extractor",
-        "type": "exec",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/session-learning-extractor.py"
-        ],
-        "timeout_ms": 15000,
-        "enabled": true,
-        "_reg": 55
-      },
-      {
-        "id": "session-lifecycle-stop",
-        "type": "exec",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/session-lifecycle.py",
-          "stop"
-        ],
-        "timeout_ms": 10000,
-        "enabled": true,
-        "_reg": 56
-      },
-      {
-        "id": "leanctx-observe-stop",
-        "type": "exec",
-        "cmd": [
-          "lean-ctx",
-          "hook",
-          "observe"
-        ],
-        "timeout_ms": 5000,
-        "enabled": false,
-        "_reg": 57,
-        "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
-      },
-      {
-        "id": "weekly-retro-trigger",
-        "type": "exec",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/weekly-retro-trigger.py",
-          "stop"
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 58,
-        "_note": "P4-T9 scheduler: fires effectiveness report + weight updater when >7d stale."
-      }
+      {"id": "hard-completion-gate", "type": "gate", "cmd": ["{PY}", "{HOOKS}/hard-completion-gate.py"], "timeout_ms": 15000, "enabled": true},
+      {"id": "invoke-suite-gate", "type": "gate", "cmd": ["{PY}", "{HOOKS}/invoke-suite-gate.py"], "timeout_ms": 15000, "enabled": true},
+      {"id": "index-flush", "type": "exec", "async": true, "cmd": ["{PY}", "{HOOKS}/index-lifecycle.py", "flush"], "timeout_ms": 5000, "enabled": true},
+      {"id": "session-lifecycle-stop", "type": "exec", "async": true, "cmd": ["{PY}", "{HOOKS}/session-lifecycle.py", "stop"], "timeout_ms": 10000, "enabled": true},
+      {"id": "weights-loop", "type": "exec", "async": true, "cmd": ["{PY}", "{HOOKS}/weekly-retro-trigger.py", "stop"], "timeout_ms": 5000, "enabled": true, "_note": "effectiveness report + weight updater when >7d stale"}
+    ],
+    "subagent-start": [
+      {"id": "subagent-context", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/subagent-context.py"], "timeout_ms": 3000, "priority": 0, "enabled": true, "_note": "write protocol + no-servers/no-commit + surface pointer (D3; replaces opus-guard prompt mutation)"}
     ],
     "subagent-stop": [
-      {
-        "id": "santa-subagent",
-        "type": "exec",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/santa-method-writer.py",
-          "subagent-stop"
-        ],
-        "timeout_ms": 5000,
-        "enabled": true,
-        "_reg": 60
-      },
-      {
-        "id": "session-lifecycle-subagent",
-        "type": "exec",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/session-lifecycle.py",
-          "subagent-stop"
-        ],
-        "timeout_ms": 8000,
-        "enabled": true,
-        "_reg": 61
-      }
+      {"id": "session-lifecycle-subagent", "type": "exec", "cmd": ["{PY}", "{HOOKS}/session-lifecycle.py", "subagent-stop"], "timeout_ms": 8000, "enabled": true}
     ],
     "pre-compact": [
-      {
-        "id": "leanctx-observe-precompact",
-        "type": "exec",
-        "cmd": [
-          "lean-ctx",
-          "hook",
-          "observe"
-        ],
-        "timeout_ms": 5000,
-        "enabled": false,
-        "_reg": 62,
-        "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
-      },
-      {
-        "id": "session-lifecycle-precompact",
-        "type": "exec",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/session-lifecycle.py",
-          "pre-compact"
-        ],
-        "timeout_ms": 8000,
-        "enabled": true,
-        "_reg": 63
-      }
+      {"id": "session-lifecycle-precompact", "type": "exec", "cmd": ["{PY}", "{HOOKS}/session-lifecycle.py", "pre-compact"], "timeout_ms": 8000, "enabled": true}
+    ],
+    "post-compact": [
+      {"id": "session-lifecycle-postcompact", "type": "exec", "cmd": ["{PY}", "{HOOKS}/session-lifecycle.py", "post-compact"], "timeout_ms": 5000, "enabled": true, "_note": "no-op: PostCompact output is display-only; the handoff is re-injected by session-lifecycle-start when source==compact"}
+    ],
+    "config-change": [
+      {"id": "permissions-deny-guard", "type": "gate", "cmd": ["{PY}", "{HOOKS}/settings-permissions-selfheal.py", "config-change"], "timeout_ms": 3000, "enabled": true}
+    ],
+    "teammate-idle": [
+      {"id": "teammate-idle-gate", "type": "gate", "cmd": ["{PY}", "{HOOKS}/teammate-idle-gate.py"], "timeout_ms": 3000, "enabled": true}
     ],
     "session-end": [
-      {
-        "id": "settings-permissions-selfheal-end",
-        "type": "exec",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/settings-permissions-selfheal.py"
-        ],
-        "timeout_ms": 3000,
-        "priority": 0,
-        "enabled": true,
-        "_new": "2026-07-19: the session-start copy of this link cannot help the session it runs in — Claude Code loads settings.json at process startup, BEFORE hooks fire, so a session that started dirty keeps the stale permissions in memory and flushes them again on exit. Running the same repair at SessionEnd cleans the file AFTER that flush, so the next process to start reads a correct file. Start+end together break the loop."
-      },
-      {
-        "id": "leanctx-observe-sessionend",
-        "type": "exec",
-        "cmd": [
-          "lean-ctx",
-          "hook",
-          "observe"
-        ],
-        "timeout_ms": 5000,
-        "enabled": false,
-        "_reg": 64,
-        "_off": "2026-07-18 de-noise: duplicate of settings-level hook / zero-emission tax"
-      },
-      {
-        "id": "index-session-end",
-        "type": "exec",
-        "cmd": [
-          "{PY}",
-          "{HOOKS}/index-lifecycle.py",
-          "session-end"
-        ],
-        "timeout_ms": 10000,
-        "enabled": true,
-        "_reg": 65,
-        "_swap": "REPLACES watch-daemon-session-end.py (HANDOFF P3-T2). That file only forwarded to this exact command; deregistered + atticked in P4-T7."
-      }
+      {"id": "settings-permissions-selfheal-end", "type": "exec", "cmd": ["{PY}", "{HOOKS}/settings-permissions-selfheal.py"], "timeout_ms": 3000, "enabled": true, "_note": "repairs AFTER the exiting session flushes its in-memory permissions"},
+      {"id": "index-session-end", "type": "exec", "cmd": ["{PY}", "{HOOKS}/index-lifecycle.py", "session-end"], "timeout_ms": 10000, "enabled": true}
     ]
   }
 }

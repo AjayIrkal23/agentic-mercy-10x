@@ -1,0 +1,6 @@
+{
+  "session_id": "doctor-fixture",
+  "hook_event_name": "TeammateIdle",
+  "teammate_name": "impl-be",
+  "cwd": "/tmp"
+}

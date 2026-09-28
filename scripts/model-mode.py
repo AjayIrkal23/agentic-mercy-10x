@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
-"""Set/clear/show the model-mode for the CURRENT project (per-project, NOT global).
+"""Set/clear/show the subagent model mode for the CURRENT repo (per-repo, not global).
 
-Fixes the old global `~/.claude/state/<mode>-only-mode` flags leaking across every
-concurrent session. A mode set here applies ONLY to the git repo you run it from,
-so different projects can pin different models at the same time.
+Usage (run from inside the repo):
+  model-mode.py sonnet | opus | fable   # pin this model for THIS repo only
+  model-mode.py clear | off | smart      # remove this repo's pin -> smart routing
+  model-mode.py show | status            # show this repo's pin + the global flags
 
-Usage (run from inside the project dir):
-  model-mode.py sonnet | opus | fable   # force this model for THIS project only
-  model-mode.py clear | off | smart      # remove this project's override -> smart routing
-  model-mode.py show | status            # show this project's mode + effective result
-
-Global default (optional, all projects with no override):
-  touch   ~/.claude/state/<mode>-only-mode
-  rm      ~/.claude/state/<mode>-only-mode
+Global kill-switch (every repo, wins over the per-repo pin):
+  touch ~/.claude/state/<mode>-only-mode   /   rm ~/.claude/state/<mode>-only-mode
 """
 from __future__ import annotations
 
@@ -20,41 +15,40 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path.home() / ".claude" / "hooks"))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
 try:
     from lib import model_mode as mm
+    from lib import platform as _plat
 except Exception as exc:  # pragma: no cover
     print(f"model-mode: cannot load helper ({exc})", file=sys.stderr)
     raise SystemExit(1)
 
+_CLEAR = ("clear", "off", "smart", "none", "reset", "auto")
+
 
 def main(argv: list[str]) -> int:
-    arg = (argv[0].lower() if argv else "show")
-    key = mm.project_key(cwd=os.getcwd())
-    modes_dir = mm.STATE / "model-modes"
-    modes_dir.mkdir(parents=True, exist_ok=True)
-    pm = modes_dir / key
+    arg = argv[0].lower() if argv else "show"
+    cwd = os.getcwd()
+    key = mm.repo_key(cwd)
 
     if arg in mm.MODES:
-        pm.write_text(arg + "\n", encoding="utf-8")
-        print(f"[model-mode] project '{key}' -> {arg}  (this project only; other sessions unaffected)")
+        if not mm.set_mode(cwd, arg):
+            print("[model-mode] could not write the mode file", file=sys.stderr)
+            return 1
+        print(f"[model-mode] {key} -> {arg}  (this repo only; other repos unaffected)")
         return 0
-    if arg in ("clear", "off", "smart", "none", "reset", "auto"):
-        try:
-            pm.unlink()
-            print(f"[model-mode] project '{key}' override cleared -> smart routing")
-        except FileNotFoundError:
-            print(f"[model-mode] project '{key}' had no override (already smart routing)")
+    if arg in _CLEAR:
+        mm.set_mode(cwd, None)
+        print(f"[model-mode] {key} pin cleared -> smart routing")
         return 0
-    if arg in ("show", "status", ""):
-        proj = pm.read_text(encoding="utf-8").strip() if pm.is_file() else None
-        globals_set = [m for m in mm.MODES if (mm.STATE / f"{m}-only-mode").is_file()]
-        eff, scope = mm.forced_mode(cwd=os.getcwd())
-        print(f"project key           : {key}")
-        print(f"this-project override : {proj or '(none)'}")
-        print(f"global default flags  : {', '.join(globals_set) or '(none)'}")
-        print(f"EFFECTIVE model       : {eff or 'smart routing'}"
-              + (f"  (from {scope})" if eff else ""))
+    if arg in ("show", "status"):
+        state = _plat.state_dir()
+        flags = [m for m in mm.MODES if (state / f"{m}-only-mode").is_file()]
+        pin = mm.forced_mode(cwd)
+        print(f"repo key            : {key}")
+        print(f"this-repo pin       : {pin or '(none)'}")
+        print(f"global kill-switch  : {', '.join(flags) or '(none)'}")
+        print(f"EFFECTIVE (guards)  : {flags[0] if flags else (pin or 'smart routing')}")
         return 0
 
     print(__doc__)

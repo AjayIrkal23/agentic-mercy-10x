@@ -14,8 +14,8 @@ Rate limiting: Only fires ONCE per conversation (per session) using a filesystem
 sentinel at STATE_DIR/{safe_cid}.codex-capture.flag. Sentinels expire naturally
 via the 24h STATE_DIR TTL cleanup.
 
-Always exits 0 — advisory only, never blocks.
-Output: JSON {hookSpecificOutput: {hookEventName: "PostToolUse", followup_message: "..."}}
+Always exits 0 — advisory only, never blocks. Honors CLAUDE_HOOK_DOCTOR (no writes).
+Output: JSON {hookSpecificOutput: {hookEventName: "PostToolUse", additionalContext: "..."}}
 """
 
 import json
@@ -178,7 +178,8 @@ def main() -> None:
         sys.exit(0)
 
     tool_name = payload.get("tool_name", "")
-    if tool_name not in ("Write", "Edit", "MultiEdit"):
+    if tool_name not in ("Write", "Edit", "MultiEdit") or os.environ.get("CLAUDE_HOOK_DOCTOR"):
+        print("{}")
         sys.exit(0)
 
     tool_input = payload.get("tool_input", {})
@@ -209,17 +210,16 @@ def main() -> None:
     workspace = payload.get("cwd", "") or os.getcwd()
     codex_path = find_codex(workspace)
 
-    # Record the CODEX nag via the shared persist primitive (P4-T6/C18) so
-    # cross-writer CODEX prompting is coordinated. Non-suppressing here (the
-    # per-session sentinel above already dedups this hook). Fail-open.
-    try:
-        from lib import persist_common as _pc
-        _pc.already_persisted(cid, "codex-nag", f"{workspace}:{os.path.basename(file_path)}")
-    except Exception:
-        pass
-
     # Emit advisory
     emit_advisory(file_path, tool_name, codex_path)
+
+    # Record the CODEX nag in the shared persist ledger AFTER emitting (the
+    # per-session sentinel below is what actually dedups this hook). Fail-open.
+    try:
+        from lib import persist_common as _pc
+        _pc.mark_persisted(cid, "codex-nag", f"{workspace}:{os.path.basename(file_path)}")
+    except Exception:
+        pass
 
     # Write sentinel so subsequent writes in this session are suppressed
     try:

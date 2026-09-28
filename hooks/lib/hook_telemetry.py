@@ -25,8 +25,8 @@ from typing import Any
 
 try:  # tolerate being imported before the package is on sys.path
     from lib import platform as _plat
-except Exception:  # noqa: BLE001
-    import platform as _plat  # type: ignore
+except Exception:  # noqa: BLE001 - the stdlib `platform` module is NOT a substitute
+    _plat = None  # type: ignore
 
 
 def _today_file() -> Path:
@@ -36,7 +36,7 @@ def _today_file() -> Path:
 
 def _debug_enabled() -> bool:
     try:
-        return (_plat.state_dir() / "hook-debug").exists()
+        return _plat is not None and (_plat.state_dir() / "hook-debug").exists()
     except OSError:
         return False
 
@@ -46,8 +46,11 @@ def record(event: str, link_id: str, **fields: Any) -> None:
 
     ``event`` — hook event (UserPromptSubmit, PreToolUse, Stop, ...).
     ``link_id`` — the specific hook/link/module id that fired.
-    ``**fields`` — ms, exit, chars_out, decision, budget_hit, error, session, etc.
+    ``**fields`` — ms, exit, chars_out, decision, budget_hit, error, session, tool, etc.
+    No-op when the platform helper could not be imported (never raises).
     """
+    if _plat is None:
+        return
     rec: dict[str, Any] = {
         "ts": round(time.time(), 3),
         "event": event,

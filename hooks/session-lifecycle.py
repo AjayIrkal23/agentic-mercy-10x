@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Session lifecycle hook: SessionStart (resume detection) + Stop (breadcrumb saving).
+"""Session lifecycle hook: SessionStart (last-session breadcrumb; handoff re-injection
+when source == "compact") + Stop (breadcrumb saving) + PreCompact (handoff snapshot) +
+PostCompact (no-op; its output is display-only) + SubagentStop (subagent records).
 
-argv[1]: "session-start", "stop", "pre-compact", or "subagent-stop"
+argv[1]: "session-start" | "stop" | "pre-compact" | "post-compact" | "subagent-stop"
 stdin:   Claude Code hook JSON payload
 stdout:  JSON with hookSpecificOutput; exit always 0 (fail open)
+Honors CLAUDE_HOOK_DOCTOR (no disk writes, prints {}).
 """
 from __future__ import annotations
 
@@ -25,9 +28,9 @@ def _safe_cid(cid: str) -> str:
 
 
 def _workspace(payload: dict) -> Path | None:
-    roots = payload.get("workspace_roots", [])
-    if roots:
-        return Path(roots[0])
+    cwd = payload.get("cwd")
+    if isinstance(cwd, str) and cwd:
+        return Path(cwd)
     try:
         return Path(os.getcwd())
     except OSError:
@@ -90,17 +93,16 @@ def session_start() -> None:
     workspace = _workspace(payload)
     parts: list[str] = []
 
-    if workspace:
-        # 1. .planning/STATE.md — active phase/milestone
-        state_md = workspace / ".planning" / "STATE.md"
-        if state_md.is_file():
-            try:
-                lines = state_md.read_text(encoding="utf-8", errors="replace")[:500].splitlines()[:20]
-                parts.append("ACTIVE PLANNING STATE (.planning/STATE.md):\n" + "\n".join(lines))
-            except OSError:
-                pass
+    # Post-compaction re-injection: SessionStart(source=="compact") is the only
+    # compaction-time channel whose additionalContext reaches the model (PostCompact
+    # output is display-only).
+    if payload.get("source") == "compact":
+        handoff = _load_handoff(payload)
+        if handoff:
+            parts.append(_handoff_summary(handoff, "RESUMED FROM PRE-COMPACT SNAPSHOT:"))
 
-        # 2. .continue-here.md — resume prompt
+    if workspace:
+        # .continue-here.md — resume prompt
         continue_md = workspace / ".continue-here.md"
         if continue_md.is_file():
             try:
@@ -170,11 +172,10 @@ def session_start() -> None:
         print("{}")
         return
 
-    additional_context = "\n\n".join(parts)
-    out = {
-        "additionalContext": additional_context,
-    }
-    print(json.dumps(out))
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "SessionStart",
+        "additionalContext": "\n\n".join(parts),
+    }}))
 
 
 def stop() -> None:
@@ -311,17 +312,6 @@ def pre_compact() -> None:
         "conversation_id": cid,
     }
 
-    # --- Active phase (from .planning/STATE.md) ---
-    workspace = _workspace(payload)
-    if workspace:
-        state_md = workspace / ".planning" / "STATE.md"
-        if state_md.is_file():
-            try:
-                lines = state_md.read_text(encoding="utf-8", errors="replace").splitlines()[:10]
-                handoff["active_phase"] = "\n".join(lines).strip()
-            except OSError:
-                pass
-
     # --- Write count (from desloppify state) ---
     deslop_file = STATE_DIR / f"{safe}.desloppify.json"
     if deslop_file.is_file():
@@ -376,21 +366,43 @@ def pre_compact() -> None:
         pass
 
     # Emit as additionalContext so it's included in the compaction summary
-    summary_lines = [
-        "PRE-COMPACT STATE SNAPSHOT (resume hook will re-inject this):",
-        f"  conversation_id: {cid}",
+    print(json.dumps({"additionalContext": _handoff_summary(
+        handoff, "PRE-COMPACT STATE SNAPSHOT (SessionStart source=compact re-injects this):")}))
+
+
+def _handoff_summary(handoff: dict, title: str) -> str:
+    return "\n".join([
+        title,
+        f"  conversation_id: {handoff.get('conversation_id', '')}",
         f"  write_count: {handoff.get('write_count', 0)}",
         f"  last_skill_reminders: {handoff.get('last_skill_reminders', [])}",
         f"  gate_states: {handoff.get('gate_states', {})}",
         f"  semgrep_ran: {handoff.get('semgrep_ran', False)}",
-    ]
-    if handoff.get("active_phase"):
-        summary_lines.append(f"  active_phase: {handoff['active_phase'][:120]}")
+    ])
 
-    out = {
-        "additionalContext": "\n".join(summary_lines),
-    }
-    print(json.dumps(out))
+
+def _load_handoff(payload: dict) -> dict:
+    """The pre-compact handoff for this conversation, or {}."""
+    cid = (payload.get("conversation_id") or payload.get("session_id") or "")
+    safe = _safe_cid(cid) if cid else ""
+    handoff_path = STATE_DIR / f"{safe}.precompact-handoff.json"
+    if not safe or not handoff_path.is_file():
+        return {}
+    try:
+        data = json.loads(handoff_path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except (json.JSONDecodeError, OSError):
+        return {}
+
+
+def post_compact() -> None:
+    """PostCompact hook: no-op. Its stdout is display-only (never reaches the model);
+    the handoff is re-injected by session_start() when source == "compact"."""
+    try:
+        sys.stdin.read()
+    except Exception:  # noqa: BLE001
+        pass
+    print("{}")
 
 
 def subagent_stop() -> None:
@@ -403,13 +415,13 @@ def subagent_stop() -> None:
     cid = payload.get("conversation_id") or payload.get("session_id") or "unknown"
     safe = re.sub(r"[^a-zA-Z0-9_-]", "_", cid)
     state_file = STATE_DIR / f"{safe}.subagents.json"
+    # Claude Code SubagentStop payload fields (2.1.x): agent_id, agent_type,
+    # agent_transcript_path.
     record = {
         "ts": datetime.now(timezone.utc).isoformat(),
         "agent_id": payload.get("agent_id", ""),
-        "subagent_type": payload.get("subagent_type", ""),
-        "status": payload.get("status", ""),
-        "duration_ms": payload.get("duration_ms", 0),
-        "exit_code": payload.get("exit_code", 0),
+        "agent_type": payload.get("agent_type", ""),
+        "agent_transcript_path": payload.get("agent_transcript_path", ""),
     }
     try:
         existing = []
@@ -429,12 +441,16 @@ def subagent_stop() -> None:
 if __name__ == "__main__":
     try:
         mode = sys.argv[1] if len(sys.argv) > 1 else "session-start"
-        if mode == "session-start":
+        if os.environ.get("CLAUDE_HOOK_DOCTOR"):
+            print("{}")
+        elif mode == "session-start":
             session_start()
         elif mode == "stop":
             stop()
         elif mode == "pre-compact":
             pre_compact()
+        elif mode == "post-compact":
+            post_compact()
         elif mode == "subagent-stop":
             subagent_stop()
         else:

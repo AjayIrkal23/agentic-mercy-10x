@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "_about": "Single source of truth for subagent/workflow/invoke model selection. Sonnet is the default; Opus handles UI/UX, implementation, and adversarial review. Fable is explicit opt-in only.",
+  "_about": "Single source of truth for subagent/workflow/invoke model selection (2026-09-27). Sonnet is the default (also env CLAUDE_CODE_SUBAGENT_MODEL=sonnet, which since CC 2.1.251 sets only the DEFAULT); Opus handles UI/UX, implementation and adversarial review (agent_pins + invoke_categories); Fable is explicit opt-in only. Guard precedence: session flag > per-project mode (state/model-modes) > explicit model param > agent pin > [label] > default. model_ids are the Agent-tool ALIASES (the valid-model set), not API ids.",
   "model_ids": {
-    "sonnet": "claude-sonnet-4-6",
-    "opus": "claude-opus-4-8",
-    "fable": "claude-fable-5-1"
+    "sonnet": "sonnet",
+    "opus": "opus",
+    "fable": "fable"
   },
   "default": "sonnet",
   "agent_pins": {
@@ -14,7 +14,8 @@
       "implementation-engineer",
       "backend-implementor-specialist",
       "frontend-implementor-specialist",
-      "integrator-specialist"
+      "integrator-specialist",
+      "santa-reviewer"
     ],
     "sonnet": [
       "explore",
@@ -39,6 +40,12 @@
     "IMPLEMENT": "opus",
     "REVIEW": "opus",
     "DESIGN": "opus"
+  },
+  "effort_defaults": {
+    "_comment": "Documentation only (D16): env CLAUDE_CODE_SUBAGENT_EFFORT is the default; per-agent `effort:` frontmatter overrides it. opus_agents = implementors/santa/debug/uiux (xhigh); closers = docs-sync/deadcode/qa/memory-codex (medium).",
+    "default": "high",
+    "opus_agents": "xhigh",
+    "closers": "medium"
   },
   "override_phrases": {
     "_comment": "Explicit user phrases in the prompt that force a model for that turn.",

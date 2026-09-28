@@ -1,0 +1,7 @@
+{
+  "session_id": "doctor-fixture",
+  "hook_event_name": "SubagentStart",
+  "agent_id": "agent-doctor-0001",
+  "agent_type": "general-purpose",
+  "cwd": "/tmp"
+}

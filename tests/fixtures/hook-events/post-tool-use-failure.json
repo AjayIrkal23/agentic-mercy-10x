@@ -1,0 +1,12 @@
+{
+  "session_id": "doctor-fixture",
+  "hook_event_name": "PostToolUseFailure",
+  "tool_name": "Edit",
+  "tool_input": {
+    "file_path": "/tmp/link_doctor_probe.py",
+    "old_string": "a",
+    "new_string": "b"
+  },
+  "error": "File has not been read yet. Read it first before writing to it.",
+  "is_interrupt": false
+}

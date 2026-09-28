@@ -182,34 +182,40 @@ def test_full_input_echoed():
         "extra_key": {"nested": [1, 2]},
     })
     ui = resolved(out)
-    # every original key preserved; only model/description/prompt overridden.
-    # The prompt is APPENDED to (read-then-write protocol, 2026-07-19), never
-    # replaced or truncated — the original text must still lead it verbatim.
-    assert ui["prompt"].startswith("a long prompt that must survive")
-    assert "<!-- opus-guard:write-protocol -->" in ui["prompt"]
+    # every original key preserved; only model/description change. The prompt
+    # and name are never touched (write protocol moved to SubagentStart, D3).
+    assert ui["prompt"] == "a long prompt that must survive"
     assert ui["extra_key"] == {"nested": [1, 2]}
     assert ui["subagent_type"] == "general-purpose"
     assert ui["model"] == "sonnet"
 
 
-def test_write_protocol_injected_once():
-    """Re-running the guard over its own output must not stack the protocol."""
-    first = resolved(run_agent({
-        "description": "do a thing",
-        "subagent_type": "general-purpose",
-        "prompt": "original task",
-    }))
-    second = resolved(run_agent({
-        "description": "[sonnet] do a thing",
-        "subagent_type": "general-purpose",
-        "prompt": first["prompt"],
-    }))
-    marker = "<!-- opus-guard:write-protocol -->"
-    assert first["prompt"].count(marker) == 1
-    assert second["prompt"].count(marker) == 1
-    # the protocol names the sanctioned editor and the banned forms
-    assert "ctx_patch" in first["prompt"]
-    assert "sed -i" in first["prompt"]
+def test_name_never_rewritten():
+    ui = resolved(run_agent({"description": "x", "subagent_type": "general-purpose",
+                             "name": "impl-crud-opus"}))
+    assert ui["name"] == "impl-crud-opus"
+
+
+def test_explicit_model_param_beats_pin():
+    # the user's explicit word wins over an agent pin (D2)
+    ui = resolved(run_agent({"description": "build it", "model": "sonnet",
+                             "subagent_type": "implementation-engineer"}))
+    assert ui["model"] == "sonnet"
+    assert ui["description"] == "[sonnet] build it"
+
+
+def test_per_project_mode_beats_explicit(monkeypatch, tmp_path):
+    mod = _load_module()
+    mod._POLICY_CACHE = None
+    monkeypatch.setattr(mod, "_flag_paths", lambda: {})
+    monkeypatch.setattr(mod._mm, "modes_dir", lambda: tmp_path / "model-modes")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    assert mod._mm.set_mode(str(repo), "opus")
+    assert mod._resolve_required("general-purpose", "sonnet", "[sonnet] x", str(repo)) == \
+        ("opus", "per-project model mode")
+    assert mod._mm.set_mode(str(repo), None)
+    assert mod._resolve_required("general-purpose", "sonnet", "x", str(repo))[0] == "sonnet"
 
 
 # --- policy-load fail-open (in-process; corrupt/missing policy -> literals) --

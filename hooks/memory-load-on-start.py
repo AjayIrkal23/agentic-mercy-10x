@@ -1,254 +1,138 @@
 #!/usr/bin/env python3
-"""
-memory-load-on-start.py — SessionStart hook
+"""memory-load-on-start.py — SessionStart advisory (D9).
 
-Queries the Memory MCP server for project-relevant entities and injects
-the top-5 as "MEMORY: ..." lines into additionalContext.
+Reads the Memory MCP jsonl store DIRECTLY — no subprocess, no nested `claude`
+(the old `claude --print` bridge never worked and would have recursed into this
+same SessionStart chain).
 
-Design principles:
-  - Bulletproof: any failure exits 0 silently (never blocks session startup)
-  - MCP calls via claude CLI subprocess (avoids direct HTTP to MCP socket)
-  - Cap output at MAX_CHARS to avoid bloating session context
-  - Two search passes: project-name query + workspace-path query
-  - Deduplicates results before formatting
+  path = ~/.claude.json -> mcpServers.memory.env.MEMORY_FILE_PATH
+         else <claude_dir>/memory/memory.jsonl
+Entities whose name contains the active repo's name, or starts with
+``pref::global``, are emitted: <=5 entities x <=3 (latest) observations,
+<=1,200 chars. {} when the file is absent or nothing matches. Fail-open.
 """
+from __future__ import annotations
 
 import json
 import os
-import subprocess
 import sys
 from pathlib import Path
 
-# ── Configuration ─────────────────────────────────────────────────────────────
+_HOOKS = Path(__file__).resolve().parent
+if str(_HOOKS) not in sys.path:
+    sys.path.insert(0, str(_HOOKS))
+try:
+    from lib import platform as _plat
+    from lib import repo_context as _rc
+except Exception:  # noqa: BLE001
+    _plat = None  # type: ignore
+    _rc = None  # type: ignore
 
-MAX_ENTITIES = 5        # max entities to inject
-MAX_CHARS = 800         # hard cap on injected additionalContext text
-MCP_TIMEOUT = 8         # seconds to wait for MCP subprocess
+MAX_ENTITIES = 5
+MAX_OBS = 3
+MAX_CHARS = 1200
 
-# Name of the memory MCP server as registered in settings.json
-# Check your settings.json mcpServers key if this differs
-MCP_SERVER_NAME = "memory"
 
-# ── MCP Query Helpers ──────────────────────────────────────────────────────────
+def _claude_dir() -> Path:
+    if _plat is not None:
+        return _plat.claude_dir()
+    env = os.environ.get("CLAUDE_CONFIG_DIR")
+    return Path(env).expanduser() if env else Path("~/.claude").expanduser()
 
-def _query_memory_mcp(query: str) -> list[dict]:
-    """
-    Call mcp__memory__search_nodes via claude CLI subprocess.
 
-    Returns list of entity dicts: [{name, entityType, observations: [str]}]
-    Returns [] on any failure (MCP unavailable, timeout, parse error).
-
-    The Memory MCP `search_nodes` tool returns:
-      {entities: [{name, entityType, observations: [...]}]}
-    """
+def memory_path() -> Path:
     try:
-        # Use the claude CLI to invoke an MCP tool call
-        # This approach works without knowing the MCP socket path directly
-        cmd = [
-            "claude",
-            "--print",
-            "--output-format", "json",
-            "--no-verbose",
-            f"Call mcp__{MCP_SERVER_NAME}__search_nodes with query: {query!r}. "
-            f"Return only the raw JSON result, no explanation."
-        ]
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            timeout=MCP_TIMEOUT,
-        )
-        if result.returncode != 0:
-            return []
-
-        stdout = result.stdout.strip()
-        if not stdout:
-            return []
-
-        # Try to parse as JSON — claude --output-format json wraps in {type, result}
-        try:
-            outer = json.loads(stdout)
-            # The result may be nested under various keys depending on claude CLI version
-            if isinstance(outer, dict):
-                # Try common wrappers
-                inner = outer.get("result") or outer.get("content") or outer.get("entities") or outer
-                if isinstance(inner, str):
-                    inner = json.loads(inner)
-                if isinstance(inner, dict):
-                    entities = inner.get("entities", [])
-                elif isinstance(inner, list):
-                    entities = inner
-                else:
-                    entities = []
-            elif isinstance(outer, list):
-                entities = outer
-            else:
-                entities = []
-        except (json.JSONDecodeError, TypeError):
-            entities = []
-
-        return entities[:MAX_ENTITIES * 2]  # fetch more, deduplicate later
-
-    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
-        return []
-    except Exception:
-        return []
+        cfg = json.loads((Path.home() / ".claude.json").read_text(encoding="utf-8"))
+        env = ((cfg.get("mcpServers") or {}).get("memory") or {}).get("env") or {}
+        p = env.get("MEMORY_FILE_PATH")
+        if isinstance(p, str) and p:
+            return Path(p).expanduser()
+    except Exception:  # noqa: BLE001
+        pass
+    return _claude_dir() / "memory" / "memory.jsonl"
 
 
-def _query_memory_direct(query: str) -> list[dict]:
-    """
-    Fallback: read memory.jsonl directly and do simple text search.
-    Used when claude CLI is unavailable or fails.
-    Returns [] if memory file not found.
-    """
-    memory_paths = [
-        Path.home() / "mcp-data" / "memory.jsonl",
-        Path.home() / ".config" / "memory" / "memory.jsonl",
-    ]
-    for mp in memory_paths:
-        if mp.is_file():
-            break
-    else:
-        return []
-
-    entities = []
-    query_lower = query.lower()
+def load_entities(path: Path) -> list[dict]:
+    out: list[dict] = []
     try:
-        with open(mp, encoding="utf-8", errors="replace") as f:
-            for line in f:
+        with open(path, encoding="utf-8", errors="replace") as fh:
+            for line in fh:
                 line = line.strip()
                 if not line:
                     continue
                 try:
-                    entry = json.loads(line)
-                    # memory.jsonl format: {type, name, entityType, observations, ...}
-                    if entry.get("type") not in ("entity",):
-                        # Also accept lines that look like entity records
-                        if "name" not in entry and "entityType" not in entry:
-                            continue
-                    name = entry.get("name", "")
-                    obs = entry.get("observations", [])
-                    # Simple relevance: query terms appear in name or any observation
-                    text = (name + " " + " ".join(obs)).lower()
-                    if any(term in text for term in query_lower.split()):
-                        entities.append({
-                            "name": name,
-                            "entityType": entry.get("entityType", "unknown"),
-                            "observations": obs,
-                        })
-                except (json.JSONDecodeError, TypeError):
+                    rec = json.loads(line)
+                except ValueError:
                     continue
-        return entities
+                if isinstance(rec, dict) and rec.get("type") == "entity" and isinstance(rec.get("name"), str):
+                    out.append(rec)
     except OSError:
         return []
-
-
-def deduplicate(entities: list[dict]) -> list[dict]:
-    """Remove duplicate entities by name."""
-    seen = set()
-    out = []
-    for e in entities:
-        name = e.get("name", "")
-        if name and name not in seen:
-            seen.add(name)
-            out.append(e)
     return out
 
 
-def format_entity(entity: dict) -> str:
-    """Format one entity as a compact MEMORY: line."""
-    name = entity.get("name", "unknown")
-    entity_type = entity.get("entityType", "")
-    observations = entity.get("observations", [])
-
-    # First observation is most important; cap length
-    if observations:
-        obs_text = observations[0][:200]
-        if len(observations) > 1:
-            obs_text += f" [+{len(observations)-1} more]"
-    else:
-        obs_text = "(no observations)"
-
-    type_tag = f"[{entity_type}] " if entity_type and entity_type != "unknown" else ""
-    return f"MEMORY: {type_tag}{name} — {obs_text}"
+def select(entities: list[dict], repo_name: str) -> list[dict]:
+    needle = (repo_name or "").lower()
+    picked = [e for e in entities
+              if e["name"].lower().startswith("pref::global")
+              or (needle and needle in e["name"].lower())]
+    return picked[:MAX_ENTITIES]
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+def render(picked: list[dict]) -> str:
+    lines = ["## Stored project memory (Memory MCP)"]
+    for ent in picked:
+        lines.append(f"- {ent['name']} [{ent.get('entityType', '')}]")
+        obs = [str(o) for o in (ent.get("observations") or [])][-MAX_OBS:]
+        lines.extend(f"  - {o[:200]}" for o in obs)
+    return "\n".join(lines)[:MAX_CHARS]
 
-def main() -> None:
-    # Always exit 0 — any failure is silent
+
+def main() -> int:
     try:
         raw = sys.stdin.read()
-        if not raw.strip():
-            sys.exit(0)
-        payload = json.loads(raw)
-    except Exception:
-        sys.exit(0)
-
-    # Extract workspace and project name
+        payload = json.loads(raw) if raw.strip().startswith("{") else {}
+    except Exception:  # noqa: BLE001
+        payload = {}
     try:
-        workspace_roots = payload.get("workspace_roots") or []
-        if workspace_roots:
-            workspace = workspace_roots[0]
-        else:
-            workspace = payload.get("cwd") or os.getcwd()
-
-        project_name = Path(workspace).name if workspace else ""
-        workspace_norm = workspace.replace("/", " ").replace("-", " ").replace("_", " ")
-
-        if not project_name:
-            sys.exit(0)
-    except Exception:
-        sys.exit(0)
-
-    # Build search queries
-    queries = []
-    if project_name:
-        queries.append(project_name)
-    if workspace_norm and workspace_norm != project_name:
-        # Add cleaned path fragments as additional search terms
-        parts = [p for p in workspace_norm.split() if len(p) > 3][-3:]
-        if parts:
-            queries.append(" ".join(parts))
-
-    # Query MCP (try CLI first, then direct file fallback)
-    all_entities: list[dict] = []
-    for q in queries:
-        entities = _query_memory_mcp(q)
-        if not entities:
-            # Fallback to direct file read
-            entities = _query_memory_direct(q)
-        all_entities.extend(entities)
-
-    # Deduplicate and limit
-    unique = deduplicate(all_entities)[:MAX_ENTITIES]
-
-    if not unique:
-        # No memory found — exit silently (do not emit empty context block)
-        sys.exit(0)
-
-    # Format output
-    lines = [format_entity(e) for e in unique]
-    context_block = (
-        "## Stored Project Memory (auto-loaded from Memory MCP)\n"
-        + "\n".join(lines)
-        + "\n"
-    )
-
-    # Hard cap at MAX_CHARS
-    if len(context_block) > MAX_CHARS:
-        context_block = context_block[:MAX_CHARS - 3] + "..."
-
-    output = {
-        "hookSpecificOutput": {
+        repo = _rc.active_repo(payload) if _rc is not None else None
+        repo_name = repo.name if repo else Path(payload.get("cwd") or os.getcwd()).name
+        path = memory_path()
+        picked = select(load_entities(path), repo_name) if path.is_file() else []
+        parts = [render(picked)] if picked else []
+        directive = search_directive(repo.name if repo else "", str(payload.get("source") or ""))
+        if directive:
+            parts.append(directive)
+        if not parts:
+            print("{}")
+            return 0
+        print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "SessionStart",
-            "additionalContext": context_block,
-        }
-    }
-    sys.stdout.write(json.dumps(output))
-    sys.stdout.flush()
-    sys.exit(0)
+            "additionalContext": "\n".join(parts),
+        }}))
+    except Exception:  # noqa: BLE001
+        print("{}")
+    return 0
+
+
+def memory_server_configured() -> bool:
+    try:
+        cfg = json.loads((Path.home() / ".claude.json").read_text(encoding="utf-8"))
+        return "memory" in (cfg.get("mcpServers") or {})
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def search_directive(repo_name: str, source: str) -> str:
+    """One-line "call memory search now" for project work (a git repo, not $HOME).
+    Skipped after a compaction (the handoff already carries context)."""
+    if not repo_name or source == "compact" or not memory_server_configured():
+        return ""
+    safe = "".join(c for c in repo_name if c.isalnum() or c in "-_. ")[:60]
+    return (f"MCP: before project work call mcp__memory__search_nodes(\"{safe}\") "
+            "(then \"<repo> <topic>\" per task); on \"remember / going forward / we decided\" "
+            "→ add_observations.")
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

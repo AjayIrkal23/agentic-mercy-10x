@@ -1,104 +1,93 @@
-"""Per-project model-mode resolution — shared by opus-guard + workflow-model-guard.
+"""model_mode.py — per-project subagent model mode (D4).
 
-The problem this fixes: the old `~/.claude/state/<mode>-only-mode` flags are
-GLOBAL, so forcing (say) fable in one project's session leaks into every other
-concurrent session. This resolves a mode scoped to the CURRENT project instead,
-so multiple projects can each pin a different model without interfering.
+State file: ``<claude_dir>/state/model-modes/<repo_key>`` containing
+``sonnet`` | ``opus`` | ``fable``. Consumers: opus-guard (Agent tool),
+workflow-model-guard (Workflow tool), the prompt router (sets the mode from
+explicit override phrases via ``set_mode``) and
+``scripts/model-mode.py`` (CLI). The GLOBAL ``state/<mode>-only-mode`` flags stay
+the kill-switch and are checked by the guards themselves, before this module.
 
-Resolution order (first hit wins):
-  1. per-project override : ~/.claude/state/model-modes/<project-key>
-                            (file content = "sonnet" | "opus" | "fable")
-  2. global flag (legacy/default) : ~/.claude/state/<mode>-only-mode
-                            (presence; precedence sonnet > opus > fable)
-  3. None -> smart routing
-
-project-key = "<basename>-<sha1(realpath(git-root or cwd))[:12]>". The git root
-is used (not bare cwd) so every subdir of a repo shares one mode. Everything is
-fail-open: any error -> fall through, never break a hook.
+repo_key = ``<basename>-<sha1(realpath(git root or cwd))[:12]>`` — the git root
+(via lib.repo_context.git_root, which never treats $HOME as a repo) so every
+subdir of a repo shares one mode. Everything fails soft: any error -> None /
+False, never raises.
 """
 from __future__ import annotations
 
 import hashlib
 import os
-import subprocess
 from pathlib import Path
 
-STATE = Path.home() / ".claude" / "state"
+try:
+    from lib import platform as _plat
+    from lib import repo_context as _rc
+except Exception:  # noqa: BLE001 - never let an import failure brick a hook
+    _plat = None  # type: ignore
+    _rc = None  # type: ignore
+
 MODES = ("sonnet", "opus", "fable")
-_PRECEDENCE = ("sonnet", "opus", "fable")
 
 
-def _cwd_from(payload) -> str:
-    """cwd from the hook payload if present, else the process cwd."""
-    if isinstance(payload, dict):
-        c = payload.get("cwd") or payload.get("cwd_path") or payload.get("workdir")
-        if isinstance(c, str) and c:
-            return c
-    try:
-        return os.getcwd()
-    except OSError:
-        return str(Path.home())
+def _claude_dir() -> Path:
+    if _plat is not None:
+        return _plat.claude_dir()
+    env = os.environ.get("CLAUDE_CONFIG_DIR")
+    return Path(env).expanduser() if env else Path("~/.claude").expanduser()
 
 
-def project_key(payload=None, cwd: str | None = None) -> str:
-    base_cwd = cwd or _cwd_from(payload)
-    root = base_cwd
-    try:
-        r = subprocess.run(
-            ["git", "-C", base_cwd, "rev-parse", "--show-toplevel"],
-            capture_output=True, text=True, timeout=3, check=False)
-        if r.returncode == 0 and r.stdout.strip():
-            root = r.stdout.strip()
-    except Exception:
-        pass
-    try:
-        root = os.path.realpath(root)
-    except OSError:
-        pass
-    digest = hashlib.sha1(root.encode("utf-8", "replace")).hexdigest()[:12]
-    name = os.path.basename(root.rstrip("/\\")) or "root"
-    return f"{name}-{digest}"
+def modes_dir() -> Path:
+    return _claude_dir() / "state" / "model-modes"
 
 
-def project_mode(payload=None, cwd: str | None = None) -> str | None:
-    """This project's explicit override, or None."""
-    try:
-        pm = STATE / "model-modes" / project_key(payload, cwd)
-        if pm.is_file():
-            m = pm.read_text(encoding="utf-8").strip().lower()
-            if m in MODES:
-                return m
-    except Exception:
-        pass
-    return None
-
-
-def _global_mode(flag_paths=None, precedence=None) -> str | None:
-    """Legacy/default global flag, or None. flag_paths/precedence let callers pass
-    policy-derived values; defaults reproduce the historical behavior."""
-    prec = precedence or _PRECEDENCE
-    for m in prec:
+def repo_key(cwd: str | os.PathLike | None) -> str | None:
+    """Stable per-repo key, or None when ``cwd`` is missing/unusable."""
+    if not cwd:
+        return None
+    root: Path | None = None
+    if _rc is not None:
         try:
-            fp = None
-            if isinstance(flag_paths, dict):
-                fp = flag_paths.get(m)
-            if fp is None:
-                fp = STATE / f"{m}-only-mode"
-            if Path(fp).is_file():
-                return m
-        except Exception:
-            pass
-    return None
+            root = _rc.git_root(cwd)
+        except Exception:  # noqa: BLE001
+            root = None
+    if root is None:
+        try:
+            root = Path(cwd).expanduser().resolve()
+        except (OSError, RuntimeError):
+            return None
+    digest = hashlib.sha1(str(root).encode("utf-8", "replace")).hexdigest()[:12]
+    return f"{root.name or 'root'}-{digest}"
 
 
-def forced_mode(payload=None, cwd: str | None = None,
-                flag_paths=None, precedence=None) -> tuple[str | None, str]:
-    """Return (mode, scope). scope is 'project', 'global', or ''.
-    Per-project override wins; the global flag is the legacy/default fallback."""
-    m = project_mode(payload, cwd)
-    if m:
-        return m, "project"
-    m = _global_mode(flag_paths, precedence)
-    if m:
-        return m, "global"
-    return None, ""
+def forced_mode(cwd: str | os.PathLike | None) -> str | None:
+    """This repo's pinned model, or None (smart routing)."""
+    key = repo_key(cwd)
+    if not key:
+        return None
+    try:
+        mode = (modes_dir() / key).read_text(encoding="utf-8").strip().lower()
+    except OSError:
+        return None
+    return mode if mode in MODES else None
+
+
+def set_mode(cwd: str | os.PathLike | None, model: str | None) -> bool:
+    """Pin ``model`` for this repo, or clear the pin when ``model`` is None."""
+    key = repo_key(cwd)
+    if not key:
+        return False
+    path = modes_dir() / key
+    try:
+        if model is None:
+            path.unlink(missing_ok=True)
+            return True
+        model = model.lower()
+        if model not in MODES:
+            return False
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(model + "\n", encoding="utf-8")
+        return True
+    except OSError:
+        return False
+
+
+__all__ = ["MODES", "modes_dir", "repo_key", "forced_mode", "set_mode"]

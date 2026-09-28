@@ -1,0 +1,6 @@
+{
+  "session_id": "doctor-fixture",
+  "hook_event_name": "PostCompact",
+  "trigger": "auto",
+  "compact_summary": "(summary omitted in fixture)"
+}

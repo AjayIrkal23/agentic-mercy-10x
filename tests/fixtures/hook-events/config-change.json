@@ -1,0 +1,6 @@
+{
+  "session_id": "doctor-fixture",
+  "hook_event_name": "ConfigChange",
+  "source": "user_settings",
+  "file_path": "~/.claude/settings.json"
+}

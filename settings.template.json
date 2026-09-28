@@ -5,41 +5,46 @@
   "effortLevel": "xhigh",
   "enabledPlugins": {
     "andrej-karpathy-skills@karpathy-skills": true,
-    "claude-mermaid@claude-mermaid": true,
     "claude-session-driver@superpowers-marketplace": true,
-    "clickhouse@claude-plugins-official": true,
-    "context7@claude-plugins-official": true,
-    "double-shot-latte@superpowers-marketplace": true,
     "elements-of-style@superpowers-marketplace": true,
     "firecrawl@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,
     "gopls-lsp@claude-plugins-official": true,
-    "playwright@claude-plugins-official": true,
+    "nateherk-design@nateherk": true,
     "ponytail@ponytail": true,
+    "pyright-lsp@claude-plugins-official": true,
     "superpowers-lab@superpowers-marketplace": true,
     "superpowers@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true
   },
   "env": {
-    "CLAUDE_CODE_SUBAGENT_EFFORT": "max",
-    "TDD_GUARD_MODEL_VERSION": "claude-sonnet-4-0",
+    "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
+    "CLAUDE_CODE_SUBAGENT_EFFORT": "high",
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
+    "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "2",
+    "MCP_TIMEOUT": "30000",
+    "RETICLE_TELEMETRY": "0",
     "VALIDATION_CLIENT": "sdk",
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+    "TDD_GUARD_MODEL_VERSION": "sonnet",
+    "PONYTAIL_SUBAGENT_MATCHER": "^(implementation-engineer|backend-implementor-specialist|frontend-implementor-specialist|frontend-uiux-designer|integrator-specialist|refactor-specialist|test-author|deadcode-reaper|docs-sync-agent)$"
   },
   "extraKnownMarketplaces": {
-    "claude-mermaid": {
-      "source": {
-        "repo": "veelenga/claude-mermaid",
-        "source": "github"
-      }
-    },
     "karpathy-skills": {
+      "autoUpdate": true,
       "source": {
         "repo": "forrestchang/andrej-karpathy-skills",
         "source": "github"
       }
     },
+    "nateherk": {
+      "autoUpdate": true,
+      "source": {
+        "repo": "nateherkai/scroll-craft",
+        "source": "github"
+      }
+    },
     "ponytail": {
+      "autoUpdate": true,
       "source": {
         "repo": "DietrichGebert/ponytail",
         "source": "github"
@@ -54,296 +59,56 @@
     }
   },
   "hooks": {
-    "PostToolUse": [
-      {
-        "hooks": [
-          {
-            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py post-tool-use",
-            "timeout": 30,
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      },
-      {
-        "hooks": [
-          {
-            "command": "/home/mercy/.local/bin/lean-ctx hook observe",
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      },
-      {
-        "hooks": [
-          {
-            "command": "/home/mercy/.local/libexec/lean-ctx/lean-ctx hook read-dedup",
-            "type": "command"
-          }
-        ],
-        "matcher": "Read"
-      }
-    ],
-    "PreCompact": [
-      {
-        "hooks": [
-          {
-            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py pre-compact",
-            "timeout": 15,
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      },
-      {
-        "hooks": [
-          {
-            "command": "/home/mercy/.local/bin/lean-ctx hook observe",
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      }
-    ],
     "PreToolUse": [
-      {
-        "hooks": [
-          {
-            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py pre-tool-use",
-            "timeout": 65,
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      },
-      {
-        "hooks": [
-          {
-            "command": "/home/mercy/.local/libexec/lean-ctx/lean-ctx hook rewrite",
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash|bash"
-      },
-      {
-        "hooks": [
-          {
-            "command": "/home/mercy/.local/libexec/lean-ctx/lean-ctx hook redirect",
-            "type": "command"
-          }
-        ],
-        "matcher": "Read|read|ReadFile|read_file|View|view|Grep|grep|Search|search|ListFiles|list_files|ListDirectory|list_directory|Glob|glob"
-      }
+      {"matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|Read|Grep|Glob|Agent|Task|Workflow|Skill|mcp__lean.ctx__.*|mcp__jcodemunch__.*",
+       "hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py pre-tool-use", "timeout": 30, "statusMessage": "dispatch: gates"}]}
     ],
-    "SessionEnd": [
-      {
-        "hooks": [
-          {
-            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py session-end",
-            "timeout": 15,
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      },
-      {
-        "hooks": [
-          {
-            "command": "/home/mercy/.local/bin/lean-ctx hook observe",
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      }
+    "PostToolUse": [
+      {"matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|Read|Agent|Task|Skill|mcp__jcodemunch__.*|mcp__semgrep__.*",
+       "hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py post-tool-use", "timeout": 25}]}
     ],
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py session-start",
-            "timeout": 60,
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      },
-      {
-        "hooks": [
-          {
-            "command": "/home/mercy/.local/bin/lean-ctx hook observe",
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py stop",
-            "timeout": 30,
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      },
-      {
-        "hooks": [
-          {
-            "command": "/home/mercy/.local/bin/lean-ctx hook observe",
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      }
-    ],
-    "SubagentStop": [
-      {
-        "hooks": [
-          {
-            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py subagent-stop",
-            "timeout": 15,
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      }
+    "PostToolUseFailure": [
+      {"matcher": "Edit|Write|Bash",
+       "hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py post-tool-use-failure", "timeout": 5}]}
     ],
     "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/prompt_router/router.py",
-            "timeout": 20,
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      },
-      {
-        "hooks": [
-          {
-            "command": "/home/mercy/.local/bin/lean-ctx hook observe",
-            "type": "command"
-          }
-        ],
-        "matcher": ".*"
-      }
+      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/prompt_router/router.py", "timeout": 15}]}
+    ],
+    "SessionStart": [
+      {"matcher": ".*",
+       "hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py session-start", "timeout": 45, "statusMessage": "session bootstrap"}]}
+    ],
+    "SubagentStart": [
+      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py subagent-start", "timeout": 5}]}
+    ],
+    "SubagentStop": [
+      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py subagent-stop", "timeout": 10}]}
+    ],
+    "TeammateIdle": [
+      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py teammate-idle", "timeout": 10}]}
+    ],
+    "Stop": [
+      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py stop", "timeout": 30, "statusMessage": "completion gates"}]}
+    ],
+    "PreCompact": [
+      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py pre-compact", "timeout": 10}]}
+    ],
+    "PostCompact": [
+      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py post-compact", "timeout": 10}]}
+    ],
+    "ConfigChange": [
+      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py config-change", "timeout": 5}]}
+    ],
+    "SessionEnd": [
+      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py session-end", "timeout": 10}]}
     ]
   },
-  "mcpServers": {
-    "ast-grep": {
-      "args": [
-        "run",
-        "--directory",
-        "{{CLAUDE_DIR}}/ast-grep-mcp",
-        "python",
-        "main.py"
-      ],
-      "command": "uv"
-    },
-    "browser-tools-mcp": {
-      "args": [
-        "-y",
-        "@agentdeskai/browser-tools-mcp@latest"
-      ],
-      "command": "npx"
-    },
-    "context7": {
-      "args": [
-        "-y",
-        "@upstash/context7-mcp"
-      ],
-      "command": "npx"
-    },
-    "fetch": {
-      "args": [
-        "mcp-server-fetch"
-      ],
-      "command": "uvx"
-    },
-    "figma": {
-      "args": [
-        "-y",
-        "@anthropic-ai/figma-mcp@latest"
-      ],
-      "command": "npx"
-    },
-    "github": {
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-github"
-      ],
-      "command": "npx",
-      "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_TOKEN}"
-      }
-    },
-    "graphify": {
-      "args": [],
-      "command": "{{CLAUDE_DIR}}/hooks/graphify_launcher.py"
-    },
-    "jcodemunch": {
-      "args": [],
-      "command": "jcodemunch-mcp"
-    },
-    "jdocmunch": {
-      "args": [],
-      "command": "jdocmunch-mcp"
-    },
-    "lean-ctx": {
-      "args": [
-        "mcp"
-      ],
-      "command": "lean-ctx",
-      "env": {
-        "CODEX_HOME": "/home/mercy/.agents"
-      }
-    },
-    "markdownify": {
-      "args": [
-        "-y",
-        "mcp-markdownify-server"
-      ],
-      "command": "npx"
-    },
-    "memory": {
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-memory"
-      ],
-      "command": "npx"
-    },
-    "playwright": {
-      "args": [
-        "-y",
-        "@playwright/mcp@latest",
-        "--headed"
-      ],
-      "command": "npx"
-    },
-    "semgrep": {
-      "args": [
-        "mcp"
-      ],
-      "command": "${HOME}/.local/bin/semgrep"
-    },
-    "sequential-thinking": {
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
-      ],
-      "command": "npx"
-    }
-  },
-  "model": "opus[1m]",
   "permissions": {
     "defaultMode": "bypassPermissions",
     "deny": []
   },
   "remoteControlAtStartup": true,
-  "skillListingBudgetFraction": 0.1,
+  "skillListingBudgetFraction": 0.3,
   "skipDangerousModePermissionPrompt": true,
   "theme": "dark"
 }

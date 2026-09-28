@@ -5,7 +5,12 @@ Fires when tool_name == "Skill". Appends a JSONL line to:
   ~/.claude/hooks/.telemetry/{safe_cid}.skill-invocations.jsonl
 
 Each line:
-  {"ts": "<ISO8601>", "skill": "<slug>", "trigger_path": "<argv or empty>", "write_index": <int>}
+  {"ts": "<ISO8601>", "skill": "<slug>", "via": "skill" | "read",
+   "trigger_path": "<argv or empty>", "write_index": <int>}
+
+``via: "read"`` marks a Read of ~/.claude/skills/<slug>/SKILL.md — the reminder
+tells the model to *read* the file, so a read is a consumption too (the weight
+updater and the effectiveness report count it as invoked).
 
 write_index is read from the desloppify state file (code_writes counter) to allow
 latency measurement: (invocation_write_index - reminder_write_index).
@@ -90,8 +95,10 @@ def main() -> int:
             sys.stdout.write("{}\n")
             return 0
         skill_slug = m.group(1)
+        via = "read"
     else:
         skill_slug = (tool_input.get("skill") or "").strip()
+        via = "skill"
     if not skill_slug:
         sys.stdout.write("{}\n")
         return 0
@@ -105,6 +112,7 @@ def main() -> int:
     record = {
         "ts":           _now_iso(),
         "skill":        skill_slug,
+        "via":          via,
         "trigger_path": trigger_path,
         "write_index":  write_index,
     }

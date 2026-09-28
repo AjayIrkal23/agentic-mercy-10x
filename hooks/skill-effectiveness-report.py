@@ -6,6 +6,11 @@ fullstack-skills-reminder.py stop branch, task 28) and reports:
 
   skill | reminded_N | invoked_N | ignore_rate%  | verdict
 
+A record's ``invoked`` list is widened with the session's
+``<cid>.skill-invocations.jsonl`` entries (2026-09-27): a ``via: "read"`` line
+(the model Read the SKILL.md the reminder pointed at) counts as invoked, so the
+baselines are no longer scored as "ignored" for doing exactly what was asked.
+
 Usage:
   python3 skill-effectiveness-report.py
   python3 skill-effectiveness-report.py --top 10
@@ -74,13 +79,42 @@ class SkillStats:
         self.invoked_count  = 0
 
 
+def _safe_cid(cid: str) -> str:
+    return "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
+
+
+def read_invocations(cid: str) -> set[str]:
+    """Skills invoked in a session by Skill tool OR by reading its SKILL.md
+    (tracker ``via: read``). Empty when the per-session file is absent."""
+    if not cid:
+        return set()
+    p = TELEMETRY_DIR / f"{_safe_cid(cid)}.skill-invocations.jsonl"
+    out: set[str] = set()
+    try:
+        for line in p.read_text(encoding="utf-8").splitlines():
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                e = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(e, dict) and e.get("via", "skill") in ("skill", "read"):
+                s = str(e.get("skill") or "").strip()
+                if s:
+                    out.add(s)
+    except OSError:
+        pass
+    return out
+
+
 def aggregate(records: list[dict]) -> dict[str, SkillStats]:
     """Aggregate per-session records into per-skill counts."""
     stats: dict[str, SkillStats] = defaultdict(SkillStats)
 
     for rec in records:
         reminded = rec.get("reminded") or []
-        invoked  = set(rec.get("invoked") or [])
+        invoked  = set(rec.get("invoked") or []) | read_invocations(str(rec.get("cid") or ""))
 
         if not isinstance(reminded, list):
             continue

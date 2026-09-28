@@ -55,10 +55,18 @@ import re
 import sys
 from pathlib import Path
 
+_HOOKS = Path(__file__).resolve().parent
+if str(_HOOKS) not in sys.path:
+    sys.path.insert(0, str(_HOOKS))
+try:
+    from lib import model_mode as _mm
+except Exception:  # noqa: BLE001 - never let the per-project layer brick the guard
+    _mm = None  # type: ignore
+
 MARKER = "__wfAgent"
-# Match a bare `agent(` call (the workflow global), not `__wfAgent(`, `myagent(`,
-# `agentType`, etc. \b prevents matching when preceded by a word char like `_`.
-AGENT_CALL_RE = re.compile(r"\bagent\s*\(")
+# Match a bare `agent(` call (the workflow global) — not `__wfAgent(`, `myagent(`,
+# `agentType`, and not a METHOD call `obj.agent(` (the `.` lookbehind, 2026-09-27).
+AGENT_CALL_RE = re.compile(r"(?<![\w.])agent\s*\(")
 META_RE = re.compile(r"export\s+const\s+meta\s*=\s*\{")
 
 # --- model-policy.json: the single model truth (P2). ---------------------------
@@ -95,11 +103,20 @@ def _load_policy() -> dict:
     return _POLICY_CACHE
 
 
+def _claude_dir() -> Path:
+    try:
+        from lib import platform as _plat
+
+        return _plat.claude_dir()
+    except Exception:  # noqa: BLE001
+        return Path.home() / ".claude"
+
+
 def _flag_paths() -> dict[str, Path]:
     sf = _load_policy().get("session_flags")
     sf = sf if isinstance(sf, dict) else {}
     fdir = sf.get("dir") if isinstance(sf.get("dir"), str) and sf.get("dir") else _DEFAULT_FLAG_DIR
-    base = Path.home() / ".claude" / fdir
+    base = _claude_dir() / fdir
     out: dict[str, Path] = {}
     for key, default_name in _DEFAULT_FLAG_NAMES.items():
         name = sf.get(key)
@@ -145,15 +162,21 @@ def _advisory(note: str) -> int:
     return 0
 
 
-def _forced_model() -> str | None:
-    """Session kill-switch flag -> forced model, or None for smart routing.
-    Flag dir/names/precedence come from model-policy.json (fail-open to literals).
+def _forced_model(cwd: str | None = None) -> str | None:
+    """Global kill-switch flag, else the per-project mode (lib/model_mode, D4),
+    else None for smart routing. Flag dir/names/precedence come from
+    model-policy.json (fail-open to literals).
     """
     flag_paths = _flag_paths()
     for mdl in _flag_precedence():
         fp = flag_paths.get(mdl)
         if fp is not None and fp.is_file():
             return mdl
+    if _mm is not None and cwd:
+        try:
+            return _mm.forced_mode(cwd)
+        except Exception:  # noqa: BLE001
+            return None
     return None
 
 
@@ -283,7 +306,8 @@ def main() -> int:
                     "every agent() (default 'sonnet') to avoid inheriting the Opus parent."
                 )
 
-        forced = _forced_model()
+        cwd = payload.get("cwd")
+        forced = _forced_model(cwd if isinstance(cwd, str) else None)
         head = script[:end]
         body = script[end:]
         # Single safe substitution in the body: agent( -> __wfAgent(
@@ -297,8 +321,8 @@ def main() -> int:
 
     if forced:
         note = (
-            f"workflow-model-guard: {forced}-only-mode active — every workflow agent() "
-            f"FORCED to {forced}."
+            f"workflow-model-guard: model forced to {forced} (session flag or per-project "
+            f"model mode) — every workflow agent() runs on {forced}."
         )
     else:
         note = (

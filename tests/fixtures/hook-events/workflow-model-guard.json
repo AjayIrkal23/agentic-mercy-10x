@@ -3,7 +3,7 @@
   "hook_event_name": "PreToolUse",
   "tool_name": "Workflow",
   "tool_input": {
-    "script": "async(ctx)=>{ await ctx.agent('do X', {}); }",
+    "script": "async()=>{ await agent('do X', {}); }",
     "args": {
       "foo": "bar",
       "n": 3,
