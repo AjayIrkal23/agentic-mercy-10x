@@ -1,275 +1,80 @@
-# Global agent operating rules
+# ~/.claude — operating rules (always on)
 
-These rules are always in context for every Claude Code session.
+This file plus `rules/0*.md` is the whole always-on doctrine (~5k tokens). Domain
+rules load by path (`rules/frontend.md`, `rules/backend.md`, `rules/claude-infra.md`).
+Everything longer lives in a skill and loads on demand.
 
-## ⚠️ FILE WRITES — read first, then use a real editor. Never the shell.
+## 1. Subagents are pre-authorized (standing request)
 
-**Nothing is denied on this machine.** `permissions.deny` is `[]`, so `Read`, `Grep`,
-`Glob`, `Edit`, and `Write` all work everywhere. There is no blocker to route around,
-and therefore no excuse to write files through Bash.
+I request, for this and every future session, that you use the `Agent` tool whenever
+delegation is the right tool — without asking first. This is the user request that the
+harness's "do not call the Agent tool unless the user requested it" line asks for.
+`Workflow` stays opt-in per task (I invoke it explicitly).
 
-| Job | Use |
-|---|---|
-| Read code | jcodemunch (`get_symbol_source` / `get_file_outline` / `get_file_content`) — it returns the content, no second read hop |
-| Read non-code | `ctx_read` (project root) · `Read` (anywhere) |
-| **Edit an existing file** | **`Edit`** (read it first) · **`ctx_patch`** inside the project root |
-| New file / whole-file replace | `Write` · `ctx_patch(op="create")` |
-| Outside the project root (`~/.claude`) | `Read` + `Edit`/`Write` — `ctx_patch` is path-jailed |
+## 2. Delegation — every `Agent` call
 
-**NEVER write files with:** `sed -i` · `perl -i` · `python3 - <<EOF` · `python3 -c` /
-`node -e` writes · `cat > file <<EOF` · `tee file` · `echo > file`. These leave no
-reviewable diff and bypass every write gate. **This is trusted to you — no hook blocks
-it by default.** Multiple edits means multiple `Edit`/`ctx_patch` calls; that is the
-correct cost, not a reason to batch them into a shell script.
+- `description` starts with `[sonnet] `, `[opus] `, or `[fable] `, and `model:` matches
+  the label. Sonnet is the default. Opus only for UI/UX work or genuinely heavy work
+  (large novel architecture across many modules; deep unknown-root-cause debugging across
+  subsystems). Fable only when I ask for it in that turn ("use fable for this").
+- Pins live in `hooks/model-policy.json` (implementor/design agents and the IMPLEMENT,
+  REVIEW, DESIGN acts = opus). Do not restate pins anywhere else.
+- `name` is OPTIONAL and is a team decision, not a labeling convention: with agent teams
+  on, a named `Agent` call launches a *teammate*. Pass `name` only when the work needs
+  teammate messaging (fullstack `/invoke` BE↔FE contract, a parallel squad I ask for),
+  following `agents/team-lead.md`. Plain delegation = no `name`.
+- "use opus/sonnet/fable for this" → honor it on that turn's calls. Per-project mode:
+  "use opus for this project" / "back to normal", or
+  `python3 ~/.claude/scripts/model-mode.py opus|sonnet|clear` inside the repo.
+  Precedence, env semantics, effort: `rules/04-model-routing.md`.
+- Subagents never `git commit` and never start servers.
 
-### ALWAYS read the file immediately before you edit it
+## 3. File writes
 
-`Edit` **requires** a prior `Read` of that exact file. Do not call `Edit` and let it
-fail — that error is avoidable, not informative. The sequence is always:
+1. FIND with jcodemunch → 2. READ the exact file → 3. `Edit` (or `Write` for a new or
+whole-file replacement; `ctx_patch` inside the repo needs no prior Read).
+Never write through the shell (`sed -i`, `python3 -c`/heredoc writes, `cat >`, `tee`,
+`echo >`) — `rules/01-no-shell-writes.md`. A gate or refusal is a route to the
+sanctioned tool, not an obstacle. Ask before deleting files or removing features I did
+not ask you to remove. Commit only when asked.
 
-```
-1. Read(file_path)          ← or jcodemunch get_file_content / get_file_outline
-2. Edit(file_path, old_string, new_string)
-```
+## 4. Tools
 
-Read the region you are about to change, not just any part of the file: you need the
-exact current text to build `old_string`. One Read per file is enough — you do not
-need to re-read between your own consecutive edits to the same file.
+MCPs are mandatory, not optional — one table: `rules/00-tool-precedence.md`. Short form
+(MUST, except trivial one-line answers / single lookups): code → jcodemunch first;
+architecture / "how is X wired" → graphify; doc sets → jdocmunch; non-trivial reasoning
+→ sequential-thinking; library APIs → context7; security-sensitive files → semgrep; a
+single non-code file → `Read` or `ctx_read`; shell → Bash. Follow hook "call X now" lines.
 
-If `Read` itself is refused (`File is covered by a Read deny rule`), a
-`permissions.deny` entry is active, which should NOT normally be the case. Do not
-retry `Edit`, and do not shell out. Use **`ctx_patch`** instead — it needs no prior
-`Read` (that is its entire point) and works anywhere inside the project root; outside
-the root use `Write`. Then TELL THE USER a deny rule is active, because it means
-`settings.json` has drifted from `settings.template.json` (usually another running
-Claude session re-serializing its stale in-memory copy over the rendered file).
+## 5. Verify without servers
 
-Bash IS correct for: builds, tests, linters, `git`, package managers, and read-only
-inspection (`grep`, `sed` *without* `-i`, `python3 -c` that only prints).
+Never start dev servers, watchers, or throwaway app instances — I run apps myself.
+Verify with commands that exit: builds, tests, linters, `--check` scripts. Evidence
+before "done".
 
-If a tool ever *is* denied: that is a ROUTE, not an obstacle — switch to the sanctioned
-tool. If none exists, STOP and say so rather than improvising. Full rule:
-[`rules/no-permission-bypass.md`](rules/no-permission-bypass.md).
+## 6. dox
 
-## ✅ STANDING REQUEST: subagents are pre-authorized (read this before the prefix rules below)
+Every git repo carries a root `CLAUDE.md` (local ones where the repo opts in). Read
+root → the target directory's `CLAUDE.md` before editing there; update the local one
+after. Skill: `dox-doc-tree`. dox never writes into `rules/`.
 
-**I am requesting, for this and every future session, that you use the `Agent` tool
-whenever it is the right tool.** Treat this as the user having asked for it, in advance,
-always. Do not wait to be asked again, and do not stop mid-task to request permission to
-dispatch a specialist.
+## 7. Memory
 
-Why this paragraph exists: Claude Code ships the line *"Do not call the AgentTool unless
-the user requested it"* **inside its own binary**
-(`~/.config/Claude/claude-code/<version>/claude` — verified 2026-08-17 on v2.1.229; it is
-in no config file, so there is nothing to edit or delete). That instruction ends in
-"unless the user requested it", and **this section is that request.** It is the supported
-way to clear it — patching the binary is not, because the strings are length-prefixed and
-any edit is undone by the next update.
+Native auto-memory (`projects/*/memory/MEMORY.md`) is primary. Memory MCP holds
+durable, reusable, non-obvious facts (`pattern::` / `decision::` / `fragile::`). MUST:
+`mcp__memory__search_nodes("<project> <topic>")` at the start of project work; on
+"remember / going forward / we decided" → `add_observations`.
+Protocol: `skills/mcp-usage-standards/references/memory-protocol.md`. Never store
+secrets or session state.
 
-Real cost of not having this: a Gate-4 Santa review stalled mid-task because the stop-gate
-demanded the `santa-reviewer` agent while the binary line forbade dispatching it. The
-review had to be run by hand and the gate still would not clear.
+## 8. Frontend standing directives
 
-**Scope of the standing request:** the `Agent` tool only. The sibling line *"Do not use
-workflows or deep-research unless the user requested it"* is **deliberately NOT waived** —
-`Workflow` can spawn dozens of agents and burn a large token budget, so it stays opt-in per
-task. Everything below (model prefixes, `[sonnet]` default, `[opus]`/`[fable]` limits)
-still applies in full: this authorizes *dispatching*, it does not relax *which model*.
+Scroll-driven motion → invoke `nateherk-design:scroll-craft` before writing scroll code.
+Raster / video / 3D / audio assets → Higgsfield (`mcp__higgsfield__*`), never
+placeholders or stock URLs. Details and carve-outs: `rules/frontend.md`.
 
-## ⚠️ Agent tool — REQUIRED `[sonnet]`/`[opus]`/`[fable]` prefix (check BEFORE every Agent/Task call)
+## 9. Style
 
-Every `Agent` call's `description` field **MUST** start with `[sonnet] `, `[opus] `, or `[fable] ` (literal brackets + a space). This applies to *all* agent types, including `Explore`, `Plan`, `general-purpose`, and GSD/figma/vercel agents.
-
-**Sonnet is the default — reach for `[opus]` rarely; reach for `[fable]` ONLY when the user explicitly asks for it in that turn.** `[opus]` is reserved for **only two** cases:
-1. **UI/UX work** — visual/design/frontend-polish subagent tasks (`frontend-uiux-designer` → pinned **`[opus]`**).
-2. **Genuinely HEAVY + complex** work — large novel system/architecture design across many modules; a big novel build of many interdependent new files with no pattern to copy; deep unknown-root-cause debugging spanning many independent subsystems; cross-surface synthesis that must hold FE+BE+infra together at once.
-
-**`[fable]` has NO standing pin (2026-07-19).** Fable is reachable only when the user explicitly asks for it on that turn ("use fable for this"), via a `[fable]` label you write deliberately, `model:"fable"`, or the `fable-only-mode` flag. No agent and no `/invoke` act routes to Fable automatically.
-
-**Do NOT use `[opus]`/`[fable]` for medium, small, or even "a bit complex" tasks.** The following are **always `[sonnet]`**: searches/exploration (`Explore`, `claude-code-guide`), single-to-several-file edits, refactors, pattern replication, bug fixes where the locus is known, lint/tests, doc updates, focused code review, and any task that is merely moderately complex. When unsure → `[sonnet]`.
-
-**Dynamic per-task overrides (user-driven).** When the user says "use opus for this task" / "use fable for this" / "use sonnet", honor it on that turn's Agent calls: write the matching label AND set `model:"opus"|"fable"|"sonnet"`. The user's explicit word wins over the default for that task. For multiple subagents in one turn, apply the user's choice to each.
-
-**Specialist routing (2026-07-19 — Fable-first REMOVED at user request).** The implementor/design/integrator specialists run on **Opus**: `[opus]` + `model:"opus"`. `/invoke` acts: IMPLEMENT and REVIEW pin Opus; every other act (audit, spec, plan, debug, design, docs, verify) falls through to the **Sonnet** default. IMPLEMENT still surface-routes: FE→`frontend-implementor-specialist`, BE→`backend-implementor-specialist` (contract-first), mixed→BE→FE→`integrator-specialist`, general→`implementation-engineer`. Source of truth: `agent_pins` + `invoke_categories` in `hooks/model-policy.json`, rendered by `gen-invoke-commands.py`. See `rules/invoke-impl-opus.md`.
-
-- `Explore` and `claude-code-guide` → always `[sonnet]`. `frontend-uiux-designer`, `implementation-engineer`, `backend-implementor-specialist`, `frontend-implementor-specialist`, `integrator-specialist` → pinned `[opus]` (opus-guard enforces).
-- Example (heavy): `Agent(subagent_type="general-purpose", description="[opus] Design the multi-service event pipeline end-to-end", prompt="…")`.
-- Example (normal): `Agent(subagent_type="Explore", description="[sonnet] Map loco process data flow", prompt="…")`.
-- Example (user said "use fable"): `Agent(subagent_type="general-purpose", description="[fable] …", model="fable", prompt="…")`.
-
-**The label is real, not cosmetic.** Two hooks enforce the sonnet-by-default policy (neither relies on the `CLAUDE_CODE_SUBAGENT_MODEL` env var, which stays `inherit` — a concrete value there would hard-override per-call models and break all overrides):
-- **`opus-guard.py`** (PreToolUse, `Agent` matcher) PINS the `model` param: `[opus]`/pinned specialist → `opus`; an explicit `[fable]`/`model:fable` you wrote deliberately → `fable`; everything else → `sonnet`. Auto-corrects a missing/wrong prefix via `updatedInput` (never denies).
-- **`workflow-model-guard.py`** (PreToolUse, `Workflow` matcher) rewrites each inline-workflow `agent()` call so it DEFAULTS to `sonnet` (UI/UX `agentType` → opus) unless the call passes an explicit `model`. This is what stops **workflow** subagents from inheriting the Opus parent (the main historical token burn). Workflows run from `scriptPath`/`name` are advised, not rewritten — pass an explicit `model` to each `agent()` there.
-
-**ALSO REQUIRED — the model appears in the agent `name`, not just the description.**
-Applies to **every model equally** (`sonnet`, `opus`, `fable`) — this is not an Opus-only rule.
-`description` carries the `[sonnet]`/`[opus]`/`[fable]` label; `name` is what the agent
-list/sidebar renders. **`opus-guard.py` now normalizes BOTH fields**, so the two can never
-disagree with the model that actually runs.
-
-`name` is validated against `^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$` — brackets and spaces are
-ILLEGAL there, so the model goes in as a trailing bare segment (the bracketed form is the
-`description`'s job):
-
-- Correct: `name="impl-crud-opus"` + `description="[opus] Implement the CRUD page"`.
-- Correct: `name="map-flow-sonnet"` / `name="spec-ingestion-fable"`.
-- Wrong: `name="[opus]impl-crud"` — rejected by the regex.
-
-Write all three yourself — `Agent(name="impl-crud-opus", description="[opus] Implement the
-CRUD page", model="opus", …)`. The guard is the safety net, not the author: it re-suffixes a
-stale model (`map-flow-fable` → `map-flow-sonnet`), never stacks suffixes, caps at 64 chars,
-and reports the final name in its note — **address `SendMessage` to that normalized name.**
-When a session flag (`sonnet-only-mode`/`opus-only-mode`/`fable-only-mode`) forces the tier,
-both the suffix and the label follow the forced model, not the one you intended.
-
-**Still write the prefix/model yourself** so the choice stays explicit — the hooks are the safety net.
-
-**Session overrides (flag files in `~/.claude/state/`), honored by BOTH hooks:** `touch sonnet-only-mode` forces *every* subagent (and workflow agent) to Sonnet (kill-switch, wins over all else); `touch opus-only-mode` → all Opus; `touch fable-only-mode` → all Fable; `rm` the flag to return to smart routing. User phrases: "all sonnet / cheap mode" → sonnet flag; "all opus" → opus flag; "all fable" → fable flag; "back to normal / smart routing" → remove flags. See [[feedback_subagent_model_routing]].
-
-## Phase 0 (Session Start)
-
-Full lifecycle defined in `mandatory-skill-protocol.mdc` — the single source of truth for phases 0–7.
-Quick orientation: determine task type → graphify + jcodemunch codebase map → domain docs → list layers → surface `ASSUMPTIONS I'M MAKING:`.
-If Memory MCP is active: call `mcp__memory__search_nodes("project:<name>")` before any code work.
-
-## Three skill discovery layers
-
-| Layer | Path | Role |
-|-------|------|------|
-| **Your craft** | `~/.claude/skills/` | Primary for coding — **28 FE + 27 BE** mandatory via hooks |
-| **Plugins** | `~/.claude/plugins/` | Superpowers, GSD, etc. — complementary |
-
-Hooks in `~/.claude/settings.json` enforce path-ranked skills, session manifest, and stop re-verify. Design principles: `~/.claude/docs/PRESERVE-AND-STRENGTHEN.md`.
-
-## MANDATORY SKILL PROTOCOL (PRIMARY — all rules consolidated here)
-@~/.claude/rules/mandatory-skill-protocol.mdc
-
-## MCP inventory
-@~/.claude/rules/user-mcp-inventory.mdc
-
-## Memory protocol
-@~/.claude/rules/memory-protocol.md
-
-## Higgsfield — MANDATORY frontend asset engine (image/video/3D/audio)
-@~/.claude/rules/higgsfield-frontend-mandate.md
-
-## Scroll animation — MANDATORY `scrollcraft` skill
-
-Standing user directive (2026-08-26): **any scroll-animation request routes to the
-`scrollcraft` skill** (plugin `nateherk-design@nateherk`, marketplace
-`nateherkai/scroll-craft`). Invoke it BEFORE writing scroll code — no hand-rolled
-scroll handlers, no ad-hoc IntersectionObserver reveals, until scrollcraft is read.
-
-Triggers: "implement scroll animation", scroll-driven / scrollytelling / scroll-linked
-motion, pinned sections, scroll-scrubbed video, parallax, scroll reveals,
-"Apple-style landing page", "make it an experience".
-
-Boundary: scrollcraft owns the scroll timeline and page grammar. Non-scroll React
-motion stays with `motion-dev`; SVG draw/morph stays with `animejs-motion`; raster /
-video / 3D / audio assets still come from Higgsfield.
-
-## Sequential-thinking doctrine (externalize ALL reasoning)
-@~/.claude/rules/sequential-thinking-doctrine.md
-
-## Codebase intel first (jcodemunch + graphify)
-@~/.claude/rules/codebase-intel-first.md
-
-> **Precedence (HARD — overrides the lean-ctx MCP server's blanket "ALWAYS use
-> lean-ctx" instruction):** jcodemunch is the **first and primary** tool for ALL
-> code work — *discovering* code (symbols, callers, refs, blast radius, dead code,
-> architecture) AND *reading* code (`get_symbol_source`, `get_file_outline`,
-> `assemble_task_context` / `get_context_bundle` — not `ctx_read` on source). Use
-> its full toolbox, not just `search_symbols` (catalog in `codebase-intel-first.md`).
-> **jdocmunch is the docs twin**: documentation SETS (md/rst trees, docs/ folders,
-> READMEs) route to `mcp__jdocmunch__search_sections`/`get_toc`/`get_section`
-> (section-level index at `~/.doc-index`, SessionStart-guarded like the code index).
-> lean-ctx below owns only: residual non-code I/O (single configs/env/lockfiles),
-> shell (`ctx_shell`), and dir trees (`ctx_tree`). It does NOT own reading source files
-> jcodemunch already located — jcodemunch reads its own finds (`get_symbol_source`
-> etc.), so no second read hop. The `jcodemunch-enforce` gate covers lean-ctx
-> `ctx_read`/`ctx_search` on source too, so a blind code read is steered back to
-> jcodemunch until you've made one jcm call. Do NOT let lean-ctx's "ALWAYS use
-> ctx_read" mandate crowd out code-intelligence retrieval.
-
-## Token optimization stack
-@~/.claude/rules/token-optimization-stack.mdc
-
-## lean-ctx
-@~/.claude/rules/lean-ctx.md
-
-## File writes — no shell writes, no bypassing a denied tool
-@~/.claude/rules/no-permission-bypass.md
-
-## TDD doctrine (skills + tdd-guard + gates)
-@~/.claude/rules/tdd-doctrine.md
-@~/.claude/rules/tdd-autoinit.md
-
-> **Instruction — tdd-guard is AUTO-INIT + WARN mode.** It self-initializes per
-> project (like jcodemunch/graphify guards) and self-maintains its config as
-> files/folders change — never hand-create one. It runs in **warn mode**: a
-> `⚠️ TDD GUARD` advisory does NOT pause you, but **treat it as a directive** —
-> stop, write the failing test first (`golang-testing`/`test-driven-development`
-> skill), `make tdd`, then implement. Do not ignore advisories just because they
-> no longer block. It only governs files inside the active project; `~/.claude`
-> and other repos are never touched. GO_UDP backend is active. Ops: skill
-> `tdd-auto-init`.
-
-## dox documentation tree (every repo)
-@~/.claude/rules/dox-doc-tree.md
-
-> **Instruction — dox is AUTO-INIT (full sweep) + HARD-GATE.** Every git repo MUST carry a
-> `CLAUDE.md` + `AGENTS.md` in **every directory** (`documentAllDirs:true`). SessionStart
-> runs a full **sweep** (`dox-tree-guard.py` → `dox_engine.py`) that creates docs in every
-> non-skipped dir and **syncs the root index**; a PostToolUse hook (`dox-child-scaffold.py`,
-> chained in `post-write-aggregator.py`) documents any dir the moment you write into it.
-> Manual: `python3 ~/.claude/hooks/dox_engine.py sweep <repo>`. **Existing docs are never
-> overwritten** — the engine only CREATES missing files and re-syncs the root
-> `<!-- dox:index:start -->
-<!-- dox auto-syncs this block from the tree on disk; edit directories, not these lines -->
-- [`assets/`](assets/CLAUDE.md)
-- [`docs/`](docs/CLAUDE.md)
-  - [`docs/audits/`](docs/audits/CLAUDE.md)
-- [`double-shot-latte/`](double-shot-latte/CLAUDE.md)
-- [`hooks/`](hooks/CLAUDE.md)
-  - [`hooks/lib/`](hooks/lib/CLAUDE.md)
-  - [`hooks/prompt_router/`](hooks/prompt_router/CLAUDE.md)
-    - [`hooks/prompt_router/modules/`](hooks/prompt_router/modules/CLAUDE.md)
-  - [`hooks/tests/`](hooks/tests/CLAUDE.md)
-  - [`hooks/tools/`](hooks/tools/CLAUDE.md)
-- [`installer/`](installer/CLAUDE.md)
-- [`memory/`](memory/CLAUDE.md)
-- [`plans/`](plans/CLAUDE.md)
-- [`rules/`](rules/CLAUDE.md)
-  - [`rules/references/`](rules/references/CLAUDE.md)
-- [`scripts/`](scripts/CLAUDE.md)
-- [`shell-snapshots/`](shell-snapshots/CLAUDE.md)
-- [`state/`](state/CLAUDE.md)
-  - [`state/model-modes/`](state/model-modes/CLAUDE.md)
-  - [`state/persist-dedup/`](state/persist-dedup/CLAUDE.md)
-- [`tdd-guard/`](tdd-guard/CLAUDE.md)
-  - [`tdd-guard/data/`](tdd-guard/data/CLAUDE.md)
-- [`teams/`](teams/CLAUDE.md)
-  - [`teams/session-3ff4a5fc/`](teams/session-3ff4a5fc/CLAUDE.md)
-  - [`teams/session-98b66299/`](teams/session-98b66299/CLAUDE.md)
-  - [`teams/session-b86608fd/`](teams/session-b86608fd/CLAUDE.md)
-  - [`teams/session-c456ad7d/`](teams/session-c456ad7d/CLAUDE.md)
-  - [`teams/session-d4186bbd/`](teams/session-d4186bbd/CLAUDE.md)
-- [`telemetry/`](telemetry/CLAUDE.md)
-- [`templates/`](templates/CLAUDE.md)
-- [`tests/`](tests/CLAUDE.md)
-  - [`tests/fixtures/`](tests/fixtures/CLAUDE.md)
-    - [`tests/fixtures/hook-events/`](tests/fixtures/hook-events/CLAUDE.md)
-- [`uploads/`](uploads/CLAUDE.md)
-  - [`uploads/25f21760-9c25-46b4-810a-b0afec97ffb1/`](uploads/25f21760-9c25-46b4-810a-b0afec97ffb1/CLAUDE.md)
-  - [`uploads/53ef7502-d50e-4091-aeac-afd86e4f35e7/`](uploads/53ef7502-d50e-4091-aeac-afd86e4f35e7/CLAUDE.md)
-  - [`uploads/754b393e-6399-4e66-85be-c439c50c87da/`](uploads/754b393e-6399-4e66-85be-c439c50c87da/CLAUDE.md)
-  - [`uploads/866403fa-fc52-4006-a2ec-c72a7e864b2d/`](uploads/866403fa-fc52-4006-a2ec-c72a7e864b2d/CLAUDE.md)
-  - [`uploads/b86608fd-8906-41f6-8ceb-802b9dbf25f1/`](uploads/b86608fd-8906-41f6-8ceb-802b9dbf25f1/CLAUDE.md)
-  - [`uploads/ba844b7c-4fc0-452a-bcc8-fe6ece6f88ab/`](uploads/ba844b7c-4fc0-452a-bcc8-fe6ece6f88ab/CLAUDE.md)
-  - [`uploads/c456ad7d-af35-47d1-bcfd-1a7539f1261f/`](uploads/c456ad7d-af35-47d1-bcfd-1a7539f1261f/CLAUDE.md)
-  - [`uploads/e9c7fe5d-cf36-4f46-95c3-9380fccfcd24/`](uploads/e9c7fe5d-cf36-4f46-95c3-9380fccfcd24/CLAUDE.md)
-<!-- dox:index:end -->
-
-## Coding Guidelines (Karpathy)
-
-Invoke `andrej-karpathy-skills:karpathy-guidelines` for the full behavioral checklist (4 rules: Think Before Coding, Simplicity First, Surgical Changes, Goal-Driven Execution). That skill is the single source of truth — do not restate here.
+- Code: `andrej-karpathy-skills:karpathy-guidelines` (think first, simplest thing,
+  surgical diff, verifiable goal) and `ponytail` (the laziest solution that works).
+- Prose to me: `caveman` — terse, no filler, full technical accuracy.
