@@ -1,27 +1,20 @@
 #!/usr/bin/env python3
-"""gen-agent-skill-blocks.py — sync agent .md skill-loading blocks from config.
+"""gen-agent-skill-blocks.py — render / check the `skills:` frontmatter of every agent.
 
-The implementor/integrator agents carry a "Skill loading" list between
-<!-- skills:auto:start --> / <!-- skills:auto:end --> markers. This generator
-rewrites that block from the single source of truth so agent checklists can
-never drift from routing config again (root cause #5 of the 2026-07-18 audit):
+AGENT_SKILLS below is the single source of truth for what each agent preloads
+(WP-7 frontmatter table, 2026-09-27). Every name is collapsed through the alias map
+(hooks/lib/skill_aliases.py when present, else hooks/skill-aliases.json) and capped at
+MAX_SKILLS, so no agent can preload an alias stub or an over-long list.
 
-  agent -> skills source
-  ---------------------------------------------------------------
-  backend-implementor-specialist   BACKEND_SKILLS (fullstack-skills-reminder.py)
-  frontend-implementor-specialist  FRONTEND_SKILLS (same)
-  implementation-engineer          cross-cutting core (skill_router.config.json
-                                   cross_cutting: always + first_write_only +
-                                   implementation + verification)
-  audit-specialist / spec-architect / planning-director / debug-detective /
-  deadcode-reaper / docs-sync-agent / qa-verifier / santa-reviewer /
-  security-sentinel / test-author / refactor-specialist
-                                   categories.<CAT>.local_skills
-                                   (autonomous-skill-router.config.json)
+  python3 gen-agent-skill-blocks.py          # rewrite `skills:` in agents/*.md
+  python3 gen-agent-skill-blocks.py --check  # exit 1 if any agent differs or is missing
 
-Alias-collapse map applied everywhere so agents load canonicals, not stubs.
-Agents without markers are skipped (never rewritten). Idempotent; --check
-exits 1 if any block is stale (used by installer verify).
+--check covers every agent in AGENT_SKILLS — there is no "no markers, skipped" path.
+Both modes also print non-fatal `drift:` lines for preloaded skills the routing sources
+do not know (FRONTEND/BACKEND_SKILLS in fullstack-skills-reminder.py and
+categories.<CAT>.local_skills in autonomous-skill-router.config.json) and `missing:`
+lines for local skills with no SKILL.md yet, so table and routing config are
+reconciled deliberately rather than drifting silently.
 """
 
 from __future__ import annotations
@@ -31,123 +24,179 @@ import re
 import sys
 from pathlib import Path
 
+import yaml
+
 HOOKS = Path(__file__).resolve().parent
-AGENTS = HOOKS.parent / "agents"
-START, END = "<!-- skills:auto:start -->", "<!-- skills:auto:end -->"
+ROOT = HOOKS.parent
+AGENTS = ROOT / "agents"
+MAX_SKILLS = 13
 
-ALIAS = {
-    "diagnose": "debug-investigation",
-    "debugging-and-error-recovery": "debug-investigation",
-    "api-and-interface-design": "api-contract-standards",
-    "tdd": "test-driven-development",
-    "forensic-change-coupling": "tech-debt-audit",
-    "forensic-complexity-trends": "tech-debt-audit",
-    "forensic-debt-quantification": "tech-debt-audit",
-    "forensic-hotspot-finder": "tech-debt-audit",
-    "improve-codebase-architecture": "tech-debt-audit",
-    "security-and-hardening": "owasp-security",
-    "domain-scaffold-patterns": "scaffold-standards",
-    "frontend-api-standards": "frontend-response-handling",
-    "browser-testing-with-devtools": "webapp-testing",
-    "incremental-implementation": "code-execution-standard",
-    "plan-exec-stack-guide": "workflow-orchestrator",
-    "project-structure-map": "codebase-intel-first",
-    "zoom-out": "codebase-intel-first",
-    "jcodemunch-token-saver": "codebase-intel-first",
-    "codebase-start-point-guide": "codebase-intel-first",
-    "iterative-retrieval": "codebase-intel-first",
-    "documentation-and-adrs": "update-docs",
+# agent -> preloaded skills (canonical names; plugin skills as plugin:skill).
+AGENT_SKILLS: dict[str, list[str]] = {
+    "backend-implementor-specialist": [
+        "backend-standards-always-follow", "backend-api-standards", "api-contract-standards",
+        "service-layer-standards", "backend-error-handling", "scaffold-standards",
+        "golang-patterns", "golang-testing", "postgres-patterns", "owasp-security",
+        "test-driven-development", "dead-code-and-change-audit", "codebase-intel-first",
+    ],
+    "frontend-implementor-specialist": [
+        "frontend-standards-always-follow", "frontend-structure-standards",
+        "frontend-response-handling", "frontend-server-data-patterns", "react-hooks-patterns",
+        "tailwind-design-system", "shadcn", "motion-dev", "design-taste-frontend",
+        "higgsfield-generate", "webapp-testing", "dead-code-and-change-audit",
+        "codebase-intel-first",
+    ],
+    "integrator-specialist": [
+        "api-contract-standards", "webapp-testing", "verification-loop", "codebase-intel-first",
+    ],
+    "implementation-engineer": [
+        "codebase-intel-first", "architect-system-design", "test-driven-development",
+        "source-driven-development", "doubt-driven-development", "dead-code-and-change-audit",
+        "verification-loop", "code-execution-standard",
+    ],
+    "frontend-uiux-designer": [
+        "design-taste-frontend", "frontend-design:frontend-design", "frontend-ui-engineering",
+        "motion-dev", "animejs-motion", "tailwind-design-system", "shadcn",
+        "higgsfield-generate", "webapp-testing",
+    ],
+    "santa-reviewer": ["santa-review", "code-review-and-quality"],
+    "security-sentinel": ["owasp-security", "verification-loop"],
+    "qa-verifier": ["verification-loop", "webapp-testing"],
+    "audit-specialist": ["tech-debt-audit", "codebase-intel-first", "dead-code-and-change-audit"],
+    "planning-director": [
+        "planning-and-task-breakdown", "superpowers:writing-plans", "architect-system-design",
+        "codebase-intel-first",
+    ],
+    "spec-architect": ["spec-driven-development", "api-contract-standards", "architect-system-design"],
+    "debug-detective": [
+        "debug-investigation", "doubt-driven-development", "superpowers:systematic-debugging",
+        "codebase-intel-first",
+    ],
+    "deadcode-reaper": ["dead-code-and-change-audit", "codebase-intel-first", "fix-lint-format"],
+    "docs-sync-agent": ["update-docs", "dox-doc-tree"],
+    "refactor-specialist": [
+        "code-simplification", "codebase-design", "test-driven-development", "codebase-intel-first",
+    ],
+    "test-author": ["test-driven-development", "golang-testing", "webapp-testing"],
+    "memory-codex": [],
+    "team-lead": ["invoke", "api-contract-standards"],
 }
 
-CATEGORY_AGENTS = {
-    "audit-specialist": "AUDIT", "spec-architect": "SPEC",
-    "planning-director": "PLAN", "debug-detective": "DEBUG",
-    "deadcode-reaper": "CLEANUP", "docs-sync-agent": "DOCS",
-    "qa-verifier": "VERIFY", "santa-reviewer": "REVIEW",
-    "security-sentinel": "SECURITY", "test-author": "TEST",
-    "refactor-specialist": "REFACTOR",
-}
+FM_RE = re.compile(r"\A---\n(.*?)\n---\n", re.S)
+SKILLS_BLOCK = re.compile(r"^skills:[^\n]*\n(?:[ \t]+-[^\n]*\n)*", re.M)
 
 
-def _load(p: Path) -> dict:
+def _canon():
+    """Alias resolver: WP-3's lib.skill_aliases when importable, else the JSON map."""
+    sys.path.insert(0, str(HOOKS))
     try:
-        return json.loads(p.read_text(encoding="utf-8"))
+        from lib import skill_aliases as sa  # type: ignore
+        fn = next((getattr(sa, n) for n in ("canonical", "resolve", "to_canonical")
+                   if callable(getattr(sa, n, None))), None)
+        if fn:
+            return fn
+    except Exception:
+        pass
+    try:
+        m = json.loads((HOOKS / "skill-aliases.json").read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return {}
+        m = {}
+    m = {k: v for k, v in m.items() if not k.startswith("_")}
+    return lambda s: m.get(s, s)
 
 
-def _collapse(skills: list[str]) -> list[str]:
+def _collapse(skills: list[str], canon) -> list[str]:
     out: list[str] = []
     for s in skills:
-        c = ALIAS.get(s, s)
+        c = canon(s)
         if c not in out:
             out.append(c)
     return out
 
 
-def _fsr_lists() -> tuple[list[str], list[str]]:
-    """FRONTEND_SKILLS / BACKEND_SKILLS parsed from fullstack-skills-reminder.py
-    without importing it (it has hook side effects)."""
-    src = (HOOKS / "fullstack-skills-reminder.py").read_text(encoding="utf-8")
+def _sources(canon) -> set[str]:
+    """Union of the routing sources, alias-collapsed (drift reference only)."""
+    names: list[str] = []
+    try:
+        src = (HOOKS / "fullstack-skills-reminder.py").read_text(encoding="utf-8")
+        for var in ("FRONTEND_SKILLS", "BACKEND_SKILLS"):
+            m = re.search(rf"{var}\s*(?::[^=]*)?=\s*\[(.*?)\]", src, re.S)
+            names += re.findall(r'"([\w:-]+)"', m.group(1)) if m else []
+    except OSError:
+        pass
+    try:
+        cfg = json.loads((HOOKS / "autonomous-skill-router.config.json").read_text(encoding="utf-8"))
+        for cat in cfg.get("categories", {}).values():
+            names += cat.get("local_skills") or []
+    except (OSError, json.JSONDecodeError):
+        pass
+    return set(_collapse(names, canon))
 
-    def grab(name: str) -> list[str]:
-        m = re.search(rf"{name}\s*(?::[^=]*)?=\s*\[(.*?)\]", src, re.S)
-        return re.findall(r'"([\w:-]+)"', m.group(1)) if m else []
 
-    return grab("FRONTEND_SKILLS"), grab("BACKEND_SKILLS")
-
-
-def _agent_skills() -> dict[str, list[str]]:
-    fe, be = _fsr_lists()
-    cats = _load(HOOKS / "autonomous-skill-router.config.json").get("categories", {})
-    cc = _load(HOOKS / "skill_router.config.json").get("cross_cutting", {})
-    core = []
-    for grp in ("always", "first_write_only", "implementation", "verification"):
-        core += cc.get(grp, [])
-    out = {
-        "backend-implementor-specialist": _collapse(be),
-        "frontend-implementor-specialist": _collapse(fe),
-        "implementation-engineer": _collapse(core),
-    }
-    for agent, cat in CATEGORY_AGENTS.items():
-        ls = (cats.get(cat) or {}).get("local_skills") or []
-        if ls:
-            out[agent] = _collapse(ls)
-    return out
+def _current(parsed: dict) -> list[str]:
+    v = parsed.get("skills")
+    if v is None:
+        return []
+    if isinstance(v, str):
+        return [s.strip() for s in v.split(",") if s.strip()]
+    return [str(s) for s in v]
 
 
 def _render(skills: list[str]) -> str:
-    lines = "\n".join(f"- {s}" for s in skills)
-    return (f"{START}\n<!-- generated by hooks/gen-agent-skill-blocks.py — do not hand-edit;"
-            f" edit the routing config and re-run -->\n{lines}\n{END}")
+    return f"skills: [{', '.join(skills)}]\n"
+
+
+def _apply(text: str, m: re.Match, skills: list[str]) -> str:
+    fm = m.group(1) + "\n"
+    line = _render(skills) if skills else ""
+    if SKILLS_BLOCK.search(fm):
+        fm = SKILLS_BLOCK.sub(lambda _: line, fm, count=1)
+    elif line:
+        cm = re.search(r"^color:", fm, re.M)  # keep color last, like every agent file
+        fm = fm[:cm.start()] + line + fm[cm.start():] if cm else fm + line
+    return "---\n" + fm + "---\n" + text[m.end():]
 
 
 def main(argv: list[str]) -> int:
     check = "--check" in argv
-    stale, written, skipped = [], [], []
-    for agent, skills in _agent_skills().items():
+    canon = _canon()
+    universe = _sources(canon)
+    stale: list[str] = []
+    written: list[str] = []
+    for agent, raw in AGENT_SKILLS.items():
+        skills = _collapse(raw, canon)[:MAX_SKILLS]
         p = AGENTS / f"{agent}.md"
         if not p.is_file():
-            skipped.append(agent)
+            stale.append(f"{agent}: file missing")
             continue
-        t = p.read_text(encoding="utf-8")
-        if START not in t or END not in t:
-            skipped.append(agent)
+        text = p.read_text(encoding="utf-8")
+        m = FM_RE.match(text)
+        if not m:
+            stale.append(f"{agent}: no frontmatter")
             continue
-        block = _render(skills)
-        new = re.sub(re.escape(START) + r".*?" + re.escape(END), lambda _: block, t, flags=re.S)
-        if new != t:
-            if check:
-                stale.append(agent)
-            else:
-                p.write_text(new, encoding="utf-8")
-                written.append(agent)
+        parsed = yaml.safe_load(m.group(1)) or {}
+        drift = [s for s in skills if s not in universe]
+        if drift:
+            print(f"drift: {agent}: {', '.join(drift)} (not in routing sources)")
+        miss = [s for s in skills if ":" not in s and not (ROOT / "skills" / s / "SKILL.md").is_file()]
+        if miss:
+            print(f"missing: {agent}: {', '.join(miss)} (no skills/<name>/SKILL.md yet)")
+        cur = _current(parsed)
+        if cur == skills:
+            continue
+        if check:
+            stale.append(f"{agent}: has {cur or 'none'}, want {skills or 'none'}")
+        else:
+            p.write_text(_apply(text, m, skills), encoding="utf-8")
+            written.append(agent)
     if check:
-        print(f"agent-skill-blocks: {'STALE: ' + ', '.join(stale) if stale else 'all in sync'}"
-              f" ({len(skipped)} without markers skipped)")
-        return 1 if stale else 0
-    print(f"agent-skill-blocks: rewrote {len(written)} ({', '.join(written) or 'none'}); "
-          f"{len(skipped)} without markers skipped")
+        if stale:
+            print("agent-skills: STALE\n  " + "\n  ".join(stale))
+            return 1
+        print(f"agent-skills: all {len(AGENT_SKILLS)} agents in sync")
+        return 0
+    print(f"agent-skills: rewrote {len(written)} ({', '.join(written) or 'none'}); "
+          f"{len(AGENT_SKILLS)} agents covered")
     return 0
 
 

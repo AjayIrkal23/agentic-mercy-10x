@@ -1,32 +1,80 @@
-# Cursor Agents — Lifecycle Routing
+# Agents — routing, models, teams
 
-Agents live in `~/.claude/agents/`. GSD workflows spawn via `$HOME/.claude/agents/<name>.md`.
+Subagent definitions live here as `<name>.md` (YAML frontmatter + body). Claude Code
+loads them natively; `/invoke <acts>` (skill `invoke`) dispatches them per act, and the
+prompt router suggests one per prompt. 18 agents: 17 specialists + `team-lead`.
 
-## When to use which agent
+## Routing table
 
-| Intent | Agent | Paired skill |
-|--------|-------|--------------|
-| **Adversarial bug-hunt review (Santa Method)** | **`santa-reviewer`** (Opus) — BREAKER + SIMPLIFIER + VERIFIER; `/invoke-review` (closer on every code-mutating invoke) or `/santa-review` | `santa-review` skill; satisfies Gate 4 (writes `.santa.json`) |
-| **Author failing tests first (TDD red)** | **`test-author`** — behavior-first, edge-complete tests seen RED before code; `/invoke-test` | `test-driven-development`, `golang-testing`, `webapp-testing` |
-| **Behavior-preserving refactor** | **`refactor-specialist`** — blast-radius-aware, test-guarded restructuring; `/invoke-refactor` | `code-simplification`, `improve-codebase-architecture` |
-| Pre-merge PR review | `code-reviewer` (Task) — Superpowers plugin: `plugins/.../superpowers/.../agents/code-reviewer.md` | Santa gate writes `.santa.json` |
-| Deep quality audit | `thermo-nuclear-code-quality-review` | Plugin rubric |
-| Figma → code | `figma-implementation`, `figma-code-connect` | UI six-skill stack |
-| Design parity | `figma-design-parity-reviewer` | Figma comparison |
-| Frontend polish | `frontend-uiux-designer` | `frontend-ui-engineering` |
-| Vercel AI apps | `vercel-ai-architect` | `architect-system-design` |
-| Deploy / perf | `vercel-deployment-expert`, `vercel-performance-optimizer` | `shipping-and-launch` |
+| Agent | Act / trigger | Model | Effort | Writes | Preload |
+|---|---|---|---|---|---|
+| `audit-specialist` | AUDIT — tech-debt, hotspots, dead code, repo health | sonnet | high | report only | 3 |
+| `spec-architect` | SPEC — requirements, typed contracts, Not-Doing | sonnet | high | report only | 3 |
+| `planning-director` | PLAN — dependency-ordered tasks, complete code per step | sonnet | high | report only | 4 |
+| `debug-detective` | DEBUG — unknown-cause failures; ROOTCAUSE.md | sonnet | xhigh | instrumentation + 1-file fix | 4 |
+| `test-author` | TEST — failing tests first (RED) | sonnet | high | test files | 3 |
+| `implementation-engineer` | IMPL fallback — infra, scripts, hooks, ambiguous surface | opus | xhigh | code | 8 |
+| `backend-implementor-specialist` | IMPL backend — contract-first; publishes CONTRACT | opus | xhigh | code | 13 |
+| `frontend-implementor-specialist` | IMPL frontend — builds against CONTRACT; Higgsfield assets | opus | xhigh | code | 13 |
+| `integrator-specialist` | IMPL mixed closer — parity diff, wiring fixes, E2E proof | opus | high | small wiring fixes | 4 |
+| `refactor-specialist` | REFACTOR — behavior-preserving, in its own worktree | sonnet | high | code (worktree) | 4 |
+| `frontend-uiux-designer` | DESIGN — any "how it looks/feels" task; anti-slop + assets | opus | xhigh | code + assets | 9 |
+| `deadcode-reaper` | CLEAN — removes only what this diff orphaned | sonnet | medium | removals + lint | 3 |
+| `security-sentinel` | SECURITY — semgrep + OWASP; PASS/BLOCK (Gate 3) | sonnet | high | report only | 2 |
+| `santa-reviewer` | REVIEW — BREAKER/SIMPLIFIER/VERIFIER (Gate 4) | opus | xhigh | report only | 2 |
+| `docs-sync-agent` | DOCS — diff → docs ledger, dox tree, ADR test (Gate 2) | sonnet | medium | docs only, background | 2 |
+| `qa-verifier` | VERIFY — evidence before assertions | sonnet | medium | report only | 2 |
+| `memory-codex` | manual — append one dated CODEX.md entry | sonnet | medium | CODEX.md only | 0 |
+| `team-lead` | teams — fullstack BE↔FE contract handoff, requested squads | opus | high | run.json only | 2 |
 
-## Orphans wired here
+Canonical `/invoke` order: audit spec plan debug test impl refactor design clean security
+review docs verify. Closers (clean, security, review, docs, verify) run only after
+code-mutating acts.
 
-These agents are **not** deprecated — invoke via Task when the handoff table in [`agent-lifecycle-routing.md`](../rules/agent-lifecycle-routing.md) applies:
+## Plain delegation vs teams
 
-- `frontend-uiux-designer` — UI polish when requested
-- Figma agents — when user provides Figma URLs (MCP + agent)
-- Vercel agents — deployment/architecture questions
+- **Plain delegation (default):** `Agent(subagent_type, description: "[sonnet|opus] …",
+  model: …)` with **no `name`**. The agent file's `model`, `effort`, `tools`,
+  `disallowedTools`, `skills`, `memory`, `mcpServers` all apply.
+- **Team (deliberate):** only when teammates must message each other — fullstack
+  `/invoke impl` (impl-be publishes the CONTRACT → SendMessage → impl-fe builds →
+  integrator diffs and bounces by name) or a parallel squad the user asks for. Passing
+  `name` launches a *teammate*, which honours `tools`/`model` but **not** `skills:` or
+  `mcpServers`; the lead tells each teammate its two baseline skills to `Skill()` first
+  and registers `expected_artifacts` in `run.json` so the `TeammateIdle` gate keeps it
+  working until the artifact exists. Pattern: `team-lead.md`.
 
-## Plugins
+## Model and effort
 
-Superpowers, shadcn, GSAP, MongoDB, Redis plugins **stay enabled** — they support planning and implementation layers. Do not disable for "simplicity."
+- Default subagent model is Sonnet (`env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet`); every agent
+  file pins its own `model:` (opus for the 5 implementor/design agents + santa-reviewer)
+  so routing holds even if hooks fail. `opus-guard` only aligns the `[label]` with
+  the resolved model; precedence lives in `hooks/model-policy.json`.
+- Effort default is `high` (`env.CLAUDE_CODE_SUBAGENT_EFFORT`); per-agent `effort:`
+  overrides it (xhigh implementors/santa/debug/uiux; medium docs/clean/qa/memory).
+- Fable is never automatic — only when the user asks for it on that turn.
 
-The manual entrypoints are the 20 `/invoke` commands (parametric `/invoke <acts...>` + 10 single-act delegators + `invoke-fullstack` + 5 muscle-memory aliases + 3 utilities); the keyword auto-router dispatches these same specialist agents from `autonomous-skill-router.config.json`. **Figma agents are DORMANT** (require a Figma MCP server — register one to activate). **Vercel agents** (vercel-ai-architect, vercel-deployment-expert, vercel-performance-optimizer) are available and surface via `/invoke design|ship` suggestions.
+## Skill preload (`skills:`)
+
+Each agent's `skills:` list is preloaded in full at start (no manual `Read` of
+SKILL.md files; canonical names only, aliases collapsed, ≤13). Bodies say
+"Preloaded skills (frontmatter `skills:`); use `Skill(...)` for anything else."
+Path-bound FE/BE standards also surface natively when matching files are read.
+`hooks/gen-agent-skill-blocks.py` holds the table: run it to rewrite every agent's
+`skills:` line, `--check` exits 1 on any drift (installer verify, WP-13). It also
+prints `drift:` when a preloaded skill is unknown to the routing config.
+
+## Least privilege
+
+Read-only roles (`audit-specialist`, `spec-architect`, `planning-director`,
+`santa-reviewer`, `security-sentinel`, `qa-verifier`) carry
+`disallowedTools: Edit, NotebookEdit, Agent` — `Write` stays for their single report.
+Every specialist disallows `Agent` (no recursive fan-out). `memory-codex` has an
+explicit `tools:` allowlist. `memory: user` on santa/security/audit/debug keeps
+false-positive lists, noise triage, metric snapshots, and killed hypotheses across runs.
+
+## Removed (2026-09-27)
+
+Four `figma-*` agents (need a Figma MCP that is not available on this Linux setup),
+three `vercel-*` agents (never used, stale model ids), and all `*.bak*` files. No agent
+depends on them; git history keeps the bodies.
