@@ -1,18 +1,49 @@
 {
   "_meta": {
-    "purpose": "Charter v3 §2 verbatim trigger floor — removals forbidden, additions allowed.",
-    "generated": "2026-08-15T03:47:28",
+    "purpose": "Prompt-router trigger floor — word-boundary keyword taxonomy consumed in full by prompt_router/classify.py.",
+    "charter": "v2 floor (2026-09-27): removals require a charter bump",
+    "generated": "2026-09-28T03:20:14.891651+00:00",
     "generator": "build-trigger-floor.py",
-    "checksum": "036877954ddb3f7fd31066f2d0477b50d16d73a36ded7d965e794c2e9d2c7fee",
-    "entry_count": 1605,
+    "checksum": "550c5f1c99e763feae1dabeedddb99fe110656370930eaf6116bb9c6a1d7eb09",
+    "entry_count": 1890,
+    "short_allow": [
+      "3d",
+      "404",
+      "a11y",
+      "adr",
+      "api",
+      "bug",
+      "cd",
+      "ci",
+      "csp",
+      "css",
+      "e2e",
+      "fix",
+      "glb",
+      "go",
+      "jwt",
+      "pii",
+      "prd",
+      "r3f",
+      "rfc",
+      "seo",
+      "sql",
+      "ssl",
+      "tdd",
+      "tls",
+      "tsx",
+      "uat",
+      "ui",
+      "ux",
+      "xss"
+    ],
     "source_counts": {
       "skill_router.config.rules": 29,
       "skill_router.builtins": 24,
-      "autonomous.category_keywords": 1164,
-      "ui.keywords": 0,
+      "autonomous.category_keywords": 1152,
+      "ui.keywords": 412,
       "graphify.arch+explore": 247,
-      "fullstack.segments": 11,
-      "command_names": 143
+      "fullstack.segments": 12
     }
   },
   "entries": [
@@ -101,8 +132,9 @@
             "routes.ts"
           ],
           "exclude_paths": [
-            "UDP_PLATFORM/server",
-            "server/internal"
+            "server/internal",
+            "/server/",
+            "/internal/"
           ]
         },
         "skills": [
@@ -171,7 +203,7 @@
           ]
         },
         "skills": [
-          "taste-skill",
+          "design-taste-frontend",
           "frontend-ui-engineering"
         ]
       },
@@ -193,7 +225,7 @@
           ]
         },
         "skills": [
-          "frontend-code-review",
+          "code-review-and-quality",
           "frontend-standards-always-follow",
           "react-hooks-patterns"
         ]
@@ -289,12 +321,11 @@
     {
       "kind": "path_route",
       "value": {
-        "id": "be_cursor_infra",
+        "id": "be_claude_infra",
         "match": {
           "path_contains_any": [
             ".claude/hooks/",
-            ".claude/rules/",
-            ".claude/hooks/"
+            ".claude/rules/"
           ]
         },
         "skills": [
@@ -304,7 +335,7 @@
         ]
       },
       "source_file": "skill_router.config.json",
-      "source_key": "be_cursor_infra",
+      "source_key": "be_claude_infra",
       "weight": 1.0
     },
     {
@@ -402,7 +433,7 @@
         },
         "skills": [
           "backend-standards-always-follow",
-          "domain-scaffold-patterns",
+          "scaffold-standards",
           "service-layer-standards"
         ]
       },
@@ -594,7 +625,7 @@
           ]
         },
         "skills": [
-          "backend-code-review",
+          "code-review-and-quality",
           "backend-standards-always-follow",
           "service-layer-standards"
         ]
@@ -656,7 +687,7 @@
         },
         "skills": [
           "owasp-security",
-          "security-and-hardening"
+          "backend-standards-always-follow"
         ]
       },
       "source_file": "skill_router.py:_BUILTIN_BACKEND_RULES",
@@ -681,12 +712,9 @@
         "group": "first_write_only",
         "skills": [
           "architect-system-design",
-          "codebase-start-point-guide",
-          "project-reference-linkage",
-          "project-structure-map",
-          "mcp-usage-standards",
-          "iterative-retrieval",
           "codebase-intel-first",
+          "project-reference-linkage",
+          "mcp-usage-standards",
           "dox-doc-tree",
           "graphify"
         ]
@@ -1388,27 +1416,6 @@
     },
     {
       "kind": "act_keyword",
-      "value": "wtf",
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "categories.DEBUG",
-      "weight": 1.0
-    },
-    {
-      "kind": "act_keyword",
-      "value": "wth",
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "categories.DEBUG",
-      "weight": 1.0
-    },
-    {
-      "kind": "act_keyword",
-      "value": "huh",
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "categories.DEBUG",
-      "weight": 1.0
-    },
-    {
-      "kind": "act_keyword",
       "value": "weird",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.DEBUG",
@@ -1417,13 +1424,6 @@
     {
       "kind": "act_keyword",
       "value": "strange",
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "categories.DEBUG",
-      "weight": 1.0
-    },
-    {
-      "kind": "act_keyword",
-      "value": "odd",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.DEBUG",
       "weight": 1.0
@@ -1592,13 +1592,6 @@
     {
       "kind": "act_keyword",
       "value": "wrong",
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "categories.DEBUG",
-      "weight": 0.4
-    },
-    {
-      "kind": "act_keyword",
-      "value": "off",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.DEBUG",
       "weight": 0.4
@@ -2298,13 +2291,6 @@
     },
     {
       "kind": "act_keyword",
-      "value": "cr",
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "categories.REVIEW",
-      "weight": 1.0
-    },
-    {
-      "kind": "act_keyword",
       "value": "pr review",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.REVIEW",
@@ -2579,13 +2565,6 @@
     {
       "kind": "act_keyword",
       "value": "good to go",
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "categories.SHIP",
-      "weight": 1.0
-    },
-    {
-      "kind": "act_keyword",
-      "value": "gtg",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.SHIP",
       "weight": 1.0
@@ -3404,13 +3383,6 @@
     },
     {
       "kind": "act_keyword",
-      "value": "qa",
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "categories.QA",
-      "weight": 1.0
-    },
-    {
-      "kind": "act_keyword",
       "value": "does it work",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.QA",
@@ -4042,13 +4014,6 @@
     {
       "kind": "act_keyword",
       "value": "stub",
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "categories.TEST",
-      "weight": 1.0
-    },
-    {
-      "kind": "act_keyword",
-      "value": "spy",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.TEST",
       "weight": 1.0
@@ -5099,13 +5064,6 @@
     {
       "kind": "act_keyword",
       "value": "compliance",
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "categories.SECURITY",
-      "weight": 1.0
-    },
-    {
-      "kind": "act_keyword",
-      "value": "dos",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.SECURITY",
       "weight": 1.0
@@ -6421,13 +6379,6 @@
     },
     {
       "kind": "act_keyword",
-      "value": "sse",
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "categories.LARGE",
-      "weight": 1.0
-    },
-    {
-      "kind": "act_keyword",
       "value": "streaming",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.LARGE",
@@ -7191,13 +7142,6 @@
     },
     {
       "kind": "act_keyword",
-      "value": "add",
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "categories.SMALL",
-      "weight": 1.0
-    },
-    {
-      "kind": "act_keyword",
       "value": "update",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.SMALL",
@@ -7215,7 +7159,7 @@
       "value": "fix",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.SMALL",
-      "weight": 0.4
+      "weight": 1.0
     },
     {
       "kind": "act_keyword",
@@ -8877,115 +8821,6 @@
       "weight": 1.0
     },
     {
-      "kind": "invoke_command_map",
-      "value": {
-        "category": "AUDIT",
-        "spec": {
-          "name": "invoke-audit"
-        }
-      },
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "invoke_commands.AUDIT",
-      "weight": 1.0
-    },
-    {
-      "kind": "invoke_command_map",
-      "value": {
-        "category": "PLAN",
-        "spec": {
-          "name": "invoke-planning"
-        }
-      },
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "invoke_commands.PLAN",
-      "weight": 1.0
-    },
-    {
-      "kind": "invoke_command_map",
-      "value": {
-        "category": "SPEC",
-        "spec": {
-          "name": "invoke-spec"
-        }
-      },
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "invoke_commands.SPEC",
-      "weight": 1.0
-    },
-    {
-      "kind": "invoke_command_map",
-      "value": {
-        "category": "IMPLEMENT",
-        "spec": {
-          "name": "invoke-implementation"
-        }
-      },
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "invoke_commands.IMPLEMENT",
-      "weight": 1.0
-    },
-    {
-      "kind": "invoke_command_map",
-      "value": {
-        "category": "DESIGN",
-        "spec": {
-          "name": "invoke-design"
-        }
-      },
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "invoke_commands.DESIGN",
-      "weight": 1.0
-    },
-    {
-      "kind": "invoke_command_map",
-      "value": {
-        "category": "CLEANUP",
-        "spec": {
-          "name": "invoke-cleanup",
-          "aliases": [
-            "invoke-deadcode"
-          ]
-        }
-      },
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "invoke_commands.CLEANUP",
-      "weight": 1.0
-    },
-    {
-      "kind": "invoke_command_map",
-      "value": {
-        "category": "DEBUG",
-        "spec": {
-          "name": "invoke-debug",
-          "aliases": [
-            "invoke-debugging"
-          ]
-        }
-      },
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "invoke_commands.DEBUG",
-      "weight": 1.0
-    },
-    {
-      "kind": "invoke_command_map",
-      "value": {
-        "category": "SECURITY",
-        "spec": {
-          "name": "invoke-security"
-        }
-      },
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "invoke_commands.SECURITY",
-      "weight": 1.0
-    },
-    {
-      "kind": "path_segment",
-      "value": "UDP_PLATFORM/client",
-      "source_file": "fullstack-skills-reminder.config.json",
-      "source_key": "frontend_path_segments",
-      "weight": 1.0
-    },
-    {
       "kind": "path_segment",
       "value": "client/",
       "source_file": "fullstack-skills-reminder.config.json",
@@ -8994,30 +8829,58 @@
     },
     {
       "kind": "path_segment",
-      "value": "UDP_PLATFORM/server",
+      "value": "frontend/",
+      "source_file": "fullstack-skills-reminder.config.json",
+      "source_key": "frontend_path_segments",
+      "weight": 1.0
+    },
+    {
+      "kind": "path_segment",
+      "value": "apps/web/",
+      "source_file": "fullstack-skills-reminder.config.json",
+      "source_key": "frontend_path_segments",
+      "weight": 1.0
+    },
+    {
+      "kind": "path_segment",
+      "value": "server/",
       "source_file": "fullstack-skills-reminder.config.json",
       "source_key": "backend_path_segments",
       "weight": 1.0
     },
     {
       "kind": "path_segment",
-      "value": "server/internal/",
+      "value": "backend/",
       "source_file": "fullstack-skills-reminder.config.json",
       "source_key": "backend_path_segments",
       "weight": 1.0
     },
     {
       "kind": "path_segment",
-      "value": "server/cmd/",
+      "value": "internal/",
       "source_file": "fullstack-skills-reminder.config.json",
       "source_key": "backend_path_segments",
       "weight": 1.0
     },
     {
       "kind": "path_segment",
-      "value": "server/pkg/",
+      "value": "cmd/",
       "source_file": "fullstack-skills-reminder.config.json",
       "source_key": "backend_path_segments",
+      "weight": 1.0
+    },
+    {
+      "kind": "path_segment",
+      "value": "pkg/",
+      "source_file": "fullstack-skills-reminder.config.json",
+      "source_key": "backend_path_segments",
+      "weight": 1.0
+    },
+    {
+      "kind": "path_segment",
+      "value": "docs/",
+      "source_file": "fullstack-skills-reminder.config.json",
+      "source_key": "documentation_path_segments",
       "weight": 1.0
     },
     {
@@ -9042,17 +8905,3132 @@
       "weight": 1.0
     },
     {
-      "kind": "path_segment",
-      "value": "UDP_PLATFORM/server/server_docs",
-      "source_file": "fullstack-skills-reminder.config.json",
-      "source_key": "documentation_path_segments",
+      "kind": "ui_keyword",
+      "value": "ui",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "ux",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "user interface",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
       "weight": 1.0
     },
     {
-      "kind": "path_segment",
-      "value": "UDP_PLATFORM/client/frontend_docs",
-      "source_file": "fullstack-skills-reminder.config.json",
-      "source_key": "documentation_path_segments",
+      "kind": "ui_keyword",
+      "value": "user experience",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "design",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "layout",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "typography",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "typo",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "landing",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "landing page",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "hero",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "hero section",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "dashboard",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "admin panel",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "control panel",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "navbar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "nav bar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "navigation",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "nav menu",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "top bar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "app bar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "footer",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "bottom bar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "modal",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "dialog",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "popup",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "pop-up",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "overlay",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "lightbox",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "toast",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "snackbar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "notification popup",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "button",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "call to action",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "card",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "card design",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "card layout",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "card grid",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "form",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "form design",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "form layout",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "form field",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "input field",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "input",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "text field",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "text input",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "textarea",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "text area",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "select",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "dropdown",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "combobox",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "combo box",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "autocomplete",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "menu",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "context menu",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "right click menu",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "sidebar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "side bar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "side panel",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "left panel",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "right panel",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "drawer",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "slide out",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "slide-out",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "theme",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "theming",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "dark mode",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "light mode",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "color scheme",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "tailwind",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "tailwindcss",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "css",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "scss",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "sass",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "styled",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "animation",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "animate",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "motion",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "transition",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "framer motion",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "microinteraction",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "micro-interaction",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "responsive",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "mobile",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "tablet",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "breakpoint",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "media query",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "mobile first",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "mobile-first",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "adaptive",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "a11y",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "accessibility",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "accessib",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "wcag",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "aria",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "screen reader",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "keyboard nav",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "focus trap",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "focus ring",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "tab order",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "color palette",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "palette",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "colors",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "colour",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "colours",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "brand",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "branding",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "brand colors",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "brand identity",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "style guide",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "design system",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "component library",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "figma",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "sketch",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "adobe xd",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "mockup",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "mock-up",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "wireframe",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "prototype",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "component",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "page",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "screen",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "view",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "banner",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "section",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "hero banner",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "grid",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "flexbox",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "flex",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "css grid",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "spacing",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "padding",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "margin",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "font",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "font size",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "font weight",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "font family",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "bold",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "italic",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "underline",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "text style",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "icon",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "icons",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "iconography",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "lucide",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "heroicons",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "illustration",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "graphic",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "image",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "photo",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "generate image",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "generate an image",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "ai image",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "generated asset",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "hero image",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "background image",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "video background",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "background video",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "hero video",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "motion background",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "animated background",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "loop video",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "3d",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "glb",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "3d model",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "3d element",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "higgsfield",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "asset generation",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "sound effect",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "ui sound",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "ambient audio",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "og image",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "texture",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "pattern",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "slide",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "deck",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "pitch deck",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "presentation",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "infographic",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "data viz",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "data visualization",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "chart",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "graph viz",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "storybook",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "component showcase",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "shape",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "craft",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "polish",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "refine",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "typeset",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "type scale",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "type hierarchy",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "premium",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "fancy",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "luxurious",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "luxury",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "modern",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "minimal",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "minimalist",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "clean",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 0.4
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "production quality",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "pixel perfect",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "pixel-perfect",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "accessible",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "inclusive",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "redesign",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "restyle",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "makeover",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "facelift",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "beautify",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "look and feel",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "visual",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "visuals",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "aesthetic",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "aesthetics",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "stylish",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "sleek",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "elegant",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "sophisticated",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "shadow",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "box shadow",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "drop shadow",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "elevation",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "hover",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "hover effect",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "hover state",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "active state",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "focus state",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "disabled state",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "interaction",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "interactive",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "clickable",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "contrast",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "color contrast",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "contrast ratio",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "extract design",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "design tokens",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "tokens",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "impeccable",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "huashu",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "gradient",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "linear gradient",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "radial gradient",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "glassmorphism",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "glass effect",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "frosted glass",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "neumorphism",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "soft ui",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "skeleton",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "skeleton loader",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "shimmer",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "loading state",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "loading spinner",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "loader",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "empty state",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "no data",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "no results",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "zero state",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "error state",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "error page",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "error boundary",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "badge",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "chip",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "label component",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "avatar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "profile pic",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "user avatar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "tooltip",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "popover",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "info tip",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "breadcrumb",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "breadcrumbs",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "path indicator",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "tabs",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "tab bar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "tab panel",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "tabbed",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "accordion",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "collapsible",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "expandable",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "stepper",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "wizard",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "multi-step",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "carousel",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "slider",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "swiper",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "table",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "data table",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "data grid",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "sortable table",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "pagination",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "paginator",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "page controls",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "search bar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "search box",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "filter bar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "progress bar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "progress indicator",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "loading bar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "divider",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "separator",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "toggle",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "switch",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "toggle switch",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "checkbox",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "radio",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "radio button",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "date picker",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "datepicker",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "calendar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "time picker",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "timepicker",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "file upload",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "drag and drop",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "dropzone",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "ugly",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "looks bad",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "looks off",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "looks wrong",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "looks weird",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "looks broken",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "looks terrible",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "not pretty",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "too cramped",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "too tight",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "too wide",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "too narrow",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "too much space",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "too little space",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "too spread out",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "clunky",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "choppy",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "janky",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "jittery",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "alignment",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "aligned",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "misaligned",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "not aligned",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "centered",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "center it",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "center this",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "truncated",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "overflow",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "text overflow",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "ellipsis",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "scrollbar",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "scroll",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "scroll area",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "overflow scroll",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "sticky",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "fixed position",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "absolute position",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "z-index",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "stacking",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "overlap",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "border radius",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "rounded",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "rounded corners",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "sharp corners",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "opacity",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "transparent",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "translucent",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "blur",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "backdrop blur",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "backdrop",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "white space",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "whitespace",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "breathing room",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "visual hierarchy",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "hierarchy",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "emphasis",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "consistency",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "consistent",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "inconsistent",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "make it look",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "make it pretty",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "make it nicer",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "make it better looking",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "improve the ui",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "improve the look",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "needs polish",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "needs work visually",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "visual polish",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "professional",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "professional look",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "corporate",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "playful",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "colorful",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "vibrant",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "muted",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "subtle",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "understated",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "toned down",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "bold design",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "striking",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "eye catching",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "eye-catching",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "flat design",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "material design",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "material ui",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "shadcn",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "radix",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "headless ui",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "headless",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "lucide react",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "react icons",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "responsive table",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "mobile table",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "mobile card",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "filter combobox",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "server filter",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_keyword",
+      "value": "filter dropdown",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_suffix",
+      "value": ".tsx",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_path_suffixes",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_suffix",
+      "value": ".jsx",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_path_suffixes",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_suffix",
+      "value": ".css",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_path_suffixes",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_suffix",
+      "value": ".scss",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_path_suffixes",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_suffix",
+      "value": ".sass",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_path_suffixes",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_suffix",
+      "value": ".less",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_path_suffixes",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_suffix",
+      "value": ".vue",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_path_suffixes",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_suffix",
+      "value": ".svelte",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_path_suffixes",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_suffix",
+      "value": ".html",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_path_suffixes",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_suffix",
+      "value": ".astro",
+      "source_file": "ui-keywords.json",
+      "source_key": "ui_path_suffixes",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "backend only",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "server only",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "database migration",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "sql only",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "api only no ui",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "audit log",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "audit trail",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "audit action",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "backend error",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "error handling",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "schema validation",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "schema parse",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "sql query",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "database query",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "go test",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "unit test only",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "service test",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "middleware only",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "controller only",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "no frontend",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "no ui",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "no visual",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "just the api",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "just the endpoint",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
+      "weight": 1.0
+    },
+    {
+      "kind": "ui_exclude",
+      "value": "just the backend",
+      "source_file": "ui-keywords.json",
+      "source_key": "exclude_keywords",
       "weight": 1.0
     },
     {
@@ -10635,7 +13613,7 @@
       "value": "map",
       "source_file": "graphify-enforce.config.json",
       "source_key": "explore_keywords",
-      "weight": 0.4
+      "weight": 1.0
     },
     {
       "kind": "explore_keyword",
@@ -10768,1007 +13746,6 @@
       "value": "how much",
       "source_file": "graphify-enforce.config.json",
       "source_key": "explore_keywords",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke",
-      "source_file": "commands/",
-      "source_key": "invoke",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit",
-      "source_file": "commands/",
-      "source_key": "invoke-audit",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-impl",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-impl",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-impl-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-impl-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-impl-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-impl-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-impl-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-impl-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-impl-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-impl-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-impl-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-impl-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-impl-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-impl-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-impl-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-impl-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan-impl",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan-impl",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan-impl-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan-impl-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan-impl-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan-impl-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan-impl-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan-impl-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan-impl-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan-impl-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan-impl-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan-impl-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan-impl-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan-impl-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-plan-impl-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-plan-impl-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-impl",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-impl",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-impl-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-impl-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-impl-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-impl-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-impl-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-impl-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-impl-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-impl-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-impl-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-impl-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-impl-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-impl-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-impl-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-impl-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan-impl",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan-impl",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan-impl-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan-impl-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan-impl-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan-impl-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan-impl-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan-impl-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan-impl-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan-impl-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan-impl-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan-impl-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan-impl-design",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan-impl-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-audit-spec-plan-impl-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-audit-spec-plan-impl-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-cleanup",
-      "source_file": "commands/",
-      "source_key": "invoke-cleanup",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-deadcode",
-      "source_file": "commands/",
-      "source_key": "invoke-deadcode",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-debugging",
-      "source_file": "commands/",
-      "source_key": "invoke-debugging",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-design",
-      "source_file": "commands/",
-      "source_key": "invoke-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-docs",
-      "source_file": "commands/",
-      "source_key": "invoke-docs",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-fullstack",
-      "source_file": "commands/",
-      "source_key": "invoke-fullstack",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-impl",
-      "source_file": "commands/",
-      "source_key": "invoke-impl",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-impl-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-impl-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-impl-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-impl-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-impl-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-impl-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-impl-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-impl-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-impl-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-impl-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-impl-design",
-      "source_file": "commands/",
-      "source_key": "invoke-impl-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-impl-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-impl-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-implementation",
-      "source_file": "commands/",
-      "source_key": "invoke-implementation",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan",
-      "source_file": "commands/",
-      "source_key": "invoke-plan",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-plan-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-plan-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-plan-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-plan-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-plan-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan-design",
-      "source_file": "commands/",
-      "source_key": "invoke-plan-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-plan-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan-impl",
-      "source_file": "commands/",
-      "source_key": "invoke-plan-impl",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan-impl-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-plan-impl-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan-impl-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-plan-impl-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan-impl-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-plan-impl-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan-impl-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-plan-impl-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan-impl-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-plan-impl-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan-impl-design",
-      "source_file": "commands/",
-      "source_key": "invoke-plan-impl-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-plan-impl-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-plan-impl-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-planning",
-      "source_file": "commands/",
-      "source_key": "invoke-planning",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-refactor",
-      "source_file": "commands/",
-      "source_key": "invoke-refactor",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-review",
-      "source_file": "commands/",
-      "source_key": "invoke-review",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-security",
-      "source_file": "commands/",
-      "source_key": "invoke-security",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-session",
-      "source_file": "commands/",
-      "source_key": "invoke-session",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec",
-      "source_file": "commands/",
-      "source_key": "invoke-spec",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-design",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-impl",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-impl",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-impl-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-impl-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-impl-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-impl-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-impl-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-impl-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-impl-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-impl-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-impl-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-impl-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-impl-design",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-impl-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-impl-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-impl-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan-design",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan-impl",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan-impl",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan-impl-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan-impl-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan-impl-debug",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan-impl-debug",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan-impl-debug-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan-impl-debug-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan-impl-debug-design",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan-impl-debug-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan-impl-debug-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan-impl-debug-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan-impl-design",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan-impl-design",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-spec-plan-impl-design-clean",
-      "source_file": "commands/",
-      "source_key": "invoke-spec-plan-impl-design-clean",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-status",
-      "source_file": "commands/",
-      "source_key": "invoke-status",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-test",
-      "source_file": "commands/",
-      "source_key": "invoke-test",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-update",
-      "source_file": "commands/",
-      "source_key": "invoke-update",
-      "weight": 1.0
-    },
-    {
-      "kind": "command_name",
-      "value": "invoke-verify",
-      "source_file": "commands/",
-      "source_key": "invoke-verify",
       "weight": 1.0
     }
   ]

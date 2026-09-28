@@ -1,27 +1,77 @@
 {
-  "_comment": "Unified prompt-router config (P1-T2). Generated as trigger-floor.json UNION additions (Charter v3 §1/§2). The router loads and evaluates the ENTIRE trigger floor at runtime (classify.py::_floor_index), so every legacy rule is reachable — consumes_entire_floor=true is what build-trigger-floor.py --check verifies for floor->config coverage. Removals from the floor are forbidden; router-only tuning lives under 'additions'.",
+  "_comment": "Unified prompt-router config (v3, 2026-09-27). The router evaluates the ENTIRE trigger floor at runtime (classify.py::_floor_index) with word-boundary matching, then ranks <= max_skill_pushes skills above min_skill_score by surface (FE/BE/API/docs from prompt paths + vocab, cwd, repo stack), intent, and the curated category lists. consumes_entire_floor=true is what build-trigger-floor.py --check verifies. Router-only tuning lives under 'additions' — never edit the floor by hand.",
   "consumes_floor": "trigger-floor.json",
   "consumes_entire_floor": true,
-  "max_tokens_per_prompt": 24000,
   "auto_dispatch_threshold": 3,
-  "max_skill_pushes": 40,
+  "max_skill_pushes": 5,
+  "min_skill_score": 3.0,
+  "deep_inject_chars": 3000,
+  "deep_inject_ratio": 1.5,
+  "max_route_lines": 3,
+  "max_mcp_routes": 4,
+  "code_intel": {"max_symbols": 5, "budget_ms": 150},
+  "weak_surface_factor": 0.5,
   "priority_tiers": {
-    "0": "gate-adjacent — first-write skill push, TDD init, dox (never budget-dropped)",
-    "1": "substrate precedence — jcodemunch>lean-ctx (code), jdocmunch>lean-ctx (docs), sequential-thinking, graphify",
-    "2": "ranked skill pushes (skills-index x weights); per-skill ids so a NEW skill always fires",
-    "3": "routing (suggest vs dispatch) + model advice"
+    "0": "gate-adjacent — first-write baseline, TDD (backend surface / TEST intent only)",
+    "1": "substrate precedence (jcodemunch for code, jdocmunch for docs, graphify for architecture) + indexed symbols + at most ONE deep-injected skill body",
+    "2": "ranked skill pushes: rank 1 MUST-READ, ranks 2-5 SHOULD-READ; aliases collapsed; core-skill-set skills never re-pushed",
+    "3": "routing (UI signal, MCP routes, /invoke act or specialist dispatch, per-project model mode) + model advice"
   },
   "dedup": {
     "mechanism": "session manifest at state/<sid>.router-manifest.json",
-    "invariant": "suppresses verbatim re-injection only; never suppresses a first fire (P1-T11 test)"
+    "invariant": "suppresses verbatim re-injection only; never suppresses a first fire"
   },
   "trivial_fast_exit": {
-    "mode": "exact-match ack allowlist ONLY",
-    "note": "the legacy '<12 chars' heuristic is DROPPED as trigger-unsafe (Charter §1)"
+    "mode": "exact-match ack allowlist ONLY"
   },
   "additions": {
-    "_comment": "Router-only trigger ADDITIONS atop the floor (never removals). Empty today; grows as new intents are added post-cutover — every addition must keep build-trigger-floor.py --check green.",
-    "intents": {},
-    "surfaces": {}
+    "_comment": "Router-only trigger ADDITIONS atop the floor. intents: extra act keywords per category (same <=3-char rule as the floor). surface_skills: surface/tag -> {skill: boost}; a boost from a stack-only inference is multiplied by weak_surface_factor. skill_rules: regex (on the lower-cased prompt) -> skill boost, optionally gated on surfaces. Plugin skills use the plugin:skill name; every candidate must exist on disk (local skill dir or installed plugin) or it is dropped.",
+    "intents": {
+      "IMPLEMENT": ["create", "create a new", "add a new", "add a", "add an", "write a", "make a", "new endpoint", "new component", "new service", "new route", "new page", "new migration", "new column", "new table", "new feature", "set up", "generate a"],
+      "DOCS": ["readme", "update the readme", "server_docs", "frontend_docs", "document the", "documentation", "docs"],
+      "DEBUG": ["returns 500", "returns a 500", "http 500", "status 500", "returns 404", "figure out why", "find out why"],
+      "REVIEW": ["review my changes", "review the diff", "review this pr", "code review"],
+      "VERIFY": ["verify", "verify that", "check it works", "check that it works", "make sure it works", "confirm it works", "prove", "prove it", "prove that", "prove it works", "does it actually work"]
+    },
+    "surface_skills": {
+      "frontend": {"frontend-standards-always-follow": 3.0, "frontend-structure-standards": 1.5, "react-hooks-patterns": 1.5, "frontend-response-handling": 1.0, "vite-react-best-practices": 0.8, "modern-web-guidance": 0.8},
+      "backend": {"backend-standards-always-follow": 3.0, "service-layer-standards": 1.5, "backend-error-handling": 1.2, "backend-api-standards": 1.2},
+      "api": {"backend-api-standards": 2.5, "api-contract-standards": 2.5},
+      "go": {"golang-patterns": 3.0, "golang-testing": 1.0},
+      "sql": {"postgres-patterns": 3.0, "backend-performance-standards": 1.0},
+      "clickhouse": {"clickhouse:clickhouse-best-practices": 3.0},
+      "three": {"threejs-r3f": 3.0, "higgsfield-generate": 1.5},
+      "scroll": {"nateherk-design:scroll-craft": 3.0, "motion-dev": 1.5},
+      "motion": {"motion-dev": 2.5, "animejs-motion": 1.0},
+      "tailwind": {"tailwind-design-system": 1.0},
+      "shadcn": {"shadcn": 1.0, "ui-styling": 0.5},
+      "docs": {"update-docs": 3.0},
+      "ui": {"design-taste-frontend": 3.5, "frontend-design:frontend-design": 1.5, "tailwind-design-system": 1.2, "shadcn": 1.2, "higgsfield-generate": 1.5, "nateherk-design:scroll-craft": 1.0}
+    },
+    "demote": {
+      "_comment": "Process/meta skills multiply by this factor before the score floor: they are doctrine (CLAUDE.md, core-skill-set) rather than surface skills, and without a demotion they take 2 of the 5 slots on every build prompt. A strong intent signal (PLAN/SPEC/DEBUG category boost) still lifts them over the floor.",
+      "doubt-driven-development": 0.5,
+      "source-driven-development": 0.5,
+      "tool-and-doc-selection": 0.5,
+      "eval-harness": 0.5,
+      "triage": 0.6,
+      "workflow-orchestrator": 0.6,
+      "planning-and-task-breakdown": 0.7,
+      "code-execution-standard": 0.6,
+      "architect-system-design": 0.8
+    },
+    "skill_rules": [
+      {"skill": "nateherk-design:scroll-craft", "regex": "scroll[- ]?(animation|driven|telling|linked|scrubb\\w*)|scrollytelling|parallax|pinned section|apple[- ]style|landing page|hero section|make it an experience", "boost": 2.5},
+      {"skill": "modern-web-guidance", "regex": "\\b(css|html|dialog|modal|popover|tooltip|anchor position\\w*|container quer\\w*|view transitions?|scroll[- ](driven|timeline)|backdrop[- ]filter|glassmorphism|content[- ]visibility|fetch ?priority|core web vitals|cwv|lcp|inp|baseline|browser support|polyfill)\\b", "boost": 2.0},
+      {"skill": "postgres-patterns", "regex": "\\b(postgres(ql)?|migrations?|row[- ]level security|\\brls\\b|index on)\\b", "boost": 1.5},
+      {"skill": "deprecation-and-migration", "regex": "\\b(deprecat\\w*|sunset|migrate (users|off|away|from))\\b", "boost": 2.5},
+      {"skill": "higgsfield-generate", "regex": "\\b(hero (image|video)|illustrations?|icon set|background (image|video)|generate (an? )?(image|video|asset)|3d model|glb|stock (photo|image)|placeholder (image|asset))\\b", "boost": 2.0},
+      {"skill": "golang-testing", "regex": "\\b(table[- ]driven|_test\\.go|go test|benchmark)\\b", "boost": 2.0},
+      {"skill": "webapp-testing", "regex": "\\b(playwright|in the browser|e2e|end[- ]to[- ]end test)\\b", "surfaces": ["frontend"], "boost": 2.0},
+      {"skill": "owasp-security", "regex": "\\b(auth(entication|orization)?|login|jwt|oauth|csrf|xss|injection|sanitiz\\w+|rate[- ]limit)\\b", "boost": 1.5},
+      {"skill": "code-simplification", "regex": "\\b(refactor\\w*|simplif\\w+|untangle|split (the|this) file|per-domain)\\b", "boost": 1.5},
+      {"skill": "santa-review", "regex": "\\b(review (my|the|this) (changes|diff|pr|code)|before (i|we) merge|tear apart|code review)\\b", "boost": 3.0},
+      {"skill": "debug-investigation", "regex": "\\b(root cause|figure out why|returns (a )?(500|404|502|503)|why (is|does|did) (it|this|the))\\b", "boost": 2.0}
+    ]
   }
 }

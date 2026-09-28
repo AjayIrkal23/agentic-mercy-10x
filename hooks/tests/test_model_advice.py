@@ -18,6 +18,7 @@ import json
 import pathlib
 import subprocess
 import sys
+import tempfile
 
 _HOOKS = pathlib.Path(__file__).resolve().parents[1]
 if str(_HOOKS) not in sys.path:
@@ -149,14 +150,18 @@ def _uid(tag: str) -> str:
 
 def _run_router(prompt: str, sid: str, argv=None) -> subprocess.CompletedProcess:
     cmd = [sys.executable, str(_HOOKS / "prompt_router" / "router.py")] + (argv or [])
-    return subprocess.run(cmd, input=json.dumps({"prompt": prompt, "session_id": sid}),
+    # neutral cwd: inside ~/.claude the router resolves the claude-infra surface
+    payload = {"prompt": prompt, "session_id": sid, "cwd": tempfile.gettempdir()}
+    return subprocess.run(cmd, input=json.dumps(payload),
                           text=True, capture_output=True, timeout=30, check=False)
 
 
 def _ac(prompt: str, sid: str, argv=None) -> str:
     cp = _run_router(prompt, sid, argv)
     out = cp.stdout.strip().splitlines()
-    return json.loads(out[-1]).get("additionalContext", "") if out else ""
+    if not out:
+        return ""
+    return (json.loads(out[-1]).get("hookSpecificOutput") or {}).get("additionalContext", "")
 
 
 def test_router_live_injects_model_advice_for_heavy_prompt():
@@ -169,30 +174,6 @@ def test_router_live_silent_model_for_light_prompt():
     body = _ac(_LIGHT, _uid("light-live"))
     assert "[Model]" not in body
     assert "/model " + _OPUS_ID not in body
-
-
-def test_router_shadow_injects_nothing_but_logs_would_emit(tmp_path):
-    # shadow-safe: legacy model-router.py still runs live during the window, so the
-    # router must inject NOTHING even for a heavy prompt. Isolate telemetry to a
-    # temp CLAUDE_CONFIG_DIR (claude_dir() honors it) so the test never depends on
-    # the real ~/.claude — the CI checkout is NOT ~/.claude.
-    import os
-    sid = _uid("heavy-shadow")
-    env = dict(os.environ)
-    env["CLAUDE_CONFIG_DIR"] = str(tmp_path)
-    cmd = [sys.executable, str(_HOOKS / "prompt_router" / "router.py"), "--shadow"]
-    cp = subprocess.run(cmd, input=json.dumps({"prompt": _HEAVY, "session_id": sid}),
-                        text=True, capture_output=True, timeout=30, check=False, env=env)
-    # CORE guarantee (deterministic, every OS): shadow injects NOTHING.
-    assert json.loads(cp.stdout.strip().splitlines()[-1]) == {}
-    # Best-effort: when the isolated shadow log lands it carries the model advice.
-    # (The ubuntu runner sandbox intermittently does not surface this isolated
-    # telemetry write; the live-injection + items() tests already prove the advice
-    # content, so this stays a bonus assertion rather than a hard gate.)
-    log = tmp_path / "telemetry" / f"{sid}.router-shadow.jsonl"
-    if log.exists():
-        rec = json.loads(log.read_text(encoding="utf-8").strip().splitlines()[-1])
-        assert "/model" in rec["would_emit"] and _OPUS_ID in rec["would_emit"]
 
 
 def _run_all():

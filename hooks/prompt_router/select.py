@@ -1,15 +1,24 @@
-"""select.py — S2: ranked skill selection + suggest/dispatch tiering.
+"""select.py — S2: ranked skill selection + suggest/dispatch tiering (v3).
 
-Ranks skills for the current TaskProfile from ``skills-index.json`` when it
-exists (built by P1-T5 / enriched by P5), and DEGRADES GRACEFULLY to the
-trigger floor's path-route rules + cross-cutting groups when the index is
-absent — so the router ranks sanely from day 1, before the front-matter corpus
-pass (Charter §4a: all skills stay rankable; the index only re-orders).
+Ranks skills for the current TaskProfile. Scorers (each canonicalizes aliases
+with a max-merge inside itself, then the scorers SUM):
 
-Also implements the auto-dispatch tiering (P1-T6, router side): an intent whose
-score >= ``auto_dispatch_threshold`` (default 3) is surfaced as an AGENT
-dispatch suggestion; a weaker hit (1..2) is surfaced as a lightweight COMMAND
-suggestion. No keyword is ever pruned — only the *consequence* is tiered.
+  index         skills-index.json: keyword hits (word-boundary; description-token
+                fallbacks count half), intent overlap, surface overlap, path rules
+  cross_cut     floor cross_cutting groups (first_write / debug / implementation /
+                verification — the "always" group is carried by core-skill-set)
+  category      autonomous-skill-router.config.json categories[intent].local_skills
+  surface       router.config.json additions.surface_skills — FE/BE/API/go/sql/…
+                baselines per detected surface; stack-only inferences half-weight
+  rules         router.config.json additions.skill_rules — regex -> boost
+
+Then: weights multiply, candidates that do not exist on disk (local skill dir or
+installed plugin ``plugin:skill``) or that core-skill-set already injects are
+dropped, and the result is the top-N (default 5) above ``min_skill_score``.
+
+Dispatch tiering: an intent at/above ``auto_dispatch_threshold`` is surfaced as
+an AGENT dispatch (agent from the autonomous config, IMPLEMENT surface-routed via
+``surface_routing``), weaker hits as a lightweight ``/invoke <act>`` suggestion.
 
 Pure stdlib; never raises.
 """
@@ -17,7 +26,9 @@ Pure stdlib; never raises.
 from __future__ import annotations
 
 import json
+import re
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 _HOOKS = Path(__file__).resolve().parents[1]
@@ -28,25 +39,115 @@ from prompt_router import classify as _classify  # noqa: E402
 
 _SKILLS_INDEX = _HOOKS / "skills-index.json"
 _WEIGHTS = _HOOKS / "skill_router_weights.json"
+_ALIASES = _HOOKS / "skill-aliases.json"
+_CORE = _HOOKS / "core-skill-set.json"
+_AUTON_CONFIG = _HOOKS / "autonomous-skill-router.config.json"
+_ROUTER_CONFIG = _HOOKS / "prompt_router" / "router.config.json"
+_CLAUDE = _HOOKS.parent
 
 DEFAULT_AUTO_DISPATCH_THRESHOLD = 3
+DEFAULT_TOP_N = 5
+DEFAULT_MIN_SCORE = 3.0
 
-# intent category -> specialist agent (for dispatch tiering)
+# intent category -> specialist agent (fallback when the autonomous config lacks `.agent`)
 _AGENT_FOR = {
     "DEBUG": "debug-detective", "DESIGN": "frontend-uiux-designer",
     "AUDIT": "audit-specialist", "SPEC": "spec-architect",
     "PLAN": "planning-director", "IMPLEMENT": "implementation-engineer",
     "CLEANUP": "deadcode-reaper", "SECURITY": "security-sentinel",
     "REVIEW": "santa-reviewer", "TEST": "test-author",
-    "REFACTOR": "refactor-specialist",
+    "REFACTOR": "refactor-specialist", "DOCS": "docs-sync-agent", "VERIFY": "qa-verifier",
+}
+_SURFACE_ROUTING_FALLBACK = {
+    "frontend": "frontend-implementor-specialist",
+    "backend": "backend-implementor-specialist",
+    "mixed": ["backend-implementor-specialist", "frontend-implementor-specialist", "integrator-specialist"],
+    "general": "implementation-engineer",
 }
 
 
 def _load_json(path: Path) -> dict:
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
     except (OSError, json.JSONDecodeError):
         return {}
+
+
+@lru_cache(maxsize=1)
+def _router_cfg() -> dict:
+    return _load_json(_ROUTER_CONFIG)
+
+
+@lru_cache(maxsize=1)
+def _auton() -> dict:
+    return _load_json(_AUTON_CONFIG).get("categories") or {}
+
+
+# --------------------------------------------------------------------------- #
+# aliases / existence / core set
+# --------------------------------------------------------------------------- #
+@lru_cache(maxsize=1)
+def _alias_map() -> dict[str, str]:
+    return {k: v for k, v in _load_json(_ALIASES).items()
+            if not k.startswith("_") and isinstance(v, str)}
+
+
+def canonical(name: str) -> str:
+    """Alias -> canonical skill name. Prefers lib.skill_aliases (WP-3) when present."""
+    try:
+        from lib import skill_aliases as _sa  # noqa: PLC0415
+        return _sa.canonical(name)
+    except Exception:  # noqa: BLE001
+        return _alias_map().get(name, name)
+
+
+@lru_cache(maxsize=1)
+def _skill_paths() -> dict[str, Path]:
+    """Every skill that exists on disk: local ``skills/<name>`` and installed
+    plugin skills as ``plugin:skill``."""
+    out: dict[str, Path] = {}
+    try:
+        for p in (_CLAUDE / "skills").iterdir():
+            if (p / "SKILL.md").is_file():
+                out[p.name] = p / "SKILL.md"
+    except OSError:
+        pass
+    inst = _load_json(_CLAUDE / "plugins" / "installed_plugins.json").get("plugins") or {}
+    for key, entries in inst.items():
+        plugin = str(key).split("@", 1)[0]
+        for e in (entries if isinstance(entries, list) else []):
+            ip = e.get("installPath") if isinstance(e, dict) else None
+            if not ip:
+                continue
+            try:
+                for sk in (Path(ip) / "skills").iterdir():
+                    f = sk / "SKILL.md"
+                    if f.is_file():
+                        out.setdefault(f"{plugin}:{sk.name}", f)
+            except OSError:
+                continue
+    return out
+
+
+def skill_exists(name: str) -> bool:
+    if name in _skill_paths():
+        return True
+    return name in index_meta()
+
+
+def skill_path(name: str) -> Path | None:
+    return _skill_paths().get(name)
+
+
+@lru_cache(maxsize=1)
+def core_skills() -> frozenset[str]:
+    """Skills core-skill-set.json already injects at SessionStart (never re-pushed)."""
+    names = set()
+    for e in _load_json(_CORE).get("always") or []:
+        if isinstance(e, dict) and e.get("skill"):
+            names.add(canonical(str(e["skill"])))
+    return frozenset(names)
 
 
 def _weights() -> dict:
@@ -57,8 +158,56 @@ def _norm(s: str) -> str:
     return s.replace("\\", "/").lower()
 
 
+def _merge_canonical(raw: dict[str, float]) -> dict[str, float]:
+    """Alias + canonical scored by the same scorer collapse to max(canonical)."""
+    out: dict[str, float] = {}
+    for name, v in raw.items():
+        c = canonical(name)
+        out[c] = max(out.get(c, 0.0), float(v))
+    return out
+
+
+# --------------------------------------------------------------------------- #
+# scorers
+# --------------------------------------------------------------------------- #
+def _index_skills(profile, index: dict, grams: set) -> dict[str, float]:
+    scores: dict[str, float] = {}
+    intents = set(profile.intents)
+    surfaces = set(profile.surfaces)
+    for name, meta in (index.get("skills") or {}).items():
+        if not isinstance(meta, dict):
+            continue
+        # description-token keywords (source floor-fallback) count half and
+        # saturate at 2.0 — a long description must not outscore a real signal;
+        # curated metadata keywords count 1.0 and saturate at 4.0
+        fallback = meta.get("source") == "floor-fallback"
+        kw_w, kw_cap = (0.5, 2.0) if fallback else (1.0, 4.0)
+        s = 0.0
+        for kw in meta.get("keywords", []) or []:
+            k = str(kw).lower()
+            if _classify.keyword_ok(k) and _classify.words(k) in grams:
+                s += kw_w
+        s = min(s, kw_cap)
+        if intents & set(meta.get("intents", []) or []):
+            s += 1.5
+        if surfaces & set(meta.get("surfaces", []) or []):
+            s += 1.0
+        for rule in meta.get("path_rules", []) or []:
+            if not isinstance(rule, dict):
+                continue
+            for pth in profile.paths:
+                if any(_norm(x) in _norm(pth) for x in (rule.get("path_contains_any", []) or [])):
+                    s += 1.2
+                ext = "." + pth.rsplit(".", 1)[-1] if "." in pth.rsplit("/", 1)[-1] else ""
+                if ext and ext in [str(e).lower() for e in (rule.get("extensions") or [])]:
+                    s += 1.2
+        if s > 0:
+            scores[name] = s
+    return scores
+
+
 def _path_route_skills(profile) -> dict[str, float]:
-    """Fallback ranking source: floor path-route rules matched against paths."""
+    """Floor path-route rules matched against paths (index-less fallback)."""
     idx = _classify._floor_index()
     scores: dict[str, float] = {}
     paths = profile.paths or []
@@ -90,20 +239,8 @@ def _path_route_skills(profile) -> dict[str, float]:
 
 
 def _cross_cutting_skills(profile) -> dict[str, float]:
-    idx = _classify._floor_index()
-    # cross_cutting captured in floor under kind path_route? No — separate; reload from floor
+    groups = _classify._floor_index().get("cross_cutting") or {}
     scores: dict[str, float] = {}
-    try:
-        floor = json.loads((_HOOKS / "trigger-floor.json").read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return scores
-    groups: dict[str, list] = {}
-    for e in floor.get("entries", []):
-        if e.get("kind") == "cross_cutting":
-            v = e.get("value", {})
-            groups[v.get("group", "")] = v.get("skills", [])
-    for sk in groups.get("always", []):
-        scores[sk] = scores.get(sk, 0.0) + 2.5
     if profile.first_write_candidate:
         for sk in groups.get("first_write_only", []):
             scores[sk] = scores.get(sk, 0.0) + 1.8
@@ -113,58 +250,69 @@ def _cross_cutting_skills(profile) -> dict[str, float]:
     if {"IMPLEMENT", "SPEC", "PLAN"} & set(profile.intents):
         for sk in groups.get("implementation", []):
             scores[sk] = scores.get(sk, 0.0) + 1.3
-    if {"REVIEW", "TEST", "QA"} & set(profile.intents):
+    if {"REVIEW", "TEST", "QA", "VERIFY"} & set(profile.intents):
         for sk in groups.get("verification", []):
             scores[sk] = scores.get(sk, 0.0) + 1.2
     return scores
 
 
-def _index_skills(profile, index: dict) -> dict[str, float]:
-    """Rank from skills-index.json when present."""
-    scores: dict[str, float] = {}
-    text = profile.text
-    intents = set(profile.intents)
-    surfaces = set(profile.surfaces)
-    for name, meta in (index.get("skills") or {}).items():
-        if not isinstance(meta, dict):
-            continue
-        s = 0.0
-        for kw in meta.get("keywords", []) or []:
-            if kw and str(kw).lower() in text:
-                s += 1.0
-        if intents & set(meta.get("intents", []) or []):
-            s += 1.5
-        if surfaces & set(meta.get("surfaces", []) or []):
-            s += 1.0
-        # path rules
-        for rule in meta.get("path_rules", []) or []:
-            for pth in profile.paths:
-                if any(_norm(x) in _norm(pth) for x in (rule.get("path_contains_any", []) or [])):
-                    s += 1.2
-        if s > 0:
-            scores[name] = scores.get(name, 0.0) + s
-    return scores
-
-
-_AUTON_CONFIG = _HOOKS / "autonomous-skill-router.config.json"
-
-
 def _category_skills(profile) -> dict[str, float]:
-    """Curated category -> local_skills mapping from the autonomous router config.
-    The legacy autonomous router pushed these directly; the live router only kept
-    the category *keywords* (as floor act_keyword intents), silently orphaning the
-    curated skill lists (e.g. PLAN->idea-refine, DEBUG->diagnose). Restored
-    2026-07-18: each intent hit boosts that category's local_skills so curated
-    skills outrank tokenized-description noise."""
+    """Curated category -> local_skills from the autonomous router config.
+
+    IMPLEMENT is surface-aware: its 40-skill ``local_skills`` list is replaced by
+    ``stack_groups[<surface>]`` for each surface the PROMPT/cwd established
+    (stack-only inferences do not count) plus ``stack_groups.cross_cutting`` at
+    half boost — so a build prompt never drags the other surface's baseline in.
+    """
     scores: dict[str, float] = {}
-    cats = (_load_json(_AUTON_CONFIG).get("categories") or {})
+    cats = _auton()
+    strong = set(profile.surfaces) - set(getattr(profile, "weak_surfaces", set()) or set())
     for cat, hit_score in (profile.intents or {}).items():
         meta = cats.get(cat)
         if not isinstance(meta, dict):
             continue
         boost = 1.4 + 0.2 * min(int(hit_score), 3)
+        groups = meta.get("stack_groups")
+        if cat == "IMPLEMENT" and isinstance(groups, dict):
+            for surf in ("frontend", "backend"):
+                if surf in strong:
+                    for sk in groups.get(surf) or []:
+                        scores[sk] = max(scores.get(sk, 0.0), boost)
+            for sk in groups.get("cross_cutting") or []:
+                scores[sk] = max(scores.get(sk, 0.0), boost * 0.5)
+            continue
         for sk in meta.get("local_skills") or []:
             scores[sk] = max(scores.get(sk, 0.0), boost)
+    return scores
+
+
+def _surface_skills(profile) -> dict[str, float]:
+    cfg = _router_cfg()
+    table = (cfg.get("additions") or {}).get("surface_skills") or {}
+    weak_factor = float(cfg.get("weak_surface_factor", 0.5))
+    weak = set(getattr(profile, "weak_surfaces", set()) or set())
+    scores: dict[str, float] = {}
+    for surf in profile.surfaces:
+        f = weak_factor if surf in weak else 1.0
+        for sk, boost in (table.get(surf) or {}).items():
+            scores[sk] = max(scores.get(sk, 0.0), float(boost) * f)
+    return scores
+
+
+def _rule_skills(profile) -> dict[str, float]:
+    rules = (_router_cfg().get("additions") or {}).get("skill_rules") or []
+    scores: dict[str, float] = {}
+    for r in rules:
+        if not isinstance(r, dict) or not r.get("skill") or not r.get("regex"):
+            continue
+        need = set(r.get("surfaces") or [])
+        if need and not (need & profile.surfaces):
+            continue
+        try:
+            if re.search(str(r["regex"]), profile.text, re.IGNORECASE):
+                scores[r["skill"]] = max(scores.get(r["skill"], 0.0), float(r.get("boost", 1.0)))
+        except re.error:
+            continue
     return scores
 
 
@@ -173,47 +321,85 @@ def index_meta() -> dict:
     return (_load_json(_SKILLS_INDEX).get("skills") or {})
 
 
-def rank_skills(profile, *, top_n: int = 10) -> list[tuple[str, float]]:
-    """Return [(skill_name, score)] descending. Index-driven when available,
-    else floor-driven. Weights (P4-T9 loop) multiply when present."""
+def rank_all(profile) -> list[tuple[str, float]]:
+    """Every scored, existing, non-core skill — descending (no cap, no floor)."""
     index = _load_json(_SKILLS_INDEX)
-    if index.get("skills"):
-        scores = _index_skills(profile, index)
-        # blend in cross-cutting so mandatory baselines never fall out
-        for sk, v in _cross_cutting_skills(profile).items():
-            scores[sk] = scores.get(sk, 0.0) + v
-    else:
-        scores = _path_route_skills(profile)
-        for sk, v in _cross_cutting_skills(profile).items():
-            scores[sk] = scores.get(sk, 0.0) + v
-    # curated category->skill lists always blend in (both branches)
-    for sk, v in _category_skills(profile).items():
-        scores[sk] = scores.get(sk, 0.0) + v
-
+    grams = _classify.ngrams(profile.text)
+    scorers = [
+        _index_skills(profile, index, grams) if index.get("skills") else _path_route_skills(profile),
+        _cross_cutting_skills(profile),
+        _category_skills(profile),
+        _surface_skills(profile),
+        _rule_skills(profile),
+    ]
+    total: dict[str, float] = {}
+    for raw in scorers:
+        for name, v in _merge_canonical(raw).items():
+            total[name] = total.get(name, 0.0) + v
     weights = _weights()
-    for sk in list(scores):
-        scores[sk] *= float(weights.get(sk, 1.0))
+    demote = (_router_cfg().get("additions") or {}).get("demote") or {}
+    core = core_skills()
+    out = []
+    for name, v in total.items():
+        if name in core or not skill_exists(name):
+            continue
+        v *= float(weights.get(name, 1.0)) * float(demote.get(name, 1.0))
+        out.append((name, v))
+    out.sort(key=lambda kv: (-kv[1], kv[0]))
+    return out
 
-    ranked = sorted(scores.items(), key=lambda kv: (-kv[1], kv[0]))
-    return ranked[:top_n]
+
+def rank_skills(profile, *, top_n: int = DEFAULT_TOP_N,
+                min_score: float = DEFAULT_MIN_SCORE) -> list[tuple[str, float]]:
+    """Return [(skill_name, score)] descending — at most ``top_n``, all >= ``min_score``."""
+    return [(n, s) for n, s in rank_all(profile) if s >= min_score][:top_n]
+
+
+# --------------------------------------------------------------------------- #
+# dispatch tiering
+# --------------------------------------------------------------------------- #
+def implement_agent(profile) -> str:
+    """IMPLEMENT specialist by surface (categories.IMPLEMENT.surface_routing)."""
+    routing = (_auton().get("IMPLEMENT") or {}).get("surface_routing")
+    if not isinstance(routing, dict):
+        routing = _SURFACE_ROUTING_FALLBACK
+    s = profile.surfaces
+    if "fullstack" in s or {"frontend", "backend"} <= s:
+        mixed = routing.get("mixed") or _SURFACE_ROUTING_FALLBACK["mixed"]
+        if isinstance(mixed, list):
+            return " then ".join(str(x) for x in mixed)
+        return str(mixed)
+    if "frontend" in s:
+        return str(routing.get("frontend") or _SURFACE_ROUTING_FALLBACK["frontend"])
+    if "backend" in s:
+        return str(routing.get("backend") or _SURFACE_ROUTING_FALLBACK["backend"])
+    return str(routing.get("general") or _SURFACE_ROUTING_FALLBACK["general"])
+
+
+def agent_for(category: str, profile=None) -> str:
+    if category == "IMPLEMENT" and profile is not None:
+        return implement_agent(profile)
+    meta = _auton().get(category)
+    if isinstance(meta, dict) and isinstance(meta.get("agent"), str) and meta["agent"]:
+        return meta["agent"]
+    return _AGENT_FOR.get(category, "")
 
 
 def dispatch_tiers(profile, *, threshold: int = DEFAULT_AUTO_DISPATCH_THRESHOLD) -> list[dict]:
-    """Suggest/dispatch tiering per act intent (P1-T6). Returns items:
-    {act, category, score, kind:'agent'|'suggest', agent}."""
+    """Suggest/dispatch tiering per act intent. Returns items
+    {act, category, score, kind:'agent'|'suggest', agent} strongest first."""
     out: list[dict] = []
     for cat, act in _classify.ACT_MAP.items():
         score = profile.intent_score(cat)
         if score < 1:
             continue
         kind = "agent" if score >= threshold else "suggest"
-        out.append({
-            "act": act, "category": cat, "score": score, "kind": kind,
-            "agent": _AGENT_FOR.get(cat, ""),
-        })
-    # stable order: strongest first
+        out.append({"act": act, "category": cat, "score": score, "kind": kind,
+                    "agent": agent_for(cat, profile)})
     out.sort(key=lambda d: -d["score"])
     return out
 
 
-__all__ = ["rank_skills", "dispatch_tiers", "DEFAULT_AUTO_DISPATCH_THRESHOLD"]
+__all__ = ["rank_skills", "rank_all", "dispatch_tiers", "canonical", "skill_exists",
+           "skill_path", "core_skills", "index_meta", "implement_agent", "agent_for",
+           "DEFAULT_AUTO_DISPATCH_THRESHOLD", "DEFAULT_TOP_N", "DEFAULT_MIN_SCORE"]

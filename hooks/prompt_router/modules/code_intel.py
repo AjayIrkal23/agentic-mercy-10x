@@ -25,14 +25,18 @@ import json
 import os
 import re
 import sqlite3
+import time
 
 INDEX_DIR = os.path.expanduser("~/.code-index")
-MAX_SYMBOLS = 8
-MAX_KEYWORDS = 6
+MAX_SYMBOLS = 5
+MAX_KEYWORDS = 5
 _MIN_KEYWORD_LEN = 3
+BUDGET_MS = 150  # hard wall-clock budget for one prompt's symbol lookup
 
-# Phase 3: intent -> tool-intelligence.json playbook (make jcode primary engine).
-_TOOLMAP_PATH = os.path.expanduser("~/.claude/hooks/tool-intelligence.json")
+# intent -> tool-intelligence.json playbook (path is hooks/-relative, not $HOME).
+_TOOLMAP_PATH = os.path.join(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+    "tool-intelligence.json")
 _PLAYBOOK_STEPS = 5  # top N steps quoted per prompt (token-lean)
 # Router intent category -> tool-intelligence.json intent key.
 _INTENT_MAP = {
@@ -107,8 +111,29 @@ def _is_placeholder(summary: str | None) -> bool:
     return not summary or not summary.strip() or bool(_PLACEHOLDER.match(summary))
 
 
-def search(repo_root: str, prompt: str, limit: int = MAX_SYMBOLS) -> list[dict]:
-    """Rank indexed symbols against the prompt's keywords."""
+def is_repo_symbol(repo_root: str, name: str) -> bool:
+    """True when ``name`` is an exact (case-insensitive) symbol name in the repo's
+    index — used to keep library-docs routes (context7) quiet for in-repo names."""
+    if not name:
+        return False
+    db = _db_for_repo(repo_root)
+    if not db:
+        return False
+    try:
+        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        try:
+            row = con.execute("select 1 from symbols where lower(name)=? limit 1",
+                              (name.lower(),)).fetchone()
+        finally:
+            con.close()
+        return row is not None
+    except sqlite3.Error:
+        return False
+
+
+def search(repo_root: str, prompt: str, limit: int = MAX_SYMBOLS,
+           budget_ms: int = BUDGET_MS) -> list[dict]:
+    """Rank indexed symbols against the prompt's keywords, within ``budget_ms``."""
     kws = _keywords(prompt)
     if not kws:
         return []
@@ -121,10 +146,13 @@ def search(repo_root: str, prompt: str, limit: int = MAX_SYMBOLS) -> list[dict]:
     except sqlite3.Error:
         return []
 
+    deadline = time.monotonic() + max(0, budget_ms) / 1000.0
     scored: dict[str, dict] = {}
     try:
         con.execute("pragma query_only = ON")
         for kw in kws:
+            if time.monotonic() > deadline:
+                break
             like = f"%{kw}%"
             try:
                 rows = con.execute(
@@ -183,14 +211,20 @@ def build_item(profile, ctx: dict) -> dict | None:
             return None
 
         text = getattr(profile, "text", "") or ""
-        hits = search(str(repo_root), text)
+        ci_cfg = (ctx.get("config") or {}).get("code_intel") or {}
+        hits = search(str(repo_root), text,
+                      limit=int(ci_cfg.get("max_symbols", MAX_SYMBOLS)),
+                      budget_ms=int(ci_cfg.get("budget_ms", BUDGET_MS)))
         if not hits:
             return None
 
         lines = []
         for h in hits:
             loc = f"{h['file']}:{h['line']}"
-            desc = "" if _is_placeholder(h["summary"]) else f" — {h['summary'].strip()}"
+            summ = "" if _is_placeholder(h["summary"]) else " ".join(h["summary"].split())
+            if len(summ) > 110:
+                summ = summ[:107].rstrip() + "..."
+            desc = f" — {summ}" if summ else ""
             lines.append(f"  {h['name']} ({h['kind']}) {loc}{desc}")
 
         real = sum(1 for h in hits if not _is_placeholder(h["summary"]))
@@ -200,8 +234,9 @@ def build_item(profile, ctx: dict) -> dict | None:
             else "Summaries are unpopulated in this index — run "
                  "`jcodemunch-mcp index <repo>` to enable semantic matching."
         )
+        salt = "-".join(sorted(str(h["name"]).lower() for h in hits))[:60]
         return {
-            "id": "intel:symbols",
+            "id": f"intel:symbols:{salt}",
             "tier": 1,
             "section": "INTEL",
             "text": "Indexed symbols matching this prompt (jcodemunch):\n"

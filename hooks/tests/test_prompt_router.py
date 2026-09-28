@@ -1,13 +1,13 @@
-"""Router invariant test suite (P1-T11) — Charter §§1-2 made regression-proof.
+"""Router invariant suite (v3, 2026-09-27).
 
-Covers: priority-ordered budget (tier-0 never dropped, sum bounded, drops
-logged); floor-coverage (build-trigger-floor.py --check as a test); manifest
-dedup NEVER suppresses a first fire; trivial fast-exit ONLY on the exact ack
-allowlist; substrate directives ALL emitted when applicable (no cap); router
-fail-open on an internal error (still emits valid JSON); + a reusable
-shadow-vs-live parity harness for P1-T8/P7.
+Covers: delivery shape (hookSpecificOutput + `<!-- prompt-router v3 -->` marker);
+tier ordering (gates first — the budget machinery is gone, nothing is dropped);
+floor coverage (build-trigger-floor.py --check as a test); manifest dedup never
+suppresses a first fire; trivial fast-exit ONLY on the exact ack allowlist;
+substrate directives (jcodemunch / jdocmunch / graphify — no sequential-thinking
+nag, D17); router fail-open on an internal error (still emits valid JSON).
 
-Runnable: `pytest hooks/tests/test_prompt_router.py` or directly.
+Runnable: `python3 -m pytest hooks/tests/test_prompt_router.py -q`.
 """
 from __future__ import annotations
 
@@ -24,6 +24,7 @@ from prompt_router import budget as B          # noqa: E402
 from prompt_router import classify as C        # noqa: E402
 from prompt_router import manifest as M        # noqa: E402
 from prompt_router import router as R          # noqa: E402
+from prompt_router.modules import mcp_routes as _mcp  # noqa: E402
 
 
 # --------------------------------------------------------------------------- #
@@ -33,13 +34,12 @@ def _run_router(payload: dict, argv=None) -> dict:
     cmd = [sys.executable, str(_HOOKS / "prompt_router" / "router.py")] + (argv or [])
     cp = subprocess.run(cmd, input=json.dumps(payload), text=True,
                         capture_output=True, timeout=30, check=False)
-    # router prints exactly one JSON object
     out = cp.stdout.strip().splitlines()
     return json.loads(out[-1]) if out else {}
 
 
 def _ac(payload: dict, argv=None) -> str:
-    return _run_router(payload, argv).get("additionalContext", "")
+    return _run_router(payload, argv).get("hookSpecificOutput", {}).get("additionalContext", "")
 
 
 def _uid(tag: str) -> str:
@@ -49,38 +49,35 @@ def _uid(tag: str) -> str:
 
 
 # --------------------------------------------------------------------------- #
-# budget
+# delivery shape
 # --------------------------------------------------------------------------- #
-def test_budget_tier0_never_dropped_even_over_budget():
-    big = "x" * 4000  # ~1000 tokens
-    items = [{"id": "g", "tier": 0, "text": big}]
-    incl, dropped = B.apply(items, max_tokens=10)
-    assert incl and not dropped
-    assert incl[0]["id"] == "g"
+def test_emit_uses_hook_specific_output_with_marker():
+    out = _run_router({"prompt": "implement the retry queue for failed webhook deliveries",
+                       "session_id": _uid("shape")})
+    hso = out.get("hookSpecificOutput")
+    assert hso, f"top-level additionalContext is the pre-v3 (undelivered) shape: {out}"
+    assert hso["hookEventName"] == "UserPromptSubmit"
+    assert hso["additionalContext"].startswith(R.MARKER)
 
 
-def test_budget_drops_low_tier_over_budget_and_logs_reason():
+# --------------------------------------------------------------------------- #
+# ordering (ex-budget): gates first, nothing dropped
+# --------------------------------------------------------------------------- #
+def test_apply_never_drops_and_keeps_tier0_first():
     items = [
-        {"id": "t0", "tier": 0, "text": "a" * 40},
-        {"id": "t3a", "tier": 3, "text": "b" * 4000},
-        {"id": "t3b", "tier": 3, "text": "c" * 4000},
-    ]
-    incl, dropped = B.apply(items, max_tokens=1100)  # ~1000 fits one t3 + t0
-    ids_in = {i["id"] for i in incl}
-    assert "t0" in ids_in                # tier-0 always
-    assert dropped                       # at least one t3 dropped
-    for d in dropped:
-        assert "_drop_reason" in d       # every drop carries a logged reason
-
-
-def test_budget_tier_order_is_ascending():
-    items = [
-        {"id": "adv", "tier": 3, "text": "z"},
+        {"id": "adv", "tier": 3, "text": "z" * 4000},
         {"id": "gate", "tier": 0, "text": "z"},
-        {"id": "sub", "tier": 1, "text": "z"},
+        {"id": "sub", "tier": 1, "text": "z" * 4000},
     ]
-    incl, _ = B.apply(items, max_tokens=10000)
+    incl, dropped = B.apply(items, max_tokens=10)   # max_tokens is accepted and ignored
+    assert not dropped
     assert [i["id"] for i in incl] == ["gate", "sub", "adv"]
+
+
+def test_apply_is_stable_within_a_tier():
+    items = [{"id": f"s{i}", "tier": 2, "text": "x"} for i in range(5)]
+    incl, _ = B.apply(items)
+    assert [i["id"] for i in incl] == [f"s{i}" for i in range(5)]
 
 
 # --------------------------------------------------------------------------- #
@@ -104,8 +101,8 @@ def test_manifest_dedup_never_suppresses_first_fire():
     ]
     kept, suppressed = M.dedup(items, emitted)
     kept_ids = {k.get("id") for k in kept}
-    assert "skill:NEW" in kept_ids                      # first fire never lost
-    assert None in kept_ids                             # id-less always kept
+    assert "skill:NEW" in kept_ids
+    assert None in kept_ids
     assert {s["id"] for s in suppressed} == {"skill:a"}
 
 
@@ -121,7 +118,6 @@ def test_manifest_dedup_dupe_within_same_prompt():
 def test_trivial_exit_only_on_exact_ack():
     assert C.is_trivial_ack("ok")
     assert C.is_trivial_ack("  Continue. ")
-    # a short REAL prompt is NOT exited (the <12-char heuristic is dropped)
     assert not C.is_trivial_ack("fix bug")
     assert not C.is_trivial_ack("why?")
     assert not C.is_trivial_ack("the ui")
@@ -132,31 +128,98 @@ def test_trivial_ack_emits_nothing_e2e():
 
 
 def test_short_real_prompt_still_triggers_e2e():
-    # "fix the login bug" is short but real -> must NOT be trivially exited
     body = _ac({"prompt": "fix the login bug", "session_id": _uid("realshort")})
     assert body != ""
 
 
 # --------------------------------------------------------------------------- #
-# substrate: ALL applicable directives emitted (no cap-2)
+# substrate directives — MCP-first "call X now" (D17 reversed 2026-09-28)
 # --------------------------------------------------------------------------- #
-def test_all_substrate_directives_when_applicable():
+def test_substrate_directives_when_applicable():
     payload = {"prompt": "debug and refactor the architecture, update the README docs, "
                          "trace the dependency graph and blast radius",
                "session_id": _uid("substrate")}
     body = _ac(payload)
-    # jcodemunch (code), jdocmunch (docs), sequential-thinking (reasoning), graphify (arch)
     assert "jcodemunch" in body
     assert "jdocmunch" in body
-    assert "sequential-thinking" in body
     assert "graphify" in body
+    assert "dox:" not in body   # static dox line dropped — CLAUDE.md carries it
+    if "sequential-thinking" in _mcp.available_servers():
+        assert "mcp__sequential-thinking__sequentialthinking" in body
+
+
+def _mcp_items(prompt: str, servers: set[str], port=None, cwd="/nonexistent-dir") -> list[str]:
+    """MCP route lines for a prompt with a faked server roster (no ~/.claude.json)."""
+    _mcp.available_servers.cache_clear()
+    _mcp.needs_auth.cache_clear()
+    _mcp.dev_server_port.cache_clear()
+    orig = (_mcp.available_servers, _mcp.needs_auth, _mcp.dev_server_port)
+    _mcp.available_servers = lambda: set(servers)          # type: ignore[assignment]
+    _mcp.needs_auth = lambda: set()                         # type: ignore[assignment]
+    _mcp.dev_server_port = lambda: port                     # type: ignore[assignment]
+    try:
+        prof = C.classify({"prompt": prompt, "cwd": cwd})
+        return [it["text"] for it in _mcp.items(prof, {"repo": None}, max_routes=4)]
+    finally:
+        _mcp.available_servers, _mcp.needs_auth, _mcp.dev_server_port = orig
+
+
+_ALL = {"sequential-thinking", "semgrep", "context7", "memory", "reticle", "playwright",
+        "higgsfield", "jcodemunch", "jdocmunch", "graphify"}
+
+
+def test_mcp_route_seqthink_on_plan_and_decision():
+    assert any("sequentialthinking" in t for t in _mcp_items("plan the migration to the new queue", _ALL))
+    assert any("sequentialthinking" in t for t in _mcp_items("should we use redis or postgres here?", _ALL))
+
+
+def test_mcp_route_availability_aware():
+    assert not any("sequentialthinking" in t for t in _mcp_items("plan the migration", _ALL - {"sequential-thinking"}))
+
+
+def test_mcp_route_context7_on_import():
+    lines = _mcp_items("why does `import { useQuery } from '@tanstack/react-query'` refetch twice", _ALL)
+    assert any("@tanstack/react-query" in t and "resolve-library-id" in t for t in lines), lines
+    lines = _mcp_items("from pydantic import BaseModel fails validation", _ALL)
+    assert any("pydantic" in t for t in lines), lines
+
+
+def test_mcp_route_memory_and_semgrep():
+    assert any("mcp__memory__search_nodes" in t for t in _mcp_items("remember that we use pnpm", _ALL))
+    assert any("semgrep_scan" in t for t in _mcp_items("add jwt refresh to the login middleware", _ALL))
+
+
+def test_mcp_route_browser_only_when_app_running():
+    p = "verify the ui change works in the browser"
+    assert not any("verify-ui-change" in t for t in _mcp_items(p, _ALL, port=None))
+    assert any("verify-ui-change" in t and ":5173" in t for t in _mcp_items(p, _ALL, port=5173))
+
+
+def test_verify_prompts_classify_as_verify():
+    for p in ("verify the export works", "check it works after the refactor", "prove the fix"):
+        assert "VERIFY" in C.classify({"prompt": p}).intents, p
+
+
+def test_hooks_word_is_not_react_without_fe_context():
+    from prompt_router.modules import surface as S
+    for p in ("update my hooks so the MCPs fire automatically",
+              "fix the hooks in dispatch config and the skills"):
+        surf, _src, _weak = S.detect({"prompt": p, "cwd": "/nonexistent-dir"}, text=p.lower())
+        assert "frontend" not in surf and "claude-infra" in surf, (p, surf)
+    p = "add a useDebounce hook to the search component"
+    surf, _src, _weak = S.detect({"prompt": p, "cwd": "/nonexistent-dir"}, text=p.lower())
+    assert "frontend" in surf
+
+
+def test_jcodemunch_directive_is_intent_specific():
+    body = _ac({"prompt": "debug why the export handler returns a 500", "session_id": _uid("jcmdebug")})
+    assert "get_call_hierarchy" in body
 
 
 # --------------------------------------------------------------------------- #
 # fail-open
 # --------------------------------------------------------------------------- #
-def test_router_fail_open_on_internal_error(monkeypatch=None):
-    # force _gather_items to raise; router.main must still emit valid JSON
+def test_router_fail_open_on_internal_error():
     orig = R._gather_items
     R._gather_items = lambda *a, **k: (_ for _ in ()).throw(RuntimeError("boom"))
     try:
@@ -170,49 +233,6 @@ def test_router_fail_open_on_internal_error(monkeypatch=None):
         finally:
             sys.stdin, sys.stdout = old_in, old_out
         assert rc == 0
-        json.loads(cap.getvalue().strip().splitlines()[-1])  # valid JSON, no crash
+        json.loads(cap.getvalue().strip().splitlines()[-1])
     finally:
         R._gather_items = orig
-
-
-# --------------------------------------------------------------------------- #
-# reusable shadow parity harness (P1-T8 / P7)
-# --------------------------------------------------------------------------- #
-def shadow_would_emit(prompt: str, sid: str) -> dict:
-    """Run the router in --shadow and return the logged would-emit record.
-    Reusable by the parity harness. Telemetry is isolated to a temp
-    CLAUDE_CONFIG_DIR (claude_dir() honors it) so it never depends on the real
-    ~/.claude — the CI checkout is not ~/.claude."""
-    import os
-    import tempfile
-    cfg = tempfile.mkdtemp()
-    env = dict(os.environ)
-    env["CLAUDE_CONFIG_DIR"] = cfg
-    cmd = [sys.executable, str(_HOOKS / "prompt_router" / "router.py"), "--shadow"]
-    subprocess.run(cmd, input=json.dumps({"prompt": prompt, "session_id": sid}),
-                   text=True, capture_output=True, timeout=30, check=False, env=env)
-    log = pathlib.Path(cfg) / "telemetry" / f"{sid}.router-shadow.jsonl"
-    if not log.exists():
-        return {}   # some CI sandboxes don't surface the isolated shadow-log write
-    last = log.read_text(encoding="utf-8").strip().splitlines()[-1]
-    return json.loads(last)
-
-
-def test_shadow_harness_produces_record():
-    rec = shadow_would_emit("debug the crash root cause in the service", _uid("shadow"))
-    # Assert the record shape when the isolated shadow-log write surfaces; some CI
-    # sandboxes don't (shadow-safety itself is proven by the e2e emit-nothing tests).
-    if rec:
-        assert "would_emit" in rec and "emitted_ids" in rec
-
-
-def _run_all():
-    fns = [v for k, v in sorted(globals().items())
-           if k.startswith("test_") and callable(v)]
-    for fn in fns:
-        fn()
-    print(f"test_prompt_router: {len(fns)} tests PASSED")
-
-
-if __name__ == "__main__":
-    _run_all()

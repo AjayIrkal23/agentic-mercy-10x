@@ -189,7 +189,8 @@
       ],
       "local_skills": [
         "debug-investigation",
-        "doubt-driven-development"
+        "doubt-driven-development",
+        "debug-broken-ui"
       ],
       "superpowers_skills": [
         "systematic-debugging",
@@ -197,6 +198,9 @@
       ],
       "ceremony": "standard",
       "agent": "debug-detective",
+      "act": "debug",
+      "order": 4,
+      "mutates": false,
       "artifact": "ROOTCAUSE.md",
       "checkpoint": false,
       "closers": true
@@ -269,13 +273,20 @@
       "local_skills": [
         "santa-review",
         "code-review-and-quality",
-        "triage"
+        "triage",
+        "improve-ui",
+        "fixing-accessibility",
+        "fixing-metadata",
+        "fixing-motion-performance"
       ],
       "superpowers_skills": [
         "requesting-code-review"
       ],
       "ceremony": "light",
       "agent": "santa-reviewer",
+      "act": "review",
+      "order": 11,
+      "mutates": false,
       "artifact": "SANTA-REVIEW.md",
       "checkpoint": false,
       "closers": true
@@ -450,22 +461,27 @@
       ],
       "local_skills": [
         "frontend-design:frontend-design",
-        "taste-skill",
+        "design-taste-frontend",
         "frontend-ui-engineering",
-        "design-consultation",
-        "design-review",
-        "design-shotgun",
-        "design-html",
         "tailwind-design-system",
         "frontend-standards-always-follow",
         "react-hooks-patterns",
         "vite-react-best-practices",
         "higgsfield-generate",
-        "shadcn"
+        "shadcn",
+        "motion-dev",
+        "animejs-motion",
+        "nateherk-design:scroll-craft",
+        "threejs-r3f",
+        "img2threejs",
+        "modern-web-guidance"
       ],
       "superpowers_skills": [],
       "ceremony": "full",
       "agent": "frontend-uiux-designer",
+      "act": "design",
+      "order": 8,
+      "mutates": true,
       "artifact": "DESIGN-REPORT.md",
       "checkpoint": false,
       "closers": true
@@ -532,7 +548,7 @@
         "run locally"
       ],
       "local_skills": [
-        "browser-testing-with-devtools"
+        "webapp-testing"
       ],
       "superpowers_skills": [],
       "ceremony": "standard"
@@ -623,13 +639,18 @@
       "local_skills": [
         "test-driven-development",
         "golang-testing",
-        "webapp-testing"
+        "webapp-testing",
+        "false-green-tests",
+        "test-error-states"
       ],
       "superpowers_skills": [
         "test-driven-development"
       ],
       "ceremony": "standard",
       "agent": "test-author",
+      "act": "test",
+      "order": 5,
+      "mutates": false,
       "artifact": "TEST-REPORT.md",
       "checkpoint": false,
       "closers": false
@@ -679,6 +700,9 @@
       "superpowers_skills": [],
       "ceremony": "standard",
       "agent": "refactor-specialist",
+      "act": "refactor",
+      "order": 7,
+      "mutates": true,
       "artifact": "REFACTOR-REPORT.md",
       "checkpoint": false,
       "closers": false
@@ -776,12 +800,14 @@
         "compromised"
       ],
       "local_skills": [
-        "owasp-security",
-        "security-and-hardening"
+        "owasp-security"
       ],
       "superpowers_skills": [],
       "ceremony": "standard",
       "agent": "security-sentinel",
+      "act": "security",
+      "order": 10,
+      "mutates": false,
       "artifact": "SECURITY-REPORT.md",
       "checkpoint": false,
       "closers": false
@@ -955,13 +981,10 @@
         "plan-mode-gate",
         "workflow-orchestrator",
         "architect-system-design",
-        "api-and-interface-design",
+        "api-contract-standards",
         "planning-and-task-breakdown",
-        "iterative-retrieval",
         "idea-refine",
-        "codebase-start-point-guide",
         "project-reference-linkage",
-        "project-structure-map",
         "mcp-usage-standards",
         "to-issues",
         "grill-with-docs",
@@ -975,6 +998,9 @@
       ],
       "ceremony": "full",
       "agent": "planning-director",
+      "act": "plan",
+      "order": 3,
+      "mutates": false,
       "artifact": "plan-{date}-{slug}.md",
       "checkpoint": true,
       "closers": false
@@ -1044,7 +1070,7 @@
       ],
       "local_skills": [
         "architect-system-design",
-        "incremental-implementation",
+        "code-execution-standard",
         "workflow-orchestrator"
       ],
       "superpowers_skills": [
@@ -1126,8 +1152,8 @@
         "soup to nuts"
       ],
       "local_skills": [
-        "incremental-implementation",
-        "domain-scaffold-patterns"
+        "code-execution-standard",
+        "scaffold-standards"
       ],
       "superpowers_skills": [
         "writing-plans",
@@ -1200,7 +1226,7 @@
         "please update"
       ],
       "local_skills": [
-        "incremental-implementation"
+        "code-execution-standard"
       ],
       "superpowers_skills": [],
       "ceremony": "light"
@@ -1273,11 +1299,8 @@
         "dead-code-and-change-audit",
         "code-review-and-quality",
         "architect-system-design",
-        "codebase-start-point-guide",
         "project-reference-linkage",
-        "project-structure-map",
         "mcp-usage-standards",
-        "iterative-retrieval",
         "codebase-intel-first",
         "graphify",
         "performance-optimization"
@@ -1289,6 +1312,9 @@
       ],
       "ceremony": "full",
       "agent": "audit-specialist",
+      "act": "audit",
+      "order": 1,
+      "mutates": false,
       "artifact": "AUDIT-{date}.md",
       "checkpoint": false,
       "closers": false
@@ -1343,11 +1369,8 @@
         "spec-driven-development",
         "architect-system-design",
         "planning-and-task-breakdown",
-        "codebase-start-point-guide",
         "project-reference-linkage",
-        "project-structure-map",
         "mcp-usage-standards",
-        "iterative-retrieval",
         "to-prd",
         "grill-with-docs",
         "idea-refine",
@@ -1359,6 +1382,9 @@
       ],
       "ceremony": "full",
       "agent": "spec-architect",
+      "act": "spec",
+      "order": 2,
+      "mutates": false,
       "artifact": "SPEC-{slug}.md",
       "checkpoint": true,
       "closers": false
@@ -1395,9 +1421,8 @@
         "architect-system-design",
         "api-contract-standards",
         "source-driven-development",
-        "domain-scaffold-patterns",
         "scaffold-standards",
-        "project-structure-map",
+        "codebase-intel-first",
         "project-reference-linkage",
         "tool-and-doc-selection",
         "mcp-usage-standards",
@@ -1407,29 +1432,26 @@
         "verification-loop",
         "test-driven-development",
         "owasp-security",
+        "code-review-and-quality",
         "backend-api-standards",
         "backend-standards-always-follow",
         "backend-error-handling",
         "backend-performance-standards",
-        "backend-code-review",
         "service-layer-standards",
         "golang-patterns",
         "golang-testing",
         "postgres-patterns",
-        "security-and-hardening",
         "eval-harness",
         "frontend-standards-always-follow",
         "frontend-structure-standards",
-        "frontend-api-standards",
         "frontend-response-handling",
         "frontend-server-data-patterns",
-        "frontend-code-review",
         "react-hooks-patterns",
         "tailwind-design-system",
         "vite-react-best-practices",
         "frontend-ui-engineering",
+        "modern-web-guidance",
         "webapp-testing",
-        "browser-testing-with-devtools",
         "code-execution-standard",
         "update-docs"
       ],
@@ -1445,10 +1467,9 @@
           "architect-system-design",
           "api-contract-standards",
           "source-driven-development",
-          "incremental-implementation",
-          "domain-scaffold-patterns",
+          "code-execution-standard",
           "scaffold-standards",
-          "project-structure-map",
+          "codebase-intel-first",
           "project-reference-linkage",
           "tool-and-doc-selection",
           "mcp-usage-standards",
@@ -1457,40 +1478,39 @@
           "dead-code-and-change-audit",
           "verification-loop",
           "test-driven-development",
-          "owasp-security"
+          "owasp-security",
+          "code-review-and-quality"
         ],
         "backend": [
           "backend-api-standards",
           "backend-standards-always-follow",
           "backend-error-handling",
           "backend-performance-standards",
-          "backend-code-review",
           "service-layer-standards",
           "golang-patterns",
           "golang-testing",
           "postgres-patterns",
-          "security-and-hardening",
-          "api-and-interface-design",
           "eval-harness"
         ],
         "frontend": [
           "frontend-standards-always-follow",
           "frontend-structure-standards",
-          "frontend-api-standards",
           "frontend-response-handling",
           "frontend-server-data-patterns",
-          "frontend-code-review",
           "react-hooks-patterns",
           "tailwind-design-system",
           "vite-react-best-practices",
           "frontend-ui-engineering",
-          "webapp-testing",
-          "browser-testing-with-devtools"
+          "modern-web-guidance",
+          "webapp-testing"
         ]
       },
       "model": "opus",
       "ceremony": "full",
       "agent": "implementation-engineer",
+      "act": "impl",
+      "order": 6,
+      "mutates": true,
       "artifact": "IMPL-REPORT.md",
       "checkpoint": false,
       "closers": true,
@@ -1556,6 +1576,9 @@
       ],
       "ceremony": "standard",
       "agent": "deadcode-reaper",
+      "act": "clean",
+      "order": 9,
+      "mutates": true,
       "artifact": "REAP-REPORT.md",
       "checkpoint": false,
       "closers": false
@@ -1582,8 +1605,11 @@
       "superpowers_skills": [],
       "ceremony": "full",
       "agent": "docs-sync-agent",
+      "act": "docs",
+      "order": 12,
+      "mutates": false,
       "artifact": "DOCS-SYNC-REPORT.md",
-      "checkpoint": true,
+      "checkpoint": false,
       "closers": false,
       "_new": "2026-07-18: docs act had no category"
     },
@@ -1602,15 +1628,21 @@
       "local_skills": [
         "verification-loop",
         "webapp-testing",
-        "eval-harness"
+        "eval-harness",
+        "verify-ui-change",
+        "verify-cli-run",
+        "design-system-compliance"
       ],
       "superpowers_skills": [
         "verification-before-completion"
       ],
       "ceremony": "full",
       "agent": "qa-verifier",
+      "act": "verify",
+      "order": 13,
+      "mutates": false,
       "artifact": "VERIFY-REPORT.md",
-      "checkpoint": true,
+      "checkpoint": false,
       "closers": false,
       "_new": "2026-07-18: verify act had no category"
     }
@@ -1645,6 +1677,11 @@
       "docs-sync-agent",
       "qa-verifier"
     ],
+    "closers_parallel": [
+      "santa-reviewer",
+      "security-sentinel",
+      "docs-sync-agent"
+    ],
     "security_trigger_globs": [
       "**/auth/**",
       "**/middleware/**",
@@ -1664,37 +1701,5 @@
       "**/*validat*",
       "**/*sanitiz*"
     ]
-  },
-  "invoke_commands": {
-    "AUDIT": {
-      "name": "invoke-audit"
-    },
-    "PLAN": {
-      "name": "invoke-planning"
-    },
-    "SPEC": {
-      "name": "invoke-spec"
-    },
-    "IMPLEMENT": {
-      "name": "invoke-implementation"
-    },
-    "DESIGN": {
-      "name": "invoke-design"
-    },
-    "CLEANUP": {
-      "name": "invoke-cleanup",
-      "aliases": [
-        "invoke-deadcode"
-      ]
-    },
-    "DEBUG": {
-      "name": "invoke-debug",
-      "aliases": [
-        "invoke-debugging"
-      ]
-    },
-    "SECURITY": {
-      "name": "invoke-security"
-    }
   }
 }

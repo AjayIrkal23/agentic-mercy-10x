@@ -22,29 +22,56 @@ Weight formula (DSPy-inspired):
   - ignore_rate 0.9 (almost never used)         → weight = 0.55 (floored at MIN_WEIGHT)
   - ignore_rate 1.0 (never used)                → weight = MIN_WEIGHT = 0.5
 
-Safety floors:
-  - MIN_WEIGHT = 0.5 (never fully suppress a skill — still appears in output)
+Safety floors (2026-09-27):
+  - BASELINE skills (fullstack-skills-reminder FRONTEND_SKILLS + BACKEND_SKILLS,
+    codebase-intel-first, graphify) are never weighted below 1.0 — the reminder
+    tells the model to *read* those files, and pre-2026-09-27 telemetry counted
+    only Skill-tool calls, so every baseline was punished to 0.5 on exactly the
+    prompts it belongs to. Reads now count (tracker `via:read`), but the floor
+    stays as the structural guarantee.
+  - MIN_WEIGHT = 0.7 elsewhere (never fully suppress a skill)
   - MAX_WEIGHT = 1.5 (high-value skills can be promoted, but not unboundedly)
   - MIN_SESSIONS = 5 (skip weight update for skills with < 5 data points)
 """
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import sys
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime, timezone
 
-TELEMETRY_DIR = Path.home() / ".claude" / "hooks" / ".telemetry"
+HOOKS_DIR = Path(__file__).resolve().parent
+TELEMETRY_DIR = HOOKS_DIR / ".telemetry"
 EFFECTIVENESS_FILE = TELEMETRY_DIR / "skill-effectiveness.jsonl"
-WEIGHTS_OUTPUT = Path(__file__).parent / "skill_router_weights.json"
+WEIGHTS_OUTPUT = HOOKS_DIR / "skill_router_weights.json"
 
-MIN_WEIGHT = 0.5
+MIN_WEIGHT = 0.7
+BASELINE_MIN_WEIGHT = 1.0
 MAX_WEIGHT = 1.5
 PENALTY_FACTOR = 0.5  # how aggressively high ignore_rate reduces weight
 SESSIONS_WINDOW = 30  # only look at last N sessions
 MIN_SESSIONS = 5      # skip a skill if we have fewer than this many data points
+
+_BASELINE_EXTRA = {"codebase-intel-first", "graphify"}
+
+
+def baseline_skills() -> set[str]:
+    """FRONTEND_SKILLS + BACKEND_SKILLS from fullstack-skills-reminder.py (+ the
+    intel baselines). Fail-open to the intel baselines alone if the import fails."""
+    names = set(_BASELINE_EXTRA)
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_fsr_for_weights", HOOKS_DIR / "fullstack-skills-reminder.py")
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)  # type: ignore[union-attr]
+        names.update(getattr(mod, "FRONTEND_SKILLS", []) or [])
+        names.update(getattr(mod, "BACKEND_SKILLS", []) or [])
+    except Exception:  # noqa: BLE001
+        pass
+    return names
 
 
 def load_effectiveness(path: Path, window: int) -> list[dict]:
@@ -80,6 +107,7 @@ def compute_weights(sessions: list[dict], min_sessions: int) -> dict[str, dict]:
         for skill in invoked_list:
             invoked[skill] += 1
 
+    baseline = baseline_skills()
     weights: dict[str, dict] = {}
     for skill, r_count in reminded.items():
         if r_count < min_sessions:
@@ -95,7 +123,8 @@ def compute_weights(sessions: list[dict], min_sessions: int) -> dict[str, dict]:
         inv_count = invoked.get(skill, 0)
         ignore_rate = max(0.0, (r_count - inv_count) / r_count)
         raw_weight = 1.0 - (ignore_rate * PENALTY_FACTOR)
-        clamped_weight = round(max(MIN_WEIGHT, min(MAX_WEIGHT, raw_weight)), 4)
+        floor = BASELINE_MIN_WEIGHT if skill in baseline else MIN_WEIGHT
+        clamped_weight = round(max(floor, min(MAX_WEIGHT, raw_weight)), 4)
 
         weights[skill] = {
             "weight": clamped_weight,
@@ -104,6 +133,8 @@ def compute_weights(sessions: list[dict], min_sessions: int) -> dict[str, dict]:
             "invoked_count": inv_count,
             "session_count": r_count,
         }
+        if skill in baseline and raw_weight < BASELINE_MIN_WEIGHT:
+            weights[skill]["note"] = "baseline_floor_1.0"
 
     # Skills invoked but never reminded (direct invocations) get a boost
     for skill in invoked:
@@ -156,7 +187,7 @@ def main() -> int:
             "generated_at": datetime.now(timezone.utc).isoformat(),
             "sessions_analyzed": len(sessions),
             "window": SESSIONS_WINDOW,
-            "formula": "weight = max(0.5, 1.0 - (ignore_rate * 0.5))",
+            "formula": "weight = max(floor, 1.0 - (ignore_rate * 0.5)); floor = 1.0 for baseline skills, 0.7 otherwise",
         },
         "weights": {skill: info["weight"] for skill, info in weights.items()},
         "detail": weights,

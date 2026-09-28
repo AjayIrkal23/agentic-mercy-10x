@@ -1,5 +1,5 @@
 {
- "_comment": "Smart Skill Router configuration. Path-ranked skills per write; manifest_mode surfaces full FE/BE lists over the session.",
+ "_comment": "Smart Skill Router configuration. Path-ranked skills per write (first matching rule wins); names are canonical — aliases are collapsed at runtime via lib/skill_aliases. Native skill `paths:` frontmatter surfaces the long tail as files are read; this config only picks the top-3 for the first write.",
  "skills_root": "~/.claude/skills",
  "manifest_mode": true,
  "max_primary_skills": 3,
@@ -72,8 +72,9 @@
      "routes.ts"
     ],
     "exclude_paths": [
-     "UDP_PLATFORM/server",
-     "server/internal"
+     "server/internal",
+     "/server/",
+     "/internal/"
     ]
    },
    "skills": [
@@ -124,7 +125,7 @@
     ]
    },
    "skills": [
-    "taste-skill",
+    "design-taste-frontend",
     "frontend-ui-engineering"
    ]
   },
@@ -140,7 +141,7 @@
     ]
    },
    "skills": [
-    "frontend-code-review",
+    "code-review-and-quality",
     "frontend-standards-always-follow",
     "react-hooks-patterns"
    ]
@@ -208,12 +209,11 @@
  ],
  "backend_rules": [
   {
-   "id": "be_cursor_infra",
+   "id": "be_claude_infra",
    "match": {
     "path_contains_any": [
      ".claude/hooks/",
-     ".claude/rules/",
-     ".claude/hooks/"
+     ".claude/rules/"
     ]
    },
    "skills": [
@@ -291,7 +291,7 @@
    },
    "skills": [
     "backend-standards-always-follow",
-    "domain-scaffold-patterns",
+    "scaffold-standards",
     "service-layer-standards"
    ]
   },
@@ -429,7 +429,7 @@
     ]
    },
    "skills": [
-    "backend-code-review",
+    "code-review-and-quality",
     "backend-standards-always-follow",
     "service-layer-standards"
    ]
@@ -469,12 +469,9 @@
   ],
   "first_write_only": [
    "architect-system-design",
-   "codebase-start-point-guide",
-   "project-reference-linkage",
-   "project-structure-map",
-   "mcp-usage-standards",
-   "iterative-retrieval",
    "codebase-intel-first",
+   "project-reference-linkage",
+   "mcp-usage-standards",
    "dox-doc-tree",
    "graphify"
   ],

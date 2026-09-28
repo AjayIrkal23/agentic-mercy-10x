@@ -1,33 +1,37 @@
 #!/usr/bin/env python3
-"""build-trigger-floor.py — Charter §2 prime-directive tool (P1-T3).
+"""build-trigger-floor.py — builds ``trigger-floor.json``, the router's keyword
+taxonomy (v2 floor, 2026-09-27).
 
-Mechanically, VERBATIM, reverse-imports EVERY trigger rule from all legacy
-taxonomies into a single ``trigger-floor.json`` that the unified router's
-``router.config.json`` is generated as a superset of. Removals are impossible;
-additions are allowed. A ``--check`` mode proves — for CI and pytest — that:
-  (a) every rule currently in the source configs is present in the on-disk
-      floor (no source rule silently dropped), and
-  (b) every floor entry is reachable in the generated router.config.json.
+Mechanically reverse-imports every trigger rule from the source configs into one
+file that ``prompt_router/classify.py`` evaluates in full. ``--check`` proves —
+for CI and pytest — that (a) every rule currently in the sources is present in
+the on-disk floor, (b) every source file exists and contributes at least one
+entry (the 2026-08-15 incident: a deleted source silently zeroed the UI
+vocabulary and ``--check`` stayed green), and (c) the router consumes the whole
+floor. Any argv this script does not recognise is refused (exit 2) WITHOUT
+writing — the pre-v2 builder rebuilt the floor on ``--help``.
 
-Sources reverse-imported (verbatim):
+Sources (verbatim, then filtered by the <= 3-char rule):
   1. skill_router.config.json          frontend_rules / backend_rules / cross_cutting
   2. skill_router.py builtins          _BUILTIN_FRONTEND_RULES / _BUILTIN_BACKEND_RULES /
-                                        _BUILTIN_CROSS_CUTTING   (UNION — captures the
-                                        drifted security-audit route)
-  3. autonomous-skill-router.config    categories[*].keywords (act keywords) + invoke_commands
+                                        _BUILTIN_CROSS_CUTTING (UNION with 1, by id)
+  3. autonomous-skill-router.config    categories[*].keywords (act keywords)
   4. fullstack-skills-reminder.config  frontend/backend/documentation path segments
-  5. ui-ux-stack-orchestrator.config   ui_keywords + ui_path_suffixes + exclude_keywords
+  5. ui-keywords.json                  ui_keywords + ui_path_suffixes + exclude_keywords
   6. graphify-enforce.config           arch_keywords + explore_keywords
-  7. commands/                         all 139 historic /invoke-* command NAMES (floor-protected;
-                                        the parametric collapse retires 120 files, names survive
-                                        + the invoke_compat translator resolves them — Charter §5)
 
-Pure Python 3 stdlib. No hardcoded absolute paths. Windows+POSIX portable.
+Keyword filter: act / ui keywords of <= 3 chars are dropped unless they are in
+``classify._SHORT_ALLOW`` (``cr``, ``off``, ``odd``, ``sse``, ``dos`` … caused
+61% of prompts to misroute under substring matching; with word-boundary matching
+they are still too ambiguous to keep).
+
+Charter: removals from the floor require a ``_meta.charter`` bump (this file
+bumped it to v2 when the historic ``/invoke-*`` command names and the
+``invoke_command_map`` entries were retired with the commands/ directory).
 
 Usage:
-  python3 build-trigger-floor.py            # (re)build trigger-floor.json
-  python3 build-trigger-floor.py --check    # verify coverage + print checksum; exit 1 on any miss
-  python3 build-trigger-floor.py --check --quiet
+  python3 build-trigger-floor.py                  # (re)build trigger-floor.json
+  python3 build-trigger-floor.py --check [--quiet] # verify; exit 1 on any miss
 """
 
 from __future__ import annotations
@@ -36,21 +40,41 @@ import ast
 import hashlib
 import json
 import sys
-import time
+from datetime import datetime, timezone
 from pathlib import Path
 
 _HOOKS = Path(__file__).resolve().parent
-_COMMANDS = _HOOKS.parent / "commands"
 _FLOOR_PATH = _HOOKS / "trigger-floor.json"
 _ROUTER_CONFIG = _HOOKS / "prompt_router" / "router.config.json"
 
-# Keywords that are legitimate but noisy — kept (never pruned, Charter §2) but
-# down-weighted so they still surface a suggestion without dominating ranking.
+CHARTER = "v2 floor (2026-09-27): removals require a charter bump"
+_KNOWN_ARGS = {"--check", "--quiet"}
+
+# JSON sources (name -> path). A missing file or a zero-entry bucket FAILS --check.
+_SOURCES = {
+    "skill_router.config.json": _HOOKS / "skill_router.config.json",
+    "autonomous-skill-router.config.json": _HOOKS / "autonomous-skill-router.config.json",
+    "fullstack-skills-reminder.config.json": _HOOKS / "fullstack-skills-reminder.config.json",
+    "ui-keywords.json": _HOOKS / "ui-keywords.json",
+    "graphify-enforce.config.json": _HOOKS / "graphify-enforce.config.json",
+}
+
+# Same allow-list as prompt_router/classify.py::_SHORT_ALLOW (imported when the
+# package is importable so the two can never drift; literal fallback otherwise).
+try:
+    sys.path.insert(0, str(_HOOKS))
+    from prompt_router.classify import _SHORT_ALLOW as SHORT_ALLOW  # noqa: E402
+except Exception:  # noqa: BLE001
+    SHORT_ALLOW = frozenset({"api", "ui", "ux", "sql", "css", "tdd", "e2e", "a11y", "seo",
+                             "glb", "r3f", "ci", "cd", "go", "tsx", "3d"})
+
+# Keywords that are legitimate but noisy — kept, but down-weighted so they still
+# surface a suggestion without dominating ranking.
 _VAGUE = {
-    "off", "wrong", "weird", "bad", "broken", "button", "btn", "input", "form",
-    "card", "menu", "page", "screen", "view", "fix", "change", "tweak", "off ",
-    "ui", "ux", "css", "flex", "grid", "gap", "font", "icon", "image", "photo",
-    "find", "search", "where", "count", "map", "scan", "flow", "trace", "graph",
+    "wrong", "weird", "bad", "broken", "button", "input", "form",
+    "card", "menu", "page", "screen", "view", "change", "tweak",
+    "ui", "ux", "css", "flex", "grid", "font", "icon", "image", "photo",
+    "find", "search", "where", "count", "scan", "flow", "trace", "graph",
     "module", "structure", "overview", "shape", "polish", "refine", "clean",
     "test", "rename", "typo", "small", "medium", "large",
 }
@@ -70,6 +94,11 @@ def _weight_for(kw: str) -> float:
     return 0.4 if kw.strip().lower() in _VAGUE else 1.0
 
 
+def keyword_ok(kw) -> bool:
+    k = str(kw).strip().lower()
+    return bool(k) and (len(k) > 3 or k in SHORT_ALLOW)
+
+
 # --------------------------------------------------------------------------- #
 # Source 2: skill_router.py builtins via AST (side-effect-free, no import)
 # --------------------------------------------------------------------------- #
@@ -83,7 +112,6 @@ def _extract_builtins() -> dict:
     except (OSError, SyntaxError):
         return out
     for node in tree.body:
-        # plain assignment:  _BUILTIN_X = [...]
         if isinstance(node, ast.Assign):
             for tgt in node.targets:
                 if isinstance(tgt, ast.Name) and tgt.id in wanted:
@@ -91,7 +119,6 @@ def _extract_builtins() -> dict:
                         out[tgt.id] = ast.literal_eval(node.value)
                     except (ValueError, TypeError):
                         pass
-        # annotated assignment:  _BUILTIN_X: list[dict] = [...]
         elif isinstance(node, ast.AnnAssign) and node.value is not None:
             tgt = node.target
             if isinstance(tgt, ast.Name) and tgt.id in wanted:
@@ -115,33 +142,21 @@ def _entry(kind: str, value, source_file: str, source_key: str, weight: float = 
     }
 
 
-def _route_entries(rules: list, source_file: str) -> list[dict]:
-    entries = []
-    for rule in rules or []:
-        if not isinstance(rule, dict):
-            continue
-        rid = rule.get("id", "")
-        entries.append(_entry("path_route", rule, source_file, rid))
-    return entries
-
-
 def _collect() -> list[dict]:
     entries: list[dict] = []
 
     # --- Source 1 + 2: path/route rules (config UNION builtins by id) --------
-    sr_cfg = _load_json(_HOOKS / "skill_router.config.json")
+    sr_cfg = _load_json(_SOURCES["skill_router.config.json"])
     builtins = _extract_builtins()
 
-    fe_by_id: dict[str, dict] = {}
-    be_by_id: dict[str, dict] = {}
+    fe_by_id: dict[str, tuple] = {}
+    be_by_id: dict[str, tuple] = {}
     for r in sr_cfg.get("frontend_rules", []) or []:
         if isinstance(r, dict):
             fe_by_id[r.get("id", "")] = ("skill_router.config.json", r)
     for r in sr_cfg.get("backend_rules", []) or []:
         if isinstance(r, dict):
             be_by_id[r.get("id", "")] = ("skill_router.config.json", r)
-    # builtin-only rules are ADDED (never override a config rule) — this is the
-    # Keep builtin-only routing rules in the generated floor.
     for r in builtins.get("_BUILTIN_FRONTEND_RULES", []) or []:
         rid = r.get("id", "")
         if rid not in fe_by_id:
@@ -150,90 +165,56 @@ def _collect() -> list[dict]:
         rid = r.get("id", "")
         if rid not in be_by_id:
             be_by_id[rid] = ("skill_router.py:_BUILTIN_BACKEND_RULES", r)
-
     for rid, (src, rule) in {**fe_by_id, **be_by_id}.items():
         entries.append(_entry("path_route", rule, src, rid))
 
-    # cross_cutting (config, else builtin)
     xcut = sr_cfg.get("cross_cutting") or builtins.get("_BUILTIN_CROSS_CUTTING") or {}
-    xcut_src = "skill_router.config.json" if sr_cfg.get("cross_cutting") else "skill_router.py:_BUILTIN_CROSS_CUTTING"
+    xcut_src = ("skill_router.config.json" if sr_cfg.get("cross_cutting")
+                else "skill_router.py:_BUILTIN_CROSS_CUTTING")
     for group, skills in xcut.items():
         entries.append(_entry("cross_cutting", {"group": group, "skills": skills}, xcut_src, group))
-    # builtin cross_cutting groups not present in config are also captured
-    b_xcut = builtins.get("_BUILTIN_CROSS_CUTTING") or {}
-    for group, skills in b_xcut.items():
+    for group, skills in (builtins.get("_BUILTIN_CROSS_CUTTING") or {}).items():
         if group not in xcut:
             entries.append(_entry("cross_cutting", {"group": group, "skills": skills},
                                   "skill_router.py:_BUILTIN_CROSS_CUTTING", group))
 
-    # --- Source 3: autonomous categories (act keywords) + invoke_commands ----
-    auto = _load_json(_HOOKS / "autonomous-skill-router.config.json")
+    # --- Source 3: autonomous categories (act keywords) ----------------------
+    auto = _load_json(_SOURCES["autonomous-skill-router.config.json"])
     for cat, spec in (auto.get("categories") or {}).items():
         if not isinstance(spec, dict):
             continue
         for kw in spec.get("keywords", []) or []:
-            entries.append(_entry("act_keyword", kw,
-                                  "autonomous-skill-router.config.json",
-                                  f"categories.{cat}", _weight_for(kw)))
-    for cat, spec in (auto.get("invoke_commands") or {}).items():
-        entries.append(_entry("invoke_command_map", {"category": cat, "spec": spec},
-                              "autonomous-skill-router.config.json", f"invoke_commands.{cat}"))
+            if keyword_ok(kw):
+                entries.append(_entry("act_keyword", kw, "autonomous-skill-router.config.json",
+                                      f"categories.{cat}", _weight_for(str(kw))))
 
     # --- Source 4: fullstack path segments -----------------------------------
-    fs = _load_json(_HOOKS / "fullstack-skills-reminder.config.json")
+    fs = _load_json(_SOURCES["fullstack-skills-reminder.config.json"])
     for key in ("frontend_path_segments", "backend_path_segments", "documentation_path_segments"):
         for seg in fs.get(key, []) or []:
-            entries.append(_entry("path_segment", seg,
-                                  "fullstack-skills-reminder.config.json", key))
+            entries.append(_entry("path_segment", seg, "fullstack-skills-reminder.config.json", key))
 
-    # --- Source 5: ui-ux keywords / suffixes / excludes ----------------------
-    ui = _load_json(_HOOKS / "ui-ux-stack-orchestrator.config.json")
+    # --- Source 5: ui keywords / suffixes / excludes -------------------------
+    ui = _load_json(_SOURCES["ui-keywords.json"])
     for kw in ui.get("ui_keywords", []) or []:
-        entries.append(_entry("ui_keyword", kw,
-                              "ui-ux-stack-orchestrator.config.json", "ui_keywords", _weight_for(kw)))
+        if keyword_ok(kw):
+            entries.append(_entry("ui_keyword", kw, "ui-keywords.json", "ui_keywords",
+                                  _weight_for(str(kw))))
     for suf in ui.get("ui_path_suffixes", []) or []:
-        entries.append(_entry("ui_suffix", suf,
-                              "ui-ux-stack-orchestrator.config.json", "ui_path_suffixes"))
+        entries.append(_entry("ui_suffix", suf, "ui-keywords.json", "ui_path_suffixes"))
     for kw in ui.get("exclude_keywords", []) or []:
-        entries.append(_entry("ui_exclude", kw,
-                              "ui-ux-stack-orchestrator.config.json", "exclude_keywords"))
+        entries.append(_entry("ui_exclude", kw, "ui-keywords.json", "exclude_keywords"))
 
     # --- Source 6: graphify arch / explore keywords --------------------------
-    gr = _load_json(_HOOKS / "graphify-enforce.config.json")
+    gr = _load_json(_SOURCES["graphify-enforce.config.json"])
     for kw in gr.get("arch_keywords", []) or []:
-        entries.append(_entry("arch_keyword", kw,
-                              "graphify-enforce.config.json", "arch_keywords", _weight_for(kw)))
+        entries.append(_entry("arch_keyword", kw, "graphify-enforce.config.json", "arch_keywords",
+                              _weight_for(str(kw))))
     for kw in gr.get("explore_keywords", []) or []:
-        entries.append(_entry("explore_keyword", kw,
-                              "graphify-enforce.config.json", "explore_keywords", _weight_for(kw)))
-
-    # --- Source 7: all historic /invoke-* command NAMES ----------------------
-    for name in _command_names():
-        entries.append(_entry("command_name", name, "commands/", name))
+        entries.append(_entry("explore_keyword", kw, "graphify-enforce.config.json",
+                              "explore_keywords", _weight_for(str(kw))))
 
     return _dedup(entries)
-
-
-def _command_names() -> list[str]:
-    """All historic /invoke-* command names (Charter §5): the UNION of the names
-    on disk now AND the frozen historic list. This guarantees the parametric
-    139->20 collapse (P5) can never drop a retired name from the floor — the
-    names stay trigger-protected forever (the invoke_compat translator resolves
-    each to /invoke <acts>)."""
-    names: set[str] = set()
-    try:
-        for p in _COMMANDS.glob("invoke*.md"):
-            names.add(p.stem)
-    except OSError:
-        pass
-    frozen = _HOOKS / "historic-invoke-commands.json"
-    if frozen.is_file():
-        try:
-            data = json.loads(frozen.read_text(encoding="utf-8"))
-            names.update(data.get("names", []))
-        except (OSError, json.JSONDecodeError):
-            pass
-    return sorted(names)
 
 
 def _dedup(entries: list[dict]) -> list[dict]:
@@ -241,8 +222,7 @@ def _dedup(entries: list[dict]) -> list[dict]:
     seen = set()
     out = []
     for e in entries:
-        key = (e["kind"], json.dumps(e["value"], sort_keys=True, ensure_ascii=False),
-               e["source_file"], e["source_key"])
+        key = _value_key(e)
         if key in seen:
             continue
         seen.add(key)
@@ -250,30 +230,32 @@ def _dedup(entries: list[dict]) -> list[dict]:
     return out
 
 
+def _value_key(e: dict) -> tuple:
+    return (e["kind"], json.dumps(e["value"], sort_keys=True, ensure_ascii=False),
+            e["source_file"], e["source_key"])
+
+
 def _checksum(entries: list[dict]) -> str:
-    canon = json.dumps(
-        sorted((e["kind"], json.dumps(e["value"], sort_keys=True, ensure_ascii=False),
-                e["source_file"], e["source_key"]) for e in entries),
-        ensure_ascii=False,
-    )
+    canon = json.dumps(sorted(_value_key(e) for e in entries), ensure_ascii=False)
     return hashlib.sha256(canon.encode("utf-8")).hexdigest()
 
 
 def _source_counts() -> dict:
-    sr = _load_json(_HOOKS / "skill_router.config.json")
-    auto = _load_json(_HOOKS / "autonomous-skill-router.config.json")
-    ui = _load_json(_HOOKS / "ui-ux-stack-orchestrator.config.json")
-    gr = _load_json(_HOOKS / "graphify-enforce.config.json")
-    fs = _load_json(_HOOKS / "fullstack-skills-reminder.config.json")
+    sr = _load_json(_SOURCES["skill_router.config.json"])
+    auto = _load_json(_SOURCES["autonomous-skill-router.config.json"])
+    ui = _load_json(_SOURCES["ui-keywords.json"])
+    gr = _load_json(_SOURCES["graphify-enforce.config.json"])
+    fs = _load_json(_SOURCES["fullstack-skills-reminder.config.json"])
     b = _extract_builtins()
     return {
         "skill_router.config.rules": len(sr.get("frontend_rules", []) or []) + len(sr.get("backend_rules", []) or []),
         "skill_router.builtins": len(b.get("_BUILTIN_FRONTEND_RULES", []) or []) + len(b.get("_BUILTIN_BACKEND_RULES", []) or []),
-        "autonomous.category_keywords": sum(len(v.get("keywords", []) or []) for v in (auto.get("categories") or {}).values()),
-        "ui.keywords": len(ui.get("ui_keywords", []) or []),
+        "autonomous.category_keywords": sum(
+            sum(1 for k in (v.get("keywords", []) or []) if keyword_ok(k))
+            for v in (auto.get("categories") or {}).values() if isinstance(v, dict)),
+        "ui.keywords": sum(1 for k in (ui.get("ui_keywords", []) or []) if keyword_ok(k)),
         "graphify.arch+explore": len(gr.get("arch_keywords", []) or []) + len(gr.get("explore_keywords", []) or []),
         "fullstack.segments": sum(len(fs.get(k, []) or []) for k in ("frontend_path_segments", "backend_path_segments", "documentation_path_segments")),
-        "command_names": len(_command_names()),
     }
 
 
@@ -284,11 +266,13 @@ def build() -> dict:
     entries = _collect()
     floor = {
         "_meta": {
-            "purpose": "Charter v3 §2 verbatim trigger floor — removals forbidden, additions allowed.",
-            "generated": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "purpose": "Prompt-router trigger floor — word-boundary keyword taxonomy consumed in full by prompt_router/classify.py.",
+            "charter": CHARTER,
+            "generated": datetime.now(timezone.utc).isoformat(),
             "generator": "build-trigger-floor.py",
             "checksum": _checksum(entries),
             "entry_count": len(entries),
+            "short_allow": sorted(SHORT_ALLOW),
             "source_counts": _source_counts(),
         },
         "entries": entries,
@@ -297,14 +281,30 @@ def build() -> dict:
     return floor
 
 
-def _value_key(e: dict) -> tuple:
-    return (e["kind"], json.dumps(e["value"], sort_keys=True, ensure_ascii=False),
-            e["source_file"], e["source_key"])
-
-
 def check(quiet: bool = False) -> int:
-    """Return 0 if the floor is a superset of all sources AND router.config
-    (if present) covers every floor entry; else 1. Prints a checksum."""
+    """0 when: every source file exists; every source bucket is non-zero
+    (skill_router.builtins may be 0 — it is a UNION supplement to source 1,
+    reported as WARN); the on-disk floor is a superset of the sources; and the
+    router consumes the whole floor. Else 1."""
+    problems = 0
+
+    # (b) source files present + non-zero buckets
+    for name, path in _SOURCES.items():
+        if not path.is_file():
+            problems += 1
+            if not quiet:
+                print(f"FAIL: source file missing: {name}", file=sys.stderr)
+    counts = _source_counts()
+    for bucket, n in counts.items():
+        if n == 0:
+            if bucket == "skill_router.builtins":
+                if not quiet:
+                    print("WARN: skill_router.builtins is 0 (UNION supplement — allowed)", file=sys.stderr)
+                continue
+            problems += 1
+            if not quiet:
+                print(f"FAIL: source bucket is 0: {bucket}", file=sys.stderr)
+
     on_disk = _load_json(_FLOOR_PATH)
     if not on_disk:
         print("FLOOR MISSING — run build-trigger-floor.py first", file=sys.stderr)
@@ -312,57 +312,44 @@ def check(quiet: bool = False) -> int:
     disk_entries = on_disk.get("entries", [])
     disk_keys = {_value_key(e) for e in disk_entries}
 
+    # (a) sources ⊆ floor
     rebuilt = _collect()
     missing_from_disk = [e for e in rebuilt if _value_key(e) not in disk_keys]
-
-    problems = 0
     if missing_from_disk:
         problems += len(missing_from_disk)
         if not quiet:
-            print(f"FAIL: {len(missing_from_disk)} source rule(s) missing from floor:", file=sys.stderr)
+            print(f"FAIL: {len(missing_from_disk)} source rule(s) missing from floor (rebuild):", file=sys.stderr)
             for e in missing_from_disk[:20]:
                 print(f"  - [{e['kind']}] {e['value']!r} ({e['source_file']}::{e['source_key']})", file=sys.stderr)
 
-    # floor -> router.config coverage (only if the generated config exists)
+    # (c) floor -> router coverage
     cfg = _load_json(_ROUTER_CONFIG)
-    if cfg:
-        if cfg.get("consumes_entire_floor") is True:
-            pass  # router evaluates the whole floor at runtime -> every entry reachable
-        else:
-            floor_ref = set(cfg.get("_floor_entry_keys", []))
-            if floor_ref:
-                uncovered = [e for e in disk_entries if _keystr(_value_key(e)) not in floor_ref]
-                if uncovered:
-                    problems += len(uncovered)
-                    if not quiet:
-                        print(f"FAIL: {len(uncovered)} floor entries not reachable in router.config.json",
-                              file=sys.stderr)
-            elif not quiet:
-                print("WARN: router.config.json neither sets consumes_entire_floor nor "
-                      "lists _floor_entry_keys — floor->config coverage unverified", file=sys.stderr)
+    if cfg and cfg.get("consumes_entire_floor") is not True:
+        problems += 1
+        if not quiet:
+            print("FAIL: router.config.json does not set consumes_entire_floor=true", file=sys.stderr)
 
-    checksum = _checksum(disk_entries)
-    stored = on_disk.get("_meta", {}).get("checksum", "")
-    live = _checksum(rebuilt)
     if not quiet:
-        print(f"floor entries: {len(disk_entries)}  checksum(disk): {checksum[:16]}")
-        print(f"checksum(sources rebuilt): {live[:16]}  stored: {stored[:16]}")
-        print(f"source_counts: {json.dumps(_source_counts())}")
-    if problems == 0 and not quiet:
-        print("OK: floor is a verbatim superset of all legacy taxonomies.")
+        print(f"floor entries: {len(disk_entries)}  checksum(disk): {_checksum(disk_entries)[:16]}  "
+              f"stored: {on_disk.get('_meta', {}).get('checksum', '')[:16]}")
+        print(f"checksum(sources rebuilt): {_checksum(rebuilt)[:16]}  charter: {on_disk.get('_meta', {}).get('charter', '?')}")
+        print(f"source_counts: {json.dumps(counts)}")
+        if problems == 0:
+            print("OK: floor is a superset of all sources; every source present and non-empty.")
     return 0 if problems == 0 else 1
 
 
-def _keystr(key_tuple: tuple) -> str:
-    return "|".join(str(x) for x in key_tuple)
-
-
 def value_keys(floor: dict) -> list[str]:
-    """Public helper: stringified value-keys for router.config to embed (--check hook)."""
-    return [_keystr(_value_key(e)) for e in floor.get("entries", [])]
+    """Public helper: stringified value-keys (kept for external tooling)."""
+    return ["|".join(str(x) for x in _value_key(e)) for e in floor.get("entries", [])]
 
 
 def main(argv: list[str]) -> int:
+    unknown = [a for a in argv if a not in _KNOWN_ARGS]
+    if unknown:
+        print(f"build-trigger-floor.py: unknown argument(s) {unknown} — nothing written. "
+              f"Usage: build-trigger-floor.py [--check] [--quiet]", file=sys.stderr)
+        return 2
     quiet = "--quiet" in argv
     if "--check" in argv:
         return check(quiet=quiet)

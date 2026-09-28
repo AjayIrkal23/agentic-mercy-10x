@@ -1,368 +1,289 @@
 {
   "_meta": {
-    "generated_at": "2026-09-21T02:40:26.556125+00:00",
+    "generated_at": "2026-09-28T03:17:28.505917+00:00",
     "sessions_analyzed": 30,
     "window": 30,
-    "formula": "weight = max(0.5, 1.0 - (ignore_rate * 0.5))"
+    "formula": "weight = max(floor, 1.0 - (ignore_rate * 0.5)); floor = 1.0 for baseline skills, 0.7 otherwise"
   },
   "weights": {
-    "frontend-standards-always-follow": 0.5,
-    "doubt-driven-development": 0.5833,
-    "graphify": 0.5,
-    "architect-system-design": 0.9167,
-    "dox-doc-tree": 0.5833,
-    "source-driven-development": 0.5,
-    "taste-skill": 0.5,
-    "iterative-retrieval": 0.5,
-    "dead-code-and-change-audit": 0.9167,
-    "codebase-intel-first": 0.5,
-    "mcp-usage-standards": 0.5,
-    "project-structure-map": 0.9167,
-    "project-reference-linkage": 1.0,
-    "codebase-start-point-guide": 0.5,
-    "frontend-ui-engineering": 0.6,
-    "backend-standards-always-follow": 0.5,
-    "backend-api-standards": 0.5,
-    "api-contract-standards": 1.0,
+    "codebase-start-point-guide": 0.9333,
+    "graphify": 1.0,
+    "frontend-standards-always-follow": 1.0,
+    "frontend-structure-standards": 1.0,
     "react-hooks-patterns": 1.0,
-    "frontend-code-review": 0.5,
-    "service-layer-standards": 0.5,
-    "api-and-interface-design": 1.5,
-    "code-simplification": 1.5,
-    "deprecation-and-migration": 1.5,
-    "domain-scaffold-patterns": 1.5,
-    "fix-lint-format": 1.5,
-    "grill-with-docs": 1.5,
-    "incremental-implementation": 1.5,
-    "invoke": 1.5,
-    "invoke-audit": 1.5,
-    "planning-and-task-breakdown": 1.5,
-    "spec-driven-development": 1.5,
-    "update-docs": 1.5,
-    "backend-error-handling": 1.5,
+    "codebase-intel-first": 1.0,
+    "architect-system-design": 1.0,
+    "dox-doc-tree": 0.7,
+    "dead-code-and-change-audit": 1.0,
+    "iterative-retrieval": 0.7,
+    "source-driven-development": 1.0,
+    "doubt-driven-development": 1.0,
+    "project-reference-linkage": 1.0,
+    "mcp-usage-standards": 1.0,
+    "project-structure-map": 0.7,
+    "service-layer-standards": 1.0,
+    "backend-standards-always-follow": 1.0,
+    "golang-patterns": 1.0,
+    "code-review-and-quality": 1.5,
+    "dataviz": 1.5,
+    "debug-investigation": 1.5,
     "diagnose": 1.5,
-    "documentation-and-adrs": 1.5,
-    "higgsfield-generate": 1.5,
+    "forensic-change-coupling": 1.5,
+    "forensic-complexity-trends": 1.5,
+    "forensic-debt-quantification": 1.5,
+    "forensic-hotspot-finder": 1.5,
+    "owasp-security": 1.5,
     "santa-review": 1.5,
-    "tailwind-design-system": 1.5,
-    "test-driven-development": 1.5,
+    "security-and-hardening": 1.5,
+    "tech-debt-audit": 1.5,
     "verification-loop": 1.5,
-    "workflow-orchestrator": 1.5
+    "webapp-testing": 1.5
   },
   "detail": {
-    "frontend-standards-always-follow": {
-      "weight": 0.5,
-      "ignore_rate": 1.0,
+    "codebase-start-point-guide": {
+      "weight": 0.9333,
+      "ignore_rate": 0.1333,
       "reminded_count": 30,
-      "invoked_count": 0,
-      "session_count": 30
-    },
-    "doubt-driven-development": {
-      "weight": 0.5833,
-      "ignore_rate": 0.8333,
-      "reminded_count": 30,
-      "invoked_count": 5,
+      "invoked_count": 26,
       "session_count": 30
     },
     "graphify": {
-      "weight": 0.5,
+      "weight": 1.0,
       "ignore_rate": 1.0,
       "reminded_count": 30,
       "invoked_count": 0,
-      "session_count": 30
+      "session_count": 30,
+      "note": "baseline_floor_1.0"
+    },
+    "frontend-standards-always-follow": {
+      "weight": 1.0,
+      "ignore_rate": 1.0,
+      "reminded_count": 26,
+      "invoked_count": 0,
+      "session_count": 26,
+      "note": "baseline_floor_1.0"
+    },
+    "frontend-structure-standards": {
+      "weight": 1.0,
+      "ignore_rate": 1.0,
+      "reminded_count": 26,
+      "invoked_count": 0,
+      "session_count": 26,
+      "note": "baseline_floor_1.0"
+    },
+    "react-hooks-patterns": {
+      "weight": 1.0,
+      "ignore_rate": 1.0,
+      "reminded_count": 26,
+      "invoked_count": 0,
+      "session_count": 26,
+      "note": "baseline_floor_1.0"
+    },
+    "codebase-intel-first": {
+      "weight": 1.0,
+      "ignore_rate": 1.0,
+      "reminded_count": 30,
+      "invoked_count": 0,
+      "session_count": 30,
+      "note": "baseline_floor_1.0"
     },
     "architect-system-design": {
-      "weight": 0.9167,
-      "ignore_rate": 0.1667,
+      "weight": 1.0,
+      "ignore_rate": 1.0,
       "reminded_count": 30,
-      "invoked_count": 25,
-      "session_count": 30
+      "invoked_count": 0,
+      "session_count": 30,
+      "note": "baseline_floor_1.0"
     },
     "dox-doc-tree": {
-      "weight": 0.5833,
-      "ignore_rate": 0.8333,
-      "reminded_count": 30,
-      "invoked_count": 5,
-      "session_count": 30
-    },
-    "source-driven-development": {
-      "weight": 0.5,
-      "ignore_rate": 1.0,
-      "reminded_count": 30,
-      "invoked_count": 0,
-      "session_count": 30
-    },
-    "taste-skill": {
-      "weight": 0.5,
-      "ignore_rate": 1.0,
-      "reminded_count": 25,
-      "invoked_count": 0,
-      "session_count": 25
-    },
-    "iterative-retrieval": {
-      "weight": 0.5,
+      "weight": 0.7,
       "ignore_rate": 1.0,
       "reminded_count": 30,
       "invoked_count": 0,
       "session_count": 30
     },
     "dead-code-and-change-audit": {
-      "weight": 0.9167,
-      "ignore_rate": 0.1667,
+      "weight": 1.0,
+      "ignore_rate": 0.1333,
       "reminded_count": 30,
-      "invoked_count": 25,
-      "session_count": 30
+      "invoked_count": 26,
+      "session_count": 30,
+      "note": "baseline_floor_1.0"
     },
-    "codebase-intel-first": {
-      "weight": 0.5,
+    "iterative-retrieval": {
+      "weight": 0.7,
       "ignore_rate": 1.0,
       "reminded_count": 30,
       "invoked_count": 0,
       "session_count": 30
     },
-    "mcp-usage-standards": {
-      "weight": 0.5,
+    "source-driven-development": {
+      "weight": 1.0,
       "ignore_rate": 1.0,
       "reminded_count": 30,
       "invoked_count": 0,
-      "session_count": 30
+      "session_count": 30,
+      "note": "baseline_floor_1.0"
     },
-    "project-structure-map": {
-      "weight": 0.9167,
-      "ignore_rate": 0.1667,
+    "doubt-driven-development": {
+      "weight": 1.0,
+      "ignore_rate": 0.1333,
       "reminded_count": 30,
-      "invoked_count": 25,
-      "session_count": 30
+      "invoked_count": 26,
+      "session_count": 30,
+      "note": "baseline_floor_1.0"
     },
     "project-reference-linkage": {
       "weight": 1.0,
-      "ignore_rate": 0.0,
+      "ignore_rate": 0.1333,
       "reminded_count": 30,
-      "invoked_count": 30,
-      "session_count": 30
+      "invoked_count": 26,
+      "session_count": 30,
+      "note": "baseline_floor_1.0"
     },
-    "codebase-start-point-guide": {
-      "weight": 0.5,
-      "ignore_rate": 1.0,
-      "reminded_count": 30,
-      "invoked_count": 0,
-      "session_count": 30
-    },
-    "frontend-ui-engineering": {
-      "weight": 0.6,
-      "ignore_rate": 0.8,
-      "reminded_count": 25,
-      "invoked_count": 5,
-      "session_count": 25
-    },
-    "backend-standards-always-follow": {
-      "weight": 0.5,
-      "ignore_rate": 1.0,
-      "reminded_count": 30,
-      "invoked_count": 0,
-      "session_count": 30
-    },
-    "backend-api-standards": {
-      "weight": 0.5,
-      "ignore_rate": 1.0,
-      "reminded_count": 30,
-      "invoked_count": 0,
-      "session_count": 30
-    },
-    "api-contract-standards": {
+    "mcp-usage-standards": {
       "weight": 1.0,
-      "ignore_rate": 0.0,
-      "reminded_count": 25,
-      "invoked_count": 30,
-      "session_count": 25
-    },
-    "react-hooks-patterns": {
-      "weight": 1.0,
-      "ignore_rate": 0.0,
-      "reminded_count": 5,
-      "invoked_count": 5,
-      "session_count": 5
-    },
-    "frontend-code-review": {
-      "weight": 0.5,
       "ignore_rate": 1.0,
-      "reminded_count": 5,
+      "reminded_count": 30,
       "invoked_count": 0,
-      "session_count": 5
+      "session_count": 30,
+      "note": "baseline_floor_1.0"
+    },
+    "project-structure-map": {
+      "weight": 0.7,
+      "ignore_rate": 1.0,
+      "reminded_count": 30,
+      "invoked_count": 0,
+      "session_count": 30
     },
     "service-layer-standards": {
-      "weight": 0.5,
-      "ignore_rate": 1.0,
-      "reminded_count": 5,
-      "invoked_count": 0,
-      "session_count": 5
+      "weight": 1.0,
+      "ignore_rate": null,
+      "session_count": 4,
+      "note": "skipped_insufficient_data (n=4 < min=5)"
     },
-    "api-and-interface-design": {
+    "backend-standards-always-follow": {
+      "weight": 1.0,
+      "ignore_rate": null,
+      "session_count": 4,
+      "note": "skipped_insufficient_data (n=4 < min=5)"
+    },
+    "golang-patterns": {
+      "weight": 1.0,
+      "ignore_rate": null,
+      "session_count": 4,
+      "note": "skipped_insufficient_data (n=4 < min=5)"
+    },
+    "code-review-and-quality": {
       "weight": 1.5,
       "ignore_rate": 0.0,
       "reminded_count": 0,
-      "invoked_count": 25,
-      "session_count": 25,
+      "invoked_count": 26,
+      "session_count": 26,
       "note": "direct_invocation_only"
     },
-    "code-simplification": {
+    "dataviz": {
       "weight": 1.5,
       "ignore_rate": 0.0,
       "reminded_count": 0,
-      "invoked_count": 25,
-      "session_count": 25,
+      "invoked_count": 26,
+      "session_count": 26,
       "note": "direct_invocation_only"
     },
-    "deprecation-and-migration": {
+    "debug-investigation": {
       "weight": 1.5,
       "ignore_rate": 0.0,
       "reminded_count": 0,
-      "invoked_count": 25,
-      "session_count": 25,
-      "note": "direct_invocation_only"
-    },
-    "domain-scaffold-patterns": {
-      "weight": 1.5,
-      "ignore_rate": 0.0,
-      "reminded_count": 0,
-      "invoked_count": 25,
-      "session_count": 25,
-      "note": "direct_invocation_only"
-    },
-    "fix-lint-format": {
-      "weight": 1.5,
-      "ignore_rate": 0.0,
-      "reminded_count": 0,
-      "invoked_count": 25,
-      "session_count": 25,
-      "note": "direct_invocation_only"
-    },
-    "grill-with-docs": {
-      "weight": 1.5,
-      "ignore_rate": 0.0,
-      "reminded_count": 0,
-      "invoked_count": 25,
-      "session_count": 25,
-      "note": "direct_invocation_only"
-    },
-    "incremental-implementation": {
-      "weight": 1.5,
-      "ignore_rate": 0.0,
-      "reminded_count": 0,
-      "invoked_count": 25,
-      "session_count": 25,
-      "note": "direct_invocation_only"
-    },
-    "invoke": {
-      "weight": 1.5,
-      "ignore_rate": 0.0,
-      "reminded_count": 0,
-      "invoked_count": 30,
-      "session_count": 30,
-      "note": "direct_invocation_only"
-    },
-    "invoke-audit": {
-      "weight": 1.5,
-      "ignore_rate": 0.0,
-      "reminded_count": 0,
-      "invoked_count": 25,
-      "session_count": 25,
-      "note": "direct_invocation_only"
-    },
-    "planning-and-task-breakdown": {
-      "weight": 1.5,
-      "ignore_rate": 0.0,
-      "reminded_count": 0,
-      "invoked_count": 25,
-      "session_count": 25,
-      "note": "direct_invocation_only"
-    },
-    "spec-driven-development": {
-      "weight": 1.5,
-      "ignore_rate": 0.0,
-      "reminded_count": 0,
-      "invoked_count": 30,
-      "session_count": 30,
-      "note": "direct_invocation_only"
-    },
-    "update-docs": {
-      "weight": 1.5,
-      "ignore_rate": 0.0,
-      "reminded_count": 0,
-      "invoked_count": 30,
-      "session_count": 30,
-      "note": "direct_invocation_only"
-    },
-    "backend-error-handling": {
-      "weight": 1.5,
-      "ignore_rate": 0.0,
-      "reminded_count": 0,
-      "invoked_count": 5,
-      "session_count": 5,
+      "invoked_count": 26,
+      "session_count": 26,
       "note": "direct_invocation_only"
     },
     "diagnose": {
       "weight": 1.5,
       "ignore_rate": 0.0,
       "reminded_count": 0,
-      "invoked_count": 5,
-      "session_count": 5,
+      "invoked_count": 26,
+      "session_count": 26,
       "note": "direct_invocation_only"
     },
-    "documentation-and-adrs": {
+    "forensic-change-coupling": {
       "weight": 1.5,
       "ignore_rate": 0.0,
       "reminded_count": 0,
-      "invoked_count": 5,
-      "session_count": 5,
+      "invoked_count": 26,
+      "session_count": 26,
       "note": "direct_invocation_only"
     },
-    "higgsfield-generate": {
+    "forensic-complexity-trends": {
       "weight": 1.5,
       "ignore_rate": 0.0,
       "reminded_count": 0,
-      "invoked_count": 5,
-      "session_count": 5,
+      "invoked_count": 26,
+      "session_count": 26,
+      "note": "direct_invocation_only"
+    },
+    "forensic-debt-quantification": {
+      "weight": 1.5,
+      "ignore_rate": 0.0,
+      "reminded_count": 0,
+      "invoked_count": 26,
+      "session_count": 26,
+      "note": "direct_invocation_only"
+    },
+    "forensic-hotspot-finder": {
+      "weight": 1.5,
+      "ignore_rate": 0.0,
+      "reminded_count": 0,
+      "invoked_count": 26,
+      "session_count": 26,
+      "note": "direct_invocation_only"
+    },
+    "owasp-security": {
+      "weight": 1.5,
+      "ignore_rate": 0.0,
+      "reminded_count": 0,
+      "invoked_count": 26,
+      "session_count": 26,
       "note": "direct_invocation_only"
     },
     "santa-review": {
       "weight": 1.5,
       "ignore_rate": 0.0,
       "reminded_count": 0,
-      "invoked_count": 5,
-      "session_count": 5,
+      "invoked_count": 30,
+      "session_count": 30,
       "note": "direct_invocation_only"
     },
-    "tailwind-design-system": {
+    "security-and-hardening": {
       "weight": 1.5,
       "ignore_rate": 0.0,
       "reminded_count": 0,
-      "invoked_count": 5,
-      "session_count": 5,
+      "invoked_count": 26,
+      "session_count": 26,
       "note": "direct_invocation_only"
     },
-    "test-driven-development": {
+    "tech-debt-audit": {
       "weight": 1.5,
       "ignore_rate": 0.0,
       "reminded_count": 0,
-      "invoked_count": 5,
-      "session_count": 5,
+      "invoked_count": 26,
+      "session_count": 26,
       "note": "direct_invocation_only"
     },
     "verification-loop": {
       "weight": 1.5,
       "ignore_rate": 0.0,
       "reminded_count": 0,
-      "invoked_count": 5,
-      "session_count": 5,
+      "invoked_count": 23,
+      "session_count": 23,
       "note": "direct_invocation_only"
     },
-    "workflow-orchestrator": {
+    "webapp-testing": {
       "weight": 1.5,
       "ignore_rate": 0.0,
       "reminded_count": 0,
-      "invoked_count": 5,
-      "session_count": 5,
+      "invoked_count": 23,
+      "session_count": 23,
       "note": "direct_invocation_only"
     }
   }

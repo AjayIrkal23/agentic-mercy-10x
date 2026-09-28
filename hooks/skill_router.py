@@ -17,13 +17,24 @@ Cross-cutting extras (not counted in the 3) are appended with priority "CROSS-CU
 from __future__ import annotations
 
 import json
-import os
+import sys
 from pathlib import Path
 
 _HOOK_DIR = Path(__file__).resolve().parent
 _CONFIG_PATH = _HOOK_DIR / "skill_router.config.json"
 _SKILL_ROOT = Path.home() / ".claude" / "skills"
 WEIGHTS_FILE = _HOOK_DIR / "skill_router_weights.json"
+
+if str(_HOOK_DIR) not in sys.path:
+    sys.path.insert(0, str(_HOOK_DIR))
+try:
+    from lib.skill_aliases import canonical as _canonical, collapse as _collapse
+except Exception:  # noqa: BLE001 — identity fallback keeps the hook fail-open
+    def _canonical(name: str) -> str:  # type: ignore[misc]
+        return name
+
+    def _collapse(names):  # type: ignore[misc]
+        return list(dict.fromkeys(names))
 
 
 def _load_weights() -> dict[str, float]:
@@ -57,7 +68,7 @@ _BUILTIN_FRONTEND_RULES: list[dict] = [
     {
         "id": "fe_api",
         "match": {"path_contains_any": ["/api/", "/api-client", "api.ts", "api.js"]},
-        "skills": ["frontend-response-handling", "frontend-api-standards", "frontend-server-data-patterns"],
+        "skills": ["frontend-response-handling", "frontend-server-data-patterns", "owasp-security"],
     },
     {
         "id": "fe_hooks",
@@ -80,12 +91,12 @@ _BUILTIN_FRONTEND_RULES: list[dict] = [
     {
         "id": "fe_test",
         "match": {"path_contains_any": [".test.", ".spec.", "__tests__", "_test.ts", "_test.tsx"]},
-        "skills": ["webapp-testing", "tdd", "frontend-standards-always-follow"],
+        "skills": ["webapp-testing", "test-driven-development", "frontend-standards-always-follow"],
     },
     {
         "id": "fe_auth",
         "match": {"path_contains_any": ["/auth/", "/login/", "/guard/", "protected", "session"]},
-        "skills": ["security-and-hardening", "frontend-standards-always-follow", "frontend-response-handling"],
+        "skills": ["owasp-security", "frontend-standards-always-follow", "frontend-response-handling"],
     },
     {
         "id": "fe_vite_config",
@@ -95,7 +106,7 @@ _BUILTIN_FRONTEND_RULES: list[dict] = [
     {
         "id": "fe_ui_design",
         "match": {"path_contains_any": ["/components/", "/layout/", "/pages/", "/views/"]},
-        "skills": ["taste-skill", "frontend-ui-engineering"],
+        "skills": ["design-taste-frontend", "frontend-ui-engineering"],
     },
     {
         "id": "fe_component_tsx",
@@ -111,16 +122,16 @@ _BUILTIN_FRONTEND_RULES: list[dict] = [
 
 _BUILTIN_BACKEND_RULES: list[dict] = [
     {
-        "id": "be_cursor_infra",
+        "id": "be_claude_infra",
         "match": {
-            "path_contains_any": [".claude/hooks/", ".claude/rules/", ".claude/hooks/"],
+            "path_contains_any": [".claude/hooks/", ".claude/rules/"],
         },
         "skills": ["tool-and-doc-selection", "dead-code-and-change-audit", "debug-investigation"],
     },
     {
         "id": "be_go_test",
         "match": {"filename_contains_any": ["_test.go"]},
-        "skills": ["golang-testing", "tdd", "backend-standards-always-follow"],
+        "skills": ["golang-testing", "test-driven-development", "backend-standards-always-follow"],
     },
     {
         "id": "be_controller",
@@ -140,7 +151,7 @@ _BUILTIN_BACKEND_RULES: list[dict] = [
     {
         "id": "be_model",
         "match": {"filename_contains_any": ["model", ".model."]},
-        "skills": ["backend-standards-always-follow", "domain-scaffold-patterns", "service-layer-standards"],
+        "skills": ["backend-standards-always-follow", "scaffold-standards", "service-layer-standards"],
     },
     {
         "id": "be_route",
@@ -150,12 +161,12 @@ _BUILTIN_BACKEND_RULES: list[dict] = [
     {
         "id": "be_test",
         "match": {"filename_contains_any": [".test.", ".spec.", "_test.ts"]},
-        "skills": ["tdd", "backend-standards-always-follow", "backend-performance-standards"],
+        "skills": ["test-driven-development", "backend-standards-always-follow", "backend-performance-standards"],
     },
     {
         "id": "be_middleware",
         "match": {"filename_contains_any": ["middleware", "auth", "guard", "session"]},
-        "skills": ["security-and-hardening", "backend-standards-always-follow", "backend-error-handling"],
+        "skills": ["owasp-security", "backend-standards-always-follow", "backend-error-handling"],
     },
     {
         "id": "be_migration",
@@ -170,7 +181,7 @@ _BUILTIN_BACKEND_RULES: list[dict] = [
     {
         "id": "be_security_audit",
         "match": {"filename_contains_any": ["security", "audit", "owasp"]},
-        "skills": ["owasp-security", "security-and-hardening"],
+        "skills": ["owasp-security", "backend-standards-always-follow"],
     },
     {
         "id": "be_go_file",
@@ -186,7 +197,7 @@ _BUILTIN_BACKEND_RULES: list[dict] = [
 
 _BUILTIN_CROSS_CUTTING = {
     "always": ["dead-code-and-change-audit"],
-    "first_write_only": ["architect-system-design", "codebase-start-point-guide"],
+    "first_write_only": ["architect-system-design", "codebase-intel-first"],
     "verification": ["verification-loop"],
     "debug": ["doubt-driven-development", "debug-investigation"],
     "implementation": ["source-driven-development", "doubt-driven-development"],
@@ -265,6 +276,7 @@ def _skill_path(name: str) -> str:
 
 
 def _build_entry(name: str, priority: str) -> dict:
+    name = _canonical(name)
     return {"name": name, "path": _skill_path(name), "priority": priority}
 
 
@@ -311,13 +323,16 @@ def select_skills(
         if _matches_rule(file_path, rule):
             matched_rule_id = str(rule.get("id") or "")
             cap = int(max_by_rule.get(matched_rule_id, default_max))
-            matched_skills = list(rule.get("skills", [])[: max(1, cap)])
+            # aliases collapse to canonicals (dedup) BEFORE the cap so no slot is wasted
+            matched_skills = _collapse(rule.get("skills", []))[: max(1, cap)]
             break
 
+    baseline = ("frontend-standards-always-follow" if surface_lower in ("frontend", "fullstack")
+                else "backend-standards-always-follow")
     while len(matched_skills) < min(default_max, 3):
-        matched_skills.append(
-            "frontend-standards-always-follow" if surface_lower in ("frontend", "fullstack") else "backend-standards-always-follow"
-        )
+        if baseline in matched_skills:
+            break
+        matched_skills.append(baseline)
 
     # Sort by (weight × score) descending, return top N
     # Weight comes from skill_router_weights.json if present (default 1.0)
@@ -338,18 +353,19 @@ def select_skills(
         for i in range(primary_count)
     ]
 
-    # Cross-cutting additions
+    # Cross-cutting additions (canonical, never duplicating a primary)
     cross = cfg.get("cross_cutting") or _BUILTIN_CROSS_CUTTING
-    for name in cross.get("always", []):
-        result.append(_build_entry(name, "CROSS-CUT"))
+    seen = {e["name"] for e in result}
+    extras = list(cross.get("always", []))
     if is_first_write:
-        for name in cross.get("first_write_only", []):
-            result.append(_build_entry(name, "CROSS-CUT"))
+        extras += list(cross.get("first_write_only", []))
     if cross_cut_mode:
-        for name in cross.get(cross_cut_mode, []):
-            entry = _build_entry(name, "CROSS-CUT")
-            if entry not in result:
-                result.append(entry)
+        extras += list(cross.get(cross_cut_mode, []))
+    for name in _collapse(extras):
+        if name in seen:
+            continue
+        seen.add(name)
+        result.append(_build_entry(name, "CROSS-CUT"))
 
     return result
 
@@ -371,7 +387,7 @@ def format_compact(
         READ NOW: `~/.claude/skills/frontend-standards-always-follow/SKILL.md`
         ALSO: `react-hooks-patterns`, `tailwind-design-system`
         Cross-cut: dead-code-and-change-audit, architect-system-design
-        Full checklist: ~/.claude/rules/mandatory-skill-protocol.mdc
+        Native `paths:` will surface the rest as you read files.
     """
     filename = Path(file_path).name or file_path
     surface_label = surface.capitalize()
@@ -398,7 +414,7 @@ def format_compact(
         lines.append(f"ALSO: {also_names}")
     if cross_names:
         lines.append(f"Cross-cut: {cross_names}")
-    lines.append("Full checklist: ~/.claude/rules/mandatory-skill-protocol.mdc")
+    lines.append("Native `paths:` will surface the rest as you read files.")
 
     return "\n".join(lines)
 
