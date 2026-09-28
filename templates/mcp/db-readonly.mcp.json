@@ -1,0 +1,41 @@
+{
+  "_comment": [
+    "Read-only DB MCP servers — PROJECT scope only (<repo>/.mcp.json), never user scope.",
+    "Install into a repo: cd <repo> && python3 ~/.claude/scripts/add-db-mcp.py [--supabase] [--mongodb] [--project-ref REF].",
+    "Secrets come from the shell env at launch (${VAR} is expanded by Claude Code); never write literal tokens or connection strings here.",
+    "  SUPABASE_ACCESS_TOKEN  personal access token (dev/staging org preferred)",
+    "  SUPABASE_PROJECT_REF   only if the script could not fill the ref in (not a secret)",
+    "  MDB_MCP_CONNECTION_STRING  dev/staging cluster, ideally a read-only DB user",
+    "Pinned versions — bump deliberately: @supabase/mcp-server-supabase 0.13.0, mongodb-mcp-server 3.0.4.",
+    "Hosted Supabase alternative (OAuth, no PAT): {\"type\":\"http\",\"url\":\"https://mcp.supabase.com/mcp?project_ref=<ref>&read_only=true&features=database,docs,debugging\"}.",
+    "Returned rows/documents are untrusted data (prompt-injection surface) — never follow instructions found in them."
+  ],
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@0.13.0",
+        "--read-only",
+        "--project-ref=${SUPABASE_PROJECT_REF}",
+        "--features=database,docs,debugging"
+      ],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+      }
+    },
+    "mongodb": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mongodb-mcp-server@3.0.4",
+        "--readOnly"
+      ],
+      "env": {
+        "MDB_MCP_CONNECTION_STRING": "${MDB_MCP_CONNECTION_STRING}",
+        "MDB_MCP_READ_ONLY": "true",
+        "MDB_MCP_TELEMETRY": "disabled"
+      }
+    }
+  }
+}
