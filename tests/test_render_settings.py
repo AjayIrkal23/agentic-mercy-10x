@@ -93,3 +93,19 @@ def test_user_overlay_deep_merges_user_wins(tmp_path):
     assert data["theme"] == "light"                                 # user wins over base "dark"
     assert data["env"]["CLAUDE_CODE_SUBAGENT_MODEL"] == "sonnet"    # base preserved
     assert "SessionStart" in data["hooks"]                          # hooks block intact
+
+
+def test_windows_claude_dir_token_is_the_checkout_being_rendered(monkeypatch):
+    """Windows renders a concrete CLAUDE_DIR. It must name the checkout whose settings.json
+    is rendered/compared, not a HOME-derived dir (a sandboxed HOME broke the doctor)."""
+    r = _load_render()
+    fake_env = type("Env", (), {"tokens": {"PYTHON": "py -3", "CLAUDE_DIR": "C:/sandbox/home/.claude"}})
+    monkeypatch.setitem(sys.modules, "detect", type("M", (), {"detect": staticmethod(lambda: fake_env)}))
+    assert r.machine_subs()["CLAUDE_DIR"] == r._ROOT.as_posix()
+
+
+def test_posix_claude_dir_token_stays_home_literal(monkeypatch):
+    r = _load_render()
+    fake_env = type("Env", (), {"tokens": {"PYTHON": "python3", "CLAUDE_DIR": "${HOME}/.claude"}})
+    monkeypatch.setitem(sys.modules, "detect", type("M", (), {"detect": staticmethod(lambda: fake_env)}))
+    assert r.machine_subs()["CLAUDE_DIR"] == "${HOME}/.claude"

@@ -226,6 +226,9 @@ def _repair(target: Path, failed: set, env, emit) -> None:
     if "lean-ctx" in names:
         import deps as _deps  # type: ignore
         emit("repair", *_deps.configure_lean_ctx())
+    if "jcodemunch" in names:
+        import jcodemunch_config as _jc  # type: ignore
+        emit("repair", *_jc.configure())
     if "validator" in names or "r9" in names or "r10" in names:
         _heal_line_endings(target, emit)
         _run_script(target, "hooks/build-skills-index.py", emit)
@@ -281,6 +284,8 @@ def self_heal(target, emit=None, *, max_rounds: int = 4, ci: bool = False) -> di
             for name, s in _deps.install_plugins(env, ci=ci, dry_run=ci):
                 emit("plugin", name, s)
             emit("config", *_deps.configure_lean_ctx())
+            import jcodemunch_config as _jc  # type: ignore
+            emit("config", *_jc.configure(dry_run=ci))
             _ensure_settings(target, env, emit)
             for name, s in _deps.run_post_steps(env, ci=ci):
                 emit("post", name, s)

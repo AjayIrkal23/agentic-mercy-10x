@@ -216,6 +216,19 @@
   "telemetry": {"enabled": false},
   "cloud": {"contribute_enabled": false, "sync_stats_enabled": false, "sync_gain_enabled": false}
  },
+ "jcodemunch_config": {
+  "_about": "Global jcodemunch-mcp keys in ~/.code-index/config.jsonc (outside ~/.claude, so a copied or fresh install keeps jcodemunch's stock tool_surface 'counter' = 6 menu tools and every get_context_bundle/plan_turn directive resolves to nothing). installer/jcodemunch_config.py writes them via `jcodemunch-mcp config set`; doctor row jcodemunch-config verifies. Scalars must match; lists are minimum members (extras such as D:\\Projects are kept); {HOME} = this user's home.",
+  "keys": {
+   "tool_surface": "full",
+   "trusted_folders": ["{HOME}"],
+   "max_folder_files": 8000,
+   "max_index_files": 20000,
+   "extra_ignore_patterns": ["attic/**", "**/attic/**", "**/node_modules/**", "**/*.umd.js", "**/*.min.js", "**/.playwright-mcp/**", "**/.claude/**", "**/dist/**", "**/build/**", "**/coverage/**", "**/test-results/**", "**/playwright-report/**"],
+   "use_ai_summaries": true,
+   "summarizer_provider": "openai",
+   "summarizer_model": "qwen2.5-coder:3b"
+  }
+ },
  "post_steps": [
   {"id": "vendor-skills", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/scripts/vendor_skill.py", "--all"], "network": true, "optional": true, "note": "re-vendor all third-party skills at their pinned refs (hooks/skills-sources.json) + rebaseline R10."},
   {"id": "gen-invoke-skills", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/hooks/gen-invoke-skills.py"], "optional": true, "note": "render the /invoke delegator skills from model-policy + categories."},
@@ -226,13 +239,13 @@
  ],
  "doctor_probes": {
   "link_doctor": true,
-  "ollama": {"url": "http://localhost:11434/api/tags", "models": ["all-minilm"], "note": "embeddings for jcodemunch/jdocmunch semantic search (WARN-only). Install: https://ollama.com then `ollama pull all-minilm`."},
+  "ollama": {"url": "http://localhost:11434/api/tags", "models": ["all-minilm", "qwen2.5-coder:3b"], "note": "all-minilm = jcodemunch/jdocmunch semantic-search embeddings; qwen2.5-coder:3b = jcodemunch AI summaries (WARN-only). Install: https://ollama.com then `ollama pull all-minilm qwen2.5-coder:3b`."},
   "interpreter_check": true,
   "mcp_roster": ["jcodemunch", "jdocmunch", "graphify", "lean-ctx", "memory", "sequential-thinking", "context7", "github", "playwright", "browser-tools-mcp", "markdownify", "semgrep", "reticle", "higgsfield", "openart"],
   "generated_checks": [
    ["{PYTHON}", "{CLAUDE_DIR}/hooks/gen-invoke-skills.py", "--check"],
    ["{PYTHON}", "{CLAUDE_DIR}/hooks/gen-agent-skill-blocks.py", "--check"]
   ],
-  "model_routing": ["workflow_model_guard_args", "invoke_impl_opus"]
+  "model_routing": ["workflow_model_guard_args", "judges_opus_executors_escalate"]
  }
 }

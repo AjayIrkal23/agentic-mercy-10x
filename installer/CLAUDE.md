@@ -43,7 +43,11 @@ re-check) happens automatically until the doctor reports 0 FAIL.
   `scripts/github-mcp-launcher.py`) registers that command instead of being skipped.
 - **Settings path token on Windows is forward-slash** (`detect.py` → `C:/Users/<you>/.claude`):
   backslashes break the rendered JSON and Git Bash hook commands. `render.machine_subs()` is
-  the one source of this machine's tokens (render CLI, `check_equivalence`, tests).
+  the one source of this machine's tokens (render CLI, `check_equivalence`, tests); a
+  concrete (Windows) `CLAUDE_DIR` is pinned to the checkout being rendered (`_ROOT`), so
+  a sandboxed HOME never moves it.
+- **Config outside `~/.claude` is the installer's job too:** lean-ctx `config.toml` and
+  jcodemunch `config.jsonc` carry manifest keys (merge, never clobber, backup first).
 - **Never a "lean-ctx" string in settings.json/template** — lean-ctx ≥3.10 re-injects
   hooks/statusLine/deny when it sees one. `render()` raises; doctor `settings-safety` FAILs.
 - **Never set `CLAUDE_CONFIG_DIR` to the default `~/.claude`** (`selfheal.pin_config_dir`):
@@ -75,8 +79,9 @@ re-check) happens automatically until the doctor reports 0 FAIL.
 | `selfheal.py` | install→repair→re-check loop; R10 heal (`git_restore_worktree` / `repair_r10_drift`) |
 | `ui.py` / `ui.html` | stdlib visual installer; auto-runs the loop on boot; live progress + status |
 | `deps.py` | idempotent deps/MCP/plugins/post-steps from `manifest.json` (post-step script = first `.py` arg — NOT `cmd[1]`; `{PYTHON}`→`py -3` shifts the index on Windows) |
-| `doctor.py` | health verifier (link-doctor, render, settings-safety, lean-ctx-config, plugins-contract, generated-in-sync, R9/R10, mcp-roster, ollama …); `--ci` skips machine rows; its 0-FAIL is the loop's success gate |
-| `verify.py` | read-only workflow status → the UI's live preflight sections |
+| `doctor.py` | health verifier (link-doctor, render, settings-safety, lean-ctx-config, jcodemunch-config, plugins-contract, generated-in-sync, R9/R10, mcp-roster, ollama …); `--ci` skips machine rows; its 0-FAIL is the loop's success gate |
+| `jcodemunch_config.py` | keeps `~/.code-index/config.jsonc` on `manifest.jcodemunch_config.keys` (tool_surface full, AI summaries, trusted home); writes only via `jcodemunch-mcp config set` (install pass + repair of row `jcodemunch-config`) |
+| `verify.py` | read-only workflow status → the UI's live preflight sections (version probes run with stdin closed: `tdd-guard` has no `--version` and waits on stdin, and on Windows the timeout only kills the `.cmd` shim) |
 | `detect.py`, `render.py`, `links.py`, `manifest.json` | env detection · settings.json render (equivalence gate) · skill links · install contract |
 
 ## Gotchas / fragile spots

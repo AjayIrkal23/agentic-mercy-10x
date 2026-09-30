@@ -43,7 +43,7 @@ def _manifest() -> dict:
 
 def _ver(binary: str) -> str:
     for flag in ("--version", "version", "-V"):
-        cp = plat.run([binary, flag], timeout=15)
+        cp = plat.run([binary, flag], timeout=15, stdin_devnull=True)
         if cp.returncode == 0 and (cp.stdout or cp.stderr):
             return (cp.stdout or cp.stderr).strip().splitlines()[0][:44]
     return ""

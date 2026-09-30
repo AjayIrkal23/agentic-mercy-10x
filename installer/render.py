@@ -64,7 +64,8 @@ _DEFAULT_SUBS = {
 CLAUDE_MANAGED_KEYS = frozenset({
     "tui", "voice", "voiceEnabled", "theme", "remoteControlAtStartup",
     "agentPushNotifEnabled", "skipWorkflowUsageWarning", "autoCompactWindow",
-    "contextWindow", "effortLevel", "skipDangerousModePermissionPrompt",
+    "contextWindow", "effortLevel", "modelSettings", "skipDangerousModePermissionPrompt",
+    "switchModelsOnFlag",
 })
 
 # lean-ctx >= 3.10 re-injects its own hooks / statusLine / permissions.deny into
@@ -154,12 +155,17 @@ def _normalized(data: dict) -> dict:
 
 def machine_subs() -> dict[str, str] | None:
     """THIS machine's path tokens (Windows: py -3, C:/Users/<you>/.claude); None falls back
-    to the POSIX defaults. On POSIX they equal the defaults, so output is unchanged."""
+    to the POSIX defaults. On POSIX they equal the defaults, so output is unchanged.
+    A concrete (Windows) CLAUDE_DIR names this checkout — the one whose settings.json is
+    rendered — not a HOME/CLAUDE_CONFIG_DIR-derived dir (a sandboxed HOME must not move it)."""
     try:
         import detect as _d  # type: ignore
-        return _d.detect().tokens
+        tokens = dict(_d.detect().tokens)
     except Exception:  # noqa: BLE001
         return None
+    if not tokens.get("CLAUDE_DIR", "").startswith("${HOME}"):
+        tokens["CLAUDE_DIR"] = _ROOT.as_posix()
+    return tokens
 
 
 def check_equivalence(live_path: Path = _LIVE, template_path: Path = _TEMPLATE,

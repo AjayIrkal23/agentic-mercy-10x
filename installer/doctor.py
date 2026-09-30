@@ -13,6 +13,8 @@ Rows (PASS / WARN / FAIL / SKIP; non-zero exit on any FAIL):
                        permissions.deny == []
   lean-ctx-config      ~/.config/lean-ctx/config.toml carries the manifest keys and
                        lean-ctx >= min_version (WARN when not configured yet)
+  jcodemunch-config    ~/.code-index/config.jsonc carries the manifest keys
+                       (tool_surface full, AI summaries, home trusted; WARN when absent)
   plugins-contract     template enabledPlugins == manifest plugins.install
   generated-in-sync    gen-invoke-skills / gen-agent-skill-blocks --check
   palette-skills       SKILL.md / agent counts, derived from disk (never pinned)
@@ -152,6 +154,20 @@ def _check_lean_ctx(rows, ci: bool):
         _row(rows, "lean-ctx-config", PASS, "no hooks/rules/skill injection, no updates/telemetry, shadow off")
 
 
+def _check_jcodemunch(rows, ci: bool):
+    if ci:
+        _row(rows, "jcodemunch-config", SKIP, "--ci")
+        return
+    import jcodemunch_config as jc  # type: ignore
+    gaps = jc.gaps()
+    if gaps is None:
+        _row(rows, "jcodemunch-config", WARN, f"{jc.config_path()} absent — the installer writes it")
+    elif gaps:
+        _row(rows, "jcodemunch-config", FAIL, f"keys off: {gaps}")
+    else:
+        _row(rows, "jcodemunch-config", PASS, "tool_surface full, AI summaries on, home trusted")
+
+
 def _check_plugins_contract(rows):
     try:
         tmpl = json.loads((_ROOT / "settings.template.json").read_text(encoding="utf-8"))
@@ -262,11 +278,13 @@ def _check_ollama(rows, ci: bool):
     import urllib.request
     try:
         with urllib.request.urlopen(probe["url"], timeout=3) as resp:  # noqa: S310 (localhost)
-            names = {m.get("name", "").split(":")[0] for m in json.load(resp).get("models", [])}
+            full = {m.get("name", "") for m in json.load(resp).get("models", [])}
     except Exception as exc:  # noqa: BLE001
         _row(rows, "ollama-embeddings", WARN, f"ollama unreachable ({type(exc).__name__}) — {probe.get('note', '')}")
         return
-    missing = [m for m in probe.get("models", []) if m not in names]
+    base = {n.split(":")[0] for n in full}
+    # a tagged probe entry (qwen2.5-coder:3b) needs that exact tag; an untagged one any tag
+    missing = [m for m in probe.get("models", []) if (m not in full if ":" in m else m not in base)]
     _row(rows, "ollama-embeddings", WARN if missing else PASS,
          f"missing models {missing}: ollama pull {' '.join(missing)}" if missing else f"models ok: {probe['models']}")
 
@@ -279,6 +297,7 @@ def run_doctor(*, ci: bool = False) -> list[tuple[str, str, str]]:
     _check_render_equivalence(rows)
     _check_settings_safety(rows)
     _check_lean_ctx(rows, ci)
+    _check_jcodemunch(rows, ci)
     _check_plugins_contract(rows)
     _check_generated(rows)
     _check_palette(rows)

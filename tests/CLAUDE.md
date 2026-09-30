@@ -21,8 +21,9 @@ post-tool-use-failure, post-compact, config-change).
 
 | File | Role |
 |------|------|
-| `test_installer.py`, `test_doctor.py` | installer + doctor smoke, read-only doctor in a sandbox |
-| `test_render_settings.py`, `test_template_contract.py` | render equivalence; template has no MCP block, no home literal, no "lean-ctx" |
+| `test_installer.py`, `test_doctor.py` | installer + doctor smoke, read-only doctor in a sandbox; `model-routing` invariant (judges on Opus, no executor pinned) |
+| `test_render_settings.py`, `test_template_contract.py` | render equivalence; template has no MCP block, no home literal, no "lean-ctx"; Windows `CLAUDE_DIR` = the rendered checkout |
+| `test_jcodemunch_config.py` | JSONC read, required keys, list union, `config set`-only writes with backup, dry-run |
 | `test_mcp_secret_transport.py` | secret-safe MCP registrations |
 | `test_validate_skills.py`, `test_vendor_sources.py` | skill validation; vendored skills match `skills-sources.json` + R10 |
 | `test_ci_portability.py`, `test_portability_gate.py` | CI-green regressions; portability grep-gates |
