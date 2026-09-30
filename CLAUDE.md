@@ -13,12 +13,14 @@ harness's "do not call the Agent tool unless the user requested it" line asks fo
 
 ## 2. Delegation — every `Agent` call
 
-- `description` starts with `[sonnet] `, `[opus] `, or `[fable] `, and `model:` matches
-  the label. Sonnet is the default. Opus only for UI/UX work or genuinely heavy work
-  (large novel architecture across many modules; deep unknown-root-cause debugging across
-  subsystems). Fable only when I ask for it in that turn ("use fable for this").
-- Pins live in `hooks/model-policy.json` (implementor/design agents and the IMPLEMENT,
-  REVIEW, DESIGN acts = opus). Do not restate pins anywhere else.
+- Omit `model` on `Agent` calls: `opus-guard` sets `model` and the `[sonnet|opus|fable]`
+  description label. Sonnet executes (the default); Opus judges (review, UI/UX, plan,
+  spec, debug agents); executors escalate to Opus after a failed attempt or on large
+  unplanned work. Pass `model` only to honor my model request or a deliberate override —
+  an explicit `model` beats pins and escalation. Fable only when I ask for it in that
+  turn ("use fable for this").
+- Pins, escalation and effort tiers live in `hooks/model-policy.json`. Do not restate
+  them anywhere else.
 - `name` is OPTIONAL and is a team decision, not a labeling convention: with agent teams
   on, a named `Agent` call launches a *teammate*. Pass `name` only when the work needs
   teammate messaging (fullstack `/invoke` BE↔FE contract, a parallel squad I ask for),
@@ -79,3 +81,10 @@ placeholders or stock URLs. Details and carve-outs: `rules/frontend.md`.
   surgical diff, verifiable goal) and `ponytail` (the laziest solution that works).
 - Prose to me: `caveman` — terse, no filler, full technical accuracy.
 - All prose (chat, docs, commits, PRs): `no-ai-slop` — none of its banned words or patterns.
+
+## 10. Machines
+
+Hosts, SSH, sudo and the Windows replica live in a gitignored per-machine file (this repo
+is public). Copy it between machines by hand; never commit it.
+
+@CLAUDE.machines.local.md

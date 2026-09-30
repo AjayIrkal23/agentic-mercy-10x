@@ -1,5 +1,36 @@
 # Changelog
 
+## v3.1.0 — 2026-09-30 Sonnet 5.5 routing + Windows parity
+
+Why: Sonnet 5.5 matches Opus 5.5 on agentic execution at half the price, while Opus 5.5
+leads on review and judgment (plan `plan-2026-09-29-sonnet55-model-routing.md`). An
+end-to-end test of the Windows replica then found gaps that the installer never covered.
+
+### Models
+- Roles flipped: Opus judges (santa, uiux, plan, spec, debug, team-lead); Sonnet executes.
+  Executors escalate to Opus on a failed previous attempt or large unplanned work
+  (`escalation` in `hooks/model-policy.json`). Every opus-guard decision is logged to
+  `hooks/.telemetry/<sid>.model-routing.jsonl`.
+- Doctrine: omit `model` on `Agent` calls; opus-guard sets it and the `[label]`.
+  `/invoke` no longer passes `model=`.
+- Effort: executors `high`, `max` banned. The `CLAUDE_CODE_SUBAGENT_EFFORT` env key was
+  removed: Claude Code never reads it, so agent `effort:` frontmatter is the only lever.
+  `TDD_GUARD_MODEL_VERSION=claude-sonnet-5-5`. New `test_model_policy_consistency.py`
+  keeps frontmatter, template env and escalation in line with the policy.
+- Doctor `model-routing` checks the new invariant (judges on Opus, no executor pinned).
+
+### Installer and Windows
+- `installer/jcodemunch_config.py` + doctor row `jcodemunch-config`: the installer keeps
+  `~/.code-index/config.jsonc` at `tool_surface: full`, AI summaries and a trusted home
+  (a copied Windows install exposed 6 of 90 jcodemunch tools).
+- `check.py` no longer hangs on Windows: version probes close stdin.
+- Windows `CLAUDE_DIR` render token names the checkout being rendered, so the doctor
+  test passes in a sandboxed HOME.
+- `switchModelsOnFlag` is Claude-managed (carried over, never compared); the ollama probe
+  also wants `qwen2.5-coder:3b` for jcodemunch summaries.
+- Private per-machine doctrine moved to the gitignored `CLAUDE.machines.local.md`,
+  imported from `CLAUDE.md` §10 (this repo is public).
+
 ## v3.0.0 — 2026-09-28 upgrade
 
 Why: an audit (2026-09-27) found the routing layer largely inert — `dispatch.py` dropped

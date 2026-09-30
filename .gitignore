@@ -74,6 +74,8 @@ plugins/cache/
 plugins/marketplaces/
 plugins/data/
 plugins/plugin-catalog-cache.json
+# Claude Code rewrites this timestamp at runtime (kept every tree dirty on both machines)
+/plugins/.last_inuse_sweep
 skills/node_modules/
 skills/package-lock.json
 ast-grep-mcp/
@@ -89,6 +91,9 @@ image-cache/
 # --- machine-specific state (per-user; regenerated on the target machine) ---
 # Local settings override (Claude Code convention: never shared)
 settings.local.json
+# Private per-machine doctrine (hosts, SSH, sudo) imported by CLAUDE.md §10 — public repo
+/CLAUDE.machines.local.md
+/scripts/sudo-askpass.sh
 # settings.json is a RENDERED artifact (P6-T3): installer/render.py generates it
 # from settings.template.json (tracked source of truth) ⊕ settings.user.json
 # (per-machine overlay). The rendered output + the overlay are per-machine and
