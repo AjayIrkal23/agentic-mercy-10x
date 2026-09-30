@@ -16,9 +16,12 @@ _SKIP = {"CLAUDE.md", "AGENTS.md", "README.md", "__init__.py"}
 
 
 def test_directory_claude_md_names_every_tracked_file():
-    cp = subprocess.run(["git", "-c", "safe.directory=*", "-C", str(_ROOT), "ls-files"],
-                        capture_output=True, text=True)
-    tracked = cp.stdout.splitlines() if cp.returncode == 0 else []
+    try:
+        cp = subprocess.run(["git", "-c", "safe.directory=*", "-C", str(_ROOT), "ls-files"],
+                            capture_output=True, text=True)
+        tracked = cp.stdout.splitlines() if cp.returncode == 0 else []
+    except OSError:  # git not on PATH: skip like a checkout with no .git
+        tracked = []
     docs = [p for p in tracked if p.endswith("/CLAUDE.md") and not p.startswith("skills/")]
     if not docs:
         pytest.skip("not a git checkout")
