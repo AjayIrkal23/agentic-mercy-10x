@@ -368,7 +368,7 @@ def migrate(targets: list[str], dry: bool = False) -> tuple[int, list[str]]:
         if new_content == current:
             continue
         if not dry:
-            (d / "SKILL.md").write_text(new_content, encoding="utf-8")
+            (d / "SKILL.md").write_text(new_content, encoding="utf-8", newline="\n")
         edited += 1
         print(f"  migrated {name}")
     return edited, skipped

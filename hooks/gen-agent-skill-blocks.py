@@ -187,7 +187,7 @@ def main(argv: list[str]) -> int:
         if check:
             stale.append(f"{agent}: has {cur or 'none'}, want {skills or 'none'}")
         else:
-            p.write_text(_apply(text, m, skills), encoding="utf-8")
+            p.write_text(_apply(text, m, skills), encoding="utf-8", newline="\n")
             written.append(agent)
     if check:
         if stale:

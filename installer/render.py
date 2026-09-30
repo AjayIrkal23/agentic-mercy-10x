@@ -135,7 +135,7 @@ def carry_managed(text: str, existing: Path) -> str:
 def emit_template(live_path: Path = _LIVE, out_path: Path = _TEMPLATE) -> str:
     """(Re)generate the template from the live settings.json by tokenizing it."""
     text = tokenize(Path(live_path).read_text(encoding="utf-8"))
-    Path(out_path).write_text(text, encoding="utf-8")
+    Path(out_path).write_text(text, encoding="utf-8", newline="\n")
     return text
 
 
@@ -152,13 +152,23 @@ def _normalized(data: dict) -> dict:
     return {k: v for k, v in data.items() if k not in CLAUDE_MANAGED_KEYS}
 
 
+def machine_subs() -> dict[str, str] | None:
+    """THIS machine's path tokens (Windows: py -3, C:/Users/<you>/.claude); None falls back
+    to the POSIX defaults. On POSIX they equal the defaults, so output is unchanged."""
+    try:
+        import detect as _d  # type: ignore
+        return _d.detect().tokens
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def check_equivalence(live_path: Path = _LIVE, template_path: Path = _TEMPLATE,
                       user_path: Path | None = _USER) -> tuple[bool, str]:
     """SEMANTIC check: parsed render(template ⊕ overlay) == parsed live settings.json,
     ignoring the Claude-managed keys (Claude Code rewrites those itself)."""
     try:
         live = json.loads(Path(live_path).read_text(encoding="utf-8"))
-        rendered = json.loads(render(template_path, user_path))
+        rendered = json.loads(render(template_path, user_path, machine_subs()))
     except (OSError, ValueError) as exc:
         return False, f"{type(exc).__name__}: {exc}"
     diffs = _diff_paths(_normalized(rendered), _normalized(live))
@@ -187,7 +197,7 @@ def main(argv: list[str]) -> int:
         print(("OK   " if ok else "FAIL ") + msg)
         return 0 if ok else 1
 
-    text = render(args.template, args.user)
+    text = render(args.template, args.user, machine_subs())
     if args.out.exists():
         text = carry_managed(text, args.out)
     if args.dry_run:

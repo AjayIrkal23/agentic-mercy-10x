@@ -37,6 +37,13 @@ re-check) happens automatically until the doctor reports 0 FAIL.
 
 - **MCP source of truth** = `manifest.json.mcp_servers` → user-scope `~/.claude.json`.
   The template has NO `mcpServers`. Secrets only via `env_from` (installer env).
+- **Windows MCP commands:** Claude Code spawns MCP stdio servers without a shell, so on
+  Windows `deps._mcp_argv` registers `npx` and any `.cmd`/`.bat` shim as `cmd /c …`
+  (`.exe` and `py` stay direct). A `posix_only` server with a `windows_add` (github →
+  `scripts/github-mcp-launcher.py`) registers that command instead of being skipped.
+- **Settings path token on Windows is forward-slash** (`detect.py` → `C:/Users/<you>/.claude`):
+  backslashes break the rendered JSON and Git Bash hook commands. `render.machine_subs()` is
+  the one source of this machine's tokens (render CLI, `check_equivalence`, tests).
 - **Never a "lean-ctx" string in settings.json/template** — lean-ctx ≥3.10 re-injects
   hooks/statusLine/deny when it sees one. `render()` raises; doctor `settings-safety` FAILs.
 - **Never set `CLAUDE_CONFIG_DIR` to the default `~/.claude`** (`selfheal.pin_config_dir`):

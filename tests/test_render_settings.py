@@ -45,7 +45,7 @@ def test_render_semantically_equals_live():
 
 def test_semantic_check_ignores_claude_managed_keys(tmp_path):
     r = _load_render()
-    live = json.loads(r.render(user_path=None))
+    live = json.loads(r.render(user_path=None, subs=r.machine_subs()))  # same tokens check_equivalence uses
     live.update({"tui": "fullscreen", "theme": "dark-ansi", "voice": {"enabled": True}})
     p = tmp_path / "settings.json"
     p.write_text(json.dumps(live, indent=4))

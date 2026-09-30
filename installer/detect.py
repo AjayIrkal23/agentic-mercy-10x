@@ -37,7 +37,8 @@ def _python_invocation() -> str:
     if plat.IS_WINDOWS:
         if shutil.which("py"):
             return "py -3"
-        return sys.executable or "python"
+        # forward slashes: a backslash path breaks the rendered JSON and Git Bash hook commands
+        return Path(sys.executable).as_posix() if sys.executable else "python"
     return "python3"
 
 
@@ -49,7 +50,7 @@ def _claude_dir_token() -> str:
     path (``${HOME}`` is not expanded there).
     """
     if plat.IS_WINDOWS:
-        return str(plat.claude_dir())
+        return plat.claude_dir().as_posix()  # forward slashes: valid in JSON strings and in Git Bash
     return "${HOME}/.claude"
 
 

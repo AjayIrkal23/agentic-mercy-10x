@@ -107,3 +107,60 @@ def test_doctor_deterministic_checks_pass(monkeypatch, tmp_path):
     assert by_name["render-equivalence"][0] in ("PASS", "SKIP")
     fails = [n for n, s, _ in rows if s == "FAIL"]
     assert not fails, f"doctor FAIL rows: {fails}"
+
+
+# Claude Code spawns MCP stdio commands WITHOUT a shell. On Windows an npm .cmd/.bat
+# shim (npx, lean-ctx) is not spawnable that way; it must be registered as `cmd /c ...`.
+_WHICH = {"npx": "npx.CMD", "lean-ctx": "lean-ctx.cmd", "jcodemunch-mcp": "jcodemunch-mcp.EXE", "py": "py.exe"}
+
+
+def _env(os_name: str, python: str):
+    from types import SimpleNamespace
+    return SimpleNamespace(os_name=os_name, python=python, node="node", real_dir=str(_ROOT), claude_cli=True)
+
+
+def test_mcp_argv_windows_wraps_cmd_shims_only(monkeypatch):
+    deps = _load("deps", "installer/deps.py")
+    monkeypatch.setattr(deps.shutil, "which", lambda c: _WHICH.get(c))
+    win = _env("windows", "py -3")
+    head = ["claude", "mcp", "add", "--scope", "user"]
+
+    npx = {"name": "memory", "add": head + ["memory", "--", "npx", "-y", "@modelcontextprotocol/server-memory"]}
+    assert deps._mcp_argv(npx, win) == head + ["memory", "--", "cmd", "/c", "npx", "-y", "@modelcontextprotocol/server-memory"]
+    shim = {"name": "lean-ctx", "add": head + ["lean-ctx", "-e", "A=1", "--", "lean-ctx"]}
+    assert deps._mcp_argv(shim, win) == head + ["lean-ctx", "-e", "A=1", "--", "cmd", "/c", "lean-ctx"]
+    exe = {"name": "jcodemunch", "add": head + ["jcodemunch", "--", "jcodemunch-mcp"]}
+    assert deps._mcp_argv(exe, win) == head + ["jcodemunch", "--", "jcodemunch-mcp"]
+    py = {"name": "graphify", "add": head + ["graphify", "--", "{PYTHON}", "{CLAUDE_DIR}/hooks/graphify_launcher.py"]}
+    assert deps._mcp_argv(py, win)[-4:] == ["--", "py", "-3", f"{_ROOT}/hooks/graphify_launcher.py"]
+
+
+def test_mcp_argv_posix_unchanged(monkeypatch):
+    deps = _load("deps", "installer/deps.py")
+    monkeypatch.setattr(deps.shutil, "which", lambda c: _WHICH.get(c))
+    head = ["claude", "mcp", "add", "--scope", "user", "memory", "--", "npx", "-y", "pkg"]
+    assert deps._mcp_argv({"name": "memory", "add": head}, _env("posix", "python3")) == head
+
+
+def test_register_mcps_windows_uses_windows_add_for_posix_only(monkeypatch):
+    deps = _load("deps", "installer/deps.py")
+    monkeypatch.setattr(deps.shutil, "which", lambda c: _WHICH.get(c))
+    monkeypatch.setattr(deps, "registered_user_mcps", lambda: set())
+    manifest = {"mcp_servers": [
+        {"name": "github", "posix_only": True, "add": ["claude", "mcp", "add", "github", "--", "sh", "-c", "x"],
+         "windows_add": ["claude", "mcp", "add", "github", "--", "{PYTHON}", "{CLAUDE_DIR}/scripts/github-mcp-launcher.py"]},
+        {"name": "posixonly", "posix_only": True, "add": ["claude", "mcp", "add", "posixonly", "--", "sh"]},
+    ]}
+    monkeypatch.setattr(deps, "_load_manifest", lambda: manifest)
+    rows = dict(deps.register_mcps(_env("windows", "py -3"), dry_run=True))
+    assert rows["github"] == f"WOULD-ADD: claude mcp add github -- py -3 {_ROOT}/scripts/github-mcp-launcher.py"
+    assert rows["posixonly"] == "SKIP(posix-only)"
+    posix = dict(deps.register_mcps(_env("posix", "python3"), dry_run=True))
+    assert posix["github"] == "WOULD-ADD: claude mcp add github -- sh -c x"
+
+
+def test_manifest_github_has_windows_launcher():
+    m = json.loads((_ROOT / "installer" / "manifest.json").read_text())
+    gh = next(s for s in m["mcp_servers"] if s["name"] == "github")
+    assert gh["windows_add"][-1] == "{CLAUDE_DIR}/scripts/github-mcp-launcher.py"
+    assert (_ROOT / "scripts" / "github-mcp-launcher.py").is_file()

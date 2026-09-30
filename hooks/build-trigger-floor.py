@@ -277,7 +277,7 @@ def build() -> dict:
         },
         "entries": entries,
     }
-    _FLOOR_PATH.write_text(json.dumps(floor, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    _FLOOR_PATH.write_text(json.dumps(floor, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
     return floor
 
 

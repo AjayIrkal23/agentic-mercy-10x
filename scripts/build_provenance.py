@@ -85,7 +85,7 @@ def write_registry(reg: dict) -> None:
                     "(validate_skills.py / doctor / CI) re-hashes and FAILS on any local edit.",
         }
     }
-    PROV_PATH.write_text(json.dumps({**header, **reg}, indent=2) + "\n", encoding="utf-8")
+    PROV_PATH.write_text(json.dumps({**header, **reg}, indent=2) + "\n", encoding="utf-8", newline="\n")
 
 
 def run_check() -> int:

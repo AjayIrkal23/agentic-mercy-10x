@@ -148,8 +148,22 @@ def registered_user_mcps() -> set[str]:
         return set()
 
 
+def _win_shell_wrap(cmd: list[str]) -> list[str]:
+    """Windows: Claude Code spawns MCP stdio servers WITHOUT a shell, so an npm
+    ``.cmd``/``.bat`` shim (``npx``, ``lean-ctx``) never starts. Register it as
+    ``cmd /c <shim> …``; real ``.exe`` servers and the ``py`` launcher stay direct."""
+    if "--" not in cmd or cmd.index("--") + 1 >= len(cmd):
+        return cmd
+    i = cmd.index("--") + 1
+    found = (shutil.which(cmd[i]) or "").lower()
+    if cmd[i].lower() == "npx" or found.endswith((".cmd", ".bat")):
+        return cmd[:i] + ["cmd", "/c"] + cmd[i:]
+    return cmd
+
+
 def _mcp_argv(srv: dict, env) -> list[str]:
-    cmd = _sub(srv["add"], _exec_tokens(env))
+    windows = env.os_name != "posix"
+    cmd = _sub(srv["windows_add"] if windows and srv.get("windows_add") else srv["add"], _exec_tokens(env))
     extra: list[str] = []
     for var in srv.get("env_from", []):
         if os.environ.get(var):
@@ -157,7 +171,7 @@ def _mcp_argv(srv: dict, env) -> list[str]:
     if extra:  # right after the server name (commander's -e is variadic)
         i = cmd.index(srv["name"]) + 1
         cmd[i:i] = extra
-    return cmd
+    return _win_shell_wrap(cmd) if windows else cmd
 
 
 def _redact(cmd: list[str], srv: dict) -> str:
@@ -174,7 +188,7 @@ def register_mcps(env, *, ci: bool = False, dry_run: bool = False) -> list[tuple
         if name in have:
             results.append((name, "PRESENT"))
             continue
-        if srv.get("posix_only") and env.os_name != "posix":
+        if srv.get("posix_only") and env.os_name != "posix" and not srv.get("windows_add"):
             results.append((name, "SKIP(posix-only)"))
             continue
         cmd = _mcp_argv(srv, env)

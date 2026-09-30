@@ -250,7 +250,7 @@ def build() -> dict:
 
 def write_index() -> dict:
     payload = build()
-    INDEX.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    INDEX.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
     return payload
 
 

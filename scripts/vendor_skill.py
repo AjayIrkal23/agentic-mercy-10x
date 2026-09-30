@@ -101,7 +101,7 @@ def apply_overrides(skill_md: Path, overrides: dict, prepend: str) -> None:
     if prepend:
         body = prepend + body.lstrip("\n")
     skill_md.write_text(f"---\n{fm_text}\n---\n\n{body}" if prepend else f"---\n{fm_text}\n---\n{body}",
-                        encoding="utf-8")
+                        encoding="utf-8", newline="\n")
 
 
 def apply_patches(root: Path, patches: list) -> None:
@@ -110,7 +110,7 @@ def apply_patches(root: Path, patches: list) -> None:
         text = f.read_text(encoding="utf-8")
         if p["find"] not in text:
             raise ValueError(f"patch target not found in {f}: {p['find'][:60]!r}")
-        f.write_text(text.replace(p["find"], p["replace"]), encoding="utf-8")
+        f.write_text(text.replace(p["find"], p["replace"]), encoding="utf-8", newline="\n")
 
 
 # --------------------------------------------------------------------------- #
@@ -146,7 +146,7 @@ def vendor(name: str, entry: dict, ref: str | None = None) -> str:
     (dst / MARKER).write_text(json.dumps({
         "repo": entry["repo"], "ref": ref, "sha": sha,
         "vendored_at": dt.date.today().isoformat(),
-    }, indent=2) + "\n", encoding="utf-8")
+    }, indent=2) + "\n", encoding="utf-8", newline="\n")
     return sha
 
 

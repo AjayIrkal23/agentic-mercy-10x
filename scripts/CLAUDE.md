@@ -14,6 +14,8 @@ nothing here is registered in `dispatch.config.json`.
   never write.
 - Skill tooling shares primitives through `skills_lib.py`; do not duplicate front-matter
   parsing or R10 hashing.
+- Generators that write tracked files pass `newline="\n"` to `write_text` — on Windows the
+  default would write CRLF and dirty every generated file on each run.
 
 ## Key files
 
@@ -31,6 +33,7 @@ nothing here is registered in `dispatch.config.json`.
 | `dox_cleanup.py` | one-shot removal of untouched dox stubs under `~` |
 | `grep_gates.py` | portability grep-gates (wrapped by `tests/test_portability_gate.py`) |
 | `install-graphify.sh` | graphify MCP install helper |
+| `github-mcp-launcher.py` | GitHub MCP launcher for Windows (manifest `windows_add`): reads `gh auth token` at launch, runs the server via `cmd /c npx` |
 
 ## Gotchas / fragile spots
 

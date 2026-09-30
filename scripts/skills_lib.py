@@ -110,7 +110,7 @@ def dump_frontmatter(fm: dict, body: str) -> str:
 
 
 def write_skill(path: Path, fm: dict, body: str) -> None:
-    Path(path).write_text(dump_frontmatter(fm, body), encoding="utf-8")
+    Path(path).write_text(dump_frontmatter(fm, body), encoding="utf-8", newline="\n")
 
 
 # ---------------------------------------------------------------------------
