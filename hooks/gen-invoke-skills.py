@@ -212,10 +212,10 @@ def render_invoke(cfg: dict, policy: dict, acts: list[dict]) -> str:
 
 ## 2. Run folder + intel (once, yourself — no dispatch)
 
-1. `SLUG` = kebab-case of at most 4 task words (`run` if empty). `RUN=.claude/runs/$(date -u +%Y%m%dT%H%M)-$SLUG` under the repo root; `mkdir -p "$RUN"`. Make sure `.claude/runs/` is git-ignored (append it to `.gitignore` when missing).
+1. `SLUG` = kebab-case of at most 4 task words (`run` if empty). `RUN=.claude/runs/$(date -u +%Y%m%dT%H%M)-$SLUG` under the repo root; `mkdir -p "$RUN"`. Make sure `.claude/runs/` is git-ignored (add it to `.gitignore` with Edit when missing). Every file below is written with the Write/Edit tools, never a shell heredoc or redirect.
 2. Intel: jcodemunch `plan_turn` (query = TASK) + `assemble_task_context` on the impacted area; graphify `query_graph` only if `graphify-out/` exists; read `CODEX.md` and the root→target `CLAUDE.md` chain when present.
-3. Write `$RUN/BRIEF.md`: task, surfaces (FE / BE / infra), impacted files, contracts at risk, acceptance criteria, open questions.
-4. Write `$RUN/run.json`:
+3. `Write` tool → `$RUN/BRIEF.md`: task, surfaces (FE / BE / infra), impacted files, contracts at risk, acceptance criteria, open questions.
+4. `Write` tool → `$RUN/run.json`:
    `{{"task": TASK, "run": RUN, "started_utc": "<ISO-8601 UTC>", "start_sha": "<git rev-parse HEAD, or null>", "acts": [...], "done": [], "models": {{act: model}}, "expected_artifacts": {{}}}}`
    `/invoke-status`, the TeammateIdle gate and the suite gate read this file — keep it current.
 
