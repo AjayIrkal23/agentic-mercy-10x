@@ -9,7 +9,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 import skills_lib as sl  # noqa: E402
 
 SOURCES = sl.vendored_sources()
-PROV = json.loads((ROOT / "hooks" / "skills-provenance.json").read_text())
+PROV = json.loads((ROOT / "hooks" / "skills-provenance.json").read_text(encoding="utf-8"))
 
 
 def test_every_source_vendored_at_pinned_ref():
@@ -17,7 +17,7 @@ def test_every_source_vendored_at_pinned_ref():
     for name, e in SOURCES.items():
         d = ROOT / "skills" / name
         assert (d / "SKILL.md").is_file(), name
-        mk = json.loads((d / ".vendored.json").read_text())
+        mk = json.loads((d / ".vendored.json").read_text(encoding="utf-8"))
         assert mk["ref"] == e["ref"], name
         assert mk["repo"] == e["repo"], name
 
@@ -42,8 +42,8 @@ def test_r10_clean_and_complete():
 
 
 def test_server_guards_applied():
-    img = (ROOT / "skills" / "img2threejs" / "SKILL.md").read_text()
+    img = (ROOT / "skills" / "img2threejs" / "SKILL.md").read_text(encoding="utf-8")
     assert "never start a dev or preview server yourself" in img
-    ui = (ROOT / "skills" / "verify-ui-change" / "SKILL.md").read_text()
+    ui = (ROOT / "skills" / "verify-ui-change" / "SKILL.md").read_text(encoding="utf-8")
     assert "in the background yourself" not in ui
     assert "npx @reticlehq/server@latest init" not in ui

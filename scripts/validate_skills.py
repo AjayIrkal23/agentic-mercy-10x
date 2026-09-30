@@ -52,7 +52,7 @@ def _load_json(p: Path) -> dict:
     if not p.exists():
         return {}
     try:
-        return json.loads(p.read_text())
+        return json.loads(p.read_text(encoding="utf-8"))
     except json.JSONDecodeError:
         return {}
 

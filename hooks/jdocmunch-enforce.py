@@ -30,7 +30,7 @@ STATE_DIR = HOOKS_DIR / ".state"
 
 def _load_config() -> dict:
     try:
-        return json.loads(CONFIG_PATH.read_text())
+        return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     except Exception:
         return {
             "doc_exts": [".md", ".mdx", ".markdown", ".rst", ".adoc"],
@@ -46,7 +46,7 @@ def _state_path(cid: str) -> Path:
 
 def _load_state(cid: str) -> dict:
     try:
-        return json.loads(_state_path(cid).read_text())
+        return json.loads(_state_path(cid).read_text(encoding="utf-8"))
     except Exception:
         return {"remind_count": 0}
 

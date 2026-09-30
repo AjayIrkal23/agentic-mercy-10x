@@ -161,7 +161,7 @@ def test_stack_fingerprint_is_cached_on_marker_mtimes(tmp_path):
     fp1 = SF.stack_fingerprint(repo)
     cache = next(SF._cache_dir().glob("*.stack.json"))
     assert fp1["surfaces"] == ["frontend"]
-    assert json.loads(cache.read_text())["surfaces"] == ["frontend"]
+    assert json.loads(cache.read_text(encoding="utf-8"))["surfaces"] == ["frontend"]
     fp2 = SF.stack_fingerprint(repo)                     # cache hit: identical result
     assert fp2 == fp1
 

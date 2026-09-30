@@ -42,7 +42,7 @@ def transport(cfg):
 
 def load_json(p):
     try:
-        return json.loads(p.read_text())
+        return json.loads(p.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return {}
 

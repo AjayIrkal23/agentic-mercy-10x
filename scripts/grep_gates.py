@@ -16,6 +16,8 @@ Gates (Charter §7 portability; Spec C §3):
   G3  no ``C:\\`` drive literals in code.
   G4  no NEW ``.sh`` under ``hooks/`` beyond the grandfathered legacy set (which
       is retained only for the 30-day flip-back window and retires in P7).
+  G5  no bare ``.read_text()``: without ``encoding=`` Windows decodes UTF-8 as
+      cp1252 and crashes on bytes like 0x9D (a ``”``), unless PYTHONUTF8 is set.
 
 Scan scope = the code THIS overhaul owns and ships: ``hooks/`` (py+js),
 ``scripts/``, ``installer/``, ``install.py``, ``tests/`` (py). Excluded:
@@ -66,6 +68,7 @@ _SELF_EXEMPT = {
 # The (?!\.\.\.) negative-lookahead skips redacted doc placeholders like /home/...
 _HOME_RE = re.compile(r"/home/(?!\.\.\.)[A-Za-z0-9._-]+/|/Users/[A-Za-z0-9._-]+/")
 _CDRIVE_RE = re.compile(r"C:\\")  # any C:\ drive literal (one or escaped backslash)
+_BARE_READ_RE = re.compile(r"\.read_text\(\s*\)")
 
 
 def _scan_files() -> list[Path]:
@@ -167,6 +170,23 @@ def run_gates() -> tuple[list[str], list[str]]:
         failures.append("G4 new .sh under hooks/ (not in grandfather set):\n    " + "\n    ".join(stray))
     else:
         passes.append(f"G4 no new .sh under hooks/ ({len(_LEGACY_SH_GRANDFATHER)} legacy grandfathered)")
+
+    # G5: bare read_text() (locale-encoded on Windows)
+    g5 = []
+    for p in files:
+        if p.suffix != ".py" or p.resolve() in _SELF_EXEMPT:
+            continue
+        try:
+            text = p.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        for i, line in enumerate(text.splitlines(), 1):
+            if _BARE_READ_RE.search(line):
+                g5.append(f"{p.relative_to(ROOT)}:{i}: {line.strip()}")
+    if g5:
+        failures.append('G5 read_text() without encoding="utf-8":\n    ' + "\n    ".join(g5))
+    else:
+        passes.append("G5 every read_text() names its encoding")
 
     return failures, passes
 

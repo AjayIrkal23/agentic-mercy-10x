@@ -28,7 +28,7 @@ STATE_DIR = HOOKS_DIR / ".state"
 
 def _load_config():
     try:
-        return json.loads(CONFIG_PATH.read_text())
+        return json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
     except Exception:
         return {
             "arch_keywords": ["architecture", "dependency", "coupling", "hotspot", "impact", "refactor"],
@@ -47,7 +47,7 @@ def _state_path(cid: str) -> Path:
 def _load_state(cid: str) -> dict:
     sp = _state_path(cid)
     try:
-        return json.loads(sp.read_text())
+        return json.loads(sp.read_text(encoding="utf-8"))
     except Exception:
         return {"match_count": 0, "remind_count": 0}
 

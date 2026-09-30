@@ -30,7 +30,7 @@ def _load(mod_name: str, rel: str):
 
 
 def test_manifest_valid_json_and_shape():
-    m = json.loads((_ROOT / "installer" / "manifest.json").read_text())
+    m = json.loads((_ROOT / "installer" / "manifest.json").read_text(encoding="utf-8"))
     assert m["min_python"] == "3.10"
     assert isinstance(m["deps"], list) and m["deps"]
     assert isinstance(m["mcp_servers"], list)
@@ -160,7 +160,7 @@ def test_register_mcps_windows_uses_windows_add_for_posix_only(monkeypatch):
 
 
 def test_manifest_github_has_windows_launcher():
-    m = json.loads((_ROOT / "installer" / "manifest.json").read_text())
+    m = json.loads((_ROOT / "installer" / "manifest.json").read_text(encoding="utf-8"))
     gh = next(s for s in m["mcp_servers"] if s["name"] == "github")
     assert gh["windows_add"][-1] == "{CLAUDE_DIR}/scripts/github-mcp-launcher.py"
     assert (_ROOT / "scripts" / "github-mcp-launcher.py").is_file()

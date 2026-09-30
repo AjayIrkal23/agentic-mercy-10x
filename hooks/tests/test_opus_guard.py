@@ -160,7 +160,7 @@ def test_routing_log_records_every_decision(monkeypatch, tmp_path):
     monkeypatch.setattr(mod, "_TELEMETRY_DIR", tmp_path)
     monkeypatch.delenv("CLAUDE_HOOK_DOCTOR", raising=False)
     mod._log_route("sid/1", "implementation-engineer", "opus", "previous attempt failed")
-    rec = json.loads((tmp_path / "sid_1.model-routing.jsonl").read_text().strip())
+    rec = json.loads((tmp_path / "sid_1.model-routing.jsonl").read_text(encoding="utf-8").strip())
     assert (rec["agent"], rec["model"], rec["reason"]) == \
         ("implementation-engineer", "opus", "previous attempt failed")
     monkeypatch.setenv("CLAUDE_HOOK_DOCTOR", "1")

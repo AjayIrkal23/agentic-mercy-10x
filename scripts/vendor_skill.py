@@ -182,7 +182,7 @@ def _remote(repo: str, cache: dict) -> dict:
 def check(sources: dict) -> int:
     prov = {}
     try:
-        prov = json.loads((sl.HOOKS_DIR / "skills-provenance.json").read_text())
+        prov = json.loads((sl.HOOKS_DIR / "skills-provenance.json").read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         pass
     cache: dict = {}

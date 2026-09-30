@@ -42,7 +42,7 @@ def build(recapture: bool | set = False) -> dict:
     existing = {}
     if PROV_PATH.exists():
         try:
-            existing = json.loads(PROV_PATH.read_text())
+            existing = json.loads(PROV_PATH.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
             existing = {}
     now = dt.date.today().isoformat()
@@ -92,7 +92,7 @@ def run_check() -> int:
     if not PROV_PATH.exists():
         print("R10: no provenance registry — run build first", file=sys.stderr)
         return 2
-    reg = {k: v for k, v in json.loads(PROV_PATH.read_text()).items()
+    reg = {k: v for k, v in json.loads(PROV_PATH.read_text(encoding="utf-8")).items()
            if not k.startswith("_")}
     results = sl.r10_check(reg)
     missing = [n for n in sl.vendored_sources() if n not in reg]

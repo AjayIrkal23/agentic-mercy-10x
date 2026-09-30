@@ -56,9 +56,9 @@ def test_materialize_substitutes_and_leaves_unknown():
 def test_atomic_write_roundtrip():
     tmp = pathlib.Path(tempfile.mkdtemp()) / "deep" / "f.txt"
     assert plat.atomic_write(tmp, "payload")
-    assert tmp.read_text() == "payload"
+    assert tmp.read_text(encoding="utf-8") == "payload"
     assert plat.atomic_write(tmp, "second")  # overwrite atomically
-    assert tmp.read_text() == "second"
+    assert tmp.read_text(encoding="utf-8") == "second"
 
 
 def test_run_never_raises_on_bad_command():
