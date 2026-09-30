@@ -96,8 +96,14 @@ fi
 # Write interpreter path for all subsequent steps (persists across invocations)
 mkdir -p graphify-out
 "$PYTHON" -c "import sys; open('graphify-out/.graphify_python', 'w', encoding='utf-8').write(sys.executable)"
-# Save scan root so `graphify update` (no args) knows where to look next time
-echo "$(cd INPUT_PATH && pwd)" > graphify-out/.graphify_root
+# Save scan root so `graphify update` (no args) knows where to look next time.
+# The scan path is passed through a quoted heredoc, never substituted into the
+# command line itself: a bare `cd <path>` (or an unquoted heredoc, which
+# still expands $()/backticks in its body) would let a malicious path execute
+# as shell code the moment this line runs.
+"$PYTHON" -c "import os, sys; out_path = os.path.abspath('graphify-out/.graphify_root'); os.chdir(sys.stdin.readline().rstrip('\n')); open(out_path, 'w', encoding='utf-8').write(os.getcwd())" <<'GRAPHIFY_ROOT_EOF'
+INPUT_PATH
+GRAPHIFY_ROOT_EOF
 ```
 
 If the import succeeds, print nothing and move straight to Step 2.
@@ -112,8 +118,11 @@ import json
 from graphify.detect import detect
 from pathlib import Path
 result = detect(Path('INPUT_PATH'))
-print(json.dumps(result, ensure_ascii=False))
-" > graphify-out/.graphify_detect.json
+# Write the sidecar from Python, not a shell redirect, so the same block renders
+# on PowerShell hosts without console-encoding drift (#2528).
+Path('graphify-out/.graphify_detect.json').write_text(json.dumps(result, ensure_ascii=False), encoding=\"utf-8\")
+print(f'Detected {result[\"total_files\"]} files')
+"
 ```
 
 Replace INPUT_PATH with the actual path the user provided. Do NOT cat or print the JSON - read it silently and present a clean summary instead:
@@ -131,7 +140,7 @@ Omit any category with 0 files from the summary.
 
 Then act on it:
 - If `total_files` is 0: stop with "No supported files found in [path]."
-- If `skipped_sensitive` is non-empty: mention file count skipped, not the file names.
+- If `skipped_sensitive` is non-empty: report the count and list the skipped file names, so a wrongly-flagged source or doc is visible and can be renamed or moved (#2106).
 - If `total_words` > 2,000,000 OR `total_files` > 500: show the warning. Then compute the top 5 first-level subdirectories by file count:
   - Read `scan_root` from the detect JSON (always an absolute path to the resolved INPUT_PATH).
   - Concatenate all file lists across all types (`code`, `document`, `paper`, `image`, `video`).
@@ -489,6 +498,7 @@ from graphify.build import build_from_json
 from graphify.cluster import score_all
 from graphify.analyze import god_nodes, surprising_connections, suggest_questions
 from graphify.report import generate
+from graphify.export import to_json
 from pathlib import Path
 
 extraction = json.loads(Path('graphify-out/.graphify_extract.json').read_text(encoding=\"utf-8\"))
@@ -510,6 +520,13 @@ questions = suggest_questions(G, communities, labels)
 report = generate(G, communities, cohesion, labels, analysis['gods'], analysis['surprises'], detection, tokens, 'INPUT_PATH', suggested_questions=questions)
 Path('graphify-out/GRAPH_REPORT.md').write_text(report, encoding=\"utf-8\")
 Path('graphify-out/.graphify_labels.json').write_text(json.dumps({str(k): v for k, v in labels.items()}, ensure_ascii=False), encoding=\"utf-8\")
+# Re-export so graph.json nodes carry the curated community_name (#2490).
+# Same extraction as Step 4, so the #479 shrink-guard passes on node count;
+# if it still refuses, surface the guard message - do not force past it.
+wrote = to_json(G, communities, 'graphify-out/graph.json', community_labels=labels)
+if not wrote:
+    print('ERROR: refused to shrink graphify-out/graph.json (existing graph has more nodes; #479).')
+    print('If this shrink is intentional (you deleted files), re-run a full build with --force.')
 print('Report updated with community labels')
 "
 ```
@@ -554,15 +571,37 @@ from graphify.detect import save_manifest
 
 # Save manifest for --update
 detect = json.loads(Path('graphify-out/.graphify_detect.json').read_text(encoding=\"utf-8\"))
+extract = json.loads(Path('graphify-out/.graphify_extract.json').read_text(encoding=\"utf-8\"))
 # In --update mode, 'all_files' carries the full corpus; 'files' is the changed
 # subset. Full-rebuild mode populates only 'files', so the fallback handles that.
 # root= relativizes the manifest keys to the scan root (same base as the build),
 # so the on-disk manifest is portable across clones/machines and a later --update
 # matches cached files instead of missing every one (#1417).
-save_manifest(detect.get('all_files') or detect['files'], root='INPUT_PATH')
+#
+# Only stamp semantic files (docs/papers/images) that ACTUALLY produced output:
+# a detected file whose chunk failed or was omitted must stay unstamped so the
+# next --update re-queues it, otherwise it is marked done and its content is lost
+# forever (#2015). This mirrors the library extract path exactly
+# (cli._stamped_manifest_files + clear_semantic + scan_corpus); do not stamp the
+# raw corpus. Code files are always stamped (AST is deterministic); only semantic
+# types are gated on output.
+from graphify.cli import _stamped_manifest_files
+_corpus = detect.get('all_files') or detect['files']
+_manifest_files = _stamped_manifest_files(_corpus, extract, Path('INPUT_PATH'))
+# Files dispatched this run (the changed subset) but NOT stamped above still carry
+# a stale semantic_hash from a prior run; clear it so detect_incremental re-queues
+# them instead of reading them as unchanged (#1948).
+_sem_types = ('document', 'paper', 'image')
+_dispatched = {f for t, fl in detect['files'].items() if t in _sem_types for f in fl}
+_stamped = {f for fl in _manifest_files.values() for f in fl}
+_cleared = _dispatched - _stamped
+# scan_corpus = the RAW full corpus (not the stamp-filtered subset) so in-root
+# files newly excluded since last run are dropped rather than masquerading as
+# deletions; untouched files' prior rows are still preserved (#1908).
+_scan = {f for fl in _corpus.values() for f in fl}
+save_manifest(_manifest_files, root='INPUT_PATH', scan_corpus=_scan, clear_semantic=_cleared or None)
 
 # Update cumulative cost tracker
-extract = json.loads(Path('graphify-out/.graphify_extract.json').read_text(encoding=\"utf-8\"))
 input_tok = extract.get('input_tokens', 0)
 output_tok = extract.get('output_tokens', 0)
 
