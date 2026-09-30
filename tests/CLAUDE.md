@@ -27,6 +27,7 @@ post-tool-use-failure, post-compact, config-change).
 | `test_mcp_secret_transport.py` | secret-safe MCP registrations |
 | `test_validate_skills.py`, `test_vendor_sources.py` | skill validation; vendored skills match `skills-sources.json` + R10 |
 | `test_ci_portability.py`, `test_portability_gate.py` | CI-green regressions; portability grep-gates |
+| `test_dox_tree.py` | every directory `CLAUDE.md` names each tracked file beside it |
 
 ## Up / down
 

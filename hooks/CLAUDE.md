@@ -44,6 +44,21 @@ Architecture: [`README.md`](README.md). Only hook logic and hook config belong h
 | `index-lifecycle.py` | event-driven jcodemunch/jdocmunch/graphify/dox freshness, active repo only, no daemons |
 | `dox_engine.py`, `dox-child-scaffold.py`, `dox-write-gate.py` | dox: git repos only, `$HOME` and `~/.claude` refused |
 | `tdd_guard_launcher.py` → `tdd-guard-gate.py` | advisory tdd-guard, project repos only |
+| `dangerous-bash-gate.py`, `bash-write-gate.py`, `blocking-doc-enforcer.py` | PreToolUse Bash gates: destructive-command deny, shell-write detector (deny layer opt-in), `git commit` doc gate |
+| `first-write-skill-gate.py`, `gateguard-write-gate.py` | PreToolUse write gates: first code write needs the baseline skills; `ask` on a high-blast-radius file |
+| `jcodemunch-enforce.py`, `jdocmunch-enforce.py`, `graphify-enforce.py` | source read gate (budget 2, then advisory) + `mcp-used` tracker; doc-set read advisory; graphify nudge. Config: `jcodemunch-enforce.config.json`, `jdocmunch-enforce.config.json`, `graphify-enforce.config.json` |
+| `session-start-aggregator.py`, `core-skill-set.json` | SessionStart status + always-on skill digests; runs `tdd-guard-init-guard.py` (per-project tdd-guard config) |
+| `ponytail-caveman-guard.py`, `session-lifecycle.py` | SessionStart style directive; breadcrumb, pre-compact handoff, subagent records |
+| `post-write-aggregator.py` | PostToolUse write fan-out, in parallel: `index-lifecycle.py post-write`, `dox-child-scaffold.py`, `doc-update-enforcer.py`, `security-scan-gate.py` |
+| `fullstack-skills-reminder.py`, `skill_router.py` | PostToolUse FE/BE mandatory-skill reminder; path-ranked skills per write. Config: `fullstack-skills-reminder.config.json`, `skill_router.config.json`, `skill_router_weights.json` |
+| `codex-capture.py`, `desloppify-cleanup.py` | PostToolUse advisories: CODEX.md capture, wrap-up cleanup pass |
+| `skill-invocation-tracker.py`, `security-semgrep-tracker.py`, `santa-method-writer.py` | PostToolUse evidence writers: skill telemetry, Gate 3 (semgrep ran), Gate 4 (santa fired) |
+| `weekly-retro-trigger.py` | Stop (async), acts weekly: `skill-effectiveness-report.py` + `skill-router-weight-updater.py` |
+| `build-skills-index.py`, `build-trigger-floor.py` | build `skills-index.json` and `trigger-floor.json` |
+| `autonomous-skill-router.config.json`, `ui-keywords.json`, `tool-intelligence.json` | router data: intent categories (also feeds `gen-invoke-skills.py`), UI keywords, MCP routes |
+| `doc-enforcement.config.json`, `dox-write-gate.config.json`, `dox-tree-guard.config.json`, `index-lifecycle.config.json` | config for the doc enforcers, the dox gate and engine, and index-lifecycle |
+| `graphify_launcher.py` | fail-open launcher for the graphify MCP server (the manifest registers it) |
+| `tool_compat.py` | tool-name helpers shared by the gates (Claude Code and Cursor names) |
 
 ## Gotchas / fragile spots
 

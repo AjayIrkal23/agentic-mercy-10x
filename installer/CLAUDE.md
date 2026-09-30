@@ -82,6 +82,7 @@ re-check) happens automatically until the doctor reports 0 FAIL.
 | `doctor.py` | health verifier (link-doctor, render, settings-safety, lean-ctx-config, jcodemunch-config, plugins-contract, generated-in-sync, R9/R10, mcp-roster, ollama …); `--ci` skips machine rows; its 0-FAIL is the loop's success gate |
 | `jcodemunch_config.py` | keeps `~/.code-index/config.jsonc` on `manifest.jcodemunch_config.keys` (tool_surface full, AI summaries, trusted home); writes only via `jcodemunch-mcp config set` (install pass + repair of row `jcodemunch-config`) |
 | `verify.py` | read-only workflow status → the UI's live preflight sections (version probes run with stdin closed: `tdd-guard` has no `--version` and waits on stdin, and on Windows the timeout only kills the `.cmd` shim) |
+| `doctor_checks.py` | source-derived doctor rows shared with `doctor.py` (palette counts, locked-source links, model-routing, hook fixtures) |
 | `detect.py`, `render.py`, `links.py`, `manifest.json` | env detection · settings.json render (equivalence gate) · skill links · install contract |
 
 ## Gotchas / fragile spots
