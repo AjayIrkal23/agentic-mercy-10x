@@ -421,6 +421,10 @@ def main(argv: list[str]) -> int:
         if event not in _EVENT_NAME:
             print("{}")
             return 0
+        try:  # Claude Code writes UTF-8; the console codepage (cp1252) would garble it
+            sys.stdin.reconfigure(encoding="utf-8", errors="replace")
+        except (AttributeError, ValueError):
+            pass  # a StringIO stdin in tests
         try:
             raw = sys.stdin.read() or "{}"
         except Exception:  # noqa: BLE001

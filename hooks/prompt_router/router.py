@@ -28,6 +28,7 @@ Side effects: state/<sid>.router-manifest.json, hooks/.telemetry/<sid>.pushed-sk
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from datetime import datetime, timezone
@@ -38,7 +39,8 @@ _HOOKS = Path(__file__).resolve().parents[1]
 # stdlib `select` (imported by subprocess) wherever `select` is not a builtin, e.g.
 # setup-python's 3.12: mcp_routes failed to import and MCP route lines vanished.
 _HERE = Path(__file__).resolve().parent
-sys.path[:] = [p for p in sys.path if Path(p or ".").resolve() != _HERE]
+# realpath, not resolve(): resolve() raises on a symlink-loop entry on 3.10-3.12
+sys.path[:] = [p for p in sys.path if Path(os.path.realpath(p or ".")) != _HERE]
 if str(_HOOKS) not in sys.path:
     sys.path.insert(0, str(_HOOKS))
 

@@ -34,7 +34,14 @@ features that looked wired but did nothing.
   0x9D; grep gate G5 now forbids them.
 - dispatch.py passed payloads and printed results as non-ASCII JSON. Without
   `PYTHONUTF8`, a cp1252 console cannot encode "→": the result fell back to `{}` (lost
-  SessionStart) and a payload with one errored every link (no gate ran). Now ASCII-escaped.
+  SessionStart) and a payload with one errored every link (no gate ran). Now ASCII-escaped,
+  and stdin is read as UTF-8: decoding it as cp1252 garbled Agent prompts in
+  `updatedInput` and a byte like 0x9D (in "”") emptied the payload so no gate ran.
+- gateguard counts Python importers too (a module imported by 5+ files asks before a
+  write); it only knew Go and JS/TS. `blocking-doc-enforcer` got its first tests.
+- playwright post-step installs the browser through the pinned MCP itself
+  (`install-browser chrome-for-testing --no-remove`): the old step fetched a different
+  chromium build than @playwright/mcp@0.0.82 expects.
 
 ## v3.1.0 — 2026-09-30 Sonnet 5.5 routing + Windows parity
 

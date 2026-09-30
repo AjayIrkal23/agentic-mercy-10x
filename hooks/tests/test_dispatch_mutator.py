@@ -174,20 +174,27 @@ def _run_cp1252(event: str, payload: dict) -> subprocess.CompletedProcess:
     import os
     env = {**os.environ, "PYTHONIOENCODING": "cp1252", "PYTHONUTF8": "0",
            "CLAUDE_HOOK_DOCTOR": "1"}
+    # Claude Code writes raw UTF-8 (not \\u escapes) to the hook's stdin.
     return subprocess.run([sys.executable, str(DISPATCH), event],
-                          input=json.dumps(payload), capture_output=True, text=True,
-                          encoding="utf-8", timeout=60, env=env)
+                          input=json.dumps(payload, ensure_ascii=False).encode("utf-8"),
+                          capture_output=True, timeout=60, env=env)
 
 
 def test_non_cp1252_text_survives_a_cp1252_console(tmp_path):
-    """Output: the merged context ("→" etc.) must not crash the final print, which fell
-    back to {} and lost the whole SessionStart. Input: a payload with "→" is passed
-    to every link's stdin; encoding it as cp1252 errored each link, so no gate ran."""
+    """A Windows console without PYTHONUTF8. Output: the merged context ("→") must not
+    crash the final print (it fell back to {} and lost SessionStart). Input: stdin is
+    UTF-8 from Claude Code; decoded as cp1252 it garbled Agent prompts in updatedInput
+    ("—" -> "â€”") and a byte like 0x9D (in "”") emptied the payload so no gate ran."""
     ss = json.loads(_run_cp1252("session-start", _fixture("session-start.json")).stdout)
     assert "ALWAYS-ON STYLE" in ss["hookSpecificOutput"]["additionalContext"]
     bash = _fixture("pre-tool-use-bash.json")
     # fresh session: the bash gate lets an identical retry through once per session
     bash["session_id"] = f"cp1252-{time.time_ns()}"
-    bash["tool_input"] = {"command": "rm -rf ~/projects  # cleanup → done"}
-    out = _run_cp1252("pre-tool-use", bash).stdout
+    bash["tool_input"] = {"command": "rm -rf ~/projects  # said ”ok” → done"}
+    out = _run_cp1252("pre-tool-use", bash).stdout.decode("utf-8")
     assert "DANGEROUS COMMAND BLOCKED" in out, out
+    agent = _fixture("pre-tool-use-agent.json")
+    agent["tool_input"] = {"description": "d", "subagent_type": "general-purpose",
+                           "prompt": "Review A — then B → report ”done”"}
+    hso = json.loads(_run_cp1252("pre-tool-use", agent).stdout)["hookSpecificOutput"]
+    assert hso["updatedInput"]["prompt"] == "Review A — then B → report ”done”"
