@@ -106,7 +106,7 @@ def test_python_stem_in_comment_or_string_not_counted(gate, repo, monkeypatch):
 
 def test_importers_found_without_a_grep_binary(gate, repo, monkeypatch):
     """Windows has no grep on PATH (CI's windows-latest), and grep's `path:line:text`
-    output split on ':' breaks on `C:\\` paths. The search must be pure Python."""
+    output split on ':' breaks on drive-letter paths. The search must be pure Python."""
     root, target = repo
     _write(root, _IMPORTERS)
     monkeypatch.setenv("PATH", "")

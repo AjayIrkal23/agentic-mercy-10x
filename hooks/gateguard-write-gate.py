@@ -86,7 +86,7 @@ def _import_regex_for(file_path: str) -> tuple[re.Pattern, tuple[str, ...]]:
 def _gather_importers(file_path: str, search_root: str) -> list[dict]:
     """Return [{path, lines: [{lineno, text}]}] for files that import this target.
     Pure Python, not grep: Windows has no grep on PATH, and grep's `path:line:text`
-    output cannot be split on ':' when paths start with `C:\\`."""
+    output cannot be split on ':' when paths start with a drive letter."""
     basename = os.path.basename(file_path)
     stem = os.path.splitext(basename)[0]
     _SHORT_STEMS = {"app", "main", "index", "types", "routes", "gorm", "db", "api", "lib", "util"}
