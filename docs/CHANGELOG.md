@@ -32,6 +32,9 @@ features that looked wired but did nothing.
   the router dropped every MCP route line. It now strips its own dir from `sys.path`.
 - CI (Windows): 19 bare `read_text()` calls decoded UTF-8 as cp1252 and crashed on byte
   0x9D; grep gate G5 now forbids them.
+- dispatch.py passed payloads and printed results as non-ASCII JSON. Without
+  `PYTHONUTF8`, a cp1252 console cannot encode "→": the result fell back to `{}` (lost
+  SessionStart) and a payload with one errored every link (no gate ran). Now ASCII-escaped.
 
 ## v3.1.0 — 2026-09-30 Sonnet 5.5 routing + Windows parity
 

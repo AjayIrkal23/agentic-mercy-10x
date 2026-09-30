@@ -167,3 +167,27 @@ def test_stop_passes_system_message(tmp_path):
     gate.write_text("print('{\"systemMessage\": \"heads up\"}')\n", encoding="utf-8")
     cfg = {"chains": {"stop": [{"id": "g", "type": "gate", "cmd": [sys.executable, str(gate)]}]}}
     assert mod.dispatch("stop", {}, cfg) == {"systemMessage": "heads up"}
+
+
+def _run_cp1252(event: str, payload: dict) -> subprocess.CompletedProcess:
+    """A Windows console without PYTHONUTF8: stdio (and child stdin) encode as cp1252."""
+    import os
+    env = {**os.environ, "PYTHONIOENCODING": "cp1252", "PYTHONUTF8": "0",
+           "CLAUDE_HOOK_DOCTOR": "1"}
+    return subprocess.run([sys.executable, str(DISPATCH), event],
+                          input=json.dumps(payload), capture_output=True, text=True,
+                          encoding="utf-8", timeout=60, env=env)
+
+
+def test_non_cp1252_text_survives_a_cp1252_console(tmp_path):
+    """Output: the merged context ("→" etc.) must not crash the final print, which fell
+    back to {} and lost the whole SessionStart. Input: a payload with "→" is passed
+    to every link's stdin; encoding it as cp1252 errored each link, so no gate ran."""
+    ss = json.loads(_run_cp1252("session-start", _fixture("session-start.json")).stdout)
+    assert "ALWAYS-ON STYLE" in ss["hookSpecificOutput"]["additionalContext"]
+    bash = _fixture("pre-tool-use-bash.json")
+    # fresh session: the bash gate lets an identical retry through once per session
+    bash["session_id"] = f"cp1252-{time.time_ns()}"
+    bash["tool_input"] = {"command": "rm -rf ~/projects  # cleanup → done"}
+    out = _run_cp1252("pre-tool-use", bash).stdout
+    assert "DANGEROUS COMMAND BLOCKED" in out, out

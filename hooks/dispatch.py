@@ -281,7 +281,9 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
     contexts: list[tuple[int, str]] = []
     updated_input = None
     system_message = ""     # Stop gates may emit a non-blocking systemMessage
-    payload_text = json.dumps(payload, ensure_ascii=False)
+    # ASCII-escaped JSON: link stdin (and our stdout) encode with the console codepage
+    # when PYTHONUTF8 is unset, and cp1252 cannot encode "→" — every link errored.
+    payload_text = json.dumps(payload)
     t_start = time.perf_counter()
 
     # ---- pass 1: sequential gates + mutators (in declared order) ---------- #
@@ -335,7 +337,7 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
                     # thread the mutation forward
                     newp = dict(payload)
                     newp["tool_input"] = ui
-                    payload_text = json.dumps(newp, ensure_ascii=False)
+                    payload_text = json.dumps(newp)
             ctx = _extract_context(parsed)
             if ctx:
                 contexts.append((int(ln.get("priority", 5)), ctx))
@@ -437,7 +439,7 @@ def main(argv: list[str]) -> int:
             # exit 2 + stderr = keep the teammate working (TeammateIdle contract)
             print(result.get("reason") or "expected artifact missing", file=sys.stderr)
             return 2
-        print(json.dumps(result, ensure_ascii=False))
+        print(json.dumps(result))  # ASCII-escaped: a cp1252 stdout cannot print "→"
         return 0
     except Exception:  # noqa: BLE001 - the dispatcher must never brick a session
         print("{}")
