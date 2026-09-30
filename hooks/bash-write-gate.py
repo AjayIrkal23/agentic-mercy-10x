@@ -15,7 +15,7 @@ DEFAULT BEHAVIOR (2026-07-19): this hook does NOT block shell writes.
   files with >=THRESHOLD importers. Unchanged, still governed by
   BASH_WRITE_GATE_HARD_BLOCK (also off by default). Advisory, not a block.
 
-Shell writes are instead discouraged by INSTRUCTION: rules/no-permission-bypass.md
+Shell writes are instead discouraged by INSTRUCTION: rules/01-no-shell-writes.md
 and the read-then-write protocol opus-guard injects into every subagent prompt.
 Instructions do not misfire on a commit message. The behavior this hook was built
 to stop was never caused by a missing block — it was caused by agents having no
@@ -63,7 +63,7 @@ HARD_BLOCK = os.environ.get("BASH_WRITE_GATE_HARD_BLOCK", "").strip() == "1"
 # prior Read; ctx_patch is path-jailed to the project root). That vacuum is fixed:
 # the deny list is empty in settings.template.json, so Edit/Write work everywhere.
 # Discipline is now carried by INSTRUCTION instead of interception —
-# rules/no-permission-bypass.md plus the protocol opus-guard injects into every
+# rules/01-no-shell-writes.md plus the protocol opus-guard injects into every
 # subagent prompt. Instructions do not misfire on a commit message.
 #
 # Set BASH_WRITE_GATE_DENY_SHELL_WRITES=1 to re-arm hard denial.
@@ -251,7 +251,7 @@ def _emit_bypass_deny(kind: str, alternative: str, cmd_preview: str) -> None:
         f"BASH-WRITE-GATE — DENIED: {kind}.\n"
         f"Command: {cmd_preview[:160]}\n\n"
         "Shell-mediated file writes are banned on this machine "
-        "(rules/no-permission-bypass.md). They bypass every write gate. A denied tool "
+        "(rules/01-no-shell-writes.md). They bypass every write gate. A denied tool "
         "is a ROUTE, not an obstacle — do NOT reimplement this write in another shell "
         "form (that is the same violation, not a workaround).\n\n"
         "READ FIRST, THEN WRITE:\n"

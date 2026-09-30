@@ -104,6 +104,15 @@ def test_python_stem_in_comment_or_string_not_counted(gate, repo, monkeypatch):
     assert _run(gate, target, monkeypatch) == {}
 
 
+def test_skip_patterns_match_windows_separators(gate, monkeypatch):
+    """Claude Code on Windows sends `a\\b` paths; the `node_modules/`, `docs/` style skips
+    never matched them (e2e run 2)."""
+    monkeypatch.setattr(gate.os.path, "isfile", lambda p: True)
+    assert gate._should_skip("web\\node_modules\\pkg\\index_core.js")
+    assert gate._should_skip("web\\docs\\examples\\sample_core.py")
+    assert not gate._should_skip("web\\src\\billing\\payments_core.py")
+
+
 def test_importers_found_without_a_grep_binary(gate, repo, monkeypatch):
     """Windows has no grep on PATH (CI's windows-latest), and grep's `path:line:text`
     output split on ':' breaks on drive-letter paths. The search must be pure Python."""

@@ -87,6 +87,9 @@ Architecture: [`README.md`](README.md). Only hook logic and hook config belong h
   `gen-agent-skill-blocks.py` writes a `<!-- path-skills -->` Read block into agent bodies
   (their `skills:` preload silently skips those).
 - tdd-guard (Sonnet via the Agent SDK) takes 4-7.3 s: gate 15 s < launcher 16 s < link 17 s.
+- Windows: spawn npm CLIs by their `shutil.which` path (a bare name cannot start a `.cmd`
+  shim), and normalise `\` to `/` before matching path fragments like `src/api/` — Claude
+  Code sends native backslash paths.
 - `settings.json` is rendered — edit `settings.template.json`, then `installer/render.py`.
 
 ## Up / down

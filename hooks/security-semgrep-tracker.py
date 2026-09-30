@@ -3,9 +3,10 @@
 
 post-tool-use (Shell): set semgrep_ran only after `semgrep scan|ci` completes
 successfully.
-post-tool-use (mcp__semgrep__*): any semgrep MCP tool call sets semgrep_ran (+ a
+post-tool-use (mcp__semgrep__semgrep_scan*): a semgrep MCP scan sets semgrep_ran (+ a
 findings count when the result is parseable) — the security-sentinel agent scans
-through the MCP, which the Bash-only match never credited (A03-B8).
+through the MCP, which the Bash-only match never credited (A03-B8). Other semgrep MCP
+tools (languages, rule schema, AST) scan nothing and earn no credit.
 Legacy pre-tool-use mode kept for backward compatibility but does not set semgrep_ran.
 """
 from __future__ import annotations
@@ -100,7 +101,7 @@ def _mcp_findings(payload: dict) -> int:
 
 def post_tool_use(payload: dict) -> int:
     name = str(tool_name(payload) or "")
-    if name.startswith("mcp__semgrep__"):
+    if name.startswith("mcp__semgrep__semgrep_scan"):
         cid = payload.get("conversation_id") or payload.get("session_id") or ""
         if not cid:
             return 0
