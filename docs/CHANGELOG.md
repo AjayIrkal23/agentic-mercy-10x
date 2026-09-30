@@ -1,5 +1,33 @@
 # Changelog
 
+## v3.1.1 — 2026-09-30 Ubuntu end-to-end run fixes
+
+Why: a full end-to-end run on Ubuntu (three headless sessions plus replays) found
+features that looked wired but did nothing.
+
+- SessionStart was 33k chars. Claude Code saves any hook context over 8,000 chars to a
+  file and shows a 2 KB preview, so core skills and the memory directive were lost. The
+  aggregator now fits 5,500 chars (pointers first, full bodies only if they fit); every
+  dispatch `budgets.chars` is 7,800.
+- `paths:`-scoped skills failed `Skill()` with "Unknown skill". The router and the
+  suite gate now say Read `SKILL.md` for them; agent bodies get a generated
+  `<!-- path-skills -->` Read block, because `skills:` preload skips them too.
+- tdd-guard advisories were dropped: Sonnet takes 4-7.3 s and the gate cut off at 7 s.
+  The cap is now 15 s (Haiku is faster but let a test-less edit through).
+- Hook-run jcodemunch indexing lost its AI summaries: the CLI never got the MCP's
+  `OPENAI_API_BASE` and jcodemunch 1.108.319 refuses api.openai.com. index-lifecycle now
+  passes `mcpServers.jcodemunch.env`, and the lost ollama-down guard (DEFER plus an
+  ACTION NEEDED line) is back.
+- A jcodemunch index rooted at `$HOME` captured every repo without its own index. The
+  installer's `jcodemunch-config` repair now deletes such indexes; `graphify-out/` is
+  ignored.
+- The workbench checkout is never indexed or dox-swept, even under a sandbox HOME, and
+  doctor mode no longer spawns writers. CI had been red since 2026-07-14: tests are now
+  hermetic, and a dox fallback stub without its placeholder is no longer indexed.
+- playwright MCP registers with `--browser chromium`, plus a post-step that installs it.
+- graphify skill refreshed to 0.9.70 (a shell-injection fix and manifest data-loss
+  fixes), keeping the local frontmatter.
+
 ## v3.1.0 — 2026-09-30 Sonnet 5.5 routing + Windows parity
 
 Why: Sonnet 5.5 matches Opus 5.5 on agentic execution at half the price, while Opus 5.5

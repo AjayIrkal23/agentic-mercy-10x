@@ -1,9 +1,9 @@
 {
-  "_about": "The ONE ordered chain map for dispatch.py. Every hook is a LINK here (its own file, run as a subprocess); settings.json registers dispatch.py once per event. Link types: gate|mutator|advisory|exec. exec links with \"async\": true are spawned detached and never waited on. tools = regex FULL-matched against tool_name. enabled toggles a link off without deleting it. priority 0 = mandatory advisory (never budget-dropped); higher = droppable once gates blew the wall budget. timeout_ms is per-link. Links that write to disk no-op when CLAUDE_HOOK_DOCTOR is set.",
+  "_about": "The ONE ordered chain map for dispatch.py. Every hook is a LINK here (its own file, run as a subprocess); settings.json registers dispatch.py once per event. Link types: gate|mutator|advisory|exec. exec links with \"async\": true are spawned detached and never waited on. tools = regex FULL-matched against tool_name. enabled toggles a link off without deleting it. priority 0 = mandatory advisory (never budget-dropped); higher = droppable once gates blew the wall budget. timeout_ms is per-link. Links that write to disk no-op when CLAUDE_HOOK_DOCTOR is set. Every budgets.chars stays under Claude Code's 8,000-char additionalContext cap: above it the harness saves the text to a file and shows the model a 2 KB preview.",
   "budgets": {
-    "session-start": {"ms": 2500, "chars": 60000},
-    "pre-tool-use": {"ms": 2000, "chars": 8000},
-    "post-tool-use": {"ms": 1500, "chars": 12000},
+    "session-start": {"ms": 2500, "chars": 7800},
+    "pre-tool-use": {"ms": 2000, "chars": 7800},
+    "post-tool-use": {"ms": 1500, "chars": 7800},
     "post-tool-use-failure": {"ms": 800, "chars": 1500},
     "stop": {"ms": 2500, "chars": 4000},
     "subagent-start": {"ms": 800, "chars": 3000},
@@ -34,7 +34,7 @@
       {"id": "jcm-gate-read", "type": "gate", "tools": "Read|Grep|Glob", "cmd": ["{PY}", "{HOOKS}/jcodemunch-enforce.py", "pre-tool-use"], "timeout_ms": 5000, "enabled": true},
       {"id": "jcm-gate-leanctx", "type": "gate", "tools": "mcp__lean-ctx__ctx_read|mcp__lean-ctx__ctx_search|mcp__lean-ctx__ctx_multi_read", "cmd": ["{PY}", "{HOOKS}/jcodemunch-enforce.py", "pre-tool-use"], "timeout_ms": 3000, "enabled": true},
       {"id": "jdoc-doc-steer", "type": "advisory", "tools": "Read|mcp__lean-ctx__ctx_read", "cmd": ["{PY}", "{HOOKS}/jdocmunch-enforce.py", "pre-tool-use"], "timeout_ms": 4000, "priority": 1, "enabled": true},
-      {"id": "tdd-guard-launcher-pre", "type": "advisory", "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/tdd_guard_launcher.py"], "timeout_ms": 8000, "priority": 2, "enabled": true, "_note": "warn-mode advisory, 8 s cap (D10); never a gate"},
+      {"id": "tdd-guard-launcher-pre", "type": "advisory", "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/tdd_guard_launcher.py"], "timeout_ms": 17000, "priority": 2, "enabled": true, "_note": "warn-mode advisory, never a gate; 15 s validator cap (D10 was 8 s, but Sonnet takes 4-7.3 s and the slow tail was silently dropped)"},
       {"id": "graphify-enforce", "type": "advisory", "tools": "Task|Agent|Bash", "cmd": ["{PY}", "{HOOKS}/graphify-enforce.py", "pre-tool-use"], "timeout_ms": 5000, "priority": 1, "enabled": true},
       {"id": "opus-guard", "type": "mutator", "tools": "Agent|Task", "cmd": ["{PY}", "{HOOKS}/opus-guard.py"], "timeout_ms": 5000, "enabled": true},
       {"id": "workflow-model-guard", "type": "mutator", "tools": "Workflow", "cmd": ["{PY}", "{HOOKS}/workflow-model-guard.py"], "timeout_ms": 5000, "enabled": true}

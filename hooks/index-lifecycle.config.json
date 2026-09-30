@@ -8,5 +8,6 @@
   "max_doc_stats": 5000,
   "incremental_file_cap": 20,
   "surfaces_enabled": { "jcodemunch": true, "jdocmunch": true, "graphify": true, "dox": true },
-  "relax_read_gate_while_building": true
+  "relax_read_gate_while_building": true,
+  "summarizer_healthcheck": { "enabled": true, "url": "http://localhost:11434/api/tags", "timeout_ms": 800 }
 }

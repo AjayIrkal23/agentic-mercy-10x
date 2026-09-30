@@ -28,16 +28,21 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 | `test_opus_guard.py`, `test_workflow_model_guard.py`, `test_model_mode.py`, `test_model_advice.py` | model routing (pins, escalation, routing log) |
 | `test_model_policy_consistency.py` | agent frontmatter / template env / escalation agree with `model-policy.json`; `max` effort banned |
 | `test_gen_invoke_skills.py` | `/invoke` skill generator determinism |
-| `test_index_lifecycle.py` | index-lifecycle state machine |
+| `test_index_lifecycle.py` | index-lifecycle state machine, jcodemunch env passthrough, ollama-down DEFER |
+| `test_session_start_budget.py` | dispatched SessionStart and every `budgets.chars` stay under the 8,000-char cap |
+| `test_router_path_scoped.py`, `test_agent_path_skills.py` | `paths:`-scoped skills are Read, never `Skill()`-ed (router + agent bodies) |
+| `test_own_checkout_guard.py` | this checkout is never indexed / dox-swept under a sandbox HOME; doctor mode spawns no writers |
 
 ## Gotchas / fragile spots
 
 - `$HOME` tests prove the ceiling only on a machine with a stray `~/.git`; elsewhere they
   pass vacuously.
 - Router tests build tmp repos and run the hook as a subprocess — keep them fast.
-- Router and dox tests read the real user's `~/.claude.json` (MCP availability). Over SSH
-  on the Windows replica run them as the desk user (`USERPROFILE`/`HOME` = `C:\Users\Win`),
-  or they fail on the SSH account's empty config.
+- Tests must pass with a bare `HOME` and a checkout outside `~/.claude` (CI does both).
+  Router MCP-directive tests get their `~/.claude.json` from the `fake_home` fixture; check
+  with `HOME=<empty dir> python3 -m pytest hooks/tests tests -q`.
+- A test that fires a real hook chain sets `CLAUDE_HOOK_DOCTOR=1`, or its writers act on
+  real repos.
 
 ## Up / down
 

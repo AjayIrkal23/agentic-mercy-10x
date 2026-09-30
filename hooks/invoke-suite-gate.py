@@ -415,9 +415,11 @@ def main() -> int:
 
     reason = (
         f"SUITE GATE ({nags}/{MAX_NAGS}): {len(expected) - len(missing)}/{len(expected)} "
-        f"pushed skills loaded. You did NOT invoke these via the Skill tool this turn:\n  - "
+        f"pushed skills loaded. You did NOT load these this turn:\n  - "
         + "\n  - ".join(missing)
-        + "\nInvoke each missing skill via the Skill tool now, then finish. Do not skip any."
+        + "\nLoad each one now via the Skill tool, or Read ~/.claude/skills/<name>/SKILL.md "
+        + "(required for paths:-scoped skills, which the Skill tool calls unknown), then "
+        + "finish. Do not skip any."
         + "\n(Agent-backed suites pass automatically instead: dispatch the category's "
           "specialist agent and/or produce its artifact — see the command's ACT B.)"
     )

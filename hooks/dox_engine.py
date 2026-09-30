@@ -172,7 +172,9 @@ def resolve_root(target: "str | Path", cfg: "dict | None" = None) -> "Path | Non
         return None
     # ~/.claude is agent infra, never a dox root — hard-coded so a caller that passes
     # DEFAULTS (exemptRepos=[]) instead of the config file cannot sweep it.
-    if is_exempt(root, {"exemptRepos": ["~/.claude"]}):
+    # The checkout holding this file is exempt too, whatever HOME says: a run under a
+    # sandbox HOME otherwise sweeps the real ~/.claude.
+    if is_exempt(root, {"exemptRepos": ["~/.claude", str(_HOOKS.parent)]}):
         return None
     if cfg is not None and is_exempt(root, cfg):
         return None
@@ -297,7 +299,7 @@ _FALLBACK_CHILD = (
     "> Local doc for this directory only. Read after the root `CLAUDE.md`. Update\n"
     "> this file whenever you add, remove, or rename files here, or change a local\n"
     "> convention.\n\n"
-    "## What lives here\n\nTODO: the responsibility of this directory.\n\n"
+    f"## What lives here\n\n{TEMPLATE_PLACEHOLDER}: the responsibility of this directory.>\n\n"
     "## Local conventions\n\n- TODO\n\n"
     "## Key files\n\n| File | Role |\n|------|------|\n| TODO | TODO |\n\n"
     "## Up / down\n\n- Parent: [`../CLAUDE.md`](../CLAUDE.md)\n"

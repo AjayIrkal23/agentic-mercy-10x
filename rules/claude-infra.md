@@ -33,7 +33,7 @@ and re-render. `hooks/model-policy.json` is the model truth →
 | `first-write-skill-gate` | first Write/Edit of code | `SKILL GATE: First code write to …` | once per session; load the named skills |
 | `dox-write-gate` | Write/Edit in a repo with no root `CLAUDE.md` | `DOX GATE: no root CLAUDE.md …` | deny once; `DOX FIRST —` is advisory |
 | `gateguard-write-gate` | Write/Edit with high blast radius | `GATEGUARD — high-blast-radius write to …` | `ask`, not deny |
-| `tdd-guard-gate` | Write/Edit in a project with a test runner | `⚠️ TDD GUARD (advisory — not blocking):` | advisory, 8 s cap; never in `$HOME` / non-git |
+| `tdd-guard-gate` | Write/Edit in a project with a test runner | `⚠️ TDD GUARD (advisory — not blocking):` | advisory, 15 s cap; never in `$HOME` / non-git |
 | `bash-write-gate` | Bash shell-write patterns | advisory unless `BASH_WRITE_GATE_DENY_SHELL_WRITES=1` | rule carried by `01-no-shell-writes.md` |
 | `hard-completion-gate` | Stop | `Gate 2 (docs)` … `Gate 5 (dead code)` | ≤1 block per turn |
 | `blocking-doc-enforcer` | `git commit` | `BLOCKED: Cannot commit without documentation updates.` | only when doc trees exist |

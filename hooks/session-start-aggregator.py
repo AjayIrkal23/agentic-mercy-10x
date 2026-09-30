@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import subprocess
 import sys
 import time
@@ -27,16 +28,20 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 HOME = Path.home()
-HOOK_DIR = HOME / ".claude" / "hooks"
+HOOK_DIR = Path(__file__).resolve().parent  # this checkout, not $HOME (CI runs elsewhere)
 STATE_DIR = HOOK_DIR / ".state"
 STATE_MAX_AGE_SECONDS = 86400  # 24 hours
 UNKNOWN_MAX_AGE_SECONDS = 3600  # 1 hour — unknown.*.json (session id was missing)
 MCP_JSON = HOME / ".claude.json"
-MCP_USAGE_SKILL = HOME / ".claude" / "skills" / "mcp-usage-standards" / "SKILL.md"
+MCP_USAGE_SKILL = HOOK_DIR.parent / "skills" / "mcp-usage-standards" / "SKILL.md"
 INDEX_LIFECYCLE = HOOK_DIR / "index-lifecycle.py"
 TDD_INIT_GUARD = HOOK_DIR / "tdd-guard-init-guard.py"
-PLUGINS_ROOT = HOME / ".claude" / "plugins"
-MAX_AGGREGATED_CHARS = 60000
+PLUGINS_ROOT = HOOK_DIR.parent / "plugins"
+# Claude Code persists a hook's additionalContext over 8,000 chars to a file and shows
+# the model a ~2 KB preview. dispatch.py merges every session-start link into one
+# output, so this link keeps to 5,500 and leaves room for the memory directive,
+# the breadcrumb and the style directive (see test_session_start_budget.py).
+MAX_AGGREGATED_CHARS = 5500
 
 if str(HOOK_DIR) not in sys.path:
     sys.path.insert(0, str(HOOK_DIR))
@@ -209,9 +214,10 @@ def _canonical(name: str) -> str:
         return name
 
 
-def _core_skill_digests() -> str:
-    """Always-active core skill set: real skill content at session start.
-    Config: hooks/core-skill-set.json; aliases resolved to canonical names."""
+def _core_skill_digests(budget: int = MAX_AGGREGATED_CHARS) -> str:
+    """Always-active core skill set (hooks/core-skill-set.json), within ``budget`` chars.
+    Every skill starts as a one-line pointer; `mode: full` entries are upgraded to
+    their body, in config order, only while the whole block still fits."""
     try:
         cfg = json.loads((HOOK_DIR / "core-skill-set.json").read_text(encoding="utf-8"))
     except Exception:  # noqa: BLE001
@@ -221,14 +227,19 @@ def _core_skill_digests() -> str:
         idx = json.loads((HOOK_DIR / "skills-index.json").read_text(encoding="utf-8")).get("skills") or {}
     except Exception:  # noqa: BLE001
         pass
-    out = ["[Always-active core skills]"]
+    header = "[Always-active core skills] — load a pointer with the Skill tool when it applies"
+    lines: list[str] = []
+    bodies: list[str | None] = []
     seen: set[str] = set()
     for ent in cfg.get("always", []):
         name = _canonical(ent.get("skill") or "")
         if not name or name in seen:
             continue
         seen.add(name)
-        sk = HOME / ".claude" / "skills" / name / "SKILL.md"
+        desc = " ".join(((idx.get(name) or {}).get("description") or "").split())
+        lines.append(f"- {name} — {desc[:150]}")
+        body = None
+        sk = HOOK_DIR.parent / "skills" / name / "SKILL.md"
         if ent.get("mode") == "full" and sk.is_file():
             try:
                 raw = sk.read_text(encoding="utf-8", errors="replace")
@@ -236,13 +247,24 @@ def _core_skill_digests() -> str:
                     end = raw.find("\n---", 3)
                     if end != -1:
                         raw = raw[end + 4:]
-                out.append(f"### skill: {name}\n{raw.strip()[: int(ent.get('max_chars', 5000))]}")
+                body = f"### skill: {name}\n{raw.strip()[: int(ent.get('max_chars', 5000))]}"
             except OSError:
-                continue
-        else:
-            desc = ((idx.get(name) or {}).get("description") or "").strip()
-            out.append(f"- {name} (on demand via Skill tool) — {desc[:180]}")
-    return "\n\n".join(out) if len(out) > 1 else ""
+                body = None
+        bodies.append(body)
+    if not lines:
+        return ""
+
+    def render(parts: list[str]) -> str:
+        return "\n\n".join([header, "\n".join(p for p in parts if p.startswith("- ")),
+                            *(p for p in parts if not p.startswith("- "))]).strip()
+
+    for i, body in enumerate(bodies):
+        if body:
+            trial = lines[:i] + [body] + lines[i + 1:]
+            if len(render(trial)) <= budget:
+                lines = trial
+    block = render(lines)
+    return block if len(block) <= budget else block[:budget]
 
 
 def _full_context(payload: dict, payload_txt: str) -> str:
@@ -253,17 +275,21 @@ def _full_context(payload: dict, payload_txt: str) -> str:
     aggregated = _merge_additional_context(aggregated, _precompact_handoff_context(payload))
 
     hook_jobs: list[tuple[list[str], int]] = []
-    if INDEX_LIFECYCLE.is_file():
-        hook_jobs.append(([sys.executable, str(INDEX_LIFECYCLE), "session-start"], 8))
-    if TDD_INIT_GUARD.is_file():
-        hook_jobs.append(([sys.executable, str(TDD_INIT_GUARD), "session"], 8))
+    if not os.environ.get("CLAUDE_HOOK_DOCTOR"):  # doctor/test dry-fire: both write to disk
+        if INDEX_LIFECYCLE.is_file():
+            hook_jobs.append(([sys.executable, str(INDEX_LIFECYCLE), "session-start"], 8))
+        if TDD_INIT_GUARD.is_file():
+            hook_jobs.append(([sys.executable, str(TDD_INIT_GUARD), "session"], 8))
     if hook_jobs:
         with ThreadPoolExecutor(max_workers=len(hook_jobs)) as pool:
             futures = [pool.submit(_run_hook_subprocess, cmd, payload_txt, t) for cmd, t in hook_jobs]
             for fut in futures:  # submission order -> deterministic merge
                 aggregated = _merge_additional_context(aggregated, fut.result())
 
-    for chunk in (_core_skill_digests(), _superpowers_session_context(), _configured_mcp_context()):
+    tail = [_superpowers_session_context(), _configured_mcp_context()]
+    sep = len("\n\n---\n\n")
+    room = MAX_AGGREGATED_CHARS - len(aggregated) - sum(len(t) + sep for t in tail if t.strip()) - sep
+    for chunk in (_core_skill_digests(max(room, 0)), *tail):
         aggregated = _merge_additional_context(aggregated, chunk)
     return aggregated
 

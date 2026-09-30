@@ -65,9 +65,12 @@ Each agent's `skills:` list is preloaded in full at start (no manual `Read` of
 SKILL.md files; canonical names only, aliases collapsed, ≤13). Bodies say
 "Preloaded skills (frontmatter `skills:`); use `Skill(...)` for anything else."
 Path-bound FE/BE standards also surface natively when matching files are read.
+A `paths:`-scoped skill in `skills:` is silently NOT preloaded (Claude Code lists it only
+after a matching file is read), so the generator also writes a `<!-- path-skills -->`
+block into the body naming those SKILL.md files to Read first.
 `hooks/gen-agent-skill-blocks.py` holds the table: run it to rewrite every agent's
-`skills:` line, `--check` exits 1 on any drift (installer verify, WP-13). It also
-prints `drift:` when a preloaded skill is unknown to the routing config.
+`skills:` line and path-skills block, `--check` exits 1 on any drift (installer verify,
+WP-13). It also prints `drift:` when a preloaded skill is unknown to the routing config.
 
 ## Least privilege
 

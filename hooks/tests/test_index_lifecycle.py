@@ -48,6 +48,7 @@ def _load():
 
 
 il = _load()
+_REAL_ALIVE = il._summarizer_alive  # fixtures stub il._summarizer_alive; keep the real one
 
 
 def _mkrepo(where: Path) -> Path:
@@ -80,6 +81,9 @@ def env(tmp_path, monkeypatch):
         spawns.append((sorted(surfaces), incremental)))
     for k in list(il._BUILD):
         monkeypatch.setitem(il._BUILD, k, lambda *a, **k: True)
+    # Hermetic: never probe the real ollama (session-start would otherwise
+    # depend on whether the machine running the tests has it up).
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: True)
     repo = _mkrepo(tmp_path / "repo")
     payload = {"workspace_roots": [str(repo)], "cwd": str(repo)}
     ctx = il._active_ctx(payload)
@@ -345,6 +349,128 @@ def test_session_start_parity_reports_state(env, monkeypatch, surface, state):
 
 
 # --------------------------------------------------------------------------- #
+# jcodemunch summarizer env passthrough + ollama-down guard
+# --------------------------------------------------------------------------- #
+_SUMM_ENV = {"OPENAI_API_BASE": "http://localhost:11434/v1",
+             "OPENAI_API_KEY": "fake-key", "OPENAI_EMBED_MODEL": "all-minilm"}
+
+
+def _fake_home(tmp_path, monkeypatch, mcp=None, raw=None):
+    """Sandbox HOME with a fake ~/.claude.json (never the real one)."""
+    home = tmp_path / "home"
+    home.mkdir(exist_ok=True)
+    monkeypatch.setenv("HOME", str(home))
+    if raw is not None:
+        (home / ".claude.json").write_text(raw)
+    elif mcp is not None:
+        (home / ".claude.json").write_text(json.dumps({"mcpServers": mcp}))
+    return home
+
+
+def _capture_run(monkeypatch):
+    calls: list = []
+    monkeypatch.setattr(il, "_which", lambda name: True)
+    monkeypatch.setattr(il, "_run", lambda cmd, timeout, env=None:
+                        (calls.append((list(cmd), env)),
+                         subprocess.CompletedProcess(cmd, 0, "", ""))[1])
+    return calls
+
+
+@pytest.mark.parametrize("incremental", [False, True])
+def test_jcodemunch_build_passes_claude_json_env(env, tmp_path, monkeypatch, incremental):
+    _fake_home(tmp_path, monkeypatch, {"jcodemunch": {"env": _SUMM_ENV}})
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: True)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+    calls = _capture_run(monkeypatch)
+    import lib.code_files as cf  # pytest tmp dirs live under /tmp/, a skip segment
+    monkeypatch.setattr(cf, "is_code_file", lambda p: True)
+    paths = [str(env["repo"] / "x.py")] if incremental else []
+    assert il._build_jcodemunch(env["repo"], incremental, paths, env["cfg"]) is True
+    assert calls, "jcodemunch CLI was not invoked"
+    for _cmd, e in calls:
+        assert e is not None
+        for k, v in _SUMM_ENV.items():
+            assert e[k] == v
+        assert "PATH" in e  # inherits os.environ, not a bare dict
+    assert calls[0][0][1] == ("index-file" if incremental else "index")
+
+
+@pytest.mark.parametrize("raw", [None, "{not json", '{"mcpServers": []}',
+                                 '{"mcpServers": {"jcodemunch": {"env": "x"}}}'])
+def test_summarizer_env_tolerates_missing_or_bad_claude_json(tmp_path, monkeypatch, raw):
+    _fake_home(tmp_path, monkeypatch, raw=raw)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+    e = il._jcodemunch_env()
+    assert "OPENAI_API_BASE" not in e and "PATH" in e
+
+
+def test_jcodemunch_build_defers_when_summarizer_down(env, tmp_path, monkeypatch):
+    _fake_home(tmp_path, monkeypatch, {"jcodemunch": {"env": _SUMM_ENV}})
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: False)
+    calls = _capture_run(monkeypatch)
+    assert il._build_jcodemunch(env["repo"], False, [], env["cfg"]) == "DEFERRED"
+    assert calls == []  # nothing ran: existing AI summaries are not overwritten
+
+
+def test_summarizer_guard_off_when_disabled(env, tmp_path, monkeypatch):
+    _fake_home(tmp_path, monkeypatch)
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: False)
+    calls = _capture_run(monkeypatch)
+    cfg = dict(env["cfg"], summarizer_healthcheck={"enabled": False})
+    assert il._build_jcodemunch(env["repo"], False, [], cfg) is True
+    assert len(calls) == 1
+
+
+def test_summarizer_probe_fails_open_on_malfunction(monkeypatch):
+    import urllib.error
+    import urllib.request
+
+    def boom(*a, **k):
+        raise ValueError("probe bug")
+    monkeypatch.setattr(urllib.request, "urlopen", boom)
+    assert _REAL_ALIVE("http://localhost:1/api/tags", 100) is True
+
+    def refused(*a, **k):
+        raise urllib.error.URLError("connection refused")
+    monkeypatch.setattr(urllib.request, "urlopen", refused)
+    assert _REAL_ALIVE("http://localhost:1/api/tags", 100) is False
+
+    def http500(*a, **k):
+        raise urllib.error.HTTPError("u", 500, "err", {}, None)
+    monkeypatch.setattr(urllib.request, "urlopen", http500)
+    assert _REAL_ALIVE("http://localhost:1/api/tags", 100) is True
+
+
+def test_session_start_loud_line_and_no_spawn_when_summarizer_down(env, monkeypatch):
+    _reset(env)
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: False)
+    for s in il.SURFACES:
+        monkeypatch.setitem(il._PROBE, s, lambda root, prior, cfg: (il.FRESH, {}, ""))
+    monkeypatch.setitem(il._PROBE, "jcodemunch",
+                        lambda root, prior, cfg: (il.STALE, {}, "detail"))
+    out = _silent(il.mode_session_start, env["payload"], env["cfg"])
+    blob = json.loads(out).get("additionalContext", "")
+    assert "ACTION NEEDED" in blob and "summarizer" in blob
+    assert env["spawns"] == []  # jcodemunch build NOT spawned
+    assert not il._lock_path(env["ctx"].key, "jcodemunch").exists()
+
+
+def test_build_deferred_is_not_a_failure(env, monkeypatch):
+    _reset(env)
+    ctx = env["ctx"]
+    monkeypatch.setitem(il._BUILD, "jcodemunch", lambda *a, **k: "DEFERRED")
+
+    class A:
+        pass
+    a = A()
+    a.root, a.key = str(env["repo"]), ctx.key
+    a.surfaces, a.incremental, a.journal = "jcodemunch", False, ""
+    il.mode_build(a, env["cfg"])
+    rec = il._load_state(ctx)["surfaces"]["jcodemunch"]
+    assert rec["state"] == il.STALE and rec["failures"] == 0  # no backoff
+
+
+# --------------------------------------------------------------------------- #
 # CI grep-gate — zero daemons, no cross-repo sweeps in live hook .py
 # --------------------------------------------------------------------------- #
 def _live_hook_py() -> list[Path]:
@@ -404,6 +530,17 @@ def _run_all() -> None:
             self._undo.append(lambda: obj.__setitem__(key, old))
             obj[key] = val
 
+        def setenv(self, name, val):
+            old = os.environ.get(name)
+            self._undo.append(lambda: os.environ.pop(name, None) if old is None
+                              else os.environ.__setitem__(name, old))
+            os.environ[name] = val
+
+        def delenv(self, name, raising=True):
+            old = os.environ.pop(name, None)
+            if old is not None:
+                self._undo.append(lambda: os.environ.__setitem__(name, old))
+
         def chdir(self, d):
             cwd = os.getcwd()
             self._undo.append(lambda: os.chdir(cwd))
@@ -431,6 +568,7 @@ def _run_all() -> None:
                    spawns.append((sorted(surfaces), incremental)))
         for k in list(il._BUILD):
             mp.setitem(il._BUILD, k, lambda *a, **k: True)
+        mp.setattr(il, "_summarizer_alive", lambda *a, **k: True)
         repo = _mkrepo(tmp / "repo")
         payload = {"workspace_roots": [str(repo)], "cwd": str(repo)}
         e = {"repo": repo, "payload": payload, "ctx": il._active_ctx(payload),

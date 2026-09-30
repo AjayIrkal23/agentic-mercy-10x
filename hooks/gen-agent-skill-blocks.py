@@ -146,6 +146,30 @@ def _render(skills: list[str]) -> str:
     return f"skills: [{', '.join(skills)}]\n"
 
 
+# Claude Code preloads a `skills:` entry only if the skill is listed, and a skill with
+# `paths:` frontmatter is listed only after a matching file is read — so those preloads
+# are silently skipped. The agent body gets a generated "Read these first" block instead.
+PATH_BLOCK = re.compile(r"\n<!-- path-skills -->\n.*?<!-- /path-skills -->\n", re.S)
+
+
+def _path_scoped() -> set[str]:
+    try:
+        idx = json.loads((HOOKS / "skills-index.json").read_text(encoding="utf-8")).get("skills") or {}
+    except (OSError, ValueError):
+        return set()
+    return {name for name, ent in idx.items() if (ent or {}).get("paths")}
+
+
+def _with_path_block(body: str, scoped: list[str]) -> str:
+    body = PATH_BLOCK.sub("\n", body, count=1)
+    if not scoped:
+        return body
+    files = ", ".join(f"`~/.claude/skills/{s}/SKILL.md`" for s in scoped)
+    block = ("\n<!-- path-skills -->\nBefore your first task, Read these preloads (they are "
+             f"`paths:`-scoped, so `skills:` cannot load them yet): {files}.\n<!-- /path-skills -->\n")
+    return block + body.lstrip("\n") if body.startswith("\n") else block + body
+
+
 def _apply(text: str, m: re.Match, skills: list[str]) -> str:
     fm = m.group(1) + "\n"
     line = _render(skills) if skills else ""
@@ -163,6 +187,7 @@ def main(argv: list[str]) -> int:
     universe = _sources(canon)
     stale: list[str] = []
     written: list[str] = []
+    path_scoped = _path_scoped()
     for agent, raw in AGENT_SKILLS.items():
         skills = _collapse(raw, canon)[:MAX_SKILLS]
         p = AGENTS / f"{agent}.md"
@@ -182,12 +207,15 @@ def main(argv: list[str]) -> int:
         if miss:
             print(f"missing: {agent}: {', '.join(miss)} (no skills/<name>/SKILL.md yet)")
         cur = _current(parsed)
-        if cur == skills:
+        body = text[m.end():]
+        new_body = _with_path_block(body, [s for s in skills if s in path_scoped])
+        if cur == skills and new_body == body:
             continue
         if check:
-            stale.append(f"{agent}: has {cur or 'none'}, want {skills or 'none'}")
+            why = "path-skills block out of date" if cur == skills else f"has {cur or 'none'}, want {skills or 'none'}"
+            stale.append(f"{agent}: {why}")
         else:
-            p.write_text(_apply(text, m, skills), encoding="utf-8", newline="\n")
+            p.write_text(_apply(text[:m.end()] + new_body, m, skills), encoding="utf-8", newline="\n")
             written.append(agent)
     if check:
         if stale:

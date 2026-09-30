@@ -52,6 +52,24 @@ Architecture: [`README.md`](README.md). Only hook logic and hook config belong h
   was silently dropped for months.
 - `index-lifecycle.py: NEVER_INDEX` excludes `$HOME`, `~/.claude`, `~/.codex`; this is
   deliberately not in `lib/repo_context.py` (gates still scope inside `~/.claude`).
+- `index-lifecycle.py` runs the jcodemunch CLI with `os.environ` + `mcpServers.jcodemunch.env`
+  from `~/.claude.json` (`_jcodemunch_env`): a hook-spawned CLI does not inherit the MCP
+  server's `OPENAI_API_BASE`, and jcodemunch-mcp ≥1.108.319 then refuses api.openai.com and
+  silently falls back to signature summaries. `summarizer_healthcheck` (config) DEFERs the
+  build and prints `⚠️ ACTION NEEDED — AI summarizer (ollama …) is DOWN` at session start
+  when ollama is unreachable (probe fails open); tests stub `_summarizer_alive`.
+- Claude Code saves any hook `additionalContext` over 8,000 chars to a file and shows the
+  model a 2 KB preview. Every `budgets.chars` stays under that; the aggregator keeps to
+  `MAX_AGGREGATED_CHARS` (5,500) and upgrades core-skill pointers to full bodies only
+  while they fit (`test_session_start_budget.py`).
+- Guards key on this checkout as well as `$HOME`: `NEVER_INDEX` and dox `resolve_root`
+  include `Path(__file__)`'s repo, and the aggregator spawns no index/tdd writers under
+  `CLAUDE_HOOK_DOCTOR`. A sandbox-HOME test run once dox-swept the real `~/.claude`.
+- `paths:`-scoped skills are unknown to the Skill tool until a matching file is read.
+  The router says `Read ~/.claude/skills/<name>/SKILL.md` for them, and
+  `gen-agent-skill-blocks.py` writes a `<!-- path-skills -->` Read block into agent bodies
+  (their `skills:` preload silently skips those).
+- tdd-guard (Sonnet via the Agent SDK) takes 4-7.3 s: gate 15 s < launcher 16 s < link 17 s.
 - `settings.json` is rendered — edit `settings.template.json`, then `installer/render.py`.
 
 ## Up / down

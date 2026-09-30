@@ -2,8 +2,8 @@
 """tdd-guard-gate.py — run tdd-guard in WARN mode, scoped to the project.
 
 Invoked by tdd_guard_launcher.py (only for active git projects; never HOME).
-Time-boxed to 7 s — the result is advisory, so a slow validator is dropped, not
-waited for. Reads the hook payload on stdin and:
+Time-boxed to TDD_TIMEOUT_S (15 s) — the result is advisory, so a hung validator is
+dropped, not waited for. Reads the hook payload on stdin and:
 
   1. SCOPE — if the edited file is OUTSIDE the active project root, allow it
      silently (tdd-guard governs the project's own code, not ~/.claude infra,
@@ -24,6 +24,9 @@ import sys
 from pathlib import Path
 
 FILE_TOOLS = {"Write", "Edit", "MultiEdit"}
+# Sonnet via the Agent SDK takes 4-7.3 s per call (2026-09-30); 7 s dropped the slow
+# tail silently. Launcher and dispatch link timeouts must stay above this.
+TDD_TIMEOUT_S = 15
 
 
 def _within(path: str, root: str) -> bool:
@@ -105,7 +108,7 @@ def main() -> int:
     # 2. Run tdd-guard.
     try:
         proc = subprocess.run(
-            ["tdd-guard"], input=raw, capture_output=True, text=True, timeout=7
+            ["tdd-guard"], input=raw, capture_output=True, text=True, timeout=TDD_TIMEOUT_S
         )
         out, rc = proc.stdout, proc.returncode
     except Exception:

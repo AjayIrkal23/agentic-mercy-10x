@@ -102,3 +102,35 @@ def test_configure_dry_run_and_missing_binary_never_write(jc, monkeypatch):
     p.parent.mkdir(parents=True)
     p.write_text(STOCK, encoding="utf-8")
     assert jc.configure(dry_run=True)[1].startswith("WOULD-SET")
+
+
+def _fake_index(jc, name: str, source_root: str) -> None:
+    import sqlite3
+    idx = jc.config_path().parent
+    idx.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(str(idx / f"local-{name}.db"))
+    conn.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+    conn.executemany("INSERT INTO meta VALUES (?, ?)",
+                     [("repo", f"local/{name}"), ("source_root", source_root)])
+    conn.commit()
+    conn.close()
+
+
+def test_home_rooted_index_is_a_gap_and_gets_deleted(jc, monkeypatch):
+    """An index rooted at $HOME swallows every repo below it without its own index
+    (identity 'respects existing index'), so the probe never finds a per-repo db."""
+    _fake_index(jc, "someone", str(Path.home()))
+    _fake_index(jc, "proj", str(Path.home() / "code" / "proj"))
+    assert jc.home_indexes() == ["local/someone"]
+    p = jc.config_path()
+    p.write_text(STOCK, encoding="utf-8")
+    assert "home-index:local/someone" in jc.gaps()
+    calls = []
+    monkeypatch.setattr(jc.shutil, "which", lambda name: "/fake/jcodemunch-mcp")
+    monkeypatch.setattr(jc.plat, "run", lambda cmd, **kw: calls.append(cmd) or subprocess.CompletedProcess(cmd, 0, "", ""))
+    jc.configure()
+    assert [c for c in calls if c[1] == "delete-index"] == [["/fake/jcodemunch-mcp", "delete-index", "local/someone"]]
+
+
+def test_graphify_output_is_never_indexed(jc):
+    assert "**/graphify-out/**" in jc.required()["extra_ignore_patterns"]

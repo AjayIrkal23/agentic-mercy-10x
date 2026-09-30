@@ -381,7 +381,7 @@ def main() -> int:
         path.write_text(content, encoding="utf-8", newline="\n")
     print(f"gen-invoke-skills: wrote {len(rendered)} files under {_rel(SKILLS_DIR)}/")
     for p in stale:
-        print(f"  warning: unexpected {_rel(p)}/ is not generated from config — delete it")
+        print(f"  warning: unexpected {_rel(p)}/ is not generated from config - delete it")
     return 0
 
 

@@ -113,12 +113,27 @@ def test_dox_sweep_writes_sidecar_and_curates_index(tmp_path):
     assert (repo / dox.DATA_REL / dox.SIDECAR_NAME).is_file()
     assert (repo / "src" / "CLAUDE.md").is_file()
     # untouched template child is NOT indexed …
-    root_doc = (repo / "CLAUDE.md").read_text()
+    root_doc = (repo / "CLAUDE.md").read_text(encoding="utf-8")
     assert "src/CLAUDE.md" not in root_doc
     # … until someone fleshes it out.
     (repo / "src" / "CLAUDE.md").write_text("<!-- dox:child v1 -->\n# src\nReal docs.\n")
     dox.sweep(repo, cfg, create=True)
-    assert "src/CLAUDE.md" in (repo / "CLAUDE.md").read_text()
+    assert "src/CLAUDE.md" in (repo / "CLAUDE.md").read_text(encoding="utf-8")
+
+
+def test_dox_fallback_child_stub_is_not_indexed(tmp_path, monkeypatch):
+    """No dox-doc-tree templates on disk (fresh checkout, bare HOME) -> the built-in
+    fallback stub must still read as template-only, or sweep indexes empty stubs."""
+    dox = _load("dox_engine_ut", "dox_engine.py")
+    monkeypatch.setattr(dox, "REFS_DIR", tmp_path / "no-templates")
+    repo = tmp_path / "repo"
+    (repo / "src").mkdir(parents=True)
+    (repo / ".git").mkdir()
+    for n in ("a", "b", "c"):
+        (repo / "src" / f"{n}.py").write_text("x = 1\n")
+    dox.sweep(repo, dox.load_cfg(None, root=repo), create=True)
+    assert (repo / "src" / "CLAUDE.md").is_file()
+    assert "src/CLAUDE.md" not in (repo / "CLAUDE.md").read_text(encoding="utf-8")
 
 
 # --------------------------------------------------------------------------- #
@@ -247,7 +262,8 @@ def test_suite_gate_passes_turn_without_code_writes(tmp_path):
     cid = f"isg-nocode-{os.getpid()}"
     assert _suite_gate_run(tmp_path, cid, [("Bash", ""), ("Read", "/app/src/x.tsx")]) == {}
     # infra/docs-only writes are not code for the suite gate either
-    assert _suite_gate_run(tmp_path, cid, [("Edit", str(_HOOKS / "x.py")),
+    # (fixed ~/.claude path: `_HOOKS` is only under `.claude/hooks/` when checked out at ~/.claude)
+    assert _suite_gate_run(tmp_path, cid, [("Edit", "home/.claude/hooks/x.py"),
                                            ("Write", "/app/docs/notes.md")]) == {}
     _isg_cleanup(cid)
 
@@ -405,3 +421,14 @@ def test_dox_cleanup_keeps_hand_edited_agents_md(tmp_path):
     assert set(pairs) == {"plain", "legacy", "edited"}
     assert pairs["plain"] is not None and pairs["legacy"] is not None
     assert pairs["edited"] is None
+
+
+def test_tdd_guard_timeouts_nest_above_validator_latency():
+    """tdd-guard (Sonnet via the Agent SDK) takes 4-7.3 s per call (2026-09-30). The old
+    7 s cap dropped the slow tail silently, so a test-less edit got no advisory. Each
+    outer layer must outlast the inner one, all inside the 30 s PreToolUse timeout."""
+    gate = _load("tdd_gate_t", "tdd-guard-gate.py").TDD_TIMEOUT_S
+    launcher = _load("tdd_launch_t", "tdd_guard_launcher.py")._GATE_TIMEOUT_S
+    link = next(ln for ln in json.loads((_HOOKS / "dispatch.config.json").read_text(encoding="utf-8"))
+                ["chains"]["pre-tool-use"] if ln["id"] == "tdd-guard-launcher-pre")["timeout_ms"] / 1000
+    assert 12 <= gate < launcher < link < 30

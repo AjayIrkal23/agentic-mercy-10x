@@ -43,7 +43,7 @@ except Exception:  # pragma: no cover - fail-open (no root → inactive)
 
 # Matches the grep the .sh used: "guardEnabled" : false (tolerant of raw/malformed JSON).
 _DISABLED_RE = re.compile(r'"guardEnabled"\s*:\s*false')
-_GATE_TIMEOUT_S = 8
+_GATE_TIMEOUT_S = 16  # > tdd-guard-gate.TDD_TIMEOUT_S, < the dispatch link timeout
 
 
 def main() -> int:

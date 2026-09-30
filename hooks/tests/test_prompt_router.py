@@ -12,9 +12,12 @@ Runnable: `python3 -m pytest hooks/tests/test_prompt_router.py -q`.
 from __future__ import annotations
 
 import json
+import os
 import pathlib
 import subprocess
 import sys
+
+import pytest
 
 _HOOKS = pathlib.Path(__file__).resolve().parents[1]
 if str(_HOOKS) not in sys.path:
@@ -30,16 +33,31 @@ from prompt_router.modules import mcp_routes as _mcp  # noqa: E402
 # --------------------------------------------------------------------------- #
 # helpers
 # --------------------------------------------------------------------------- #
-def _run_router(payload: dict, argv=None) -> dict:
+@pytest.fixture(scope="module")
+def fake_home(tmp_path_factory):
+    """Hermetic HOME whose ~/.claude.json registers the MCP servers the router
+    routes to — the router only emits lines for registered servers, so tests must
+    not depend on this machine's real ~/.claude.json."""
+    home = tmp_path_factory.mktemp("home")
+    (home / ".claude.json").write_text(json.dumps({"mcpServers": {
+        n: {} for n in ("jcodemunch", "jdocmunch", "graphify", "sequential-thinking")}}),
+        encoding="utf-8")
+    return home
+
+
+def _run_router(payload: dict, argv=None, home=None) -> dict:
     cmd = [sys.executable, str(_HOOKS / "prompt_router" / "router.py")] + (argv or [])
-    cp = subprocess.run(cmd, input=json.dumps(payload), text=True,
+    env = None
+    if home is not None:
+        env = {**os.environ, "HOME": str(home), "USERPROFILE": str(home)}
+    cp = subprocess.run(cmd, input=json.dumps(payload), text=True, env=env,
                         capture_output=True, timeout=30, check=False)
     out = cp.stdout.strip().splitlines()
     return json.loads(out[-1]) if out else {}
 
 
-def _ac(payload: dict, argv=None) -> str:
-    return _run_router(payload, argv).get("hookSpecificOutput", {}).get("additionalContext", "")
+def _ac(payload: dict, argv=None, home=None) -> str:
+    return _run_router(payload, argv, home).get("hookSpecificOutput", {}).get("additionalContext", "")
 
 
 def _uid(tag: str) -> str:
@@ -135,17 +153,16 @@ def test_short_real_prompt_still_triggers_e2e():
 # --------------------------------------------------------------------------- #
 # substrate directives — MCP-first "call X now" (D17 reversed 2026-09-28)
 # --------------------------------------------------------------------------- #
-def test_substrate_directives_when_applicable():
+def test_substrate_directives_when_applicable(fake_home):
     payload = {"prompt": "debug and refactor the architecture, update the README docs, "
                          "trace the dependency graph and blast radius",
                "session_id": _uid("substrate")}
-    body = _ac(payload)
+    body = _ac(payload, home=fake_home)
     assert "jcodemunch" in body
     assert "jdocmunch" in body
     assert "graphify" in body
     assert "dox:" not in body   # static dox line dropped — CLAUDE.md carries it
-    if "sequential-thinking" in _mcp.available_servers():
-        assert "mcp__sequential-thinking__sequentialthinking" in body
+    assert "mcp__sequential-thinking__sequentialthinking" in body   # registered in fake_home
 
 
 def _mcp_items(prompt: str, servers: set[str], port=None, cwd="/nonexistent-dir") -> list[str]:
@@ -211,8 +228,9 @@ def test_hooks_word_is_not_react_without_fe_context():
     assert "frontend" in surf
 
 
-def test_jcodemunch_directive_is_intent_specific():
-    body = _ac({"prompt": "debug why the export handler returns a 500", "session_id": _uid("jcmdebug")})
+def test_jcodemunch_directive_is_intent_specific(fake_home):
+    body = _ac({"prompt": "debug why the export handler returns a 500", "session_id": _uid("jcmdebug")},
+               home=fake_home)
     assert "get_call_hierarchy" in body
 
 

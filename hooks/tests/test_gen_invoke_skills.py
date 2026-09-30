@@ -9,8 +9,8 @@ spec = importlib.util.spec_from_file_location("gen_invoke_skills", HOOKS / "gen-
 gen = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gen)
 
-CFG = json.loads((HOOKS / "autonomous-skill-router.config.json").read_text())
-POLICY = json.loads((HOOKS / "model-policy.json").read_text())
+CFG = json.loads((HOOKS / "autonomous-skill-router.config.json").read_text(encoding="utf-8"))
+POLICY = json.loads((HOOKS / "model-policy.json").read_text(encoding="utf-8"))
 
 
 def test_act_table_is_canonical_and_from_config():
@@ -47,9 +47,20 @@ def test_check_flags_unexpected_invoke_dir(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(gen, "SKILLS_DIR", tmp_path)
     for path, content in gen.render_all(CFG, POLICY).items():
         path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(content)
+        path.write_text(content, encoding="utf-8")  # content has non-ASCII (banner); locale codec differs on Windows
     monkeypatch.setattr(sys, "argv", ["gen", "--check"])
     assert gen.main() == 0
     (tmp_path / "invoke-cleanup").mkdir()
     assert gen.main() == 1
     assert "unexpected" in capsys.readouterr().out
+
+
+def test_console_output_is_ascii_safe(tmp_path, monkeypatch, capsys):
+    """Progress/warning lines must survive any Windows console codepage (cp437 …)."""
+    monkeypatch.setattr(gen, "SKILLS_DIR", tmp_path)
+    (tmp_path / "invoke-cleanup").mkdir()
+    monkeypatch.setattr(sys, "argv", ["gen"])
+    assert gen.main() == 0
+    out = capsys.readouterr().out
+    assert "unexpected" in out
+    out.encode("ascii")

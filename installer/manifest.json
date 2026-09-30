@@ -165,7 +165,7 @@
   {"name": "sequential-thinking", "add": ["claude", "mcp", "add", "--scope", "user", "sequential-thinking", "--", "npx", "-y", "@modelcontextprotocol/server-sequential-thinking"], "ci_stub": true},
   {"name": "context7", "env_from": ["CONTEXT7_API_KEY"], "add": ["claude", "mcp", "add", "--scope", "user", "context7", "--", "npx", "-y", "@upstash/context7-mcp"], "ci_stub": true, "note": "export CONTEXT7_API_KEY before installing for higher rate limits (works without)."},
   {"name": "github", "posix_only": true, "add": ["claude", "mcp", "add", "--scope", "user", "github", "--", "sh", "-c", "GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) exec npx -y @modelcontextprotocol/server-github"], "windows_add": ["claude", "mcp", "add", "--scope", "user", "github", "--", "{PYTHON}", "{CLAUDE_DIR}/scripts/github-mcp-launcher.py"], "ci_stub": true, "note": "token read at launch from `gh auth token` (never stored). Windows has no `sh`: windows_add runs scripts/github-mcp-launcher.py, which does the same."},
-  {"name": "playwright", "add": ["claude", "mcp", "add", "--scope", "user", "playwright", "--", "npx", "-y", "@playwright/mcp@0.0.82"], "ci_stub": true},
+  {"name": "playwright", "add": ["claude", "mcp", "add", "--scope", "user", "playwright", "--", "npx", "-y", "@playwright/mcp@0.0.82", "--browser", "chromium"], "ci_stub": true, "note": "--browser chromium: the default 'chrome' channel needs Google Chrome at a system path; bundled chromium comes from post-step playwright-chromium."},
   {"name": "browser-tools-mcp", "add": ["claude", "mcp", "add", "--scope", "user", "browser-tools-mcp", "--", "npx", "-y", "@agentdeskai/browser-tools-mcp@2.0.2"], "ci_stub": true},
   {"name": "markdownify", "add": ["claude", "mcp", "add", "--scope", "user", "markdownify", "--", "npx", "-y", "mcp-markdownify-server"], "ci_stub": true},
   {"name": "semgrep", "add": ["claude", "mcp", "add", "--scope", "user", "semgrep", "-e", "SEMGREP_MCP_DISABLE_TRACING=true", "-e", "SEMGREP_FINDINGS_DISABLED=true", "-e", "SEMGREP_SCAN_SUPPLY_CHAIN_DISABLED=true", "--", "semgrep", "mcp"], "ci_stub": true, "note": "tracing off; login-only tools hidden. Callers pass an explicit config (p/default …)."},
@@ -223,13 +223,14 @@
    "trusted_folders": ["{HOME}"],
    "max_folder_files": 8000,
    "max_index_files": 20000,
-   "extra_ignore_patterns": ["attic/**", "**/attic/**", "**/node_modules/**", "**/*.umd.js", "**/*.min.js", "**/.playwright-mcp/**", "**/.claude/**", "**/dist/**", "**/build/**", "**/coverage/**", "**/test-results/**", "**/playwright-report/**"],
+   "extra_ignore_patterns": ["attic/**", "**/attic/**", "**/node_modules/**", "**/*.umd.js", "**/*.min.js", "**/.playwright-mcp/**", "**/.claude/**", "**/dist/**", "**/build/**", "**/coverage/**", "**/test-results/**", "**/playwright-report/**", "**/graphify-out/**"],
    "use_ai_summaries": true,
    "summarizer_provider": "openai",
    "summarizer_model": "qwen2.5-coder:3b"
   }
  },
  "post_steps": [
+  {"id": "playwright-chromium", "cmd": ["npx", "-y", "playwright@1.64.0-alpha-1789764292000", "install", "chromium"], "network": true, "optional": true, "note": "bundled chromium for the playwright MCP (registered with --browser chromium); version = the playwright that @playwright/mcp@0.0.82 pins."},
   {"id": "vendor-skills", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/scripts/vendor_skill.py", "--all"], "network": true, "optional": true, "note": "re-vendor all third-party skills at their pinned refs (hooks/skills-sources.json) + rebaseline R10."},
   {"id": "gen-invoke-skills", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/hooks/gen-invoke-skills.py"], "optional": true, "note": "render the /invoke delegator skills from model-policy + categories."},
   {"id": "gen-agent-skill-blocks", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/hooks/gen-agent-skill-blocks.py"], "optional": true, "note": "sync agent skill-loading blocks from routing config."},

@@ -82,7 +82,9 @@ SURFACES = ("jcodemunch", "jdocmunch", "graphify", "dox")
 # graphify, jdocmunch, dox) burns CPU on every hook edit for zero retrieval
 # value, and $HOME additionally drags the whole home tree in. Excluded from ALL
 # four surfaces. User directive 2026-08-16.
-NEVER_INDEX = (HOME, HOME / ".claude", HOME / ".codex")
+# The checkout holding this file is listed too: HOME alone let a run under a
+# sandbox HOME (tests, CI) index and dox-sweep the real ~/.claude.
+NEVER_INDEX = (HOME, HOME / ".claude", HOME / ".codex", Path(__file__).resolve().parents[1])
 
 DOC_GLOBS = ["*.md", "*.mdx", "*.markdown", "*.rst", "*.adoc", "*.txt",
              "*.yaml", "*.yml", "*.html", "*.ipynb"]
@@ -97,6 +99,8 @@ _DEFAULT_CONFIG = {
     "incremental_file_cap": 20,
     "surfaces_enabled": {"jcodemunch": True, "jdocmunch": True, "graphify": True, "dox": True},
     "relax_read_gate_while_building": True,
+    "summarizer_healthcheck": {"enabled": True, "url": "http://localhost:11434/api/tags",
+                               "timeout_ms": 800},
 }
 
 
@@ -117,16 +121,64 @@ def _which(name: str) -> bool:
     return shutil.which(name) is not None
 
 
-def _run(cmd, timeout):
-    """Never-raising subprocess.run (delegates to lib.platform.run)."""
+def _run(cmd, timeout, env=None):
+    """Never-raising subprocess.run (delegates to lib.platform.run).
+
+    ``env`` (when given) replaces the child's environment.
+    """
     if _LIBS_OK:
-        return plat.run(cmd, timeout=timeout)
+        return plat.run(cmd, timeout=timeout, env=env)
     import subprocess
     try:
         return subprocess.run(list(cmd), capture_output=True, text=True,
-                              timeout=timeout, check=False)
+                              timeout=timeout, check=False, env=env)
     except Exception as exc:  # noqa: BLE001
         return subprocess.CompletedProcess(cmd, 127, "", str(exc))
+
+
+def _summarizer_alive(url: str, timeout_ms: int) -> bool:
+    """Liveness probe for the local AI summarizer (ollama).
+
+    True if the endpoint answers at all (any HTTP status means the server is
+    up); False only on a genuine connection-level failure (refused / timeout /
+    DNS). Fails OPEN on a probe malfunction so a broken probe never freezes
+    indexing — only a real "ollama down" defers.
+    """
+    import urllib.error
+    import urllib.request
+    timeout = max(0.2, (timeout_ms or 800) / 1000.0)
+    if not str(url).startswith(("http://", "https://")):
+        return True  # no file:// or other schemes; a bad config never blocks indexing
+    try:
+        urllib.request.urlopen(  # noqa: S310 - http(s) health URL from config
+            urllib.request.Request(url, method="GET"), timeout=timeout)
+        return True
+    except urllib.error.HTTPError:
+        return True
+    except urllib.error.URLError:
+        return False
+    except Exception:  # noqa: BLE001 - probe malfunction => never block indexing
+        return True
+
+
+def _jcodemunch_env() -> dict:
+    """os.environ + the env block of mcpServers.jcodemunch in ~/.claude.json.
+
+    The MCP server gets its summarizer endpoint (OPENAI_API_BASE, ...) from that
+    block; a CLI spawned from a hook does not inherit it, and jcodemunch-mcp then
+    defaults to api.openai.com and refuses it, silently degrading every summary
+    to the signature/docstring fallback. Absent/unparsable file => plain
+    os.environ. Values are never logged.
+    """
+    env = dict(os.environ)
+    try:
+        data = json.loads((Path.home() / ".claude.json").read_text(encoding="utf-8"))
+        extra = data["mcpServers"]["jcodemunch"]["env"]
+        env.update({k: v for k, v in extra.items()
+                    if isinstance(k, str) and isinstance(v, str)})
+    except Exception:  # noqa: BLE001 - missing file / bad shape => no extra env
+        pass
+    return env
 
 
 def _pid_alive(pid: int) -> bool:
@@ -518,9 +570,30 @@ def _probe_all(ctx, state: dict, cfg: dict) -> dict:
 # --------------------------------------------------------------------------- #
 # Builders (single-shot, time-boxed, run inside the detached worker)
 # --------------------------------------------------------------------------- #
-def _build_jcodemunch(root: Path, incremental: bool, paths, cfg: dict) -> bool:
+def _summarizer_cfg(cfg: dict) -> tuple:
+    hc = cfg.get("summarizer_healthcheck") or {}
+    return (bool(hc.get("enabled", True)),
+            hc.get("url", "http://localhost:11434/api/tags"),
+            hc.get("timeout_ms", 800))
+
+
+def _summarizer_down(cfg: dict) -> bool:
+    enabled, url, timeout_ms = _summarizer_cfg(cfg)
+    return enabled and not _summarizer_alive(url, timeout_ms)
+
+
+def _build_jcodemunch(root: Path, incremental: bool, paths, cfg: dict):
+    """True/False, or "DEFERRED" when the AI summarizer (ollama) is down."""
     if not _which("jcodemunch-mcp"):
         return False
+    # Fail loud, never degrade silently: with the summarizer down a reindex would
+    # overwrite good prose summaries with signature fallback AND report success.
+    # Leave the index untouched and let the worker retry later (mode_build).
+    if _summarizer_down(cfg):
+        _telem("summarizer_down_build_deferred", surface="jcodemunch",
+               key=_repo_key(root), incremental=bool(incremental))
+        return "DEFERRED"
+    env = _jcodemunch_env()
     to = cfg["build_timeouts_s"]["jcodemunch"]
     if incremental and paths and len(paths) <= cfg["incremental_file_cap"]:
         # Only CODE files go to `index-file` (md/json journal entries used to fail
@@ -534,13 +607,13 @@ def _build_jcodemunch(root: Path, incremental: bool, paths, cfg: dict) -> bool:
             return True
         failed = 0
         for pth in code_paths:
-            cp = _run(["jcodemunch-mcp", "index-file", str(pth)], timeout=to)
+            cp = _run(["jcodemunch-mcp", "index-file", str(pth)], timeout=to, env=env)
             if cp.returncode != 0:
                 failed += 1
                 _telem("index_file_fail", surface="jcodemunch", path=str(pth)[-120:],
                        rc=cp.returncode)
         return failed < len(code_paths)
-    cp = _run(["jcodemunch-mcp", "index", str(root)], timeout=to)
+    cp = _run(["jcodemunch-mcp", "index", str(root)], timeout=to, env=env)
     return cp.returncode == 0
 
 
@@ -716,6 +789,19 @@ def mode_session_start(payload: dict, cfg: dict) -> int:
                 rec["failures"] = 0
             lines.append(f"{surface} index: FRESH — `{ctx.name}`")
         else:  # STALE or MISSING
+            if surface == "jcodemunch" and _summarizer_down(cfg):
+                # ollama DOWN: a rebuild would overwrite good AI summaries with
+                # signature fallback. Skip it, keep the state, tell the user loudly;
+                # the next session-start re-probes and retries.
+                rec["state"] = st
+                lines.append(
+                    f"⚠️ ACTION NEEDED — AI summarizer (ollama, {_summarizer_cfg(cfg)[1]}) "
+                    f"is DOWN. jcodemunch reindex for `{ctx.name}` was SKIPPED so "
+                    f"existing AI summaries are not overwritten with fallback. Start "
+                    f"ollama, then reindex (`mcp__jcodemunch__index_folder` or open a "
+                    f"new session).")
+                state.setdefault("surfaces", {})[surface] = rec
+                continue
             failures = prior.get("failures", 0)
             backed_off = (prior.get("state") == FAILED
                           and failures >= maxf
@@ -867,7 +953,17 @@ def mode_build(args, cfg: dict) -> int:
         # with a concurrent post-write appending to the journal).
         state = _load_state(ctx)
         prior = state.get("surfaces", {}).get(surface, {})
-        if ok:
+        if ok == "DEFERRED":
+            # Summarizer down — index left intact. NOT a failure (no backoff): keep
+            # the prior fingerprint/failures so the next session-start re-probes
+            # STALE and retries once ollama is back.
+            state.setdefault("surfaces", {})[surface] = {
+                "state": STALE, "fingerprint": prior.get("fingerprint", {}),
+                "checked_at": int(time.time()), "built_at": prior.get("built_at"),
+                "failures": prior.get("failures", 0)}
+            _telem("build_deferred", surface=surface, key=ctx.key,
+                   reason="summarizer_down")
+        elif ok:
             try:
                 st, fp, _ = _PROBE[surface](root, prior, cfg)
             except Exception:  # noqa: BLE001

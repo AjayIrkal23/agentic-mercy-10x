@@ -80,7 +80,7 @@ re-check) happens automatically until the doctor reports 0 FAIL.
 | `ui.py` / `ui.html` | stdlib visual installer; auto-runs the loop on boot; live progress + status |
 | `deps.py` | idempotent deps/MCP/plugins/post-steps from `manifest.json` (post-step script = first `.py` arg — NOT `cmd[1]`; `{PYTHON}`→`py -3` shifts the index on Windows) |
 | `doctor.py` | health verifier (link-doctor, render, settings-safety, lean-ctx-config, jcodemunch-config, plugins-contract, generated-in-sync, R9/R10, mcp-roster, ollama …); `--ci` skips machine rows; its 0-FAIL is the loop's success gate |
-| `jcodemunch_config.py` | keeps `~/.code-index/config.jsonc` on `manifest.jcodemunch_config.keys` (tool_surface full, AI summaries, trusted home); writes only via `jcodemunch-mcp config set` (install pass + repair of row `jcodemunch-config`) |
+| `jcodemunch_config.py` | keeps `~/.code-index/config.jsonc` on `manifest.jcodemunch_config.keys` (tool_surface full, AI summaries, trusted home); writes only via `jcodemunch-mcp config set` (install pass + repair of row `jcodemunch-config`); also deletes indexes rooted at `$HOME`/`~/.claude`/`~/.codex` (they swallow every repo below them) |
 | `verify.py` | read-only workflow status → the UI's live preflight sections (version probes run with stdin closed: `tdd-guard` has no `--version` and waits on stdin, and on Windows the timeout only kills the `.cmd` shim) |
 | `detect.py`, `render.py`, `links.py`, `manifest.json` | env detection · settings.json render (equivalence gate) · skill links · install contract |
 
