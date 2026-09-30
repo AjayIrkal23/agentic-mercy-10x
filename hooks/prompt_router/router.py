@@ -227,9 +227,15 @@ def _skill_items(profile, ctx: dict) -> list[dict]:
         if len(desc) > 120:
             desc = desc[:117].rstrip() + "..."
         tail = f" — {desc}" if desc else ""
+        action = f"ACTION: Skill(\"{name}\") before the related work."
+        # A `paths:`-scoped skill is not in the Skill tool's listing until a matching
+        # file is touched ("Unknown skill"), so name the file; a Read counts as loaded.
+        path = _select.skill_path(name) if (meta.get(name) or {}).get("paths") else None
+        if path:
+            action += f" Path-scoped: if the Skill tool does not list it yet, Read {path}."
         items.append({
             "id": f"skill:{name}:{top_intent}:{surf_salt}", "tier": 2, "section": "SKILLS",
-            "text": f"- **{name}** ({label}){tail}\n  ACTION: Skill(\"{name}\") before the related work.",
+            "text": f"- **{name}** ({label}){tail}\n  {action}",
             "score": round(score, 2),
         })
 

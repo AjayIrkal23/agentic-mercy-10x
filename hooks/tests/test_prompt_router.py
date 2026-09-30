@@ -236,3 +236,21 @@ def test_router_fail_open_on_internal_error():
         json.loads(cap.getvalue().strip().splitlines()[-1])
     finally:
         R._gather_items = orig
+
+
+# --------------------------------------------------------------------------- #
+# path-scoped skills: no dead Skill() push
+# --------------------------------------------------------------------------- #
+def test_path_scoped_skill_push_names_its_file():
+    """Claude Code keeps a `paths:`-scoped skill out of the Skill tool's listing until a
+    matching file is touched (`Unknown skill`), so its push must also name the file."""
+    import re
+    out = _ac({"prompt": "add a paginated GET /products endpoint with input validation",
+               "session_id": _uid("pathscoped"), "cwd": "/nonexistent-dir"})
+    meta = R._select.index_meta()
+    pushed = re.findall(r"^- \*\*([\w:.-]+)\*\* \((?:MUST|SHOULD)-READ\).*\n  (ACTION: .*)$",
+                        out, re.M)
+    scoped = [(n, a) for n, a in pushed if (meta.get(n) or {}).get("paths")]
+    assert scoped, f"expected a paths:-scoped skill for a backend API prompt: {pushed}"
+    for name, action in scoped:
+        assert f'Skill("{name}")' in action and "SKILL.md" in action, (name, action)

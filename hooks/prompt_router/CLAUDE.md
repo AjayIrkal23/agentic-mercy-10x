@@ -26,7 +26,9 @@ starts servers or mutates the repo; side effects are the session manifest,
   rebuild it with `python3 hooks/build-trigger-floor.py` and verify `--check`.
 - **Plugin skills are `plugin:skill`** (e.g. `nateherk-design:scroll-craft`) and
   every ranked candidate must exist on disk (`select.skill_exists`) — no dead
-  `Skill()` pushes.
+  `Skill()` pushes. A `paths:`-scoped skill is "Unknown skill" to the Skill tool until a
+  matching file is touched, so its push also names the `SKILL.md` to Read (the tracker
+  counts a Read as loaded).
 - Skills in `core-skill-set.json` are never re-pushed; aliases collapse via
   `lib.skill_aliases` (fallback `skill-aliases.json`).
 - Run `python3 -m py_compile` on every edited module before the next prompt —
