@@ -25,6 +25,8 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 | `test_prompt_router.py`, `test_router_surface.py`, `test_surface_classification.py` | router classify/rank/output shape, stack/cwd surface, FE/BE detection, path-scoped push = Read |
 | `test_mcp_post_hints.py` | PostToolUse MCP hints + memory search directive |
 | `test_gates.py` | Stop/Pre gates incl. invoke-suite-gate 1-nag cap |
+| `test_gateguard.py` | gateguard-write-gate counts Python importers (5 → `ask`, 4 → `{}`, comment/string mentions ignored) |
+| `test_blocking_doc_enforcer.py` | `git commit` in GO_UDP/UDP_PLATFORM denied until docs + `PROJECT_LINKAGES.md` are written; other repos, amends, no-state pass |
 | `test_opus_guard.py`, `test_workflow_model_guard.py`, `test_model_mode.py`, `test_model_advice.py` | model routing (pins, escalation, routing log) |
 | `test_model_policy_consistency.py` | agent frontmatter / template env / escalation agree with `model-policy.json`; `max` effort banned |
 | `test_gen_invoke_skills.py` | `/invoke` skill generator determinism |

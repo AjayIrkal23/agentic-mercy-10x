@@ -72,6 +72,16 @@ def _grep_pattern_for(file_path: str) -> tuple[str, list[str]]:
     if ext == ".go":
         pattern = f'".*/{re.escape(stem)}"|package {re.escape(stem)}'
         includes = ["--include=*.go"]
+    elif ext == ".py":
+        # POSIX ERE (GNU + git-bash grep): `from [pkg.|.|..x.]stem import`, or an
+        # `import` / `from X import` line naming stem as a whole word after `import`.
+        s, w = re.escape(stem), "[^A-Za-z0-9_]"
+        pattern = (
+            f"^[[:space:]]*(from[[:space:]]+([.A-Za-z0-9_]*[.])?{s}[[:space:]]+import"
+            f"|(from[[:space:]]+[.A-Za-z0-9_]+[[:space:]]+)?import[[:space:]](.*{w})?{s}({w}|$))"
+        )
+        includes = ["--include=*.py", "--exclude-dir=__pycache__",
+                    "--exclude-dir=.venv", "--exclude-dir=venv"]
     else:
         pattern = "from.*/" + re.escape(stem) + "|require.*/" + re.escape(stem)
         includes = [

@@ -230,7 +230,7 @@
   }
  },
  "post_steps": [
-  {"id": "playwright-chromium", "cmd": ["npx", "-y", "playwright@1.64.0-alpha-1789764292000", "install", "chromium"], "network": true, "optional": true, "note": "bundled chromium for the playwright MCP (registered with --browser chromium); version = the playwright that @playwright/mcp@0.0.82 pins."},
+  {"id": "playwright-chromium", "cmd": ["npx", "-y", "@playwright/mcp@0.0.82", "install-browser", "chrome-for-testing", "--no-remove"], "network": true, "optional": true, "note": "the browser build the pinned MCP itself expects (--browser chromium = chrome-for-testing, chromium-1246 for 0.0.82); keep the version in step with the mcp entry. --no-remove keeps other projects' browsers."},
   {"id": "vendor-skills", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/scripts/vendor_skill.py", "--all"], "network": true, "optional": true, "note": "re-vendor all third-party skills at their pinned refs (hooks/skills-sources.json) + rebaseline R10."},
   {"id": "gen-invoke-skills", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/hooks/gen-invoke-skills.py"], "optional": true, "note": "render the /invoke delegator skills from model-policy + categories."},
   {"id": "gen-agent-skill-blocks", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/hooks/gen-agent-skill-blocks.py"], "optional": true, "note": "sync agent skill-loading blocks from routing config."},
