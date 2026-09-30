@@ -227,7 +227,8 @@ def _core_skill_digests(budget: int = MAX_AGGREGATED_CHARS) -> str:
         idx = json.loads((HOOK_DIR / "skills-index.json").read_text(encoding="utf-8")).get("skills") or {}
     except Exception:  # noqa: BLE001
         pass
-    header = "[Always-active core skills] — load a pointer with the Skill tool when it applies"
+    header = ("[Always-active core skills] — load a pointer with the Skill tool when it "
+              "applies, or Read the SKILL.md it names")
     lines: list[str] = []
     bodies: list[str | None] = []
     seen: set[str] = set()
@@ -237,9 +238,12 @@ def _core_skill_digests(budget: int = MAX_AGGREGATED_CHARS) -> str:
             continue
         seen.add(name)
         desc = " ".join(((idx.get(name) or {}).get("description") or "").split())
-        lines.append(f"- {name} — {desc[:150]}")
-        body = None
         sk = HOOK_DIR.parent / "skills" / name / "SKILL.md"
+        # `paths:`-scoped skills are "Unknown skill" to the Skill tool until a matching
+        # file is read; the path goes before the description so truncation keeps it.
+        hint = f" (Read {sk.as_posix()})" if (idx.get(name) or {}).get("paths") else ""
+        lines.append(f"- {name}{hint} — {desc[:150]}")
+        body = None
         if ent.get("mode") == "full" and sk.is_file():
             try:
                 raw = sk.read_text(encoding="utf-8", errors="replace")
@@ -264,7 +268,9 @@ def _core_skill_digests(budget: int = MAX_AGGREGATED_CHARS) -> str:
             if len(render(trial)) <= budget:
                 lines = trial
     block = render(lines)
-    return block if len(block) <= budget else block[:budget]
+    if len(block) > budget:  # too tight even for pointers: keep names + Read paths
+        block = render([p.split(" — ", 1)[0] if p.startswith("- ") else p for p in lines])
+    return block[:budget]
 
 
 def _full_context(payload: dict, payload_txt: str) -> str:

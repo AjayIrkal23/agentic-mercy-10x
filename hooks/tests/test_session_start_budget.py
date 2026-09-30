@@ -38,7 +38,10 @@ def test_dispatched_session_start_fits_the_cap():
     cp = subprocess.run([sys.executable, str(HOOKS / "dispatch.py"), "session-start"], input=fixture,
                         capture_output=True, text=True, timeout=120, env=env)
     ctx = (json.loads(cp.stdout or "{}").get("hookSpecificOutput") or {}).get("additionalContext", "")
-    assert len(ctx) < CC_CONTEXT_CAP, len(ctx)
+    # dispatch truncates at budgets.chars (7,800), so length alone always passes. The
+    # style directive merges last (priority 2): if it survives, nothing was cut.
+    assert "ALWAYS-ON STYLE" in ctx, ctx[-300:]
+    assert len(ctx) < 7800, len(ctx)
 
 
 def test_core_skills_degrade_to_pointers_and_keep_every_name():
@@ -47,6 +50,17 @@ def test_core_skills_degrade_to_pointers_and_keep_every_name():
     block = agg._core_skill_digests(budget=1500)
     assert len(block) <= 1500
     assert all(agg._canonical(n) in block for n in names)
+
+
+def test_path_scoped_core_pointer_names_its_skill_file():
+    """dox-doc-tree is `paths:`-scoped (**/CLAUDE.md): the Skill tool may call it unknown."""
+    agg = _load_aggregator()
+    idx = json.loads((HOOKS / "skills-index.json").read_text(encoding="utf-8"))["skills"]
+    block = agg._core_skill_digests(budget=1500)
+    for line in block.splitlines():
+        name = line[2:].split(" ", 1)[0] if line.startswith("- ") else ""
+        if (idx.get(name) or {}).get("paths"):
+            assert f"skills/{name}/SKILL.md" in line, line
 
 
 def test_core_skills_use_full_bodies_when_they_fit():

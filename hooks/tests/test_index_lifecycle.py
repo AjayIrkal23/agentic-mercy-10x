@@ -455,6 +455,24 @@ def test_session_start_loud_line_and_no_spawn_when_summarizer_down(env, monkeypa
     assert not il._lock_path(env["ctx"].key, "jcodemunch").exists()
 
 
+def test_summarizer_down_keeps_the_indexed_fingerprint(env, monkeypatch):
+    """Deferring must not record the new (dirty) fingerprint as indexed: the next
+    session, with ollama back, would probe FRESH and never rebuild those edits."""
+    _reset(env)
+    ctx = env["ctx"]
+    indexed = {"head": "H0", "dirty_sha": "D0"}
+    st = il._load_state(ctx)
+    st.setdefault("surfaces", {})["jcodemunch"] = {"state": il.FRESH, "fingerprint": indexed}
+    il._save_state(ctx, st)
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: False)
+    for s in il.SURFACES:
+        monkeypatch.setitem(il._PROBE, s, lambda root, prior, cfg: (il.FRESH, {}, ""))
+    monkeypatch.setitem(il._PROBE, "jcodemunch",
+                        lambda root, prior, cfg: (il.STALE, {"head": "H0", "dirty_sha": "D1"}, "dirty"))
+    _silent(il.mode_session_start, env["payload"], env["cfg"])
+    assert il._load_state(ctx)["surfaces"]["jcodemunch"]["fingerprint"] == indexed
+
+
 def test_build_deferred_is_not_a_failure(env, monkeypatch):
     _reset(env)
     ctx = env["ctx"]

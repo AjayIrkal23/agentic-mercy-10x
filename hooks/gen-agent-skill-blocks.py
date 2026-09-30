@@ -167,7 +167,7 @@ def _with_path_block(body: str, scoped: list[str]) -> str:
     files = ", ".join(f"`~/.claude/skills/{s}/SKILL.md`" for s in scoped)
     block = ("\n<!-- path-skills -->\nBefore your first task, Read these preloads (they are "
              f"`paths:`-scoped, so `skills:` cannot load them yet): {files}.\n<!-- /path-skills -->\n")
-    return block + body.lstrip("\n") if body.startswith("\n") else block + body
+    return block + body.lstrip("\n")
 
 
 def _apply(text: str, m: re.Match, skills: list[str]) -> str:

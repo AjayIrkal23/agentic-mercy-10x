@@ -792,8 +792,10 @@ def mode_session_start(payload: dict, cfg: dict) -> int:
             if surface == "jcodemunch" and _summarizer_down(cfg):
                 # ollama DOWN: a rebuild would overwrite good AI summaries with
                 # signature fallback. Skip it, keep the state, tell the user loudly;
-                # the next session-start re-probes and retries.
+                # the next session-start re-probes and retries. Keep the INDEXED
+                # fingerprint: saving `fp` would make the retry probe FRESH.
                 rec["state"] = st
+                rec["fingerprint"] = prior.get("fingerprint", {})
                 lines.append(
                     f"⚠️ ACTION NEEDED — AI summarizer (ollama, {_summarizer_cfg(cfg)[1]}) "
                     f"is DOWN. jcodemunch reindex for `{ctx.name}` was SKIPPED so "
