@@ -424,6 +424,10 @@ def prompt_submit() -> int:
 # ---------------------------------------------------------------------------
 
 
+def _norm(p: str) -> str:
+    return os.path.normcase(p).replace("\\", "/")
+
+
 def _is_exempt(target: str, cfg: dict) -> bool:
     """Return True if this target should be silently allowed (non-code)."""
     suffix = Path(target).suffix.lower() if target else ""
@@ -433,17 +437,20 @@ def _is_exempt(target: str, cfg: dict) -> bool:
     if suffix in exempt_exts:
         return True
 
-    # Exempt by path prefix / substring.
-    home = str(Path.home())
+    # Exempt by path prefix / substring. Compared "/"-separated and case-folded
+    # the way the OS does (normcase is a no-op on POSIX): a Windows target has
+    # backslashes and "~" expands to a backslash home, so raw strings never matched.
+    norm = _norm(target)
+    home = _norm(str(Path.home()))
     for raw_path in cfg.get("exempt_paths", []):
-        resolved = raw_path.replace("~", home)
-        if target.startswith(resolved) or resolved in target:
+        resolved = _norm(raw_path).replace("~", home)
+        if norm.startswith(resolved) or resolved in norm:
             return True
 
     # No code extension AND no known code path segment → treat as non-code.
     if suffix not in CODE_EXTS:
         code_segments = ("/src/", "/lib/", "/pkg/", "/internal/", "/app/", "/server/", "/client/", "/cmd/")
-        if not any(seg in target for seg in code_segments):
+        if not any(seg in norm for seg in code_segments):
             return True
 
     return False
