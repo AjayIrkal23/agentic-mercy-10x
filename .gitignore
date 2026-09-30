@@ -74,6 +74,7 @@ plugins/cache/
 plugins/marketplaces/
 plugins/data/
 plugins/plugin-catalog-cache.json
+plugins/store/
 # Claude Code rewrites this timestamp at runtime (kept every tree dirty on both machines)
 /plugins/.last_inuse_sweep
 skills/node_modules/
