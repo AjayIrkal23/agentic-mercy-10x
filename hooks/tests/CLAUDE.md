@@ -22,7 +22,7 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 |------|------|
 | `test_lib_foundation.py` | `platform`, `repo_context` ($HOME ceiling), `hook_telemetry` |
 | `test_dispatch_mutator.py` | dispatcher threads mutator `updatedInput` (the dropped-mutation regression) |
-| `test_prompt_router.py`, `test_router_surface.py`, `test_surface_classification.py` | router classify/rank/output shape, stack/cwd surface, FE/BE detection |
+| `test_prompt_router.py`, `test_router_surface.py`, `test_surface_classification.py` | router classify/rank/output shape, stack/cwd surface, FE/BE detection, path-scoped push = Read |
 | `test_mcp_post_hints.py` | PostToolUse MCP hints + memory search directive |
 | `test_gates.py` | Stop/Pre gates incl. invoke-suite-gate 1-nag cap |
 | `test_opus_guard.py`, `test_workflow_model_guard.py`, `test_model_mode.py`, `test_model_advice.py` | model routing (pins, escalation, routing log) |
@@ -30,7 +30,7 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 | `test_gen_invoke_skills.py` | `/invoke` skill generator determinism |
 | `test_index_lifecycle.py` | index-lifecycle state machine, jcodemunch env passthrough, ollama-down DEFER |
 | `test_session_start_budget.py` | dispatched SessionStart and every `budgets.chars` stay under the 8,000-char cap |
-| `test_router_path_scoped.py`, `test_agent_path_skills.py` | `paths:`-scoped skills are Read, never `Skill()`-ed (router + agent bodies) |
+| `test_agent_path_skills.py` | agent bodies name their `paths:`-scoped preloads to Read (`skills:` skips them) |
 | `test_own_checkout_guard.py` | this checkout is never indexed / dox-swept under a sandbox HOME; doctor mode spawns no writers |
 
 ## Gotchas / fragile spots

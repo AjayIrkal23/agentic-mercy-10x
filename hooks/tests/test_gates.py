@@ -65,6 +65,21 @@ def test_code_files_classifier_and_home():
 
 
 # --------------------------------------------------------------------------- #
+# jcodemunch-enforce — exempt_paths must match native (Windows) separators
+# --------------------------------------------------------------------------- #
+def test_jcm_gate_exempts_claude_dir_with_native_separators():
+    jcm = _load("jcodemunch_enforce", "jcodemunch-enforce.py")
+    cfg = jcm._load_enforce_config()
+    claude = Path.home() / ".claude"
+    # str(Path) is backslashed on Windows, where "~" used to expand to a backslash
+    # home glued onto "/.claude/", so the exemption never matched there.
+    assert jcm._is_exempt(str(claude / "installer" / "doctor.py"), cfg)
+    assert jcm._is_exempt((claude / "hooks" / "dispatch.py").as_posix(), cfg)
+    assert not jcm._is_exempt("/work/repo/src/app.py", cfg)
+    assert not jcm._is_exempt(r"D:\work\repo\src\app.py", cfg)
+
+
+# --------------------------------------------------------------------------- #
 # tdd launcher — HOME cwd is never a tdd project
 # --------------------------------------------------------------------------- #
 def test_tdd_launcher_home_cwd_exits_0_silent():

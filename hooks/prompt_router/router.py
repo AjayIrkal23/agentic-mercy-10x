@@ -229,8 +229,11 @@ def _skill_items(profile, ctx: dict) -> list[dict]:
         tail = f" — {desc}" if desc else ""
         # A `paths:`-scoped skill is not in the Skill tool until a matching file is read
         # ("Unknown skill"); a Read of its SKILL.md always works and counts as loaded.
+        # The Read tool needs an absolute path, so name the real file.
         if (meta.get(name) or {}).get("paths"):
-            action = f"Read ~/.claude/skills/{name}/SKILL.md before the related work."
+            path = _select.skill_path(name)
+            path = Path(path).as_posix() if path else f"~/.claude/skills/{name}/SKILL.md"
+            action = f"Read {path} before the related work."
         else:
             action = f"Skill(\"{name}\") before the related work."
         items.append({

@@ -254,3 +254,31 @@ def test_router_fail_open_on_internal_error():
         json.loads(cap.getvalue().strip().splitlines()[-1])
     finally:
         R._gather_items = orig
+
+
+# --------------------------------------------------------------------------- #
+# path-scoped skills: no dead Skill() push
+# --------------------------------------------------------------------------- #
+def _pushed_actions(prompt: str, tag: str) -> list[tuple[str, str]]:
+    import re
+    out = _ac({"prompt": prompt, "session_id": _uid(tag), "cwd": "/nonexistent-dir"})
+    return re.findall(r"^- \*\*([\w:.-]+)\*\* \((?:MUST|SHOULD)-READ\).*\n  (ACTION: .*)$",
+                      out, re.M)
+
+
+def test_path_scoped_skill_push_is_a_read_of_its_file():
+    """Claude Code keeps a `paths:`-scoped skill out of the Skill tool's listing until a
+    matching file is touched (`Unknown skill`), so its push is a Read of the SKILL.md."""
+    meta = R._select.index_meta()
+    pushed = _pushed_actions("add a paginated GET /products endpoint with input validation",
+                             "pathscoped")
+    scoped = [(n, a) for n, a in pushed if (meta.get(n) or {}).get("paths")]
+    assert scoped, f"expected a paths:-scoped skill for a backend API prompt: {pushed}"
+    for name, action in scoped:
+        assert "Skill(" not in action and f"skills/{name}/SKILL.md" in action, (name, action)
+
+
+def test_listed_skill_push_still_uses_the_skill_tool():
+    pushed = dict(_pushed_actions("the checkout total is wrong intermittently, find the root cause",
+                                  "listed"))
+    assert 'Skill("debug-investigation")' in pushed.get("debug-investigation", ""), pushed

@@ -24,11 +24,12 @@ Nothing else belongs here — not app assets, not skill assets.
 | `hero.webp` | Top banner — orchestrated dev pipeline |
 | `token-economics.webp` · `auto-index.webp` · `codebase-navigation.webp` | Intel / token-saving story |
 | `superpowers-grid.webp` | The eight-superpowers overview |
-| `standards-frontend/backend/scaffold/api-contract.webp` | Structure & standards |
+| `standards-frontend.webp` · `standards-backend.webp` · `scaffold-standards.webp` · `api-contract.webp` | Structure & standards |
 | `skill-router.webp` · `invoke-team.webp` | Orchestration (router + /invoke chain) |
 | `hooks-lifecycle.webp` · `hooks-gates.webp` | Hook enforcement |
-| `uiux-antislop/stack-flow/designer-loop.webp` | Anti-slop UI/UX |
+| `uiux-antislop.webp` · `uiux-stack-flow.webp` · `uiux-designer-loop.webp` | Anti-slop UI/UX |
 | `codebase-structure.webp` | Before/after structure |
+| `dox-tree.webp` | The dox CLAUDE.md tree |
 
 ## Gotchas / fragile spots
 
