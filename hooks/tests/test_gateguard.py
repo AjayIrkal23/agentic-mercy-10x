@@ -102,3 +102,14 @@ def test_python_stem_in_comment_or_string_not_counted(gate, repo, monkeypatch):
     found = {Path(e["path"]).name for e in gate._gather_importers(str(target), str(root))}
     assert found == {"checkout.py", "invoice.py", "ledger.py", "refunds.py"}
     assert _run(gate, target, monkeypatch) == {}
+
+
+def test_importers_found_without_a_grep_binary(gate, repo, monkeypatch):
+    """Windows has no grep on PATH (CI's windows-latest), and grep's `path:line:text`
+    output split on ':' breaks on `C:\\` paths. The search must be pure Python."""
+    root, target = repo
+    _write(root, _IMPORTERS)
+    monkeypatch.setenv("PATH", "")
+    found = gate._gather_importers(str(target), str(root))
+    assert len(found) == 5
+    assert all(e["lines"] and e["lines"][0]["lineno"] >= 1 for e in found)

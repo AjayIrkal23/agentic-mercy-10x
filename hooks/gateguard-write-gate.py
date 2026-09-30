@@ -14,8 +14,8 @@ from __future__ import annotations
 import json
 import os
 import re
-import subprocess
 import sys
+import time
 from pathlib import Path
 
 from tool_compat import is_write_tool, tool_name
@@ -63,71 +63,58 @@ def _find_project_root(file_path: str) -> str:
     return os.path.dirname(file_path)
 
 
-def _grep_pattern_for(file_path: str) -> tuple[str, list[str]]:
-    """Return (regex_pattern, include_flags) for files that import this target."""
-    basename = os.path.basename(file_path)
-    stem = os.path.splitext(basename)[0]
-    ext = os.path.splitext(basename)[1].lower()
+_EXCLUDE_DIRS = {"node_modules", ".git", "dist", "build", "__pycache__", ".venv", "venv"}
+_SCAN_BUDGET_S = 8.0  # like the old grep timeout: an over-budget scan fails open
 
+
+def _import_regex_for(file_path: str) -> tuple[re.Pattern, tuple[str, ...]]:
+    """(compiled per-line import regex, file suffixes to scan) for this target."""
+    basename = os.path.basename(file_path)
+    s = re.escape(os.path.splitext(basename)[0])
+    ext = os.path.splitext(basename)[1].lower()
     if ext == ".go":
-        pattern = f'".*/{re.escape(stem)}"|package {re.escape(stem)}'
-        includes = ["--include=*.go"]
-    elif ext == ".py":
-        # POSIX ERE (GNU + git-bash grep): `from [pkg.|.|..x.]stem import`, or an
-        # `import` / `from X import` line naming stem as a whole word after `import`.
-        s, w = re.escape(stem), "[^A-Za-z0-9_]"
-        pattern = (
-            f"^[[:space:]]*(from[[:space:]]+([.A-Za-z0-9_]*[.])?{s}[[:space:]]+import"
-            f"|(from[[:space:]]+[.A-Za-z0-9_]+[[:space:]]+)?import[[:space:]](.*{w})?{s}({w}|$))"
-        )
-        includes = ["--include=*.py", "--exclude-dir=__pycache__",
-                    "--exclude-dir=.venv", "--exclude-dir=venv"]
-    else:
-        pattern = "from.*/" + re.escape(stem) + "|require.*/" + re.escape(stem)
-        includes = [
-            "--include=*.ts", "--include=*.tsx",
-            "--include=*.js", "--include=*.jsx",
-        ]
-    return pattern, includes
+        return re.compile(f'".*/{s}"|package {s}'), (".go",)
+    if ext == ".py":
+        # `from [pkg.|.|..x.]stem import`, or an `import` / `from X import` line
+        # naming stem as a whole word after `import`.
+        w = r"[^A-Za-z0-9_]"
+        return re.compile(rf"^\s*(from\s+([.A-Za-z0-9_]*[.])?{s}\s+import"
+                          rf"|(from\s+[.A-Za-z0-9_]+\s+)?import\s(.*{w})?{s}({w}|$))"), (".py",)
+    return re.compile(f"from.*/{s}|require.*/{s}"), (".ts", ".tsx", ".js", ".jsx")
 
 
 def _gather_importers(file_path: str, search_root: str) -> list[dict]:
-    """Return [{path, lines: [{lineno, text}]}] for files that import this target."""
+    """Return [{path, lines: [{lineno, text}]}] for files that import this target.
+    Pure Python, not grep: Windows has no grep on PATH, and grep's `path:line:text`
+    output cannot be split on ':' when paths start with `C:\\`."""
     basename = os.path.basename(file_path)
     stem = os.path.splitext(basename)[0]
     _SHORT_STEMS = {"app", "main", "index", "types", "routes", "gorm", "db", "api", "lib", "util"}
     if not stem or len(stem) < 6 or stem.lower() in _SHORT_STEMS:
         return []
 
-    pattern, includes = _grep_pattern_for(file_path)
-
-    try:
-        cmd = ["grep", "-rn"] + includes + [
-            "--exclude-dir=node_modules", "--exclude-dir=.git",
-            "--exclude-dir=dist", "--exclude-dir=build",
-            "-E", pattern, search_root,
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=8)
-        if result.returncode not in (0, 1):
-            return []
-    except (subprocess.TimeoutExpired, OSError):
-        return []
-
-    by_file: dict[str, list[dict]] = {}
+    rx, suffixes = _import_regex_for(file_path)
     self_abs = os.path.abspath(file_path)
-    for raw in result.stdout.splitlines():
-        # Format: <path>:<lineno>:<text>
-        parts = raw.split(":", 2)
-        if len(parts) < 3:
-            continue
-        path, lineno_str, text = parts
-        if not path or os.path.abspath(path) == self_abs:
-            continue
-        try:
-            lineno = int(lineno_str)
-        except ValueError:
-            continue
-        by_file.setdefault(path, []).append({"lineno": lineno, "text": text})
+    deadline = time.monotonic() + _SCAN_BUDGET_S
+    by_file: dict[str, list[dict]] = {}
+    for dirpath, dirnames, filenames in os.walk(search_root):
+        if time.monotonic() > deadline:
+            return []
+        dirnames[:] = [d for d in dirnames if d not in _EXCLUDE_DIRS]
+        for name in filenames:
+            if not name.endswith(suffixes):
+                continue
+            path = os.path.join(dirpath, name)
+            if os.path.abspath(path) == self_abs:
+                continue
+            try:
+                with open(path, encoding="utf-8", errors="replace") as fh:
+                    hits = [{"lineno": i, "text": line.rstrip("\r\n")}
+                            for i, line in enumerate(fh, 1) if rx.search(line)]
+            except OSError:
+                continue
+            if hits:
+                by_file[path] = hits
 
     return [{"path": p, "lines": lines} for p, lines in sorted(by_file.items())]
 
