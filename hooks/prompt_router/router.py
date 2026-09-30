@@ -34,6 +34,11 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 _HOOKS = Path(__file__).resolve().parents[1]
+# Run as a script, this file's own dir is sys.path[0], and its select.py then shadows
+# stdlib `select` (imported by subprocess) wherever `select` is not a builtin, e.g.
+# setup-python's 3.12: mcp_routes failed to import and MCP route lines vanished.
+_HERE = Path(__file__).resolve().parent
+sys.path[:] = [p for p in sys.path if Path(p or ".").resolve() != _HERE]
 if str(_HOOKS) not in sys.path:
     sys.path.insert(0, str(_HOOKS))
 

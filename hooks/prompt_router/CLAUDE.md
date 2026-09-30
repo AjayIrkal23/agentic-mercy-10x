@@ -33,6 +33,10 @@ starts servers or mutates the repo; side effects are the session manifest,
   `lib.skill_aliases` (fallback `skill-aliases.json`).
 - Run `python3 -m py_compile` on every edited module before the next prompt —
   the hook is live.
+- `router.py` strips its own dir from `sys.path` at startup: run as a script, `select.py`
+  here shadowed stdlib `select` (imported by `subprocess`) on Pythons where `select` is
+  not a builtin (CI's setup-python 3.12), and every MCP route line vanished silently.
+  Never add a sibling module named after a stdlib module.
 
 ## Key files
 

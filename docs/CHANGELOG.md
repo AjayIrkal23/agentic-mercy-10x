@@ -27,6 +27,11 @@ features that looked wired but did nothing.
 - playwright MCP registers with `--browser chromium`, plus a post-step that installs it.
 - graphify skill refreshed to 0.9.70 (a shell-injection fix and manifest data-loss
   fixes), keeping the local frontmatter.
+- CI: `router.py` run as a script let its `select.py` shadow stdlib `select` where that
+  is not a builtin (setup-python 3.12), so `subprocess` broke inside `mcp_routes` and
+  the router dropped every MCP route line. It now strips its own dir from `sys.path`.
+- CI (Windows): 19 bare `read_text()` calls decoded UTF-8 as cp1252 and crashed on byte
+  0x9D; grep gate G5 now forbids them.
 
 ## v3.1.0 — 2026-09-30 Sonnet 5.5 routing + Windows parity
 

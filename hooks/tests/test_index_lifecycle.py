@@ -360,10 +360,11 @@ def _fake_home(tmp_path, monkeypatch, mcp=None, raw=None):
     home = tmp_path / "home"
     home.mkdir(exist_ok=True)
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))  # Path.home() on Windows
     if raw is not None:
-        (home / ".claude.json").write_text(raw)
+        (home / ".claude.json").write_text(raw, encoding="utf-8")
     elif mcp is not None:
-        (home / ".claude.json").write_text(json.dumps({"mcpServers": mcp}))
+        (home / ".claude.json").write_text(json.dumps({"mcpServers": mcp}), encoding="utf-8")
     return home
 
 

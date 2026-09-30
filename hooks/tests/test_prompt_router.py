@@ -259,6 +259,21 @@ def test_router_fail_open_on_internal_error():
 # --------------------------------------------------------------------------- #
 # path-scoped skills: no dead Skill() push
 # --------------------------------------------------------------------------- #
+def test_script_dir_never_shadows_stdlib():
+    """Run as a script, router.py puts hooks/prompt_router/ first on sys.path, and its
+    select.py then shadows stdlib `select` wherever that is not a builtin (CI's
+    setup-python 3.12 ships it as a .so). `subprocess` imports `select`, so
+    mcp_routes failed to import and every MCP route line vanished, silently."""
+    pr = _HOOKS / "prompt_router"
+    code = ("import runpy, sys, pathlib\n"
+            f"d = pathlib.Path({str(pr)!r}).resolve()\n"
+            "sys.path.insert(0, str(d))\n"
+            "runpy.run_path(str(d / 'router.py'), run_name='router_probe')\n"
+            "print(any(pathlib.Path(p or '.').resolve() == d for p in sys.path))\n")
+    cp = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=60)
+    assert cp.stdout.strip() == "False", cp.stdout + cp.stderr
+
+
 def _pushed_actions(prompt: str, tag: str) -> list[tuple[str, str]]:
     import re
     out = _ac({"prompt": prompt, "session_id": _uid(tag), "cwd": "/nonexistent-dir"})

@@ -31,7 +31,7 @@ nothing here is registered in `dispatch.config.json`.
 | `add-db-mcp.py` | add read-only Supabase/MongoDB MCP to a repo's `.mcp.json` from `templates/mcp/` |
 | `mcp_inventory.py` | print the live MCP inventory (user + project scope + plugins) |
 | `dox_cleanup.py` | one-shot removal of untouched dox stubs under `~` |
-| `grep_gates.py` | portability grep-gates (wrapped by `tests/test_portability_gate.py`) |
+| `grep_gates.py` | portability grep-gates G1–G5, G5 = no bare `read_text()` (wrapped by `tests/test_portability_gate.py`) |
 | `install-graphify.sh` | graphify MCP install helper |
 | `github-mcp-launcher.py` | GitHub MCP launcher for Windows (manifest `windows_add`): reads `gh auth token` at launch, runs the server via `cmd /c npx` |
 
