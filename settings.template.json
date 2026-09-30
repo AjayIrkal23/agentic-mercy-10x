@@ -19,13 +19,12 @@
   },
   "env": {
     "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
-    "CLAUDE_CODE_SUBAGENT_EFFORT": "high",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "2",
     "MCP_TIMEOUT": "30000",
     "RETICLE_TELEMETRY": "0",
     "VALIDATION_CLIENT": "sdk",
-    "TDD_GUARD_MODEL_VERSION": "sonnet",
+    "TDD_GUARD_MODEL_VERSION": "claude-sonnet-5-5",
     "PONYTAIL_SUBAGENT_MATCHER": "^(implementation-engineer|backend-implementor-specialist|frontend-implementor-specialist|frontend-uiux-designer|integrator-specialist|refactor-specialist|test-author|deadcode-reaper|docs-sync-agent)$"
   },
   "extraKnownMarketplaces": {

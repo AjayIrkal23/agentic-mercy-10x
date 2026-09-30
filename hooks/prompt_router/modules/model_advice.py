@@ -79,7 +79,7 @@ def advise(profile) -> str | None:
         return None
     if _override_suppresses(profile, policy):
         return None
-    opus_id = policy.get("model_ids", {}).get("opus", "claude-opus-4-8")
+    opus_id = policy.get("model_ids", {}).get("opus", "opus")
     return (f"Heavy task ({hit}, size {profile.size}, risk {profile.risk}): "
             f"consider /model {opus_id} for this work.")
 

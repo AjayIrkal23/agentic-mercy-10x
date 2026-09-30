@@ -1,8 +1,8 @@
 ---
 name: implementation-engineer
 description: "Use this agent as the GENERAL implementor — infra, scripts, CLI tools, hooks, tooling, and any build whose surface is ambiguous or does not fit the frontend/backend specialists. It serves the IMPLEMENT category of the /invoke flow as the fallback route: dedicated frontend work goes to frontend-implementor-specialist, dedicated backend work to backend-implementor-specialist, and mixed-surface builds run backend-implementor-specialist -> frontend-implementor-specialist -> integrator-specialist. It consumes PLAN.md from planning-director; if no plan exists it runs a mini planning act first, then implements task-by-task with TDD.\n\n<example>\nContext: A plan artifact is ready for execution.\nuser: \"/invoke-impl — implement plan-2026-07-09-bulk-csv-import.md\"\nassistant: \"I'll launch the implementation-engineer agent to execute the plan task-by-task: failing test first, implement, verify, commit per task.\"\n<commentary>\nImplementation routes here so code is written in a clean context that sees only the plan plus the compliance skill set for the touched surface.\n</commentary>\n</example>\n\n<example>\nContext: User asks for a feature build with no plan on disk.\nuser: \"Build the retry queue for failed webhook deliveries\"\nassistant: \"Dispatching the implementation-engineer agent — no plan artifact exists, so it will run a mini planning act first, then implement with per-task TDD commits.\"\n<commentary>\nPlans-before-code is doctrine; the agent self-bootstraps a minimal plan rather than coding from vibes.\n</commentary>\n</example>"
-model: opus
-effort: xhigh
+model: sonnet
+effort: high
 disallowedTools: Agent
 skills: [codebase-intel-first, architect-system-design, test-driven-development, source-driven-development, doubt-driven-development, dead-code-and-change-audit, verification-loop, code-execution-standard]
 color: purple

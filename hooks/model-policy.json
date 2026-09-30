@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "_about": "Single source of truth for subagent/workflow/invoke model selection (2026-09-27). Sonnet is the default (also env CLAUDE_CODE_SUBAGENT_MODEL=sonnet, which since CC 2.1.251 sets only the DEFAULT); Opus handles UI/UX, implementation and adversarial review (agent_pins + invoke_categories); Fable is explicit opt-in only. Guard precedence: session flag > per-project mode (state/model-modes) > explicit model param > agent pin > [label] > default. model_ids are the Agent-tool ALIASES (the valid-model set), not API ids.",
+  "_about": "Single source of truth for subagent/workflow/invoke model selection (2026-09-29, Sonnet 5.5 remap). Sonnet 5.5 EXECUTES (default; env CLAUDE_CODE_SUBAGENT_MODEL=sonnet sets only the DEFAULT); Opus 5.5 JUDGES — review, UI/UX, plan, spec, debug (agent_pins + invoke_categories); escalation lifts execution agents to Opus on a failed previous attempt or large unplanned work; Fable is explicit opt-in only. Guard precedence: session flag > per-project mode (state/model-modes) > explicit model param > agent pin > escalation > [label] > default. model_ids are the Agent-tool ALIASES (the valid-model set), not API ids. Evidence: ~/reports/Sonnet 5 5 release feedback.md.",
   "model_ids": {
     "sonnet": "sonnet",
     "opus": "opus",
@@ -8,14 +8,14 @@
   },
   "default": "sonnet",
   "agent_pins": {
-    "_comment": "subagent_type -> forced model. Fable is never auto-pinned.",
+    "_comment": "subagent_type -> forced model. Opus = judgment roles (Opus 5.5 leads on review, factual accuracy, ambiguous work). Execution agents are NOT pinned: they default to sonnet and go through `escalation`. Fable is never auto-pinned.",
     "opus": [
       "frontend-uiux-designer",
-      "implementation-engineer",
-      "backend-implementor-specialist",
-      "frontend-implementor-specialist",
-      "integrator-specialist",
-      "santa-reviewer"
+      "santa-reviewer",
+      "planning-director",
+      "spec-architect",
+      "debug-detective",
+      "team-lead"
     ],
     "sonnet": [
       "explore",
@@ -31,21 +31,48 @@
     "IMPLEMENT_SUITE": "opus"
   },
   "heavy_qualifiers": {
-    "_comment": "HEAVY_ARCHITECTURE / DEEP_DEBUG promote to opus only when size:L AND risk>=2 in the TaskProfile — a keyword alone never promotes.",
+    "_comment": "HEAVY_ARCHITECTURE / DEEP_DEBUG main-session advice and the opus-guard `escalation` size rule fire only when size:L AND risk>=2 in the TaskProfile — a keyword alone never promotes.",
     "min_size": "L",
     "min_risk": 2
   },
   "invoke_categories": {
-    "_comment": "Only acts that require the strongest implementation or design reasoning are pinned; other acts inherit the Sonnet default.",
-    "IMPLEMENT": "opus",
+    "_comment": "Judgment acts run on opus (they match the opus agent_pins); IMPLEMENT and every other act inherit the Sonnet default, and the guard's escalation still applies to /invoke impl dispatches (no model= is passed).",
     "REVIEW": "opus",
-    "DESIGN": "opus"
+    "DESIGN": "opus",
+    "PLAN": "opus",
+    "SPEC": "opus",
+    "DEBUG": "opus"
+  },
+  "escalation": {
+    "_comment": "opus-guard step after agent_pins: lifts an execution agent to `to` when (1) a retry_marker matches (a previous attempt failed), or (2) no plan_marker matches AND prompt_router.classify gives size >= heavy_qualifiers.min_size AND risk >= heavy_qualifiers.min_risk. A referenced plan/spec/contract means the work is well-scoped: Opus planned, Sonnet executes. An explicit model param or a session/project mode wins over escalation. Regexes are case-insensitive; any error -> no escalation (fail-open).",
+    "enabled": true,
+    "to": "opus",
+    "agents": [
+      "implementation-engineer",
+      "backend-implementor-specialist",
+      "frontend-implementor-specialist",
+      "integrator-specialist",
+      "refactor-specialist"
+    ],
+    "retry_markers": [
+      "\\b(previous|prior|last|earlier|first)\\s+(attempt|run|try|pass)\\s+(failed|did not work|didn't work|was rejected|broke)"
+    ],
+    "plan_markers": [
+      "plan-\\d{4}-\\d{2}-\\d{2}",
+      "\\bplan\\.md\\b",
+      "\\bspec-[\\w.-]+\\.md\\b",
+      "\\bimpl-report-be\\.md\\b",
+      "\\brootcause\\.md\\b",
+      "\\btest-report\\.md\\b",
+      "docs/superpowers/(plans|specs)/"
+    ]
   },
   "effort_defaults": {
-    "_comment": "Documentation only (D16): env CLAUDE_CODE_SUBAGENT_EFFORT is the default; per-agent `effort:` frontmatter overrides it. opus_agents = implementors/santa/debug/uiux (xhigh); closers = docs-sync/deadcode/qa/memory-codex (medium).",
-    "default": "high",
-    "opus_agents": "xhigh",
-    "closers": "medium"
+    "_comment": "Documentation of the effort tiers (agent `effort:` frontmatter is the source; test_model_policy_consistency checks it). Frontmatter is the ONLY lever: Claude Code (checked through 2.1.285) reads no subagent-effort env var — CLAUDE_CODE_SUBAGENT_EFFORT is not in the binary — so built-ins (general-purpose, Explore, Plan) run at Claude Code's own default. Executors stay at high because Sonnet 5.5 at xhigh is very verbose (~2.5x the cost of high for ~10% more score). `max` burns tokens and times out, so it is banned.",
+    "executors": "high",
+    "judges": "high (santa-reviewer, frontend-uiux-designer, debug-detective: xhigh)",
+    "closers": "medium",
+    "banned": ["max"]
   },
   "override_phrases": {
     "_comment": "Explicit user phrases in the prompt that force a model for that turn.",

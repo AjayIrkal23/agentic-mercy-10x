@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Tests for hooks/opus-guard.py (P2-T3): policy-driven, behavior-preserving.
+"""Tests for hooks/opus-guard.py: policy-driven model routing for the Agent tool.
 
 Covers the resolution order sourced from model-policy.json:
-  session_flags -> agent_pins -> explicit model param -> [label] prefix -> default
-(task_matrix is intentionally NOT consulted here — the Agent tool carries no
-TaskProfile, so that global-order step is a no-op at this boundary). Plus policy-load
-fail-open (corrupt/missing policy -> hardcoded literals) and full-input echo (the whole
-tool_input is returned in updatedInput, only model/description overridden).
+  session_flags -> per-project mode -> explicit model param -> agent_pins ->
+  escalation (execution agents: retry / large unplanned work) -> [label] -> default
+Opus judges (pinned), Sonnet executes (default), escalation lifts execution agents.
+Plus policy-load fail-open (corrupt/missing policy -> hardcoded literals), full-input
+echo (only model/description overridden) and the per-session routing log.
 
 Session-flag tests use HOME=<tmp> so ~/.claude/state/*-only-mode files are read from a
 throwaway dir; the real state is never touched. The policy file itself loads via
@@ -88,15 +88,84 @@ def test_agent_pin_opus_beats_sonnet_label():
     assert ui["description"] == "[opus] polish UI"
 
 
-def test_agent_pin_opus_implementation_engineer():
-    out = run_agent({"description": "[sonnet] build feature", "subagent_type": "implementation-engineer"})
-    assert resolved(out)["model"] == "opus"
-
-
-def test_agent_pin_opus_new_specialists():
-    for at in ("backend-implementor-specialist", "frontend-implementor-specialist", "integrator-specialist"):
+def test_judges_pinned_opus():
+    # Opus judges (2026-09-29 Sonnet 5.5 remap): review, design, plan, spec, debug.
+    for at in ("santa-reviewer", "planning-director", "spec-architect", "debug-detective"):
         out = run_agent({"description": "[sonnet] work", "subagent_type": at})
         assert resolved(out)["model"] == "opus", at
+
+
+def test_implementors_default_to_sonnet():
+    # Sonnet 5.5 executes: implementors are no longer Opus-pinned.
+    for at in ("implementation-engineer", "backend-implementor-specialist",
+               "frontend-implementor-specialist", "integrator-specialist"):
+        out = run_agent({"description": "build feature", "subagent_type": at,
+                         "prompt": "Add a created_at column to the users table and update the handler."})
+        assert resolved(out)["model"] == "sonnet", at
+
+
+# --- escalation: execution agents lift to opus on retry / large unplanned work ---
+
+HEAVY = ("Rebuild the whole notification system end-to-end: real-time websocket "
+         "event-driven pipeline across the codebase, frontend and backend.")
+
+
+def test_retry_escalates_implementor():
+    out = run_agent({"description": "fix tests", "subagent_type": "backend-implementor-specialist",
+                     "prompt": "Previous attempt failed: the migration test is still red. Fix it."})
+    assert resolved(out)["model"] == "opus"
+    assert "previous attempt failed" in out["hookSpecificOutput"]["additionalContext"]
+
+
+def test_large_unplanned_task_escalates_even_with_sonnet_label():
+    out = run_agent({"description": "[sonnet] notifications", "subagent_type": "implementation-engineer",
+                     "prompt": HEAVY})
+    ui = resolved(out)
+    assert ui["model"] == "opus"
+    assert ui["description"] == "[opus] notifications"
+
+
+def test_plan_reference_keeps_large_task_on_sonnet():
+    out = run_agent({"description": "notifications", "subagent_type": "implementation-engineer",
+                     "prompt": HEAVY + " Execute docs/superpowers/plans/plan-2026-09-29-notify.md task by task."})
+    assert resolved(out)["model"] == "sonnet"
+
+
+def test_explicit_model_beats_escalation():
+    out = run_agent({"description": "fix", "model": "sonnet", "subagent_type": "implementation-engineer",
+                     "prompt": "Previous attempt failed: still broken."})
+    assert out == {} or resolved(out)["model"] == "sonnet"
+
+
+def test_non_execution_agents_never_escalate():
+    for at in ("explore", "general-purpose", "deadcode-reaper"):
+        out = run_agent({"description": "x", "subagent_type": at,
+                         "prompt": "Previous attempt failed. " + HEAVY})
+        assert resolved(out)["model"] == "sonnet", at
+
+
+def test_escalation_fail_open(monkeypatch):
+    # a malformed marker regex must degrade to "no escalation", never raise.
+    mod = _load_module()
+    mod._POLICY_CACHE = None
+    policy = mod._load_policy()
+    mod._POLICY_CACHE = {**policy, "escalation": {**policy["escalation"], "retry_markers": ["("]}}
+    monkeypatch.setattr(mod, "_flag_paths", lambda: {})
+    assert mod._resolve_required("implementation-engineer", "", "x", None, HEAVY) == \
+        ("sonnet", "default (no opus/fable signal)")
+
+
+def test_routing_log_records_every_decision(monkeypatch, tmp_path):
+    mod = _load_module()
+    monkeypatch.setattr(mod, "_TELEMETRY_DIR", tmp_path)
+    monkeypatch.delenv("CLAUDE_HOOK_DOCTOR", raising=False)
+    mod._log_route("sid/1", "implementation-engineer", "opus", "previous attempt failed")
+    rec = json.loads((tmp_path / "sid_1.model-routing.jsonl").read_text().strip())
+    assert (rec["agent"], rec["model"], rec["reason"]) == \
+        ("implementation-engineer", "opus", "previous attempt failed")
+    monkeypatch.setenv("CLAUDE_HOOK_DOCTOR", "1")
+    mod._log_route("sid2", "x", "sonnet", "default")
+    assert not (tmp_path / "sid2.model-routing.jsonl").exists()
 
 
 def test_no_agent_is_auto_pinned_to_fable():
@@ -199,7 +268,7 @@ def test_name_never_rewritten():
 def test_explicit_model_param_beats_pin():
     # the user's explicit word wins over an agent pin (D2)
     ui = resolved(run_agent({"description": "build it", "model": "sonnet",
-                             "subagent_type": "implementation-engineer"}))
+                             "subagent_type": "santa-reviewer"}))
     assert ui["model"] == "sonnet"
     assert ui["description"] == "[sonnet] build it"
 
@@ -243,7 +312,8 @@ def test_policy_load_fail_open_corrupt(monkeypatch, tmp_path):
     (home / ".claude" / "state").mkdir(parents=True)
     monkeypatch.setenv("HOME", str(home))
     assert mod._resolve_required("explore", "", "x")[0] == "sonnet"
-    assert mod._resolve_required("implementation-engineer", "", "x")[0] == "opus"
+    assert mod._resolve_required("santa-reviewer", "", "x")[0] == "opus"
+    assert mod._resolve_required("implementation-engineer", "", "x")[0] == "sonnet"
 
 
 def test_policy_actually_loaded_from_disk():
@@ -251,9 +321,9 @@ def test_policy_actually_loaded_from_disk():
     mod = _load_module()
     mod._POLICY_CACHE = None
     sonnet_set, opus_set, fable_set = mod._agent_sets()
-    assert "frontend-uiux-designer" in opus_set
-    assert "implementation-engineer" in opus_set
-    assert "backend-implementor-specialist" in opus_set
+    assert {"frontend-uiux-designer", "santa-reviewer", "planning-director"} <= opus_set
+    assert "implementation-engineer" not in opus_set
+    assert "backend-implementor-specialist" not in opus_set
     assert fable_set == set(), "Fable is opt-in only; no agent may be pinned to it"
     assert "explore" in sonnet_set
     assert mod._default_model() == "sonnet"

@@ -5,7 +5,7 @@
     "skill_count": 121,
     "plugin_count": 40,
     "alias_count": 24,
-    "checksum": "52bad9ec958925e3716e6cf577e6918548f809cf1456812ef383456f90e3a70c"
+    "checksum": "cd9de543959ca689039bf487a3fc5916ec4fc9995116bb32c5fa6732d67db0bd"
   },
   "aliases": {
     "api-and-interface-design": "api-contract-standards",
@@ -3771,7 +3771,7 @@
     },
     "invoke-debug": {
       "name": "invoke-debug",
-      "description": "Run the DEBUG act — forks straight into debug-detective (sonnet); writes `ROOTCAUSE.md` into the run folder. Single-act form of `/invoke debug -- <task>`.",
+      "description": "Run the DEBUG act — forks straight into debug-detective (opus); writes `ROOTCAUSE.md` into the run folder. Single-act form of `/invoke debug -- <task>`.",
       "keywords": [
         "act",
         "debug",
@@ -3780,10 +3780,10 @@
         "forks",
         "form",
         "invoke-debug",
+        "opus",
         "rootcause",
         "run",
         "single-act",
-        "sonnet",
         "straight",
         "writes"
       ],
@@ -3846,7 +3846,7 @@
     },
     "invoke-impl": {
       "name": "invoke-impl",
-      "description": "Run the IMPL act — forks straight into implementation-engineer (opus); writes `IMPL-REPORT.md` into the run folder. Single-act form of `/invoke impl -- <task>`.",
+      "description": "Run the IMPL act — forks straight into implementation-engineer (sonnet); writes `IMPL-REPORT.md` into the run folder. Single-act form of `/invoke impl -- <task>`.",
       "keywords": [
         "act",
         "folder",
@@ -3856,9 +3856,9 @@
         "impl-report",
         "implementation-engineer",
         "invoke-impl",
-        "opus",
         "run",
         "single-act",
+        "sonnet",
         "straight",
         "writes"
       ],
@@ -3871,7 +3871,7 @@
     },
     "invoke-plan": {
       "name": "invoke-plan",
-      "description": "Run the PLAN act — forks straight into planning-director (sonnet); writes `plan-{date}-{slug}.md` into the run folder. Single-act form of `/invoke plan -- <task>`.",
+      "description": "Run the PLAN act — forks straight into planning-director (opus); writes `plan-{date}-{slug}.md` into the run folder. Single-act form of `/invoke plan -- <task>`.",
       "keywords": [
         "act",
         "date",
@@ -3879,13 +3879,13 @@
         "forks",
         "form",
         "invoke-plan",
+        "opus",
         "plan",
         "plan-",
         "planning-director",
         "run",
         "single-act",
         "slug",
-        "sonnet",
         "straight",
         "writes"
       ],
@@ -4000,17 +4000,17 @@
     },
     "invoke-spec": {
       "name": "invoke-spec",
-      "description": "Run the SPEC act — forks straight into spec-architect (sonnet); writes `SPEC-{slug}.md` into the run folder. Single-act form of `/invoke spec -- <task>`.",
+      "description": "Run the SPEC act — forks straight into spec-architect (opus); writes `SPEC-{slug}.md` into the run folder. Single-act form of `/invoke spec -- <task>`.",
       "keywords": [
         "act",
         "folder",
         "forks",
         "form",
         "invoke-spec",
+        "opus",
         "run",
         "single-act",
         "slug",
-        "sonnet",
         "spec",
         "spec-",
         "spec-architect",

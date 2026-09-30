@@ -28,14 +28,14 @@ Every specialist receives `$RUN/BRIEF.md` plus every artifact already in `$RUN/`
 
 ## 3. Dispatch — one specialist per act, canonical order
 
-| act | agent | artifact (in `$RUN/`) | model | mutates | checkpoint |
-|-----|-------|-----------------------|-------|---------|------------|
+| act | agent | artifact (in `$RUN/`) | model (default) | mutates | checkpoint |
+|-----|-------|-----------------------|-----------------|---------|------------|
 | `audit` | audit-specialist | `AUDIT-{date}.md` | sonnet | no | no |
-| `spec` | spec-architect | `SPEC-{slug}.md` | sonnet | no | yes |
-| `plan` | planning-director | `plan-{date}-{slug}.md` | sonnet | no | yes |
-| `debug` | debug-detective | `ROOTCAUSE.md` | sonnet | no | no |
+| `spec` | spec-architect | `SPEC-{slug}.md` | opus | no | yes |
+| `plan` | planning-director | `plan-{date}-{slug}.md` | opus | no | yes |
+| `debug` | debug-detective | `ROOTCAUSE.md` | opus | no | no |
 | `test` | test-author | `TEST-REPORT.md` | sonnet | no | no |
-| `impl` | implementation-engineer | `IMPL-REPORT.md` | opus | yes | no |
+| `impl` | implementation-engineer | `IMPL-REPORT.md` | sonnet | yes | no |
 | `refactor` | refactor-specialist | `REFACTOR-REPORT.md` | sonnet | yes | no |
 | `design` | frontend-uiux-designer | `DESIGN-REPORT.md` | opus | yes | no |
 | `clean` | deadcode-reaper | `REAP-REPORT.md` | sonnet | yes | no |
@@ -44,15 +44,17 @@ Every specialist receives `$RUN/BRIEF.md` plus every artifact already in `$RUN/`
 | `docs` | docs-sync-agent | `DOCS-SYNC-REPORT.md` | sonnet | no | no |
 | `verify` | qa-verifier | `VERIFY-REPORT.md` | sonnet | no | no |
 
+`model` is what opus-guard resolves by default: opus judges, sonnet executes. Execution agents escalate to opus when the prompt reports a failed previous attempt, or when it names no plan/spec artifact and the task is large. Do not pass `model=`; it would bypass that escalation. Pass it only when the user asked for a specific model.
+
 For each act, in order:
 
 1. Set `run.json.expected_artifacts["<agent>"] = "$RUN/<artifact>"` before dispatching.
-2. `Agent(subagent_type="<agent>", description="[<model>] <act>: <TASK>", model="<model>", prompt=...)` — the prompt names `$RUN/BRIEF.md`, each prior artifact path, and the exact output path `$RUN/<artifact>`. Plain delegation: no `name=` (teams only for the mixed `impl` case below).
-3. Wait for it, then append the act to `run.json.done`. Artifact missing → re-dispatch once with the same prompt; still missing → stop and report.
+2. `Agent(subagent_type="<agent>", description="<act>: <TASK>", prompt=...)`. The prompt names `$RUN/BRIEF.md`, each prior artifact path, and the exact output path `$RUN/<artifact>`; opus-guard adds the model and its `[label]`. Plain delegation: no `name=` (teams only for the mixed `impl` case below).
+3. Wait for it, then append the act to `run.json.done`. Artifact missing or the act failed → re-dispatch once with the prompt prefixed `Previous attempt failed: <one-line reason>.` (this escalates execution agents to opus); still failing → stop and report.
 
 Act-specific rules:
 
-- **`impl`** [opus] surface-routes from the BRIEF: frontend → `frontend-implementor-specialist`; backend → `backend-implementor-specialist` (contract-first, publishes `IMPL-REPORT-BE.md ## CONTRACT`); mixed → spawn `team-lead` as a plain subagent (`[opus]`), which runs the BE↔FE team per `agents/team-lead.md` — set `expected_artifacts` for `IMPL-REPORT-BE.md`, `IMPL-REPORT-FE.md` and `INTEGRATION-REPORT.md`; user asked for no teams → sequential BE → FE → `integrator-specialist`; general / infra → `implementation-engineer`. A plan artifact in `$RUN/` satisfies `requires: plan`; without one the implementor writes a mini-plan first.
+- **`impl`** [sonnet] surface-routes from the BRIEF: frontend → `frontend-implementor-specialist`; backend → `backend-implementor-specialist` (contract-first, publishes `IMPL-REPORT-BE.md ## CONTRACT`); mixed → spawn `team-lead` as a plain subagent (opus-pinned), which runs the BE↔FE team per `agents/team-lead.md` — set `expected_artifacts` for `IMPL-REPORT-BE.md`, `IMPL-REPORT-FE.md` and `INTEGRATION-REPORT.md`; user asked for no teams → sequential BE → FE → `integrator-specialist`; general / infra → `implementation-engineer`. A plan artifact in `$RUN/` satisfies `requires: plan`; without one the implementor writes a mini-plan first.
 - **`design`** [opus] — `frontend-uiux-designer`; every raster/video/3D/audio asset comes from Higgsfield (`higgsfield-generate`), never placeholders.
 - **`clean`** edits code — treat REAP edits as real changes; the closers review them.
 - **Checkpoints** (after `spec`, `plan`): interactive session → stop, show the artifact path + a 5-line summary, ask "continue with <remaining acts>?" and wait for the answer. Non-interactive (`-p`) → continue.

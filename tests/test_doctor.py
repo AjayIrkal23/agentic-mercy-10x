@@ -54,6 +54,33 @@ def test_doctor_is_green(sandbox_home):
     assert by.get("lean-ctx-config") in ("WARN", "PASS")
 
 
+def _routing_status(tmp_path, mutate) -> tuple[str, str]:
+    checks = _load("doctor_checks", "installer/doctor_checks.py")
+    policy = json.loads((_ROOT / "hooks" / "model-policy.json").read_text(encoding="utf-8"))
+    mutate(policy)
+    (tmp_path / "model-policy.json").write_text(json.dumps(policy), encoding="utf-8")
+    rows: list = []
+    checks.check_model_routing(rows, tmp_path, tmp_path, lambda r, n, s, d: r.append((n, s, d)),
+                               None, sys.executable, "PASS", "FAIL", "WARN")
+    return next((s, d) for n, s, d in rows if n == "model-routing")
+
+
+def test_model_routing_accepts_judges_on_opus(tmp_path):
+    assert _routing_status(tmp_path, lambda p: None)[0] == "PASS"
+
+
+def test_model_routing_rejects_opus_pinned_implementor(tmp_path):
+    def pin_impl(p):
+        p["agent_pins"]["opus"].append("implementation-engineer")
+    assert _routing_status(tmp_path, pin_impl)[0] == "FAIL"
+
+
+def test_model_routing_rejects_unpinned_judge(tmp_path):
+    def unpin_santa(p):
+        p["agent_pins"]["opus"].remove("santa-reviewer")
+    assert _routing_status(tmp_path, unpin_santa)[0] == "FAIL"
+
+
 def test_doctor_ci_skips_machine_rows(sandbox_home):
     doctor = _load("doctor", "installer/doctor.py")
     by = {n: s for n, s, _ in doctor.run_doctor(ci=True)}

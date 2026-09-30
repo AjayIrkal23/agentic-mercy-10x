@@ -25,7 +25,8 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 | `test_prompt_router.py`, `test_router_surface.py`, `test_surface_classification.py` | router classify/rank/output shape, stack/cwd surface, FE/BE detection |
 | `test_mcp_post_hints.py` | PostToolUse MCP hints + memory search directive |
 | `test_gates.py` | Stop/Pre gates incl. invoke-suite-gate 1-nag cap |
-| `test_opus_guard.py`, `test_workflow_model_guard.py`, `test_model_mode.py`, `test_model_advice.py` | model routing |
+| `test_opus_guard.py`, `test_workflow_model_guard.py`, `test_model_mode.py`, `test_model_advice.py` | model routing (pins, escalation, routing log) |
+| `test_model_policy_consistency.py` | agent frontmatter / template env / escalation agree with `model-policy.json`; `max` effort banned |
 | `test_gen_invoke_skills.py` | `/invoke` skill generator determinism |
 | `test_index_lifecycle.py` | index-lifecycle state machine |
 
@@ -34,6 +35,9 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 - `$HOME` tests prove the ceiling only on a machine with a stray `~/.git`; elsewhere they
   pass vacuously.
 - Router tests build tmp repos and run the hook as a subprocess — keep them fast.
+- Router and dox tests read the real user's `~/.claude.json` (MCP availability). Over SSH
+  on the Windows replica run them as the desk user (`USERPROFILE`/`HOME` = `C:\Users\Win`),
+  or they fail on the SSH account's empty config.
 
 ## Up / down
 

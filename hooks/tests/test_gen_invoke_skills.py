@@ -30,6 +30,19 @@ def test_render_is_deterministic_and_uses_arguments():
     assert len(a) == 2 + 13 + len(gen.UTILITIES)
 
 
+def test_invoke_lets_opus_guard_route():
+    # Sonnet 5.5 remap: judges on opus, impl on the sonnet default; the dispatch template
+    # must not pass model= (it would bypass opus-guard escalation), and a re-dispatch
+    # carries the retry marker that escalates execution agents.
+    acts = {a["act"]: a for a in gen.load_acts(CFG)}
+    assert {k: gen.act_model(acts[k], POLICY) for k in ("plan", "spec", "debug", "review", "design")} == \
+        dict.fromkeys(("plan", "spec", "debug", "review", "design"), "opus")
+    assert gen.act_model(acts["impl"], POLICY) == "sonnet"
+    invoke = gen.render_all(CFG, POLICY)[gen.SKILLS_DIR / "invoke" / "SKILL.md"]
+    assert 'model="<model>"' not in invoke
+    assert "Previous attempt failed:" in invoke
+
+
 def test_check_flags_unexpected_invoke_dir(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr(gen, "SKILLS_DIR", tmp_path)
     for path, content in gen.render_all(CFG, POLICY).items():

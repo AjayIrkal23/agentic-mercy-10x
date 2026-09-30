@@ -15,8 +15,9 @@ THE FIX:
   routes through a tiny injected wrapper `__wfAgent` that:
     - HONORS an explicit `opts.model` (sonnet/opus/fable) — your deliberate per-task
       override is never touched;
-    - auto-promotes the UI/UX agent (agentType 'frontend-uiux-designer') to opus and
-      keeps Explore/claude-code-guide on sonnet (mirrors opus-guard's exceptions);
+    - auto-promotes the opus-pinned judge agents (model-policy agent_pins.opus: UI/UX,
+      santa, plan, spec, debug, team-lead) to opus and keeps Explore/claude-code-guide
+      on sonnet (mirrors opus-guard's pins; its per-prompt escalation is not applied here);
     - otherwise DEFAULTS to sonnet (never inherits the Opus parent);
     - and if a session flag is set, FORCES that model on every agent (kill-switch):
         ~/.claude/state/sonnet-only-mode -> force sonnet (wins over everything)
@@ -73,8 +74,9 @@ META_RE = re.compile(r"export\s+const\s+meta\s*=\s*\{")
 # workflow-model-guard consumes it for the session-flag dir/names/precedence and the
 # opus/sonnet agent pins injected into the wrapper. Fail-open to these literals if the
 # file is missing/corrupt. NOTE: sourcing agent_pins from the policy aligns the workflow
-# opus set with opus-guard — 'implementation-engineer' now defaults to opus in workflows
-# too (an intentional consistency fix). Explicit model params and force flags still win.
+# opus set with opus-guard (the judge agents). Execution agents run on the sonnet default;
+# opus-guard's per-prompt escalation is NOT applied inside workflow scripts — pass
+# opts.model 'opus' there. Explicit model params and force flags still win.
 POLICY_PATH = Path(__file__).resolve().parent / "model-policy.json"
 
 _DEFAULT_FLAG_DIR = "state"
@@ -84,7 +86,7 @@ _DEFAULT_FLAG_NAMES = {
     "fable": "fable-only-mode",
 }
 _DEFAULT_FLAG_PRECEDENCE = ["sonnet", "opus", "fable"]
-_DEFAULT_OPUS_AGENTS = ["frontend-uiux-designer", "implementation-engineer"]
+_DEFAULT_OPUS_AGENTS = ["frontend-uiux-designer", "santa-reviewer"]
 _DEFAULT_SONNET_AGENTS = ["explore", "claude-code-guide"]
 
 _POLICY_CACHE: dict | None = None

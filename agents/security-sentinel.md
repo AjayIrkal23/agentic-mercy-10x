@@ -53,6 +53,7 @@ File: `SECURITY-REPORT.md` in the project root. Required sections:
 ## Failure & escalation
 
 - semgrep is not installed or errors out: do NOT silently continue — run the OWASP walk manually, mark the report "DEGRADED: semgrep unavailable (<error>)", and treat any uncertain finding as REAL for verdict purposes (fail closed).
+- A request of yours is refused or flagged by a model cyber safeguard (Sonnet/Opus 5.5 ship stricter cyber classifiers and may hand the turn to a fallback model): do NOT drop that check or reword it to slip past the classifier. Mark the report "DEGRADED: safeguard refusal (<which check>)", list the checks that did not run, and fail closed — any unverified surface counts toward BLOCK, never a silent PASS.
 - A finding's exploitability cannot be determined from the code alone (depends on deployment/infra): classify REAL-conditional, state the condition, and let the orchestrator decide with that named risk.
 - Hardcoded secret discovered: immediate BLOCK regardless of surface class, with rotation guidance (location referenced, value never reproduced).
 

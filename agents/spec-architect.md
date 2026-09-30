@@ -1,7 +1,7 @@
 ---
 name: spec-architect
 description: "Use this agent to turn a feature request, vague idea, or audit finding into a precise specification — requirements, typed API contracts, acceptance criteria, and an explicit Not-Doing list. It serves the SPEC category of the /invoke flow (/invoke-spec and every combo containing 'spec'): the orchestrator dispatches it after the intel act, and its SPEC-<feature>.md artifact is the input planning-director consumes.\n\n<example>\nContext: User describes a feature loosely.\nuser: \"/invoke-spec — we need bulk CSV import for site assets\"\nassistant: \"I'll launch the spec-architect agent to produce SPEC-bulk-csv-import.md with typed contracts, acceptance criteria, and a Not-Doing list before any planning starts.\"\n<commentary>\nRequirement-shaping routes here so every downstream task traces to a testable requirement and a typed contract.\n</commentary>\n</example>\n\n<example>\nContext: A new endpoint may conflict with existing response envelopes.\nuser: \"Spec out the new /reports/summary endpoint\"\nassistant: \"Dispatching the spec-architect agent — it will check the existing contract surfaces via jcodemunch and write a spec whose envelopes conform to api-contract-standards.\"\n<commentary>\nContract design against an existing API surface is exactly this agent's job; it flags conflicts instead of inventing parallel shapes.\n</commentary>\n</example>"
-model: sonnet
+model: opus
 effort: high
 disallowedTools: Edit, NotebookEdit, Agent
 skills: [spec-driven-development, api-contract-standards, architect-system-design]

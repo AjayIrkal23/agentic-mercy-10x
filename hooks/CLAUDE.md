@@ -30,7 +30,7 @@ Architecture: [`README.md`](README.md). Only hook logic and hook config belong h
 |------|------|
 | `dispatch.py` / `dispatch.config.json` | per-event chain runner + link declarations (12 events, 43 links; types gate/mutator/advisory/exec, `async` exec) |
 | `prompt_router/` | UserPromptSubmit router — see its `CLAUDE.md` |
-| `opus-guard.py`, `workflow-model-guard.py`, `model-policy.json` | label⇄model alignment (never touches `prompt`/`name`) |
+| `opus-guard.py`, `workflow-model-guard.py`, `model-policy.json` | sets `model` + `[label]` (Opus judges, Sonnet executes, `escalation` lifts executors), logs each decision to `.telemetry/<sid>.model-routing.jsonl`; never touches `prompt`/`name` |
 | `subagent-context.py` | SubagentStart: write protocol, no-servers/no-commit, MCP protocol, surface pointer |
 | `teammate-idle-gate.py` | TeammateIdle: teammate can't idle until its `run.json` expected artifact exists |
 | `mcp-post-hints.py` | PostToolUse "call X now" (semgrep, context7, reticle/playwright, postgres-patterns, blast radius) |

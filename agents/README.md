@@ -9,15 +9,15 @@ prompt router suggests one per prompt. 18 agents: 17 specialists + `team-lead`.
 | Agent | Act / trigger | Model | Effort | Writes | Preload |
 |---|---|---|---|---|---|
 | `audit-specialist` | AUDIT — tech-debt, hotspots, dead code, repo health | sonnet | high | report only | 3 |
-| `spec-architect` | SPEC — requirements, typed contracts, Not-Doing | sonnet | high | report only | 3 |
-| `planning-director` | PLAN — dependency-ordered tasks, complete code per step | sonnet | high | report only | 4 |
-| `debug-detective` | DEBUG — unknown-cause failures; ROOTCAUSE.md | sonnet | xhigh | instrumentation + 1-file fix | 4 |
+| `spec-architect` | SPEC — requirements, typed contracts, Not-Doing | opus | high | report only | 3 |
+| `planning-director` | PLAN — dependency-ordered tasks, complete code per step | opus | high | report only | 4 |
+| `debug-detective` | DEBUG — unknown-cause failures; ROOTCAUSE.md | opus | xhigh | instrumentation + 1-file fix | 4 |
 | `test-author` | TEST — failing tests first (RED) | sonnet | high | test files | 3 |
-| `implementation-engineer` | IMPL fallback — infra, scripts, hooks, ambiguous surface | opus | xhigh | code | 8 |
-| `backend-implementor-specialist` | IMPL backend — contract-first; publishes CONTRACT | opus | xhigh | code | 13 |
-| `frontend-implementor-specialist` | IMPL frontend — builds against CONTRACT; Higgsfield assets | opus | xhigh | code | 13 |
-| `integrator-specialist` | IMPL mixed closer — parity diff, wiring fixes, E2E proof | opus | high | small wiring fixes | 4 |
-| `refactor-specialist` | REFACTOR — behavior-preserving, in its own worktree | sonnet | high | code (worktree) | 4 |
+| `implementation-engineer` | IMPL fallback — infra, scripts, hooks, ambiguous surface | sonnet ↑ | high | code | 8 |
+| `backend-implementor-specialist` | IMPL backend — contract-first; publishes CONTRACT | sonnet ↑ | high | code | 13 |
+| `frontend-implementor-specialist` | IMPL frontend — builds against CONTRACT; Higgsfield assets | sonnet ↑ | high | code | 13 |
+| `integrator-specialist` | IMPL mixed closer — parity diff, wiring fixes, E2E proof | sonnet ↑ | high | small wiring fixes | 4 |
+| `refactor-specialist` | REFACTOR — behavior-preserving, in its own worktree | sonnet ↑ | high | code (worktree) | 4 |
 | `frontend-uiux-designer` | DESIGN — any "how it looks/feels" task; anti-slop + assets | opus | xhigh | code + assets | 9 |
 | `deadcode-reaper` | CLEAN — removes only what this diff orphaned | sonnet | medium | removals + lint | 3 |
 | `security-sentinel` | SECURITY — semgrep + OWASP; PASS/BLOCK (Gate 3) | sonnet | high | report only | 2 |
@@ -27,14 +27,17 @@ prompt router suggests one per prompt. 18 agents: 17 specialists + `team-lead`.
 | `memory-codex` | manual — append one dated CODEX.md entry | sonnet | medium | CODEX.md only | 0 |
 | `team-lead` | teams — fullstack BE↔FE contract handoff, requested squads | opus | high | run.json only | 2 |
 
+↑ = escalates to Opus on a failed previous attempt or large unplanned work (`escalation`
+in `hooks/model-policy.json`).
+
 Canonical `/invoke` order: audit spec plan debug test impl refactor design clean security
 review docs verify. Closers (clean, security, review, docs, verify) run only after
 code-mutating acts.
 
 ## Plain delegation vs teams
 
-- **Plain delegation (default):** `Agent(subagent_type, description: "[sonnet|opus] …",
-  model: …)` with **no `name`**. The agent file's `model`, `effort`, `tools`,
+- **Plain delegation (default):** `Agent(subagent_type, description: "…")` with **no
+  `model`** (opus-guard sets it and the `[label]`) and **no `name`**. The agent file's `model`, `effort`, `tools`,
   `disallowedTools`, `skills`, `memory`, `mcpServers` all apply.
 - **Team (deliberate):** only when teammates must message each other — fullstack
   `/invoke impl` (impl-be publishes the CONTRACT → SendMessage → impl-fe builds →
@@ -46,12 +49,14 @@ code-mutating acts.
 
 ## Model and effort
 
-- Default subagent model is Sonnet (`env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet`); every agent
-  file pins its own `model:` (opus for the 5 implementor/design agents + santa-reviewer)
-  so routing holds even if hooks fail. `opus-guard` only aligns the `[label]` with
-  the resolved model; precedence lives in `hooks/model-policy.json`.
-- Effort default is `high` (`env.CLAUDE_CODE_SUBAGENT_EFFORT`); per-agent `effort:`
-  overrides it (xhigh implementors/santa/debug/uiux; medium docs/clean/qa/memory).
+- Sonnet 5.5 executes, Opus 5.5 judges. Default subagent model is Sonnet
+  (`env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet`); every agent file pins its own `model:`
+  (opus for the 6 judges: santa, uiux, plan, spec, debug, team-lead) so routing holds
+  even if hooks fail. `opus-guard` sets `model` + `[label]` and escalates executors;
+  precedence lives in `rules/04-model-routing.md`, pins in `hooks/model-policy.json`.
+- Effort comes only from each agent's `effort:` (xhigh santa/debug/uiux; high executors
+  and the other judges; medium docs/clean/qa/memory). `max` is banned. Claude Code reads
+  no subagent-effort env var, so built-ins run at its own default.
 - Fable is never automatic — only when the user asks for it on that turn.
 
 ## Skill preload (`skills:`)

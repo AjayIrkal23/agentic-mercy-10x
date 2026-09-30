@@ -59,27 +59,28 @@ def check_model_routing(
     failed: str,
     warned: str,
 ) -> None:
-    """Validate the Sonnet-default, Opus-implementation routing policy."""
+    """Validate the Sonnet 5.5 routing policy: Opus judges, Sonnet executes and
+    escalates to Opus, Fable never pinned."""
     try:
         policy = json.loads((hooks / "model-policy.json").read_text(encoding="utf-8"))
-        impl = (policy.get("invoke_categories") or {}).get("IMPLEMENT")
         default = policy.get("default")
-        opus_pins = set((policy.get("agent_pins") or {}).get("opus") or [])
-        required = {
-            "implementation-engineer",
-            "backend-implementor-specialist",
-            "frontend-implementor-specialist",
-            "integrator-specialist",
-        }
-        fable_pins = set((policy.get("agent_pins") or {}).get("fable") or [])
+        pins = policy.get("agent_pins") or {}
+        opus_pins = set(pins.get("opus") or [])
+        judges = {"santa-reviewer", "frontend-uiux-designer", "planning-director",
+                  "spec-architect", "debug-detective"}
+        esc = policy.get("escalation") or {}
+        executors = set(esc.get("agents") or [])
         ok = (
-            impl == "opus"
-            and default == "sonnet"
-            and required <= opus_pins
-            and not fable_pins
+            default == "sonnet"
+            and judges <= opus_pins
+            and bool(executors) and not executors & opus_pins
+            and esc.get("enabled") is True and esc.get("to") == "opus"
+            and (policy.get("invoke_categories") or {}).get("IMPLEMENT") in (None, default)
+            and not pins.get("fable")
         )
         row(rows, "model-routing", passed if ok else failed,
-            f"IMPLEMENT={impl} default={default}")
+            f"default={default} judges-on-opus={judges <= opus_pins} "
+            f"executors-pinned={sorted(executors & opus_pins)} escalation->{esc.get('to')}")
     except Exception as exc:  # noqa: BLE001
         row(rows, "model-routing", failed,
             f"model-policy.json: {type(exc).__name__}: {exc}")
