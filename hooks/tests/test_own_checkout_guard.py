@@ -46,3 +46,16 @@ def test_doctor_mode_aggregator_spawns_no_writers(monkeypatch):
         raise AssertionError("doctor mode spawned an index/tdd writer")
     monkeypatch.setattr(agg, "_run_hook_subprocess", boom)
     agg._full_context({"cwd": str(ROOT)}, "{}")
+
+
+def test_doctor_mode_skills_index_guard_writes_nothing(monkeypatch, capsys):
+    """In a fresh checkout every SKILL.md looks newer, so the session-start guard rebuilt
+    the tracked skills-index.json from a bare HOME and dropped all plugin skills."""
+    import types
+    stub = types.ModuleType("build_skills_index")
+    stub.main = lambda argv: (_ for _ in ()).throw(AssertionError("doctor mode rebuilt the index"))  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "build_skills_index", stub)
+    monkeypatch.setenv("CLAUDE_HOOK_DOCTOR", "1")
+    shim = _load("bsi_own_guard", "build-skills-index.py")
+    assert shim.main(["--hook"]) == 0
+    assert capsys.readouterr().out.strip() == "{}"

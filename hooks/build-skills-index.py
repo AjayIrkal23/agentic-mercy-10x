@@ -9,6 +9,7 @@ Flags: --hook (rebuild if stale, print {}), --check, --force. No flag = rebuild 
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 
@@ -16,12 +17,21 @@ _SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
 if str(_SCRIPTS) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS))
 
-if __name__ == "__main__":
+
+def main(argv: list[str]) -> int:
+    hook = "--hook" in argv
+    if hook and os.environ.get("CLAUDE_HOOK_DOCTOR"):
+        print("{}")  # dry-fire: a fresh checkout looks stale and would be rewritten
+        return 0
     try:
         import build_skills_index  # noqa: E402
     except Exception:  # noqa: BLE001 — a hook must never crash the session
-        if "--hook" in sys.argv:
+        if hook:
             print("{}")
-            raise SystemExit(0)
+            return 0
         raise
-    raise SystemExit(build_skills_index.main(sys.argv[1:]))
+    return build_skills_index.main(argv)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main(sys.argv[1:]))

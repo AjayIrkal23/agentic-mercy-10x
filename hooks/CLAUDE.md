@@ -63,8 +63,10 @@ Architecture: [`README.md`](README.md). Only hook logic and hook config belong h
   `MAX_AGGREGATED_CHARS` (5,500) and upgrades core-skill pointers to full bodies only
   while they fit (`test_session_start_budget.py`).
 - Guards key on this checkout as well as `$HOME`: `NEVER_INDEX` and dox `resolve_root`
-  include `Path(__file__)`'s repo, and the aggregator spawns no index/tdd writers under
-  `CLAUDE_HOOK_DOCTOR`. A sandbox-HOME test run once dox-swept the real `~/.claude`.
+  include `Path(__file__)`'s repo. Under `CLAUDE_HOOK_DOCTOR` the aggregator spawns no
+  index/tdd writers and `build-skills-index.py --hook` skips its rebuild. A sandbox-HOME
+  test run once dox-swept the real `~/.claude`; a fresh checkout once lost its plugin
+  skills from `skills-index.json`.
 - `paths:`-scoped skills are unknown to the Skill tool until a matching file is read.
   The router says `Read ~/.claude/skills/<name>/SKILL.md` for them, and
   `gen-agent-skill-blocks.py` writes a `<!-- path-skills -->` Read block into agent bodies
