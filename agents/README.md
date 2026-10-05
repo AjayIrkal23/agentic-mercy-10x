@@ -2,7 +2,8 @@
 
 Subagent definitions live here as `<name>.md` (YAML frontmatter + body). Claude Code
 loads them natively; `/invoke <acts>` (skill `invoke`) dispatches them per act, and the
-prompt router suggests one per prompt. 18 agents: 17 specialists + `team-lead`.
+prompt router suggests one per prompt. 17 agents, plus `team-lead.md`: the team playbook the
+MAIN session follows (no frontmatter, so it is not a spawnable agent).
 
 ## Routing table
 
@@ -11,21 +12,20 @@ prompt router suggests one per prompt. 18 agents: 17 specialists + `team-lead`.
 | `audit-specialist` | AUDIT — tech-debt, hotspots, dead code, repo health | sonnet | high | report only | 3 |
 | `spec-architect` | SPEC — requirements, typed contracts, Not-Doing | opus | high | report only | 3 |
 | `planning-director` | PLAN — dependency-ordered tasks, complete code per step | opus | high | report only | 4 |
-| `debug-detective` | DEBUG — unknown-cause failures; ROOTCAUSE.md | opus | xhigh | instrumentation + 1-file fix | 4 |
-| `test-author` | TEST — failing tests first (RED) | sonnet | high | test files | 3 |
-| `implementation-engineer` | IMPL fallback — infra, scripts, hooks, ambiguous surface | sonnet ↑ | high | code | 8 |
-| `backend-implementor-specialist` | IMPL backend — contract-first; publishes CONTRACT | sonnet ↑ | high | code | 13 |
-| `frontend-implementor-specialist` | IMPL frontend — builds against CONTRACT; Higgsfield assets | sonnet ↑ | high | code | 13 |
-| `integrator-specialist` | IMPL mixed closer — parity diff, wiring fixes, E2E proof | sonnet ↑ | high | small wiring fixes | 4 |
-| `refactor-specialist` | REFACTOR — behavior-preserving, in its own worktree | sonnet ↑ | high | code (worktree) | 4 |
-| `frontend-uiux-designer` | DESIGN — any "how it looks/feels" task; anti-slop + assets | opus | xhigh | code + assets | 9 |
+| `debug-detective` | DEBUG — unknown-cause failures; ROOTCAUSE.md | opus | xhigh | instrumentation + 1-file fix | 3 |
+| `test-author` | TEST — failing tests first (RED) | sonnet | high | test files | 2 |
+| `implementation-engineer` | IMPL fallback — infra, scripts, hooks, ambiguous surface | sonnet ↑ | high | code | 7 |
+| `backend-implementor-specialist` | IMPL backend — contract-first; publishes CONTRACT | sonnet ↑ | high | code | 8 |
+| `frontend-implementor-specialist` | IMPL frontend — builds against CONTRACT; Higgsfield assets | sonnet ↑ | high | code | 9 |
+| `integrator-specialist` | IMPL mixed closer — parity diff, wiring fixes, E2E proof on a running app | sonnet ↑ | high | small wiring fixes | 4 |
+| `refactor-specialist` | REFACTOR — behavior-preserving, in the main working tree | sonnet ↑ | high | code | 4 |
+| `frontend-uiux-designer` | DESIGN — any "how it looks/feels" task; anti-slop + assets | opus | xhigh | code + assets | 3 |
 | `deadcode-reaper` | CLEAN — removes only what this diff orphaned | sonnet | medium | removals + lint | 3 |
 | `security-sentinel` | SECURITY — semgrep + OWASP; PASS/BLOCK (Gate 3) | sonnet | high | report only | 2 |
 | `santa-reviewer` | REVIEW — BREAKER/SIMPLIFIER/VERIFIER (Gate 4) | opus | xhigh | report only | 2 |
 | `docs-sync-agent` | DOCS — diff → docs ledger, dox tree, ADR test (Gate 2) | sonnet | medium | docs only, background | 2 |
 | `qa-verifier` | VERIFY — evidence before assertions | sonnet | medium | report only | 2 |
 | `memory-codex` | manual — append one dated CODEX.md entry | sonnet | medium | CODEX.md only | 0 |
-| `team-lead` | teams — fullstack BE↔FE contract handoff, requested squads | opus | high | run.json only | 2 |
 
 ↑ = escalates to Opus on a failed previous attempt or large unplanned work (`escalation`
 in `hooks/model-policy.json`).
@@ -41,19 +41,22 @@ code-mutating acts.
   `disallowedTools`, `skills`, `memory`, `mcpServers` all apply.
 - **Team (deliberate):** only when teammates must message each other — fullstack
   `/invoke impl` (impl-be publishes the CONTRACT → SendMessage → impl-fe builds →
-  integrator diffs and bounces by name) or a parallel squad the user asks for. Passing
-  `name` launches a *teammate*, which honours `tools`/`model` but **not** `skills:` or
-  `mcpServers`; the lead tells each teammate its two baseline skills to `Skill()` first
-  and registers `expected_artifacts` in `run.json` so the `TeammateIdle` gate keeps it
-  working until the artifact exists. Pattern: `team-lead.md`.
+  integrator diffs and bounces by name) or a parallel squad the user asks for. The MAIN
+  session is the lead (a subagent cannot spawn teammates). Passing `name` launches a
+  *teammate*, which honours `tools`/`model` but **not** `skills:` or `mcpServers`; the
+  lead tells each teammate its two baseline skills to `Skill()` first and registers
+  `expected_artifacts` in `run.json` so the `TeammateIdle` gate keeps it working until
+  the artifact exists. No teams → the same agents run sequentially. Playbook:
+  `team-lead.md`; the one `run.json` schema lives in `skills/invoke/SKILL.md` §2.
 
 ## Model and effort
 
 - Sonnet 5.5 executes, Opus 5.5 judges. Default subagent model is Sonnet
   (`env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet`); every agent file pins its own `model:`
-  (opus for the 6 judges: santa, uiux, plan, spec, debug, team-lead) so routing holds
-  even if hooks fail. `opus-guard` sets `model` + `[label]` and escalates executors;
-  precedence lives in `rules/04-model-routing.md`, pins in `hooks/model-policy.json`.
+  (opus for the 5 judges: santa, uiux, plan, spec, debug) so routing holds even if
+  hooks fail. `opus-guard` sets `model` + `[label]` and escalates executors; an explicit
+  `model` moves a judge or an executor only when the user's own turn names the model.
+  Precedence lives in `rules/04-model-routing.md`, pins in `hooks/model-policy.json`.
 - Effort comes only from each agent's `effort:` (xhigh santa/debug/uiux; high executors
   and the other judges; medium docs/clean/qa/memory). `max` is banned. Claude Code reads
   no subagent-effort env var, so built-ins run at its own default.
@@ -62,7 +65,9 @@ code-mutating acts.
 ## Skill preload (`skills:`)
 
 Each agent's `skills:` list is preloaded in full at start (no manual `Read` of
-SKILL.md files; canonical names only, aliases collapsed, ≤13). Bodies say
+SKILL.md files; canonical names only, aliases collapsed, ≤13). It holds only what every
+spawn needs; stack- and task-specific skills load on demand with `Skill()`, and
+`hooks/tests/test_agents_wp5.py` caps the weight per spawn (20k tokens, uiux 30k). Bodies say
 "Preloaded skills (frontmatter `skills:`); use `Skill(...)` for anything else."
 Path-bound FE/BE standards also surface natively when matching files are read.
 A `paths:`-scoped skill in `skills:` is silently NOT preloaded (Claude Code lists it only
@@ -78,8 +83,10 @@ Read-only roles (`audit-specialist`, `spec-architect`, `planning-director`,
 `santa-reviewer`, `security-sentinel`, `qa-verifier`) carry
 `disallowedTools: Edit, NotebookEdit, Agent` — `Write` stays for their single report.
 Every specialist disallows `Agent` (no recursive fan-out). `memory-codex` has an
-explicit `tools:` allowlist. `memory: user` on santa/security/audit/debug keeps
-false-positive lists, noise triage, metric snapshots, and killed hypotheses across runs.
+explicit `tools:` allowlist. `memory: local` on santa/security/audit/debug keeps
+false-positive lists, noise triage, metric snapshots, and killed hypotheses per repo
+(`.claude/agent-memory-local/`, never committed), so one stack's "safe" never mutes a
+real finding in another.
 
 ## Removed (2026-09-27)
 

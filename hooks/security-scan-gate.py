@@ -63,7 +63,9 @@ SKIP_PATTERNS = [
     ".test.ts", ".test.tsx", ".spec.ts", "docs/", "_docs/",
 ]
 
-STATE_DIR = Path(__file__).resolve().parent / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or Path(__file__).resolve().parent / ".state")
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lib.platform import locked_update  # noqa: E402
 
 
 def _is_security_sensitive(fp: str) -> bool:
@@ -84,18 +86,14 @@ def _state_path(cid: str) -> Path:
     return STATE_DIR / f"{safe}.security-scan.json"
 
 
-def _load_state(cid: str) -> dict:
-    p = _state_path(cid)
-    if not p.is_file():
-        return {"security_files": [], "reminded": False}
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return {"security_files": [], "reminded": False}
-
-
-def _save_state(cid: str, state: dict) -> None:
-    _state_path(cid).write_text(json.dumps(state, indent=2), encoding="utf-8")
+def _add_file(state: dict, rel_str: str) -> dict:
+    files = state.get("security_files")
+    files = files if isinstance(files, list) else []
+    if rel_str not in files:
+        files.append(rel_str)
+    state["security_files"] = files
+    state.setdefault("reminded", False)
+    return state
 
 
 def main() -> int:
@@ -121,20 +119,14 @@ def main() -> int:
         print("{}")
         return 0
 
-    state = _load_state(cid)
-    security_files = state.get("security_files", [])
-
     rel = fp.split("/")[-2:] if "/" in fp else [fp]
     rel_str = "/".join(rel)
-
-    if rel_str not in security_files:
-        security_files.append(rel_str)
-    state["security_files"] = security_files
 
     # Bookkeeping only (read by hard-completion-gate Gate 3). The model-facing
     # nudge is mcp-post-hints.py's "call mcp__semgrep__semgrep_scan" line — one
     # nudge per file, not two (the old CLI `semgrep scan` line here was a duplicate).
-    _save_state(cid, state)
+    # security-semgrep-tracker writes the same file: locked RMW (audit J-01).
+    locked_update(_state_path(cid), lambda s: _add_file(s, rel_str))
     print("{}")
     return 0
 

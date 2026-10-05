@@ -125,25 +125,9 @@
     ]
    },
    "skills": [
-    "design-taste-frontend",
-    "frontend-ui-engineering"
-   ]
-  },
-  {
-   "id": "fe_review",
-   "match": {
-    "path_contains_any": [
-     "/components/",
-     "/pages/",
-     "/views/",
-     ".tsx",
-     ".jsx"
-    ]
-   },
-   "skills": [
-    "code-review-and-quality",
     "frontend-standards-always-follow",
-    "react-hooks-patterns"
+    "frontend-ui-engineering",
+    "tailwind-design-system"
    ]
   },
   {
@@ -385,26 +369,11 @@
    ]
   },
   {
-   "id": "be_review_perf",
-   "match": {
-    "path_contains_any": [
-     "internal/",
-     "server/",
-     "cmd/"
-    ]
-   },
-   "skills": [
-    "tech-debt-audit",
-    "backend-performance-standards"
-   ]
-  },
-  {
    "id": "be_debug",
    "match": {
     "filename_contains_any": [
      "debug",
-     "trace",
-     "error"
+     "trace"
     ]
    },
    "skills": [
@@ -414,22 +383,15 @@
    ]
   },
   {
-   "id": "be_review",
+   "id": "be_errors",
    "match": {
-    "path_contains_any": [
-     "internal/",
-     "server/",
-     "controller",
-     "service"
-    ],
-    "extensions": [
-     ".go",
-     ".ts",
-     ".js"
+    "filename_contains_any": [
+     "error",
+     "exception"
     ]
    },
    "skills": [
-    "code-review-and-quality",
+    "backend-error-handling",
     "backend-standards-always-follow",
     "service-layer-standards"
    ]

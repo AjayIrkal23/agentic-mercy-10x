@@ -1,35 +1,30 @@
 {
- "_comment": "Always-active core skill set injected at session start. full=body digest, pointer=name+description line. Names are canonical (aliases resolved via lib/skill_aliases at load).",
+ "_comment": "Always-active core skill set injected at session start. full=body digest, pointer=name+description line. Names are canonical (aliases resolved via lib/skill_aliases at load). Budget: session-start-aggregator gives this block what is left of MAX_AGGREGATED_CHARS (5500) after the superpowers + MCP tails, about 4.3k chars; nine pointers take about 1.6k, so exactly one short body fits. Only caveman is full (capped at its Scope+Rules part); the rest are pointers the model loads with the Skill tool. tests/test_skills_wp2.py asserts every full entry actually arrives.",
  "always": [
-  {
-   "skill": "codebase-intel-first",
-   "mode": "full",
-   "max_chars": 4000
-  },
-  {
-   "skill": "project-reference-linkage",
-   "mode": "full",
-   "max_chars": 7000
-  },
   {
    "skill": "caveman",
    "mode": "full",
-   "max_chars": 4000
+   "max_chars": 2400
+  },
+  {
+   "skill": "codebase-intel-first",
+   "mode": "pointer"
+  },
+  {
+   "skill": "project-reference-linkage",
+   "mode": "pointer"
   },
   {
    "skill": "no-ai-slop",
-   "mode": "full",
-   "max_chars": 11000
+   "mode": "pointer"
   },
   {
    "skill": "mcp-usage-standards",
-   "mode": "full",
-   "max_chars": 4500
+   "mode": "pointer"
   },
   {
    "skill": "verification-loop",
-   "mode": "full",
-   "max_chars": 3000
+   "mode": "pointer"
   },
   {
    "skill": "graphify",

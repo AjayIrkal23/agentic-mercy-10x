@@ -3,9 +3,8 @@
 
 Root gate for the dox CLAUDE.md documentation tree: a CODE file is about to be
 written in a GIT repo (HOME-guarded, never `$HOME`, never `exemptRepos`) that has
-NO root CLAUDE.md → HARD deny until the root is scaffolded. Override: re-issue the
-exact same edit once (records a fingerprint, second attempt passes) — same
-pattern as dangerous-bash-gate.py.
+NO root CLAUDE.md → deny once per repo per session (fingerprint = the repo root,
+B1-19); the retry and every later code write in that repo pass.
 
 ALWAYS ALLOWED (never gated): writes to docs/scaffold — *.md, CLAUDE.md, AGENTS.md,
 CODEX.md, and anything under a .claude/ directory. This keeps scaffolding (and the
@@ -21,7 +20,7 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-STATE_DIR = SCRIPT_DIR / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or SCRIPT_DIR / ".state")
 CONFIG_PATH = SCRIPT_DIR / "dox-write-gate.config.json"
 ROOT_DOC = "CLAUDE.md"
 
@@ -208,9 +207,11 @@ def main() -> int:
 
         # ---- Root gate: hard deny when no root CLAUDE.md exists ----
         if not root_doc.exists():
-            fp = f"missing-root::{abs_path}"
+            # once per REPO, not per file (B1-19): N files in an undocumented repo
+            # used to cost N denies
+            fp = f"missing-root::{root}"
             if fp in set(state.get("overridden") or []):
-                return _allow()  # override accepted (2nd identical attempt)
+                return _allow()  # override accepted (any later code write in this repo)
             ov = list(state.get("overridden") or [])
             ov.append(fp)
             state["overridden"] = ov
@@ -220,7 +221,8 @@ def main() -> int:
                 f"({root}). Code work is blocked until the dox tree's root exists.\n\n"
                 "Fix (preferred): invoke the `dox-doc-tree` skill and scaffold the root "
                 "(+ the area you're touching). Writing `CLAUDE.md`/`*.md` is always allowed.\n"
-                "Override: re-issue this exact edit once to proceed anyway (logged)."
+                "Override: re-issue the edit to proceed anyway; the gate then stays quiet "
+                "for this repo for the rest of the session (logged)."
             )
 
         return _allow()

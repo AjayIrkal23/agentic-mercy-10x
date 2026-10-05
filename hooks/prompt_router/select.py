@@ -151,7 +151,9 @@ def core_skills() -> frozenset[str]:
 
 
 def _weights() -> dict:
-    return _load_json(_WEIGHTS).get("weights", {}) if _WEIGHTS.exists() else {}
+    """Shared loader with skill_router.py: clamp [0.1, 1.0], dead keys dropped (C-16)."""
+    from prompt_router import weights as _w  # noqa: PLC0415
+    return _w.load(_WEIGHTS, set(index_meta()))
 
 
 def _norm(s: str) -> str:
@@ -174,13 +176,15 @@ def _index_skills(profile, index: dict, grams: set) -> dict[str, float]:
     scores: dict[str, float] = {}
     intents = set(profile.intents)
     surfaces = set(profile.surfaces)
+    weak = set(getattr(profile, "weak_surfaces", set()) or set())
+    weak_factor = float(_router_cfg().get("weak_surface_factor", 0.5))
     for name, meta in (index.get("skills") or {}).items():
         if not isinstance(meta, dict):
             continue
-        # description-token keywords (source floor-fallback) count half and
-        # saturate at 2.0 — a long description must not outscore a real signal;
-        # curated metadata keywords count 1.0 and saturate at 4.0
-        fallback = meta.get("source") == "floor-fallback"
+        # description-token keywords (index source `description`; `floor-fallback`
+        # on the no-index path) count half and saturate at 2.0 — a long description
+        # must not outscore a real signal; curated keywords count 1.0, cap 4.0
+        fallback = meta.get("source") in ("description", "floor-fallback")
         kw_w, kw_cap = (0.5, 2.0) if fallback else (1.0, 4.0)
         s = 0.0
         for kw in meta.get("keywords", []) or []:
@@ -190,8 +194,9 @@ def _index_skills(profile, index: dict, grams: set) -> dict[str, float]:
         s = min(s, kw_cap)
         if intents & set(meta.get("intents", []) or []):
             s += 1.5
-        if surfaces & set(meta.get("surfaces", []) or []):
-            s += 1.0
+        hit = surfaces & set(meta.get("surfaces", []) or [])
+        if hit:  # stack-only (weak) surfaces earn partial credit, like _surface_skills
+            s += 1.0 if hit - weak else weak_factor
         for rule in meta.get("path_rules", []) or []:
             if not isinstance(rule, dict):
                 continue
@@ -339,11 +344,15 @@ def rank_all(profile) -> list[tuple[str, float]]:
     weights = _weights()
     demote = (_router_cfg().get("additions") or {}).get("demote") or {}
     core = core_skills()
+    hidden = {n for n, m in (index.get("skills") or {}).items()
+              if isinstance(m, dict) and m.get("hidden")}
     out = []
     for name, v in total.items():
-        if name in core or not skill_exists(name):
+        if name in core or name in hidden or not skill_exists(name):
             continue
-        v *= float(weights.get(name, 1.0)) * float(demote.get(name, 1.0))
+        # learned weights may demote, never boost: their input is test-polluted and
+        # frozen since 2026-09-27 (audit C-01)
+        v *= min(float(weights.get(name, 1.0)), 1.0) * float(demote.get(name, 1.0))
         out.append((name, v))
     out.sort(key=lambda kv: (-kv[1], kv[0]))
     return out

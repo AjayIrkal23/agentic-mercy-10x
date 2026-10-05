@@ -5,7 +5,6 @@ when_to_use: Use when writing or reviewing frontend API modules, fetch/SDK wrapp
 paths:
   - "**/api/**/*.{ts,tsx}"
   - "**/*api*.{ts,js}"
-  - "**/services/**/*.ts"
 metadata:
   schema: 1
   category: frontend
@@ -51,6 +50,10 @@ It combines backend-driven list/query behavior with success-envelope parsing and
 3. Lock request keys, success envelope, error envelope, and pagination metadata before coding.
 
 ## Success Rules
+
+The envelopes below are the default. The project contract wins: when the repo's
+`CLAUDE.md`, `CODEX.md` or API docs define its own success or error shape, parse that
+shape and never migrate it unasked.
 
 Expected backend success envelope:
 

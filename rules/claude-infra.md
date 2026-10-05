@@ -6,6 +6,7 @@ paths:
   - "**/.claude/skills/**"
   - "**/.claude/installer/**"
   - "**/.claude/scripts/**"
+  - "**/.claude/mods/**"
   - "**/hooks/*.py"
   - "**/dispatch.config.json"
   - "**/settings.template.json"
@@ -37,6 +38,11 @@ and re-render. `hooks/model-policy.json` is the model truth →
 | `bash-write-gate` | Bash shell-write patterns | advisory unless `BASH_WRITE_GATE_DENY_SHELL_WRITES=1` | rule carried by `01-no-shell-writes.md` |
 | `hard-completion-gate` | Stop | `Gate 2 (docs)` … `Gate 5 (dead code)` | ≤1 block per turn |
 | `blocking-doc-enforcer` | `git commit` | `BLOCKED: Cannot commit without documentation updates.` | only when doc trees exist |
+| mercy mod guard | Bash dev server / watcher, subagent commit/push, live secret in a write | `mercy guard:` | deny; userConfig `guard` |
+| mercy mod verify gate | Stop after unverified code edits | `mercy verify gate:` | ≤1 block per turn; userConfig `verifyGate` |
+
+Mods (`mods/<name>`, loaded via rendered `env.CLAUDE_CODE_PLUGIN_DIRS`) run in-process
+beside the Python hooks; check them with `python3 scripts/validate_mods.py`.
 
 **Misdiagnosis order when an edit or read is refused** (stop at the first hit):
 1. No jcodemunch call yet this session → make one. 2. No `Read` of that file before

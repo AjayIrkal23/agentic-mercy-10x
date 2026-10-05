@@ -3,14 +3,16 @@
 Driven by ``hooks/tool-intelligence.json`` -> ``mcp_routes``:
 
   {id, when: {intents:[...], regex:"...", surfaces:[...], all:bool}, server: [names],
-   tools:[...], text:"...", guard:"" | "dev_server_listening" | "not_in_repo_symbol",
-   once_per:"session" | "match"}
+   tools:[...], text:"...", text_by_server:{name: text}, guard:"" |
+   "dev_server_listening" | "not_in_repo_symbol", once_per:"session" | "match"}
 
 A route fires when ANY ``when`` condition holds (``all: true`` requires every
 listed condition), its guard passes, and its server is available: present in
 ``~/.claude.json`` ``mcpServers`` (or an enabled plugin, ``plugin:<name>``, or the
 active repo's project scope: ``.mcp.json`` / ``projects[root].mcpServers``) and
-NOT listed in ``~/.claude/mcp-needs-auth-cache.json``. One line per route, at
+NOT listed in ``~/.claude/mcp-needs-auth-cache.json`` nor in the repo's
+``projects[root].disabledMcpServers``; ``reticle`` only where the repo carries its
+instrumentation (``reticle_instrumented``). One line per route, at
 most ``max_mcp_routes`` per prompt. Never starts anything: the browser guard
 only PROBES for a listening dev-server port (``ss -ltn``).
 
@@ -57,10 +59,15 @@ def routes() -> list[dict]:
 
 
 @lru_cache(maxsize=1)
+def _user_cfg() -> dict:
+    return _load_json(Path.home() / ".claude.json")
+
+
+@lru_cache(maxsize=1)
 def available_servers() -> set[str]:
     """User-scope MCP servers + enabled plugins (as ``plugin:<name>``)."""
     names: set[str] = set()
-    names.update(str(k) for k in (_load_json(Path.home() / ".claude.json").get("mcpServers") or {}))
+    names.update(str(k) for k in (_user_cfg().get("mcpServers") or {}))
     plugins = _load_json(_CLAUDE / "settings.json").get("enabledPlugins") or {}
     for key, on in plugins.items():
         if on:
@@ -78,7 +85,7 @@ def project_servers(root: str) -> set[str]:
     """Project-scoped servers for a repo: ``<root>/.mcp.json`` (minus
     ``disabledMcpjsonServers``) + local scope ``~/.claude.json projects[root]``.
     Lets per-project servers (read-only DB MCPs) route only where connected."""
-    entry = (_load_json(Path.home() / ".claude.json").get("projects") or {}).get(root) or {}
+    entry = (_user_cfg().get("projects") or {}).get(root) or {}
     names = {str(k) for k in (entry.get("mcpServers") or {})}
     disabled = {str(x) for x in (entry.get("disabledMcpjsonServers") or [])}
     names.update(str(k) for k in (_load_json(Path(root) / ".mcp.json").get("mcpServers") or {})
@@ -86,17 +93,23 @@ def project_servers(root: str) -> set[str]:
     return names
 
 
-def server_available(servers, root: str | None = None) -> str | None:
+def server_available(servers, root=None) -> str | None:
     """First server name (from the route's list) that is registered (user scope,
-    plugin, or — given ``root`` — project scope) and not waiting on auth, else None."""
+    plugin, or — given ``root`` — project scope) and not waiting on auth, else None.
+    ``root`` may be a list: ~/.claude.json keys projects by the folder Claude was
+    launched in, which can be below the git root (Santa-2 A1)."""
     if isinstance(servers, str):
         servers = [servers]
     avail, auth = available_servers(), needs_auth()
-    if root:
-        avail = avail | project_servers(str(root))
+    off: set[str] = set()
+    projects = _user_cfg().get("projects") or {}
+    for r in dict.fromkeys(str(x) for x in (root if isinstance(root, (list, tuple)) else [root]) if x):
+        avail = avail | project_servers(r)
+        # servers the user turned off here with /mcp (audit G-03)
+        off |= {str(x) for x in ((projects.get(r) or {}).get("disabledMcpServers") or [])}
     for s in servers or []:
         s = str(s)
-        if s not in avail:
+        if s not in avail or s in off:
             continue
         if any(a == s or a.startswith(s + ":") for a in auth):
             continue
@@ -125,6 +138,24 @@ def dev_server_port() -> int | None:
         if any(lo <= p <= hi for lo, hi in _DEV_PORT_RANGES):
             return p
     return None
+
+
+@lru_cache(maxsize=8)
+def reticle_instrumented(root: str) -> bool:
+    """The repo carries reticle's app-side plugin (package.json dep or a vite/next
+    config that names it). Without it reticle has no session to verify (G-14)."""
+    r = Path(root)
+    pkg = _load_json(r / "package.json")
+    deps = {str(k) for key in ("dependencies", "devDependencies") for k in (pkg.get(key) or {})}
+    if any(d.startswith("@reticlehq/") or d == "reticle" for d in deps):
+        return True
+    for cfg in list(r.glob("vite.config.*")) + list(r.glob("next.config.*")):
+        try:
+            if "reticle" in cfg.read_text(encoding="utf-8", errors="replace"):
+                return True
+        except OSError:
+            continue
+    return False
 
 
 def _match(route: dict, profile) -> tuple[bool, str]:
@@ -186,13 +217,16 @@ def items(profile, ctx: dict, *, max_routes: int = MAX_ROUTES) -> list[dict]:
             fires, token = _match(route, profile)
             if not fires:
                 continue
-            server = server_available(route.get("server"), root)
+            names = list(route.get("server") or [])
+            if root and "reticle" in names and not reticle_instrumented(str(root)):
+                names.remove("reticle")
+            server = server_available(names, [root, (ctx.get("payload") or {}).get("cwd")])
             if not server:
                 continue
             g = _guard_ok(route, token, ctx)
             if not g:
                 continue
-            text = str(route.get("text") or "")
+            text = str((route.get("text_by_server") or {}).get(server) or route.get("text") or "")
             try:
                 text = text.format(server=server, token=token, port=g.get("port", ""))
             except (KeyError, IndexError, ValueError):
@@ -207,4 +241,4 @@ def items(profile, ctx: dict, *, max_routes: int = MAX_ROUTES) -> list[dict]:
 
 
 __all__ = ["items", "routes", "available_servers", "project_servers", "needs_auth",
-           "server_available", "dev_server_port"]
+           "server_available", "dev_server_port", "reticle_instrumented"]

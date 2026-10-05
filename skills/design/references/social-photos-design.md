@@ -22,9 +22,9 @@ Design social media images via HTML/CSS rendering + screenshot export. Orchestra
 
 ## Workflow
 
-### Step 1: Activate Project Management
+### Step 1: Plan the tasks
 
-Invoke `project-management` skill to create persistent TODO tasks via Claude's native task orchestration. Break down into:
+Create a TodoWrite task list. Break down into:
 - Requirement analysis task
 - Idea generation task(s)
 - HTML design task(s) — can parallelize per size/variant
@@ -269,7 +269,7 @@ Report structure:
 
 ### Step 8: Organize Output
 
-Invoke `assets-organizing` skill to organize all output files and reports:
+Organize all output files and reports:
 - Move/copy exported PNGs to proper asset directories
 - Ensure reports are in `plans/reports/` with correct naming
 - Clean up intermediate HTML files if requested

@@ -1,10 +1,28 @@
 ---
 version: 0.13.0
 name: higgsfield-brandkit
-description: |
-  Create and extend complete visual brand systems through the Higgsfield CLI and bundled deterministic local tooling: palettes, SVG logo marks, typography, mockups, social graphics, packaging, signage, merchandise, posters, presentation decks, and editable PPTX/PDF brandbooks. Preserves official supplied assets, persists approvals locally, and regenerates only dependent outputs. Use when: "create a brand kit", "make a visual identity", "design a logo and brandbook", "apply this logo to branded assets", "make packaging or signage", or "extend our existing branding". Chain with higgsfield-generate for general image production and Marketing Studio brand-kits when importing website metadata for ads. NOT for unbranded image generation (use higgsfield-generate), product catalog photography (use higgsfield-product-photoshoot), website implementation (use higgsfield-websites), or native Figma/Canva/PSD/AI delivery.
-argument-hint: "[brand brief or existing assets] [requested deliverables]"
+description: 'Complete visual brand systems through the Higgsfield CLI and local tooling: palettes, SVG
+  logo marks, typography, mockups, packaging, signage and editable PPTX/PDF brandbooks.'
+argument-hint: '[brand brief or existing assets] [requested deliverables]'
 allowed-tools: Bash
+when_to_use: Create a brand kit or visual identity, a logo plus brandbook, branded assets from a logo,
+  packaging or signage. Not for unbranded images (higgsfield-generate), catalog photos (higgsfield-product-photoshoot)
+  or websites.
+metadata:
+  category: frontend
+  surfaces:
+  - frontend
+  triggers:
+    keywords:
+    - brand kit
+    - brandkit
+    - visual identity
+    - brandbook
+    - packaging design
+    - signage
+    - brand system
+    intents:
+    - design
 ---
 
 > **Local guard (vendor patch, ~/.claude):** never run the `curl … | sh` CLI installer or `npx playwright install` from `references/prerequisites.md` without an explicit yes from the user; if a prerequisite is missing, name it and stop.

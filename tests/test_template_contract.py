@@ -37,7 +37,8 @@ def test_template_is_portable_and_leanctx_free():
     assert not re.search(r"/home/[A-Za-z0-9._-]+/|/Users/[A-Za-z0-9._-]+/", TEXT)
     assert "lean-ctx" not in TEXT
     assert TMPL["permissions"]["deny"] == []
-    assert "statusLine" not in TMPL
+    sl = TMPL.get("statusLine")  # ours only: lean-ctx's status line must never come back
+    assert sl is None or ("scripts/statusline.py" in sl["command"] and "lean-ctx" not in sl["command"])
 
 
 def test_template_registers_every_dispatch_event():
@@ -54,13 +55,16 @@ def test_template_registers_every_dispatch_event():
 def test_env_and_marketplaces():
     env = TMPL["env"]
     assert env["CLAUDE_CODE_SUBAGENT_MODEL"] == "sonnet"
+    assert env["CLAUDE_CODE_PLUGIN_DIRS"] == "{{MOD_DIRS}}"  # machine paths are rendered, never templated
     assert env["RETICLE_TELEMETRY"] == "0"
     assert re.fullmatch(env["PONYTAIL_SUBAGENT_MATCHER"], "implementation-engineer")
     assert not re.search(env["PONYTAIL_SUBAGENT_MATCHER"], "Explore")
     mk = TMPL["extraKnownMarketplaces"]
     assert "claude-mermaid" not in mk
-    for name in ("ponytail", "nateherk", "karpathy-skills", "superpowers-marketplace"):
-        assert mk[name]["autoUpdate"] is True, name
+    # audit 2026-10-05 A-03: personal-repo marketplaces update by hand (tests/test_settings_wp8.py)
+    assert mk["superpowers-marketplace"]["autoUpdate"] is True
+    for name in ("ponytail", "nateherk", "karpathy-skills"):
+        assert mk[name]["autoUpdate"] is False, name
 
 
 def test_enabled_plugins_equal_manifest():

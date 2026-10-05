@@ -14,28 +14,16 @@ metadata:
   token-cost: 1431
   triggers:
     keywords:
-    - api
-    - components
-    - controllers
+    - project linkage
     - cross-module
-    - directory
-    - feature
-    - frontend
-    - global
-    - hooks
-    - layers
-    - linkage
-    - navigation
-    - project
-    - reference
-    - relationships
-    - routes
-    - schemas
-    - slices
-    - standards
-    - store
-    - structure
-    - understand
+    - cross-layer
+    - layer map
+    - project structure
+    - directory structure
+    - which files power
+    - route to component
+    - controller to service
+    - linked modules
     paths: []
     intents:
     - general
@@ -85,7 +73,7 @@ Before writing or modifying code, the agent **MUST** perform the following check
    - shared utilities  
    - cross-module dependencies
 
-   Use `jcodemunch-code-finder` as the code-discovery companion, then use `jcodemunch` when the repo is indexed to identify importers, references, dependency graphs, and related symbols for broad discovery. Use shell/file tools immediately for exact paths, literal text, dirty or untracked files, stale indexes, direct verification reads, and execution output.
+   Use `jcodemunch` as the code-discovery companion when the repo is indexed to identify importers, references, dependency graphs, and related symbols for broad discovery. Use shell/file tools immediately for exact paths, literal text, dirty or untracked files, stale indexes, direct verification reads, and execution output.
 
 2. **Impact Analysis:**  
    Determine whether changes to a:
@@ -99,7 +87,7 @@ Before writing or modifying code, the agent **MUST** perform the following check
    - frontend API layer  
    - store slices
 
-   Use `jcodemunch-code-finder` and `jcodemunch` blast-radius, reference, and dependency tools when available for broad impacted-layer discovery, then verify candidate files with direct local reads.
+   Use `jcodemunch` blast-radius, reference, and dependency tools when available for broad impacted-layer discovery, then verify candidate files with direct local reads.
 
 3. **No Assumptions:**  
    Never guess project context.  
@@ -160,7 +148,7 @@ Before completing any change:
 
 - [ ] Directory path matches `{layer}/{domain}/{file}` pattern  
 - [ ] All cross-module dependencies reviewed  
-- [ ] `jcodemunch-code-finder` plus `jcodemunch` or equivalent evidence used for linkage and impact checks when available  
+- [ ] `jcodemunch` or equivalent evidence used for linkage and impact checks when available  
 - [ ] No file exceeds 250 lines  
 - [ ] Naming consistent across API, Controller, and Service layers  
 - [ ] No circular dependencies introduced  

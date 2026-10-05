@@ -33,12 +33,12 @@ Config lives in **~/.claude.json (root level)** — correct location. A second c
 |---|---|---|
 | browser-tools-mcp | npx @agentdeskai/browser-tools-mcp@latest | npx on PATH ✓ |
 | context7 | npx @upstash/context7-mcp | ✓ |
-| fetch | /home/mercy/.local/bin/uvx mcp-server-fetch | EXISTS ✓ |
-| gbrain | /home/mercy/.bun/bin/gbrain serve | EXISTS ✓ (also ~/.local/bin/gbrain 0.42.62.0) |
+| fetch | ~/.local/bin/uvx mcp-server-fetch | EXISTS ✓ |
+| gbrain | ~/.bun/bin/gbrain serve | EXISTS ✓ (also ~/.local/bin/gbrain 0.42.62.0) |
 | graphify | python3 ~/.claude/hooks/graphify_launcher.py | launcher EXISTS ✓ |
-| jcodemunch | /home/mercy/.local/bin/jcodemunch-mcp | EXISTS ✓ |
-| jdocmunch | /home/mercy/.local/bin/jdocmunch-mcp | EXISTS ✓ |
-| lean-ctx | /home/mercy/.local/bin/lean-ctx | EXISTS ✓ (3.9.12, live this session) |
+| jcodemunch | ~/.local/bin/jcodemunch-mcp | EXISTS ✓ |
+| jdocmunch | ~/.local/bin/jdocmunch-mcp | EXISTS ✓ |
+| lean-ctx | ~/.local/bin/lean-ctx | EXISTS ✓ (3.9.12, live this session) |
 | markdownify | npx mcp-markdownify-server | ✓ |
 | memory | npx @modelcontextprotocol/server-memory | ✓ (but see BROKEN: storage) |
 | playwright | npx @playwright/mcp@latest | ✓ |
@@ -78,7 +78,7 @@ caveman-active + ponytail-active present (both modes indeed active this session)
 ## BROKEN
 
 1. **Memory MCP has no persistent storage path.** `memory` server config has `env: {}` — @modelcontextprotocol/server-memory then writes memory.json inside its npx cache package dir, which is wiped/re-created on version bumps and was NOT restored from backup (no memory.json found anywhere under ~/.npm/_npx, ~/.claude, ~). **All pre-crash Memory-MCP knowledge (pattern::/decision::/session:: entities) is gone**, and new writes will be ephemeral.
-   FIX: in ~/.claude.json → mcpServers.memory add `"env": {"MEMORY_FILE_PATH": "/home/mercy/.claude/memory/memory.jsonl"}` (create dir), restart session. Restore old file from git-backup if it was ever committed (search backup repo for memory.json).
+   FIX: in ~/.claude.json → mcpServers.memory add `"env": {"MEMORY_FILE_PATH": "~/.claude/memory/memory.jsonl"}` (create dir), restart session. Restore old file from git-backup if it was ever committed (search backup repo for memory.json).
 
 2. **graphify skill/package version drift**: CLI is 0.9.18 but installed skill is 0.7.16 — graphify itself warns. FIX: `graphify install`.
 
@@ -86,11 +86,11 @@ caveman-active + ponytail-active present (both modes indeed active this session)
 
 ## MISSING
 
-4. **jcodemunch index for /home/mercy/Desktop** — ~/.code-index contains only config.jsonc + last_seen_version; zero project indexes (all pre-crash indexes lost). Also note config.jsonc defaults to trusted-folders whitelist mode with an empty (commented) list. FIX: `mcp__jcodemunch__index_folder({"path": "/home/mercy/Desktop", "incremental": true})` (and each active repo); add roots to `trusted_folders` in ~/.code-index/config.jsonc if indexing is refused.
+4. **jcodemunch index for ~/Desktop** — ~/.code-index contains only config.jsonc + last_seen_version; zero project indexes (all pre-crash indexes lost). Also note config.jsonc defaults to trusted-folders whitelist mode with an empty (commented) list. FIX: `mcp__jcodemunch__index_folder({"path": "~/Desktop", "incremental": true})` (and each active repo); add roots to `trusted_folders` in ~/.code-index/config.jsonc if indexing is refused.
 
 5. **jdocmunch doc index** — ~/.doc-index has only `_hooks` (debounce/lock), no indexes. FIX: `mcp__jdocmunch__index_local` on doc-bearing repos, or let the SessionStart guard rebuild on first real repo session.
 
-6. **/home/mercy/Desktop/graphify-out/** — Desktop CLAUDE.md mandates `graphify query` when graphify-out/graph.json exists; it doesn't exist at all. FIX: `graphify update /home/mercy/Desktop` (AST-only) — or accept absent since Desktop is not a git repo and the graph guard only serves git repos.
+6. **~/Desktop/graphify-out/** — Desktop CLAUDE.md mandates `graphify query` when graphify-out/graph.json exists; it doesn't exist at all. FIX: `graphify update ~/Desktop` (AST-only) — or accept absent since Desktop is not a git repo and the graph guard only serves git repos.
 
 7. **tdd-guard reporters (all 3)** — confirmed missing: tdd-guard-go, tdd-guard-vitest, tdd-guard-pytest not on PATH (checked PATH, ~/go/bin, ~/.bun/bin, nvm bin). tdd-guard core binary is fine. Install commands per skills/tdd-auto-init/SKILL.md:
    - Go: `go install github.com/nizos/tdd-guard/reporters/go/cmd/tdd-guard-go@latest`
@@ -108,7 +108,7 @@ caveman-active + ponytail-active present (both modes indeed active this session)
 
 11. **~/.claude/double-shot-latte/ is an empty directory**, yet the dox root index in CLAUDE.md links `double-shot-latte/CLAUDE.md`. Plugin content actually lives in plugins/cache. FIX: remove the empty dir + let dox re-sync the index (or leave; harmless).
 
-12. **~/.code-index/config.jsonc whitelist mode** — with all defaults commented, `trusted_folders_whitelist_mode` default true + empty trusted list may refuse indexing new roots after restore. FIX: uncomment/set `"trusted_folders": ["/home/mercy/Desktop", ...your repos]` (verify actual behavior on first index_folder call).
+12. **~/.code-index/config.jsonc whitelist mode** — with all defaults commented, `trusted_folders_whitelist_mode` default true + empty trusted list may refuse indexing new roots after restore. FIX: uncomment/set `"trusted_folders": ["~/Desktop", ...your repos]` (verify actual behavior on first index_folder call).
 
 ---
 

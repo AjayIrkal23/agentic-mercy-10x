@@ -13,38 +13,13 @@ metadata:
   token-cost: 1040
   triggers:
     keywords:
-    - already
-    - amount
-    - big
-    - cause
-    - change
-    - changes
-    - code
-    - delivers
-    - execution
-    - feature
-    - feels
-    - file
-    - implement
-    - implementing
+    - implement the plan
+    - execute the plan
+    - implement this change
+    - known-scope change
+    - make the change
+    - apply the fix
     - incrementally
-    - known-scope
-    - land
-    - large
-    - once
-    - root
-    - safe
-    - safely
-    - scope
-    - standard
-    - step
-    - task
-    - too
-    - touches
-    - understood
-    - validated
-    - validation
-    - write
     paths: []
     intents:
     - general
@@ -77,8 +52,8 @@ Choose the touched surface first:
 If the prompt is asking for a code change, treat it as implementation and activate this shell before editing, even when the prompt does not explicitly mention mode selection.
 
 - Backend-only: load the mandatory Backend Core Compliance Set before editing: `backend-standards-always-follow`, `service-layer-standards`, `backend-api-standards`, `backend-error-handling`, and `backend-performance-standards`. Preserve `api-contract-standards` for envelope/contract work and `scaffold-standards` for new domain/feature skeletons.
-- Frontend-only: select and load the matching Build Web Apps plugin skill when available, then load the mandatory Frontend Core Compliance Set: `build-web-apps:frontend-app-builder` for new/redesign/visual surfaces or `build-web-apps:react-best-practices` for React/Vite/UI/code work, plus `frontend-standards-always-follow`, `frontend-structure-standards`, `frontend-response-handling`, `frontend-server-data-patterns`, and `react-hooks-patterns`.
-- Cross-surface: load the matching Build Web Apps plugin plus Frontend Core Compliance Set and Backend Core Compliance Set, then only the preserved add-ons required by the actual files and contracts being changed.
+- Frontend-only: load the Frontend Core Compliance Set: `frontend-design:frontend-design` (plugin) for new/redesign/visual surfaces or `vite-react-best-practices` for React/Vite/UI/code work (`expo-react-native` for React Native / Expo), plus `frontend-standards-always-follow`, `frontend-structure-standards`, `frontend-response-handling`, `frontend-server-data-patterns`, and `react-hooks-patterns`.
+- Cross-surface: load the Frontend Core Compliance Set and Backend Core Compliance Set, then only the preserved add-ons required by the actual files and contracts being changed.
 
 Use `project-reference-linkage` for linked modules and shared contracts.
 Use `mcp-usage-standards` when external verification or repo-system truth must guide the implementation.
@@ -88,7 +63,7 @@ When the repo is indexed, use `jcodemunch` first for broad path discovery, symbo
 ## Workflow
 
 1. Confirm the touched surfaces and impacted layers, preferring `jcodemunch` for indexed broad repo discovery and shell/file tools for exact or verification lookups.
-2. Load the matching Build Web Apps plugin for frontend surfaces, the Frontend Core Compliance Set for frontend work, and the Backend Core Compliance Set for backend/server work.
+2. Load the Frontend Core Compliance Set for frontend work and the Backend Core Compliance Set for backend/server work.
 3. Add `dead-code-and-change-audit` for code changes and only the other specialists required by the actual change.
 4. Implement the smallest complete change that satisfies the request.
 5. Verify tests, contracts, stale references, and user-visible behavior before closing.
@@ -111,4 +86,4 @@ When the repo is indexed, use `jcodemunch` first for broad path discovery, symbo
 ## References
 
 - Use `references/full-guide.md` if you need the previous full strict guide.
-- Use `workflow-overlay-optimizer` when persistent routing friction or missing implementation-skill activation must be corrected across sessions instead of patched ad hoc per prompt.
+- Persistent routing friction or a skill that keeps failing to activate: report it (router keywords live in the skill's `metadata.triggers.keywords`), do not patch it ad hoc per prompt.

@@ -66,7 +66,7 @@ Cover:
 - **Error handling** — HTTP errors, DB errors, rollback, user-visible messages
 - **Testability** — unit/integration coverage; missing cases for new behavior
 
-Optional pattern checklist (not mandatory): [references/examples/sample-go-service-layout-checklist.md](references/examples/sample-go-service-layout-checklist.md).
+Optional pattern checklist (not mandatory): [examples/sample-go-service-layout-checklist.md](backend-code-review/references/examples/sample-go-service-layout-checklist.md).
 
 ### 5. Provide feedback
 
@@ -89,5 +89,5 @@ After the review, ask whether to switch back to the default branch (`git checkou
 
 ## References
 
-- [source-attribution.md](references/source-attribution.md)
-- [examples/sample-go-service-layout-checklist.md](references/examples/sample-go-service-layout-checklist.md)
+- [source-attribution.md](backend-code-review/references/source-attribution.md)
+- [examples/sample-go-service-layout-checklist.md](backend-code-review/references/examples/sample-go-service-layout-checklist.md)

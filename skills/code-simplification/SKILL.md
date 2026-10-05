@@ -14,25 +14,19 @@ metadata:
   token-cost: 3301
   triggers:
     keywords:
-    - accumulated
-    - behavior
-    - changing
-    - clarity
-    - code
-    - complexity
-    - extend
-    - harder
-    - has
-    - maintain
-    - read
-    - refactoring
-    - reviewing
-    - should
+    - simplify
+    - simplify this
     - simplification
-    - simplifies
-    - unnecessary
-    - without
-    - works
+    - too complex
+    - hard to read
+    - reduce complexity
+    - over-engineered
+    - clean up this code
+    - readability
+    - refactor for clarity
+    - refactor
+    - split into smaller
+    - its own file
     paths: []
     intents:
     - general

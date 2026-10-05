@@ -30,7 +30,7 @@ _HOOKS = Path(__file__).resolve().parent
 if str(_HOOKS) not in sys.path:
     sys.path.insert(0, str(_HOOKS))
 
-STATE_DIR = _HOOKS / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or _HOOKS / ".state")
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 BLAST_THRESHOLD = 3
 MAX_CHARS = 900
@@ -86,6 +86,18 @@ def _server(name: str) -> bool:
         return _mcp.server_available([name]) is not None
     except Exception:  # noqa: BLE001
         return False
+
+
+def _browser_verifier(root) -> str:
+    """reticle only where the repo carries its instrumentation (audit G-14), else playwright."""
+    try:
+        from prompt_router.modules import mcp_routes as _mcp  # noqa: PLC0415
+        instrumented = _mcp.reticle_instrumented(str(root))
+    except Exception:  # noqa: BLE001
+        instrumented = False
+    if instrumented and _server("reticle"):
+        return "reticle (Skill verify-ui-change)"
+    return "playwright (browser_navigate → browser_snapshot)" if _server("playwright") else ""
 
 
 def _dev_port():
@@ -191,12 +203,12 @@ def hints(payload: dict, state: dict) -> list[str]:
                        "CONCURRENTLY for big-table indexes, no table-rewriting default, RLS on new "
                        "tables, FK indexes, backfill in batches.")
 
-    if (low.endswith(_FE_EXT) and root is not None and once(f"fe:{fp}")
-            and (_server("reticle") or _server("playwright"))):
-        port = _dev_port()
+    if low.endswith(_FE_EXT) and root is not None:
+        how = _browser_verifier(root)
+        port = _dev_port() if how and once(f"fe:{fp}") else None
         if port:
-            out.append(f"FE component edited and your app is running on :{port} → verify with reticle "
-                       "(Skill verify-ui-change) or playwright browser_snapshot. Never start a server.")
+            out.append(f"FE component edited and your app is running on :{port} → verify with {how}. "
+                       "Never start a server.")
 
     if is_code and fp not in files:
         files.append(fp)

@@ -18,70 +18,17 @@ metadata:
   token-cost: 1216
   triggers:
     keywords:
-    - affected
-    - agents
-    - apis
-    - architectural
-    - asks
-    - changelogs
-    - changes
-    - changing
-    - check
-    - client/server
-    - code
-    - codebase
-    - coding
-    - completeness
-    - context
-    - decisions
-    - docs
-    - documentation
-    - engineers
-    - example
-    - feature
-    - features
-    - first
-    - folders
-    - frontend_docs
-    - future
-    - go_udp
-    - impact
-    - implementation
-    - including
-    - making
-    - mapping
-    - markdown/pr
-    - mdx
-    - mentions
-    - monorepo
-    - must
-    - need
-    - next.js
-    - optional
-    - phase
-    - project_linkages
-    - public
-    - read
+    - update docs
+    - update the docs
+    - sync docs
+    - docs affected
+    - which docs
+    - document this change
     - readme
-    - record
-    - records
-    - references/examples
-    - references/go-udp-documentation-lifecycle.md
-    - references/upstream-nextjs
-    - repo
-    - review
-    - scaffold
-    - see
+    - changelog
     - server_docs
-    - shipping
-    - split
-    - substantive
-    - sync
-    - understand
-    - update
-    - user
-    - will
-    - work
+    - frontend_docs
+    - mdx
     paths: []
     intents:
     - backend

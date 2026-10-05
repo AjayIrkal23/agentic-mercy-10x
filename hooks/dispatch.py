@@ -23,9 +23,18 @@ What the orchestration layer adds on top of the old N-registrations-per-event:
     skipped once the wall budget is blown (and the skip is telemetered);
   * ``{PY}`` / ``{NODE}`` / ``{HOOKS}`` / ``{HOME}`` resolution via ``lib/platform.py``.
 
+Pass order (B1-17): (1) gates and mutators, sequential and interleaved in declared
+order (a mutator feeds the gates after it, not before); (2) execs; (3) advisories in
+parallel. A ``"defer": true`` advisory (tdd-guard) is spawned detached instead and its
+text is delivered by the next PreToolUse/PostToolUse dispatch of that session; ``--only``
+runs it synchronously (the mod's async lane needs the answer).
+
 Link types (declared per link):
-  gate      sequential; may emit ``permissionDecision: deny|ask``; first deny/ask
-            short-circuits the chain; NEVER budget-dropped.
+  gate      sequential; may emit ``permissionDecision: deny|ask``. A deny ends the
+            chain at once; its reason carries earlier gate notes and any held ask.
+            An ask is held while later gates run (a later deny wins), then pauses
+            the call. Gate notes sort before advisories under the char cap, which
+            cuts on a line boundary. NEVER budget-dropped.
   mutator   sequential; may emit ``updatedInput`` (opus-guard, workflow-model-guard);
             threaded forward into later links. Only a Bash ``command`` with control
             characters is dropped (the harness rejects it); Agent/Workflow prompts
@@ -40,6 +49,20 @@ Top-level ``{"decision":"block"}`` from a gate short-circuits Stop, ConfigChange
 TeammateIdle (TeammateIdle exits 2 with the reason on stderr to keep the teammate
 working). A Stop gate's ``systemMessage`` is passed through when nothing blocks.
 
+Mod bridge (``mods/mercy``): when the mod owns links for this session it sets
+``MERCY_MOD_OWNED`` (comma-separated link ids) and ``MERCY_MOD_SESSION`` (the owning
+session id) in the Claude Code process env, which every hook inherits. Links in that
+set are skipped here, but only for that session's payloads, so a nested ``claude``
+without the mod still runs everything. ``dispatch.py <event> --only id1,id2`` runs just
+those links (ownership ignored): that is how the mod runs an owned link when it can
+fire, synchronously or in the background. No env set → behaviour is unchanged.
+Rows of ``--only`` runs carry ``via: "mod"``; ``MERCY_MOD_FAILED`` hands one call's links
+back (see ``_mod_owned``).
+
+lean-ctx ``ctx_shell`` / ``shell`` / ``ctx_patch`` (and ``ctx_call`` wrapping them) are
+reshaped into Bash / Edit / Write payloads by ``dispatch_support.adapt`` so every gate
+and post-write link sees them (B1-04); rows carry ``adapted_from``.
+
 Fail-open at every level: any internal error prints ``{}`` (allow) so a broken
 dispatcher can never brick a session.
 """
@@ -52,7 +75,6 @@ import re
 import subprocess
 import sys
 import time
-from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 _HOOKS = Path(__file__).resolve().parent
@@ -65,6 +87,10 @@ try:  # shared foundation; never let an import failure brick the hook
 except Exception:  # noqa: BLE001
     _plat = None  # type: ignore
     _tel = None  # type: ignore
+try:
+    import dispatch_support as _sup
+except Exception:  # noqa: BLE001
+    _sup = None  # type: ignore
 
 CONFIG = _HOOKS / "dispatch.config.json"
 
@@ -101,12 +127,15 @@ _DEFAULT_BUDGET = {"ms": 2500, "chars": 4000}
 # helpers
 # --------------------------------------------------------------------------- #
 _CUR_TOOL = ""  # set per dispatch(); stamped on every telemetry row
+_ROW_EXTRA: dict = {}  # per dispatch(): via="mod" for --only runs, adapted_from=<lean-ctx tool>
 
 
 def _telemeter(event: str, link_id: str, **fields) -> None:
     if _tel is None:
         return
     fields.setdefault("tool", _CUR_TOOL)
+    for k, v in _ROW_EXTRA.items():
+        fields.setdefault(k, v)
     try:
         _tel.record(event, link_id, **fields)
     except Exception:  # noqa: BLE001
@@ -193,7 +222,8 @@ def _run_link(link: dict, event: str, payload_text: str, sid: str):
         _telemeter(event, lid, ms=ms, exit=proc.returncode,
                    chars_out=len(out), decision=decision, session=sid,
                    type=link.get("type"))
-        return parsed, out
+        # raw text of a crashed link (a traceback) never reaches the model (B1-15)
+        return parsed, (out if proc.returncode == 0 else "")
     except subprocess.TimeoutExpired:
         ms = round((time.perf_counter() - t0) * 1000, 2)
         _telemeter(event, lid, ms=ms, exit=124, chars_out=0,
@@ -243,6 +273,47 @@ def _extract_updated_input(parsed):
     return hso.get("updatedInput") or parsed.get("updatedInput")
 
 
+_MOD_BEAT_MAX_AGE_S = 120  # the mod refreshes MERCY_MOD_BEAT on every tool event
+
+
+def _mod_owned(payload: dict) -> frozenset:
+    """Link ids the mercy mod runs itself for this payload's session (empty otherwise).
+
+    Ownership needs a fresh heartbeat: if the mod is unloaded mid-session (a remote
+    rollout switch, a crash), its env vars linger but the beat ages, and every link
+    runs here again within two minutes.
+
+    Hand-back (B1-06): ``MERCY_MOD_FAILED=<tool_use_id>:id,id`` means the mod's run of
+    those ids failed for that call (set before handing the call on, so Python runs them
+    now). A full release clears ``MERCY_MOD_OWNED`` itself."""
+    owner = os.environ.get("MERCY_MOD_SESSION", "")
+    sid = str(payload.get("session_id") or "")
+    if not owner or owner != sid:
+        return frozenset()
+    try:
+        age_s = time.time() - float(os.environ.get("MERCY_MOD_BEAT", "0")) / 1000.0
+    except ValueError:
+        return frozenset()
+    if not 0 <= age_s <= _MOD_BEAT_MAX_AGE_S:
+        return frozenset()
+    owned = _ids(os.environ.get("MERCY_MOD_OWNED", ""))
+    tu, _, failed = os.environ.get("MERCY_MOD_FAILED", "").partition(":")
+    if tu and tu == str(payload.get("tool_use_id") or ""):
+        owned -= _ids(failed)
+    return owned
+
+
+def _ids(text: str) -> frozenset:
+    return frozenset(x.strip() for x in (text or "").split(",") if x.strip())
+
+
+def _cap(text: str, limit: int) -> str:
+    """Line-boundary cut with a ``[truncated]`` marker (B1-16)."""
+    if _sup is not None:
+        return _sup.cap(text, limit)
+    return text[:limit] if limit else text
+
+
 def _has_hidden_control_chars(obj) -> bool:
     """True if any string in a (possibly nested) tool_input contains a C0 control
     character (newline/carriage-return/etc., excluding tab) that the harness
@@ -262,7 +333,41 @@ def _has_hidden_control_chars(obj) -> bool:
 # --------------------------------------------------------------------------- #
 # main dispatch
 # --------------------------------------------------------------------------- #
-def dispatch(event: str, payload: dict, cfg: dict) -> dict:
+_TOOL_EVENTS = ("pre-tool-use", "post-tool-use", "post-tool-use-failure")
+
+
+def dispatch(event: str, payload: dict, cfg: dict, only: frozenset | None = None) -> dict:
+    """Run ``event``'s chain. A lean-ctx write/shell call is first reshaped into the
+    Bash / Edit / Write payloads the gates read (B1-04), one run per touched path."""
+    global _ROW_EXTRA
+    _ROW_EXTRA = {"via": "mod"} if only is not None else {}
+    adapted = _sup.adapt(payload) if (_sup and event in _TOOL_EVENTS) else None
+    if not adapted:
+        return _dispatch_one(event, payload, cfg, only, drain=True)
+    _ROW_EXTRA["adapted_from"] = _tool_name(payload)
+    results = [_dispatch_one(event, p, cfg, only, drain=(i == 0), adapted=True)
+               for i, p in enumerate(adapted)]
+    for dec in ("deny", "ask"):
+        for r in results:
+            hso = r.get("hookSpecificOutput") or {}
+            if hso.get("permissionDecision") == dec:
+                # the other paths' context (incl. advisories drained on path 1) rides along,
+                # else it is lost: the queue file is already gone (Santa H2)
+                rest = [(x.get("hookSpecificOutput") or {}).get("additionalContext", "")
+                        for x in results if x is not r]
+                key = "permissionDecisionReason" if dec == "deny" else "additionalContext"
+                hso[key] = "\n\n".join(c for c in [hso.get(key, "")] + rest if c)
+                return r
+    merged = "\n\n".join(c for c in ((r.get("hookSpecificOutput") or {}).get("additionalContext", "")
+                                     for r in results) if c)
+    if not merged:
+        return {}
+    return {"hookSpecificOutput": {"hookEventName": _EVENT_NAME.get(event, event),
+                                   "additionalContext": merged}}
+
+
+def _dispatch_one(event: str, payload: dict, cfg: dict, only: frozenset | None = None,
+                  drain: bool = False, adapted: bool = False) -> dict:
     global _CUR_TOOL
     event_name = _EVENT_NAME.get(event, event)
     sid = str(payload.get("session_id") or payload.get("session") or "")
@@ -274,17 +379,30 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
     ms_budget = float(budget.get("ms", _DEFAULT_BUDGET["ms"]))
     char_cap = int(budget.get("chars", _DEFAULT_BUDGET["chars"]))
 
-    # split links by type, preserving declared order, applying enable + tool filter
+    # split links by type, preserving declared order, applying enable + tool filter;
+    # `only` (the mod's --only run) selects links; otherwise mod-owned links are skipped.
+    # An adapted lean-ctx call is never owned: the mod plans by the real tool name.
+    owned = frozenset() if (only is not None or adapted) else _mod_owned(payload)
     active = [ln for ln in chain
-              if ln.get("enabled", True) and _link_matches(ln, tool)]
+              if ln.get("enabled", True) and _link_matches(ln, tool)
+              and (only is None or ln.get("id") in only)
+              and ln.get("id") not in owned]
 
     contexts: list[tuple[int, str]] = []
+    if drain and only is None and _sup and event in ("user-prompt-submit", "pre-tool-use", "post-tool-use"):
+        # advisories of deferred links (tdd-guard) from earlier calls (B1-02), and Stop-gate
+        # notes for the model (CLAUDE.md §11) — the prompt delivers them before any tool runs
+        contexts += [(1, "[Deferred advisory from an earlier write]\n" + c) for c in _sup.drain(sid)]
     updated_input = None
     system_message = ""     # Stop gates may emit a non-blocking systemMessage
+    held_ask = None         # (reason, link id): later gates still run, a later deny wins (B1-07)
     # ASCII-escaped JSON: link stdin (and our stdout) encode with the console codepage
     # when PYTHONUTF8 is unset, and cp1252 cannot encode "→" — every link errored.
     payload_text = json.dumps(payload)
     t_start = time.perf_counter()
+
+    def _ms() -> float:
+        return round((time.perf_counter() - t_start) * 1000, 2)
 
     # ---- pass 1: sequential gates + mutators (in declared order) ---------- #
     advisory_links = []
@@ -295,7 +413,7 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
             parsed, _ = _run_link(ln, event, payload_text, sid)
             if event in _TOP_LEVEL_BLOCK_EVENTS and isinstance(parsed, dict):
                 if parsed.get("decision") == "block":
-                    _telemeter(event, "_dispatch", decision="block", session=sid,
+                    _telemeter(event, "_dispatch", decision="block", session=sid, ms=_ms(),
                                note=f"short-circuit@{ln.get('id')}")
                     return {
                         "decision": "block",
@@ -305,18 +423,25 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
                     system_message = str(parsed["systemMessage"])
             dec, reason = ((None, None) if event in _TOP_LEVEL_BLOCK_EVENTS
                            else _extract_decision(parsed))
-            if dec is not None:
-                # short-circuit: emit the deny/ask decision now
-                _telemeter(event, "_dispatch", decision=dec, session=sid,
+            if dec == "deny":
+                # a deny ends the chain; earlier gate notes and a held ask ride along
+                _telemeter(event, "_dispatch", decision=dec, session=sid, ms=_ms(),
                            note=f"short-circuit@{ln.get('id')}")
+                notes = [c for _, c in sorted(contexts, key=lambda p: p[0])]
+                if held_ask:
+                    notes.append(f"(an earlier gate, {held_ask[1]}, also asked: {held_ask[0]})")
+                if notes:
+                    reason = f"{reason}\n\nEarlier gate notes:\n" + "\n\n".join(notes)
                 return {"hookSpecificOutput": {
                     "hookEventName": event_name,
                     "permissionDecision": dec,
-                    "permissionDecisionReason": reason,
+                    "permissionDecisionReason": _cap(reason, char_cap),
                 }}
+            if dec == "ask" and held_ask is None:
+                held_ask = (reason, ln.get("id", "?"))
             ctx = _extract_context(parsed)
-            if ctx:
-                contexts.append((int(ln.get("priority", 5)), ctx))
+            if ctx:  # gate notes outrank advisories under the char cap (B1-16)
+                contexts.append((int(ln.get("priority", -1)), ctx))
         elif typ == "mutator":
             parsed, _ = _run_link(ln, event, payload_text, sid)
             ui = _extract_updated_input(parsed)
@@ -346,6 +471,32 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
         else:  # advisory
             advisory_links.append(ln)
 
+    if held_ask is not None:
+        # an ask still pauses the call: execs and advisories wait for the answer, as before
+        _telemeter(event, "_dispatch", decision="ask", session=sid, ms=_ms(),
+                   note=f"short-circuit@{held_ask[1]}")
+        hso = {"hookEventName": event_name, "permissionDecision": "ask",
+               "permissionDecisionReason": held_ask[0]}
+        notes = "\n\n".join(c for _, c in sorted(contexts, key=lambda p: p[0]))
+        if notes:
+            hso["additionalContext"] = _cap(notes, char_cap)
+        if updated_input is not None:
+            hso["updatedInput"] = updated_input
+        return {"hookSpecificOutput": hso}
+
+    # ---- deferred advisories: detached, delivered on a later call (B1-02) - #
+    if only is None and sid and _sup:
+        keep = []
+        for ln in advisory_links:
+            if ln.get("defer") and _sup.spawn_deferred(
+                    _resolve_cmd(ln.get("cmd", [])), float(ln.get("timeout_ms", 5000)) / 1000.0,
+                    payload_text, sid, event, ln.get("id", "?")):
+                _telemeter(event, ln.get("id", "?"), decision="deferred", session=sid,
+                           type="advisory", ms=0)
+            else:
+                keep.append(ln)
+        advisory_links = keep
+
     # ---- pass 2: execs (async ones detached; the rest bounded by timeout) -- #
     for ln in exec_links:
         if ln.get("async"):
@@ -363,10 +514,13 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
             for ln in advisory_links:
                 if int(ln.get("priority", 5)) > 0:
                     _telemeter(event, ln.get("id", "?"), decision="skip-budget",
-                               budget_hit=True, session=sid)
+                               budget_hit=True, session=sid, ms=0)
             run_now = [ln for ln in advisory_links if int(ln.get("priority", 5)) == 0]
         if run_now:
             try:
+                # imported here: concurrent.futures costs ~10 ms of the 35 ms dispatcher
+                # start, and most dispatches have no advisory left to run
+                from concurrent.futures import ThreadPoolExecutor
                 with ThreadPoolExecutor(max_workers=min(8, len(run_now))) as pool:
                     futs = {pool.submit(_run_link, ln, event, payload_text, sid): ln
                             for ln in run_now}
@@ -388,10 +542,8 @@ def dispatch(event: str, payload: dict, cfg: dict) -> dict:
                 pass
 
     # ---- assemble the single merged response ------------------------------ #
-    contexts.sort(key=lambda p: p[0])  # priority 0 first
-    merged = "\n\n".join(c for _, c in contexts if c).strip()
-    if char_cap and len(merged) > char_cap:
-        merged = merged[:char_cap]
+    contexts.sort(key=lambda p: p[0])  # gate notes (-1), then priority 0 first
+    merged = _cap("\n\n".join(c for _, c in contexts if c).strip(), char_cap)
     total_ms = round((time.perf_counter() - t_start) * 1000, 2)
     if total_ms > ms_budget:
         _telemeter(event, "_dispatch", decision="budget-overrun",
@@ -438,7 +590,13 @@ def main(argv: list[str]) -> int:
         except Exception:  # noqa: BLE001
             print("{}")
             return 0
-        result = dispatch(event, payload, cfg)
+        only = None
+        if len(argv) >= 2 and argv[1] == "--only":
+            only = _ids(argv[2] if len(argv) >= 3 else "")
+            if not only:  # a bare --only selects nothing; it must never run the whole chain
+                print("{}")
+                return 0
+        result = dispatch(event, payload, cfg, only)
         if event == "teammate-idle" and result.get("decision") == "block":
             # exit 2 + stderr = keep the teammate working (TeammateIdle contract)
             print(result.get("reason") or "expected artifact missing", file=sys.stderr)

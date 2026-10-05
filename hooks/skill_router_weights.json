@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "generated_at": "2026-09-28T03:17:28.505917+00:00",
+    "generated_at": "2026-10-05T03:20:32.223143+00:00",
     "sessions_analyzed": 30,
     "window": 30,
     "formula": "weight = max(floor, 1.0 - (ignore_rate * 0.5)); floor = 1.0 for baseline skills, 0.7 otherwise"

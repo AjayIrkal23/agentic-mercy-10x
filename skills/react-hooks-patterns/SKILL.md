@@ -4,7 +4,7 @@ description: "React component state, effects, refs, reducers, memoization, and c
 when_to_use: Use when implementing or reviewing useState/useReducer/useEffect/useRef logic, extracting a custom hook, checking effect safety or stale closures, or adopting React 19 Actions hooks.
 paths:
   - "**/hooks/**/*.{ts,tsx}"
-  - "**/use*.{ts,tsx}"
+  - "**/use[A-Z]*.{ts,tsx}"
 metadata:
   schema: 1
   category: frontend

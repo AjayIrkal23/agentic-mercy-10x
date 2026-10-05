@@ -13,6 +13,7 @@ validate_skills.py — skill validator, rules R1..R12.
   R10 upstream-intactness: locked skills hash-match their provenance baseline [HARD when provenance present]
   R11 custom keys live under ``metadata:`` (HARD user-authored, WARN locked)
   R12 ``paths:`` entries are plain glob strings without ``~``                 [HARD]
+  R13 intents not named as a router category are inert (exact match)         [WARN]
 
 Routing metadata is read through build_skills_index.skill_meta (metadata: first,
 legacy top-level keys as fallback). --fix applies only to R1/R4. Exit nonzero on
@@ -35,6 +36,7 @@ SOURCES = sl.HOOKS_DIR / "skills-sources.json"
 FLOOR = sl.HOOKS_DIR / "trigger-floor.json"
 INDEX = sl.HOOKS_DIR / "skills-index.json"
 ALIASES = sl.HOOKS_DIR / "skill-aliases.json"
+ROUTER = sl.HOOKS_DIR / "autonomous-skill-router.config.json"
 
 # Claude Code skill frontmatter keys (skills.md "Frontmatter reference", v2.1.283).
 NATIVE_KEYS = {
@@ -82,10 +84,12 @@ def validate(fix: bool = False) -> int:
     floor = _load_json(FLOOR)
     index = _load_json(INDEX)
     aliases = {k for k in _load_json(ALIASES) if not k.startswith("_")}
+    categories = set(_load_json(ROUTER).get("categories") or {})
 
     hard_fail = 0
     warns = 0
     intent_kw: dict[str, set[str]] = defaultdict(set)
+    inert: dict[str, list[str]] = {}
 
     for d in sl.skill_dirs():
         name = d.name
@@ -167,6 +171,8 @@ def validate(fix: bool = False) -> int:
         for kw in kws:
             for it in (intent_list or ["_"]):
                 intent_kw[f"{it}:{kw}"].add(name)
+        if categories and (dead := [it for it in intent_list if it not in categories]):
+            inert[name] = dead
 
         # R11 custom keys under metadata: — HARD for user-authored, WARN for locked
         stray = sorted(k for k in fm if k not in NATIVE_KEYS)
@@ -192,6 +198,13 @@ def validate(fix: bool = False) -> int:
     overloaded = {k: v for k, v in intent_kw.items() if len(v) > 3}
     if overloaded:
         print(f"  R7  WARN disambiguation: {len(overloaded)} keyword×intent pairs on >3 skills")
+        warns += 1
+
+    # R13 — WARN: the router matches intents to category names exactly (C-03)
+    if inert:
+        sample = ", ".join(f"{n}: {v}" for n, v in sorted(inert.items())[:6])
+        print(f"  R13 WARN {len(inert)} skills carry intents that match no router category "
+              f"(inert; use {sorted(categories)[:4]}…): {sample}")
         warns += 1
 
     # R9 floor guard — every skill the floor references must resolve: index entry,

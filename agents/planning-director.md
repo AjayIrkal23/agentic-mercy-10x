@@ -34,7 +34,7 @@ Preloaded skills (frontmatter `skills:`): `superpowers:writing-plans` (sets the 
 
 ## ARTIFACT
 
-File: `plan-YYYY-MM-DD-<feature-slug>.md`, written to the project root AND copied to `docs/superpowers/plans/` (create the directory if missing).
+File: `plan-YYYY-MM-DD-<feature-slug>.md`, written to the path the dispatch names (under `/invoke`: the run folder), else the project root, AND copied to `docs/superpowers/plans/` (create the directory if missing).
 
 Required sections, in order:
 1. `## Goal` — outcome-shaped, one sentence, plus source spec path.

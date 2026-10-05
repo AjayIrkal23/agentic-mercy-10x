@@ -7,11 +7,12 @@ Also detects generic code-reviewer subagent types.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-STATE_DIR = Path(__file__).resolve().parent / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or Path(__file__).resolve().parent / ".state")
 
 SANTA_SUBAGENTS = frozenset(
     {
@@ -79,7 +80,8 @@ def main() -> int:
     # dispatched this session" instead of nagging about skill loads.
     if subagent:
         try:
-            tel = Path(__file__).resolve().parent / ".telemetry"
+            tel = Path(os.environ.get("CLAUDE_HOOK_TELEMETRY_DIR")
+                       or Path(__file__).resolve().parent / ".telemetry")
             tel.mkdir(parents=True, exist_ok=True)
             rec = {"ts": datetime.now(timezone.utc).isoformat(), "agent": subagent}
             with (tel / f"{_safe_cid(cid)}.agent-dispatches.jsonl").open("a", encoding="utf-8") as fh:

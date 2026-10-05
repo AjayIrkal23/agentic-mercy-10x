@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Skill effectiveness report CLI.
 
-Reads ~/.claude/hooks/.telemetry/skill-effectiveness.jsonl (written by
-fullstack-skills-reminder.py stop branch, task 28) and reports:
+Reads ~/.claude/hooks/.telemetry/skill-effectiveness.jsonl and reports what it
+holds. Its writer (fullstack-skills-reminder.py's stop mode) was retired on
+2026-10-05 (audit B2-14), so the file only carries history up to 2026-09-27; the
+weekly Stop trigger no longer runs this report. Reports:
 
   skill | reminded_N | invoked_N | ignore_rate%  | verdict
 
@@ -33,11 +35,13 @@ Exit codes:
 from __future__ import annotations
 
 import json
+import os
 import sys
 from collections import defaultdict
 from pathlib import Path
 
-TELEMETRY_DIR = Path(__file__).resolve().parent / ".telemetry"
+TELEMETRY_DIR = Path(os.environ.get("CLAUDE_HOOK_TELEMETRY_DIR")
+                     or Path(__file__).resolve().parent / ".telemetry")
 EFFECTIVENESS_FILE = TELEMETRY_DIR / "skill-effectiveness.jsonl"
 
 REVIEW_THRESHOLD = 80   # ignore_rate% above this → REVIEW-CANDIDATE

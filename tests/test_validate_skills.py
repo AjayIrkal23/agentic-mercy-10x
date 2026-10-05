@@ -96,3 +96,22 @@ def test_r6_retains_skill_relative_reference_resolution(tmp_path, monkeypatch):
     _isolate_validator(monkeypatch, validator, skill_dir, skills_root)
 
     assert validator.validate() == 0
+
+
+def test_r13_warns_on_intents_the_router_never_matches(tmp_path, monkeypatch, capsys):
+    """C-03 (audit 2026-10-05): the router matches intents against its category names
+    exactly, so a `design` or `planning` label is inert. Warn, never fail."""
+    validator = _load_validator()
+    skill_dir = tmp_path / "skills" / "reference-test"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: reference-test\ndescription: Validates intents.\nmetadata:\n"
+        "  triggers:\n    intents: [design, REVIEW]\n---\nbody\n", encoding="utf-8")
+    _isolate_validator(monkeypatch, validator, skill_dir, tmp_path / "skills")
+    router = {"categories": {"DESIGN": {}, "REVIEW": {}}}
+    monkeypatch.setattr(validator, "_load_json",
+                        lambda p: router if p == validator.ROUTER else {})
+
+    assert validator.validate() == 0
+    out = capsys.readouterr().out
+    assert "R13 WARN" in out and "reference-test: ['design']" in out

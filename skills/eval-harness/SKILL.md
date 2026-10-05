@@ -16,19 +16,15 @@ metadata:
   origin: ECC
   triggers:
     keywords:
-    - claude
-    - code
-    - development
-    - edd
     - eval
+    - evals
+    - eval harness
     - eval-driven
-    - evaluation
-    - formal
-    - framework
-    - harness
-    - implementing
-    - principles
-    - sessions
+    - evaluation suite
+    - pass@k
+    - prompt regression
+    - agent evaluation
+    - benchmark the skill
     paths: []
     intents:
     - general

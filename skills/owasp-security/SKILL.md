@@ -20,43 +20,24 @@ metadata:
   token-cost: 5324
   triggers:
     keywords:
-    - '2025'
-    - '2026'
-    - '5.0'
-    - accepts
-    - against
-    - agentic
-    - application
-    - asvs
-    - authentication
-    - authentication/authorization
-    - building
-    - code
-    - covers
-    - data
-    - discussing
-    - external
-    - feature
-    - handling
-    - hardens
-    - implementing
-    - input
-    - integrations
-    - interacts
-    - llm
-    - manages
     - owasp
-    - reviewing
     - security
-    - services
-    - sessions
-    - storage
-    - third-party
-    - top
-    - untrusted
-    - user
+    - security review
+    - security audit
+    - vulnerability
     - vulnerabilities
-    - web
+    - injection
+    - xss
+    - csrf
+    - ssrf
+    - authentication
+    - authorization
+    - access control
+    - refresh token
+    - refresh tokens
+    - untrusted input
+    - asvs
+    - secrets
     paths:
     - /api-client
     - /api/

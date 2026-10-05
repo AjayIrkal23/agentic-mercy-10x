@@ -1,9 +1,11 @@
 """budget.py — S5: emission ordering (v3).
 
 The 24k-token priority budget never bound (0 drops in 1,114 live prompts), so the
-machinery is gone. Emission size is bounded by construction instead: <= 5 skill
-lines, <= 1 deep body (``deep_inject_chars``), <= 5 indexed symbols, <= 3 route
-lines, <= 2 gate lines. ``apply`` keeps the one invariant that mattered — items
+machinery is gone. Emission size is bounded by construction instead: <= 4 skill
+pushes (``max_skill_pushes``), <= 1 deep body (``deep_inject_chars``), <= 5 indexed
+symbols (``code_intel.max_symbols``), <= 2 gate lines, and <= ``max_routing_lines``
+(5) routing lines in total — enforced in router._builtin_items via
+policy.cap_section, not here. ``apply`` keeps the one invariant that mattered — items
 are emitted tier-ascending (gates first), stable within a tier — and returns an
 empty ``dropped`` list so callers keep their shape.
 """

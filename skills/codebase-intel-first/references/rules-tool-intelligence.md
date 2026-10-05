@@ -1,7 +1,7 @@
 # Tool-Intelligence Map — intent → jcodemunch/graphify/jdocmunch playbook
 
 > Human-readable mirror of the machine source of truth
-> [`hooks/tool-intelligence.json`](../../hooks/tool-intelligence.json). The prompt
+> [`hooks/tool-intelligence.json`](../../../hooks/tool-intelligence.json). The prompt
 > router (`code_intel.py`) consumes the JSON; rules and skills link **here**. Keep
 > the two in sync (small file). Part of making jcodemunch the primary smart engine
 > — see [[codebase-intel-first]].

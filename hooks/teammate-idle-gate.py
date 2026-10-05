@@ -5,7 +5,8 @@ A teammate may not go idle while the artifact its run expects is still missing.
 Run folders are created by the /invoke skill:
   <cwd>/.claude/runs/<ts>-<slug>/run.json
   {"expected_artifacts": {"<teammate_name>": "<path relative to cwd, or absolute>"}}
-The NEWEST run.json is consulted.
+The NEWEST run.json that names this teammate is consulted (B2-13: a newer run for
+other teammates used to hide it).
 
 Bounded (Santa A3): at most MAX_BLOCKS blocks per (run.json, teammate) — a teammate
 that cannot produce its artifact (tool error, abort, bad path) is then allowed to
@@ -25,19 +26,27 @@ import sys
 from pathlib import Path
 
 MAX_BLOCKS = 2
-STATE_FILE = Path(__file__).resolve().parent / ".state" / "teammate-idle.json"
+STATE_FILE = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR")
+                  or Path(__file__).resolve().parent / ".state") / "teammate-idle.json"
 
 
-def _newest_run(cwd: Path) -> tuple[Path | None, dict]:
+def _run_for(cwd: Path, name: str) -> tuple[Path | None, str]:
+    """(run.json, artifact) of the NEWEST run that expects ``name``. A newer run for
+    other teammates (a concurrent /invoke) no longer hides it (audit B2-13)."""
     try:
         runs = sorted((p for p in (cwd / ".claude" / "runs").glob("*/run.json") if p.is_file()),
                       key=lambda p: p.stat().st_mtime, reverse=True)
-        if runs:
-            data = json.loads(runs[0].read_text(encoding="utf-8"))
-            return runs[0], (data if isinstance(data, dict) else {})
-    except (OSError, ValueError):
-        pass
-    return None, {}
+    except OSError:
+        return None, ""
+    for rj in runs:
+        try:
+            expected = json.loads(rj.read_text(encoding="utf-8")).get("expected_artifacts")
+        except (OSError, ValueError, AttributeError):
+            continue
+        art = expected.get(name) if isinstance(expected, dict) else None
+        if isinstance(art, str) and art:
+            return rj, art
+    return None, ""
 
 
 def missing_artifact(payload: dict) -> tuple[str, str, str] | None:
@@ -46,13 +55,12 @@ def missing_artifact(payload: dict) -> tuple[str, str, str] | None:
     if not name:
         return None
     cwd = Path(payload.get("cwd") or os.getcwd())
-    run_path, run = _newest_run(cwd)
-    expected = run.get("expected_artifacts")
-    art = expected.get(name) if isinstance(expected, dict) else None
-    if not isinstance(art, str) or not art:
+    run_path, art = _run_for(cwd, name)
+    if run_path is None:
         return None
-    path = Path(art) if os.path.isabs(art) else cwd / art
-    return None if path.exists() else (name, art, str(run_path))
+    # relative to the repo (/invoke's run.json) or to the run folder (team-lead's)
+    cands = [Path(art)] if os.path.isabs(art) else [cwd / art, run_path.parent / art]
+    return None if any(p.exists() for p in cands) else (name, art, str(run_path))
 
 
 def _bump(key: str) -> int:

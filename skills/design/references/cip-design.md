@@ -116,6 +116,6 @@ python3 ~/.claude/skills/design/scripts/cip/render-html.py --brand "TopGroup" --
 ## Setup
 
 ```bash
-# No API key needed — image generation goes through the Higgsfield MCP connector.
-pip install google-genai pillow
+# No API key and no install needed — image generation goes through the Higgsfield MCP
+# connector; scripts/cip/generate.py is legacy and must not be run.
 ```

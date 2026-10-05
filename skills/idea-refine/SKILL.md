@@ -26,7 +26,6 @@ metadata:
     - structured
     - thinking
     - through
-    - trigger
     paths: []
     intents:
     - general
@@ -74,7 +73,7 @@ The final output is a markdown one-pager saved to `docs/ideas/[idea-name].md` (a
 - Key Assumptions
 - MVP Scope
 - Not Doing list
-- Optional: Mermaid diagram of the idea's flow / user journey / state machine, rendered via `claude-mermaid:mermaid-diagrams` (plugin path `~/.claude/plugins/marketplaces/claude-mermaid/skills/mermaid-diagrams/SKILL.md`). Recommended when the idea is shape-heavy or process-heavy.
+- Optional: Mermaid diagram of the idea's flow / user journey / state machine, as a fenced `mermaid` block (preview with the drawio MCP `open_drawio_mermaid` when it is connected). Recommended when the idea is shape-heavy or process-heavy.
 
 ## Detailed Instructions
 

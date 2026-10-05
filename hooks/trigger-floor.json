@@ -2,10 +2,10 @@
   "_meta": {
     "purpose": "Prompt-router trigger floor — word-boundary keyword taxonomy consumed in full by prompt_router/classify.py.",
     "charter": "v2 floor (2026-09-27): removals require a charter bump",
-    "generated": "2026-09-28T03:20:14.891651+00:00",
+    "generated": "2026-10-05T12:10:56.630741+00:00",
     "generator": "build-trigger-floor.py",
-    "checksum": "550c5f1c99e763feae1dabeedddb99fe110656370930eaf6116bb9c6a1d7eb09",
-    "entry_count": 1890,
+    "checksum": "f213f2897fadd76baeeedbe2e717f583266b129f95db6668bfb10f631dae610a",
+    "entry_count": 1886,
     "short_allow": [
       "3d",
       "404",
@@ -38,10 +38,10 @@
       "xss"
     ],
     "source_counts": {
-      "skill_router.config.rules": 29,
+      "skill_router.config.rules": 27,
       "skill_router.builtins": 24,
-      "autonomous.category_keywords": 1152,
-      "ui.keywords": 412,
+      "autonomous.category_keywords": 1151,
+      "ui.keywords": 411,
       "graphify.arch+explore": 247,
       "fullstack.segments": 12
     }
@@ -203,35 +203,13 @@
           ]
         },
         "skills": [
-          "design-taste-frontend",
-          "frontend-ui-engineering"
+          "frontend-standards-always-follow",
+          "frontend-ui-engineering",
+          "tailwind-design-system"
         ]
       },
       "source_file": "skill_router.config.json",
       "source_key": "fe_ui_design",
-      "weight": 1.0
-    },
-    {
-      "kind": "path_route",
-      "value": {
-        "id": "fe_review",
-        "match": {
-          "path_contains_any": [
-            "/components/",
-            "/pages/",
-            "/views/",
-            ".tsx",
-            ".jsx"
-          ]
-        },
-        "skills": [
-          "code-review-and-quality",
-          "frontend-standards-always-follow",
-          "react-hooks-patterns"
-        ]
-      },
-      "source_file": "skill_router.config.json",
-      "source_key": "fe_review",
       "weight": 1.0
     },
     {
@@ -569,32 +547,11 @@
     {
       "kind": "path_route",
       "value": {
-        "id": "be_review_perf",
-        "match": {
-          "path_contains_any": [
-            "internal/",
-            "server/",
-            "cmd/"
-          ]
-        },
-        "skills": [
-          "tech-debt-audit",
-          "backend-performance-standards"
-        ]
-      },
-      "source_file": "skill_router.config.json",
-      "source_key": "be_review_perf",
-      "weight": 1.0
-    },
-    {
-      "kind": "path_route",
-      "value": {
         "id": "be_debug",
         "match": {
           "filename_contains_any": [
             "debug",
-            "trace",
-            "error"
+            "trace"
           ]
         },
         "skills": [
@@ -610,28 +567,21 @@
     {
       "kind": "path_route",
       "value": {
-        "id": "be_review",
+        "id": "be_errors",
         "match": {
-          "path_contains_any": [
-            "internal/",
-            "server/",
-            "controller",
-            "service"
-          ],
-          "extensions": [
-            ".go",
-            ".ts",
-            ".js"
+          "filename_contains_any": [
+            "error",
+            "exception"
           ]
         },
         "skills": [
-          "code-review-and-quality",
+          "backend-error-handling",
           "backend-standards-always-follow",
           "service-layer-standards"
         ]
       },
       "source_file": "skill_router.config.json",
-      "source_key": "be_review",
+      "source_key": "be_errors",
       "weight": 1.0
     },
     {
@@ -4902,13 +4852,6 @@
     },
     {
       "kind": "act_keyword",
-      "value": "https",
-      "source_file": "autonomous-skill-router.config.json",
-      "source_key": "categories.SECURITY",
-      "weight": 1.0
-    },
-    {
-      "kind": "act_keyword",
       "value": "certificate",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.SECURITY",
@@ -5098,7 +5041,7 @@
     },
     {
       "kind": "act_keyword",
-      "value": "guard",
+      "value": "route guard",
       "source_file": "autonomous-skill-router.config.json",
       "source_key": "categories.SECURITY",
       "weight": 1.0
@@ -9481,13 +9424,6 @@
     {
       "kind": "ui_keyword",
       "value": "responsive",
-      "source_file": "ui-keywords.json",
-      "source_key": "ui_keywords",
-      "weight": 1.0
-    },
-    {
-      "kind": "ui_keyword",
-      "value": "mobile",
       "source_file": "ui-keywords.json",
       "source_key": "ui_keywords",
       "weight": 1.0

@@ -14,11 +14,14 @@ metadata:
   platforms: [linux, darwin, windows]
   token-cost: 1188
   triggers:
-    keywords: [frontend, react, next.js, vite, component, css, styling, hook, state, dashboard, browser ux, client data, frontend performance, baseline]
+    keywords: [frontend change, frontend task, react, next.js, vite, component, css, styling, hook, state, dashboard, browser ux, client data, frontend performance, baseline]
     paths: [.tsx, .jsx, /components/, /pages/, /hooks/, /store/, /routes/, /router/, /views/, src/types/, src/schemas/, slice., reducer., selector., use-]
     intents: [frontend, implement, refactor]
 ---
 # Frontend Standards Always Follow
+
+> **React Native / Expo files** match this skill's globs too; its DOM, CSS and Tailwind
+> rules do not apply there. Load `expo-react-native` and the mobile app's own `CLAUDE.md`.
 
 > **Baseline first.** Load this skill at the start of any frontend task. Companion skills
 > surface natively via their own `paths:` as you touch matching files — do not bulk-load them:

@@ -20,7 +20,7 @@ metadata:
 > (`logo/generate.py`, `cip/generate.py`, `icon/generate.py`) are legacy and must not be run —
 > use this skill for its *art direction, specs, styles, and layout reasoning* (the `search.py`
 > helpers are fine), then hand pixel generation to Higgsfield. SVG icons are text: write them
-> directly, no image API. See `~/.claude/rules/higgsfield-frontend-mandate.md`.
+> directly, no image API. See the Assets section of `~/.claude/rules/frontend.md`.
 
 # Design
 
@@ -208,14 +208,14 @@ Load `references/social-photos-design.md` for sizes, templates, best practices.
 
 ### Social Photos: Workflow
 
-1. **Orchestrate** — `project-management` skill for TODO tasks; parallel subagents for independent work
+1. **Orchestrate** — a TodoWrite list for the tasks; parallel subagents for independent work
 2. **Analyze** — Parse prompt: subject, platforms, style, brand context, content elements
 3. **Ideate** — 3-5 concepts, present via `AskUserQuestion`
 4. **Design** — `brand` → `tailwind-design-system` tokens → `design-taste-frontend` or plugin `frontend-design`; HTML per idea × size
 5. **Export** — Playwright MCP screenshot at exact px (2x deviceScaleFactor)
 6. **Verify** — Inspect the exported PNGs (Read the image); fix layout/styling issues and re-export
 7. **Report** — Summary to `plans/reports/` with design decisions
-8. **Organize** — Invoke `assets-organizing` skill to sort output files and reports
+8. **Organize** — Move the exported files into the project's asset directories and the report into `plans/reports/`
 
 ### Social Photos: Key Sizes
 

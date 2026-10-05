@@ -19,25 +19,20 @@ metadata:
   token-cost: 2688
   triggers:
     keywords:
-    - automate
-    - automates
-    - automation
-    - build
+    - github actions
+    - github actions workflow
     - ci/cd
-    - configure
-    - deployment
-    - establish
-    - gates
-    - modifying
-    - need
+    - ci pipeline
+    - ci workflow
+    - ci is red
+    - ci fails
     - pipeline
-    - pipelines
-    - quality
+    - gitlab ci
+    - workflow yaml
+    - build pipeline
+    - release automation
+    - pre-commit
     - runners
-    - setting
-    - setup
-    - strategies
-    - test
     paths: []
     intents:
     - general

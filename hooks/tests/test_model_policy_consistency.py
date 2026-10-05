@@ -21,8 +21,9 @@ def _frontmatter(path: Path) -> dict:
     return out
 
 
-AGENTS = {p.stem: _frontmatter(p) for p in (ROOT / "agents").glob("*.md")
-          if p.stem not in ("README", "CLAUDE", "AGENTS")}
+# A file with no frontmatter (team-lead.md, the main session's team playbook) is not an agent.
+AGENTS = {p.stem: fm for p in (ROOT / "agents").glob("*.md")
+          if p.stem not in ("README", "CLAUDE", "AGENTS") and (fm := _frontmatter(p))}
 
 
 def test_agent_frontmatter_model_matches_pins():

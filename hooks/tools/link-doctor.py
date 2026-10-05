@@ -8,9 +8,9 @@ the link's command as a subprocess, and asserts:
 
   * it returns within 10s (no hang);
   * its stdout is empty or parseable JSON (no garbage that would break dispatch);
-  * exit code is tolerable (0, or a hook's own non-fatal code — links are
-    fail-open by contract, so a nonzero exit that still emits valid/empty JSON
-    is acceptable; only a hang or unparseable non-empty output is a FAIL).
+  * it exits 0 — links are fail-open by contract, so any non-zero exit (a
+    traceback included) is a FAIL(rc=N); a missing script is FAIL(missing-script).
+    stderr output alone is not a failure.
 
 Prints a PASS/FAIL table and exits nonzero if any link FAILs. Also runnable as a
 library (``run_doctor()``) for the P6 installer doctor. Pure stdlib, fail-open.
@@ -21,9 +21,12 @@ Usage:  python3 hooks/tools/link-doctor.py [--verbose]
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
@@ -87,7 +90,26 @@ def _payload_for(event_token: str, link: dict) -> dict:
     return p
 
 
+def _child_env(scratch: str) -> dict:
+    """Probe runs write gate evidence, state and telemetry like real hooks; send all
+    three under `scratch` unless the caller already isolated them (audit J-02:
+    every doctor run left link-doctor.* files in the live hooks/.state)."""
+    env = dict(os.environ)
+    for var in ("CLAUDE_HOOK_DOTSTATE_DIR", "CLAUDE_HOOK_STATE_DIR", "CLAUDE_HOOK_TELEMETRY_DIR"):
+        if not env.get(var):
+            env[var] = os.path.join(scratch, var.lower())
+    return env
+
+
 def run_doctor(verbose: bool = False) -> tuple[int, int, list]:
+    scratch = tempfile.mkdtemp(prefix="link-doctor-")
+    try:
+        return _run_links(_child_env(scratch))
+    finally:
+        shutil.rmtree(scratch, ignore_errors=True)
+
+
+def _run_links(env: dict) -> tuple[int, int, list]:
     cfg = json.loads(_CONFIG.read_text(encoding="utf-8"))
     rows = []
     passed = failed = 0
@@ -101,13 +123,21 @@ def run_doctor(verbose: bool = False) -> tuple[int, int, list]:
             payload = _payload_for(event_token, link)
             t0 = time.perf_counter()
             status = "PASS"
+            if any(p.endswith(".py") and not Path(p).is_file() for p in cmd[1:2]):
+                rows.append((event_token, lid, "FAIL(missing-script)", 0.0))
+                failed += 1
+                continue
             try:
                 proc = subprocess.run(cmd, input=json.dumps(payload), capture_output=True,
-                                      text=True, timeout=10, check=False)
+                                      text=True, timeout=10, check=False, env=env)
                 ms = round((time.perf_counter() - t0) * 1000, 1)
                 out = (proc.stdout or "").strip()
                 is_advisory = link.get("type", "advisory") == "advisory"
-                if out and not out.startswith("{"):
+                if proc.returncode != 0:
+                    # links are fail-open by contract: a non-zero exit (a traceback
+                    # included) is a crash, whatever stdout says. stderr alone is not.
+                    status = f"FAIL(rc={proc.returncode})"
+                elif out and not out.startswith("{"):
                     # advisory links may legitimately emit RAW TEXT (injected as
                     # additionalContext by dispatch); gate/mutator/exec must emit
                     # JSON or nothing, so non-JSON there is a real defect.

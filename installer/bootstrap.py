@@ -13,12 +13,15 @@ the single entry point does everything with **zero** user action:
   3. launch the visual installer, which auto-runs the self-heal loop to 100%.
 
 No CLI verbs, no prompts, no folder picker — fully automatic. The only flag is
-``--ci``: the same flow headless in the console, with every network step planned
-(WOULD-*) instead of run — for CI and fresh-machine rehearsals. Pure stdlib;
+``--ci``: the same flow headless in the console. Network steps and everything outside
+the checkout (deps, MCP, plugins, lean-ctx / jcodemunch config) are planned (WOULD-*);
+local repo steps really run (render settings.json, generators, skill validator). It is
+NOT read-only: the read-only plan is ``python3 installer/deps.py``. Pure stdlib;
 Windows + POSIX.
 """
 from __future__ import annotations
 
+import filecmp
 import os
 import shutil
 import subprocess
@@ -37,7 +40,9 @@ _SKIP_COPY_DIRS = {".git", "__pycache__", "node_modules", ".venv", "venv"}
 # sentinel bundle items that prove a complete install is present at the target.
 _BUNDLE_ITEMS = ("skills", "hooks", "agents", "rules", "scripts", "installer",
                  "settings.template.json", "install-ui.py")
-_HEADLESS_FLAGS = {"--ci"}  # network-free plan install, console only — never the web UI
+# console only, never the web UI. --ci plans every network step (WOULD-*); --headless is the
+# real install without the browser (fresh servers / containers / ssh).
+_HEADLESS_FLAGS = {"--ci", "--headless"}
 
 
 def canonical_target() -> Path:
@@ -63,8 +68,25 @@ def _needs_relocate(src: Path, target: Path) -> bool:
     return True
 
 
-def _copy_tree(src: Path, dst: Path) -> int:
-    """Merge-copy src -> dst, overwriting collisions, keeping dst extras."""
+PRE_INSTALL = ".pre-install"
+
+
+def _put(src: Path, dst: Path, kept: list | None) -> None:
+    """Copy src over dst. With ``kept`` (a list: the FIRST install), a dst that already exists with
+    DIFFERENT bytes (the user's own CLAUDE.md, a same-named skill or agent) is first kept once as
+    ``<name>.pre-install``; an existing kept copy is never overwritten. ``kept=None`` (a re-run on
+    a complete install) overwrites plainly: the differences are files the installer regenerated."""
+    if kept is not None and dst.is_file() and not dst.is_symlink():
+        keep = dst.with_name(dst.name + PRE_INSTALL)
+        if not keep.exists() and not filecmp.cmp(src, dst, shallow=False):
+            shutil.copy2(dst, keep)
+            kept.append(dst.name)
+    shutil.copy2(src, dst)
+
+
+def _copy_tree(src: Path, dst: Path, kept: list | None = None) -> int:
+    """Merge-copy src -> dst, overwriting collisions (on the first install the user's differing
+    files are kept as ``*.pre-install`` first), keeping dst extras."""
     n = 0
     for dp, dns, fns in os.walk(src):
         dns[:] = [d for d in dns if d not in _SKIP_COPY_DIRS]
@@ -76,7 +98,7 @@ def _copy_tree(src: Path, dst: Path) -> int:
             continue
         for fn in fns:
             try:
-                shutil.copy2(Path(dp) / fn, out / fn)
+                _put(Path(dp) / fn, out / fn, kept)
                 n += 1
             except OSError:
                 pass
@@ -87,8 +109,11 @@ def relocate(src: Path, target: Path, emit=None) -> int:
     """Move the bundle's content into ~/.claude, replacing bundle files in place.
 
     User runtime dirs already at the target are preserved (merge, never wipe).
-    Returns the number of files copied."""
+    On the FIRST install (bundle items missing at the target) a differing file of the user's own
+    is kept once as ``<name>.pre-install`` (one summary line is printed). Returns the number of
+    files copied."""
     src, target = Path(src), Path(target)
+    kept: list[str] | None = [] if missing_items(target) else None
     if emit is None:
         def emit(kind, name, status):  # noqa: E731
             print(f"  [{kind}] {name}: {status}")
@@ -107,15 +132,18 @@ def relocate(src: Path, target: Path, emit=None) -> int:
             pass
         dest = target / item.name
         if item.is_dir():
-            total += _copy_tree(item, dest)
+            total += _copy_tree(item, dest, kept)
         else:
             try:
                 dest.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(item, dest)
+                _put(item, dest, kept)
                 total += 1
             except OSError:
                 pass
     emit("relocate", str(target), f"OK — {total} files replaced into ~/.claude")
+    if kept:
+        print(f"  Kept {len(kept)} of your files as *{PRE_INSTALL} next to the originals "
+              f"(e.g. {', '.join(sorted(set(kept))[:3])}).")
     return total
 
 
@@ -140,6 +168,10 @@ def _run_headless(ci: bool) -> int:
     warns = [r for r in res["rows"] if r[1] == "WARN"]
     print(f"\ninstall: {'SUCCESS' if res['success'] else 'INCOMPLETE'} in {res['rounds']} round(s); "
           f"{len(res['fails'])} FAIL {sorted(res['fails'])}, {len(warns)} WARN")
+    if res.get("todo"):
+        print("\n" + "\n".join(res["todo"]))
+        if not ci:
+            print("  Open a new terminal (or `export PATH=\"$HOME/.local/bin:$PATH\"`) so `claude` is on PATH.")
     return 0 if res["success"] else 1
 
 
@@ -147,8 +179,10 @@ def main(argv=None) -> int:
     argv = [] if argv is None else list(argv)
     if any(a not in _HEADLESS_FLAGS for a in argv):
         print(
-            "install.py takes no verbs; run it without arguments (visual installer) or "
-            "with --ci (headless, network-free plan). Health check: python3 installer/doctor.py; "
+            "install.py takes no verbs; run it without arguments (visual installer), with "
+            "--headless (real install in the console) or --ci (network steps planned, local "
+            "repo steps run). Read-only plan: "
+            "python3 installer/deps.py; health check: python3 installer/doctor.py; "
             "status: python3 check.py.",
             file=sys.stderr,
         )

@@ -436,3 +436,35 @@ def test_claude_config_dir_is_claude_infra_not_backend():
 
 def test_short_chatter_in_claude_dir_emits_nothing():
     assert _hook("Continue the stopped ones", str(_HOOKS)) == ""
+
+
+# --------------------------------------------------------------------------- #
+# "migration" is not SQL in a Mongo repo (audit 2026-10-05 C-06)
+# --------------------------------------------------------------------------- #
+def _node_repo(tmp_path, name: str, deps: dict) -> pathlib.Path:
+    root = tmp_path / name
+    (root / ".git").mkdir(parents=True)
+    (root / "package.json").write_text(json.dumps({"dependencies": deps}), encoding="utf-8")
+    return root
+
+
+def _tags(prompt: str, root: pathlib.Path) -> set[str]:
+    out, _src, _weak = SF.detect({"prompt": prompt, "cwd": str(root), "session_id": "t-c06"})
+    return out
+
+
+def test_migration_in_mongoose_repo_is_not_sql(tmp_path):
+    root = _node_repo(tmp_path, "mongo", {"fastify": "^5", "mongoose": "^8"})
+    assert "sql" not in _tags("write a migration that backfills archivedAt on expenses", root)
+    assert "mongo" in SF.stack_fingerprint(__import__("lib.repo_context", fromlist=["x"]).active_repo(
+        {"cwd": str(root)})).get("tags", [])
+
+
+def test_migration_in_sql_repo_is_sql(tmp_path):
+    root = _node_repo(tmp_path, "pg", {"express": "^5", "pg": "^8"})
+    assert "sql" in _tags("write a migration that adds an archived_at column", root)
+
+
+def test_explicit_postgres_is_sql_even_in_mongo_repo(tmp_path):
+    root = _node_repo(tmp_path, "mongo2", {"mongoose": "^8"})
+    assert "sql" in _tags("add a postgres index for the report query", root)

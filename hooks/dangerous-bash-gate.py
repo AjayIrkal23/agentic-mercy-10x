@@ -6,7 +6,10 @@ Hard-blocks on first detection. Second attempt within same conversation is allow
 (logged as an intentional override — the model has been forced to acknowledge danger).
 
 Patterns blocked:
-  - rm -rf  (anywhere; smart-suppressed for /tmp/ paths)
+  - rm -rf  (anywhere; suppressed only when every rm -rf segment targets temp paths)
+  - payloads of `bash|sh -c '…'`, `eval '…'` and quoted SQL/JS given to a DB client
+    (psql, mysql, sqlite3, mongosh, …) are scanned too
+  - MongoDB dropDatabase() / db.<coll>.drop(); dd of=/dev/…; mkfs; curl|wget … | sh
   - rm --no-preserve-root (root filesystem destruction)
   - rm $VAR / rm ${VAR} (shell variable expansion bypass)
   - git push --force / git push -f
@@ -31,7 +34,7 @@ from pathlib import Path
 # State directory (shared with other hooks)
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
-STATE_DIR = SCRIPT_DIR / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or SCRIPT_DIR / ".state")
 
 
 # ---------------------------------------------------------------------------
@@ -40,17 +43,35 @@ STATE_DIR = SCRIPT_DIR / ".state"
 # safe_suppression_fn(command) -> bool: return True to SKIP the block
 # ---------------------------------------------------------------------------
 
+_RMRF_RE = re.compile(
+    # Combined flags: rm -rf, rm -fr, rm -rfv, rm -vfr, etc.
+    r"\brm\s+-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*(?:\s|$)"
+    r"|\brm\s+-[a-zA-Z]*f[a-zA-Z]*r[a-zA-Z]*(?:\s|$)"
+    # Separated flags: rm -r -f, rm -f -r
+    r"|\brm\s+-[a-zA-Z]*f[a-zA-Z]*\s+-[a-zA-Z]*r[a-zA-Z]*"
+    r"|\brm\s+-[a-zA-Z]*r[a-zA-Z]*\s+-[a-zA-Z]*f[a-zA-Z]*"
+    # Long flags
+    r"|\brm\s+--recursive\s+--force|\brm\s+--force\s+--recursive",
+    re.IGNORECASE,
+)
+_SAFE_RM_PREFIXES = ("/tmp/", "/var/tmp/", "$TMPDIR", "${TMPDIR}", "$(mktemp")
+_SEGMENT_SPLIT = re.compile(r"&&|\|\||;|\n|\|")
+_REDIRECT_RE = re.compile(r"\d*&?>>?\s*&?\S+|<\s*\S+")
+
+
 def _rm_is_safe(cmd: str) -> bool:
-    """Suppress rm -rf block for /tmp/ paths — frequent in test scaffolding."""
-    # Allow: rm -rf /tmp/... or rm -rf /var/tmp/...
-    safe_prefixes = (r"/tmp/", r"/var/tmp/", r"$TMPDIR", r"$(mktemp")
-    for prefix in safe_prefixes:
-        # Pattern: rm [flags] /tmp/ or rm [flags] "$TMPDIR"
-        if re.search(
-            r"\brm\s+(?:-[a-zA-Z]+\s+)*" + re.escape(prefix), cmd
-        ):
-            return True
-    return False
+    """Suppress the rm -rf block only when EVERY rm -rf segment deletes nothing but
+    temp paths (test scaffolding). Judged per segment and per argument, so
+    `rm -rf /tmp/x && rm -rf ~/src` or `rm -rf /tmp/../etc` is not safe."""
+    for seg in _SEGMENT_SPLIT.split(cmd):
+        if not _RMRF_RE.search(seg):
+            continue
+        seg = _REDIRECT_RE.sub(" ", seg)  # `2>/dev/null`, `>/dev/null 2>&1` are not targets
+        m = re.search(r"\brm\b(.*)", seg)
+        args = [a.strip("'\"") for a in (m.group(1).split() if m else []) if not a.startswith("-")]
+        if not args or not all(a.startswith(_SAFE_RM_PREFIXES) and ".." not in a for a in args):
+            return False
+    return True
 
 
 def _git_push_force_is_safe(cmd: str) -> bool:
@@ -70,23 +91,15 @@ def _git_push_force_is_safe(cmd: str) -> bool:
 
 DANGEROUS_PATTERNS: list[tuple[re.Pattern, str, object]] = [
     (
-        re.compile(
-            # Combined flags: rm -rf, rm -fr, rm -rfv, rm -vfr, etc.
-            r"\brm\s+-[a-zA-Z]*r[a-zA-Z]*f[a-zA-Z]*(?:\s|$)"
-            r"|\brm\s+-[a-zA-Z]*f[a-zA-Z]*r[a-zA-Z]*(?:\s|$)"
-            # Separated flags: rm -r -f, rm -f -r
-            r"|\brm\s+-[a-zA-Z]*f[a-zA-Z]*\s+-[a-zA-Z]*r[a-zA-Z]*"
-            r"|\brm\s+-[a-zA-Z]*r[a-zA-Z]*\s+-[a-zA-Z]*f[a-zA-Z]*"
-            # Long flags
-            r"|\brm\s+--recursive\s+--force|\brm\s+--force\s+--recursive",
-            re.IGNORECASE,
-        ),
+        _RMRF_RE,
         "rm -rf (recursive force delete)",
         _rm_is_safe,
     ),
     (
         re.compile(
-            r"\bgit\s+push\s+(?:\S+\s+)*--force\b"
+            # `--force(?![-\w])`: --force-with-lease / --force-if-includes refuse to
+            # overwrite work the pusher has not seen; only a bare --force does (WP3)
+            r"\bgit\s+push\s+(?:\S+\s+)*--force(?![-\w])"
             r"|\bgit\s+push\s+(?:\S+\s+)*-f\b"
             r"|\bgit\s+push\s+-f\s+",
             re.IGNORECASE,
@@ -152,7 +165,34 @@ DANGEROUS_PATTERNS: list[tuple[re.Pattern, str, object]] = [
         "rm with shell variable expansion (potential bypass)",
         None,
     ),
+    (
+        re.compile(r"\bdropDatabase\s*\(|\bdb\.\S*\.drop\s*\(\s*\)", re.IGNORECASE),
+        "MongoDB drop (irreversible collection/database destruction)",
+        None,
+    ),
+    (
+        re.compile(r"\bdd\b[^\n;&|]*\bof=/dev/(?!null\b|zero\b|stdout\b|stderr\b)", re.IGNORECASE),
+        "dd onto a device (overwrites a disk)",
+        None,
+    ),
+    (
+        re.compile(r"(?:^|[;&|(]\s*|\bsudo\s+)mkfs(?:\.\w+)?\b", re.IGNORECASE),
+        "mkfs (formats a filesystem)",
+        None,
+    ),
+    (
+        re.compile(r"\b(?:curl|wget)\b[^\n;&]*\|\s*(?:sudo\s+)?(?:ba|z|da|k)?sh\b", re.IGNORECASE),
+        "download piped to a shell (runs unreviewed remote code)",
+        None,
+    ),
 ]
+
+# Quoted payloads that DO execute: `bash -c '…'`, `eval '…'`, SQL/JS handed to a DB
+# client. Quote-stripping hid them; the head is matched on the stripped text so a
+# commit message that merely mentions psql never qualifies.
+_PAYLOAD_HEAD_RE = re.compile(  # standalone words only: not `eval-harness`, `db/mongo`
+    r"(?<![\w./-])(?:(?:ba|z|da|k)?sh\s+(?:-[a-zA-Z]+\s+)*-c|eval|psql|mysql|mariadb|sqlite3|sqlcmd"
+    r"|clickhouse-client|mongosh|mongo)(?![\w./-])", re.IGNORECASE)
 
 
 # ---------------------------------------------------------------------------
@@ -275,6 +315,9 @@ def main() -> int:
         overridden = set(state.get("overridden_commands") or [])
 
         scan = _strip_quoted(cmd)
+        if _PAYLOAD_HEAD_RE.search(scan):
+            bodies = [q[1:-1] for q in _DQUOTE_RE.findall(cmd) + _SQUOTE_RE.findall(cmd)]
+            scan = scan + "\n" + "\n".join(bodies)
         for pattern, name, suppress_fn in DANGEROUS_PATTERNS:
             if not pattern.search(scan):
                 continue

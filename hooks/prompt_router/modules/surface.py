@@ -42,8 +42,9 @@ except Exception:  # noqa: BLE001
 # --------------------------------------------------------------------------- #
 # 1. prompt paths
 # --------------------------------------------------------------------------- #
+# {0,255}, not *: an unbounded run made this quadratic on long '.'/'-' runs (Santa A3)
 PATH_RE = re.compile(
-    r"(?<![\w@])[\w./-]*\w\.(?:tsx|ts|jsx|js|vue|svelte|css|scss|html|go|sql|py|rs|proto|graphql)\b")
+    r"(?<![\w@])[\w./-]{0,255}\w\.(?:tsx|ts|jsx|js|vue|svelte|css|scss|html|go|sql|py|rs|proto|graphql)\b")
 _FE_EXT = {"tsx", "jsx", "vue", "svelte", "css", "scss", "html"}
 _BE_EXT = {"go", "sql", "py", "rs", "proto", "graphql"}
 _FE_SEGS = ("client", "web", "frontend", "app", "components", "pages", "ui", "hooks", "store")
@@ -89,6 +90,10 @@ def _rx(*alts: str) -> re.Pattern:
     return re.compile(r"(?<!\w)(?:" + "|".join(alts) + r")(?!\w)", re.IGNORECASE)
 
 
+# "a small go cli" / "the go program" name Go; "let's go program it" does not (Santa-2 A2)
+_GO_NOUN_PHRASE = r"(?:a|an|the|this|my|our|small|simple|tiny|new) go (?:cli|program|tool)s?"
+
+
 _FE_VOCAB = _rx(
     r"react", r"next\.?js", r"vue", r"svelte", r"angular", r"tailwind(?:css)?", r"shadcn",
     r"components?", r"tsx", r"jsx", r"css", r"scss", r"front-?end", r"ui", r"ux",
@@ -102,6 +107,7 @@ _BE_VOCAB = _rx(
     r"middleware", r"migrations?", r"schema", r"postgres(?:ql)?", r"sql", r"clickhouse", r"mongo(?:db)?",
     r"redis", r"kafka", r"queue", r"workers?", r"cron", r"udp", r"tcp", r"websocket", r"golang",
     r"go\.mod", r"go (?:service|module|package|code|server|handler|worker|struct|routine|binary)s?",
+    _GO_NOUN_PHRASE,
     r"fastapi", r"express", r"fastify", r"django", r"flask", r"prisma", r"drizzle", r"back-?end",
     r"server", r"database", r"db", r"index on", r"webhook", r"ingest(?:ion)?", r"pipeline",
     r"batch(?:es|ing)?", r"retries", r"idempoten\w+", r"jwt", r"oauth", r"microservices?",
@@ -111,8 +117,9 @@ _DOCS_VOCAB = _rx(r"readme", r"docs?", r"documentation", r"changelog", r"adrs?",
 
 _TAG_VOCAB = {
     "go": _rx(r"golang", r"\S+\.go", r"go\.mod",
-              r"go (?:service|module|package|code|server|handler|worker|struct|routine|binary|test)s?"),
-    "sql": _rx(r"sql", r"postgres(?:ql)?", r"migrations?", r"rls", r"row-level security"),
+              r"go (?:service|module|package|code|server|handler|worker|struct|routine|binary|test)s?",
+              _GO_NOUN_PHRASE),
+    "sql": _rx(r"sql", r"postgres(?:ql)?", r"rls", r"row-level security"),
     "clickhouse": _rx(r"clickhouse"),
     "api": _rx(r"endpoints?", r"rest", r"graphql", r"grpc", r"openapi", r"api"),
     "three": _rx(r"three\.?js", r"r3f", r"react-three-fiber", r"@react-three(?:/\w+)?", r"webgl",
@@ -121,7 +128,16 @@ _TAG_VOCAB = {
                   r"parallax", r"pinned sections?", r"apple-?style"),
     "motion": _rx(r"framer[- ]motion", r"motion\.dev", r"animations?", r"animate", r"transitions?",
                   r"micro-?interactions?"),
+    "mobile": _rx(r"expo(?:-[\w-]+)?", r"react[- ]native", r"android", r"ios", r"iphone",
+                  r"mobile apps?", r"app\.json"),
 }
+# bare "mobile" means the RN app only in a repo that has one, and only when the
+# prompt names no web/backend surface ("cramped on mobile" is responsive web)
+_BARE_MOBILE = _rx(r"mobile")
+_MOBILE_DEPS = {"expo", "react-native", "expo-router"}
+# "migration" means SQL only where the repo is not Mongo-only (C-06: a Mongoose
+# backfill got postgres-patterns at rank 1).
+_MIGRATION = _rx(r"migrations?")
 _BE_TAGS = {"go", "sql", "clickhouse", "api"}
 _FE_TAGS = {"three", "scroll", "motion", "shadcn", "tailwind"}
 
@@ -257,6 +273,9 @@ def _compute(root: Path, markers: list[Path], sql: bool, migrations: bool, ch: b
         name = m.name
         if name == "package.json":
             deps = _deps(m)
+            if deps & _MOBILE_DEPS:  # an RN app's `react` is not a web frontend (C-07)
+                tags.add("mobile")
+                continue
             if deps & _FE_DEPS:
                 surfaces.add("frontend")
             if deps & _BE_DEPS:
@@ -269,6 +288,8 @@ def _compute(root: Path, markers: list[Path], sql: bool, migrations: bool, ch: b
                 tags.add("tailwind")
             if "@clickhouse/client" in deps:
                 tags.add("clickhouse")
+            if deps & {"mongoose", "mongodb"}:
+                tags.add("mongo")
         elif name == "go.mod":
             surfaces.add("backend")
             tags.add("go")
@@ -307,6 +328,7 @@ def stack_fingerprint(repo) -> dict:
         markers, sql, migrations, ch = _scan(root)
         sig = {str(m.relative_to(root)): int(m.stat().st_mtime) for m in markers}
         sig["_flags"] = int(sql) | (int(migrations) << 1) | (int(ch) << 2)
+        sig["_v"] = 3  # bump when _compute derives new tags, so old caches recompute
     except OSError:
         return {}
     cache = _cache_dir() / f"{getattr(repo, 'key', 'repo')}.stack.json"
@@ -411,6 +433,12 @@ def _detect_impl(payload: dict, text: str | None) -> tuple[set[str], str, set[st
     stack = stack_fingerprint(repo) if repo is not None else {}
     stack_surfaces = set(stack.get("surfaces") or [])
     stack_tags = set(stack.get("tags") or [])
+    if _MIGRATION.search(t) and ("sql" in stack_tags or "mongo" not in stack_tags):
+        tags.add("sql")
+    if not code and "mobile" in stack_tags and _BARE_MOBILE.search(t):
+        tags.add("mobile")
+    if not code and "mobile" in tags:
+        code, source = {"mobile"}, "prompt"
 
     if not code:
         cwd = payload.get("cwd") if isinstance(payload, dict) else None

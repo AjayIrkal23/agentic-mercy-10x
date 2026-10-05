@@ -27,9 +27,14 @@ tool, so they never appear in the invocation telemetry and are intentionally NOT
 
 v3 (2026-09-28): the gate only bites on turns that WROTE CODE. A pushed skill is
 enforced only when the current turn wrote at least one code file matching that
-skill's surface (skills-index `paths` globs, else its frontend/backend surface,
-else any code file). Pure chat / orchestration turns (no code writes, or only
-infra/docs writes) always pass. At most ONE nag per turn, then fail open.
+skill's surface (skills-index `paths` globs, else a one-sided frontend/backend
+surface). Pure chat / orchestration turns (no code writes, or only infra/docs
+writes) always pass. At most ONE nag per turn, then fail open.
+
+v4 (2026-10-05, audit B2-04/P5): a generic skill (no paths, no one-sided surface)
+or an `enforce:"soft"` push is never enforced — a missing one is queued for the
+model's next prompt (`dispatch_support.enqueue`; CLAUDE.md §11: never a line on the
+user's screen). An unknown turn ("?") never persists nags.
 
 Env: INVOKE_SUITE_GATE_MAX_NAGS (default 1), INVOKE_SUITE_GATE_OFF=1 to disable.
 
@@ -41,12 +46,13 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 HOOK_DIR = Path(__file__).resolve().parent
-TELEMETRY_DIR = HOOK_DIR / ".telemetry"
+TELEMETRY_DIR = Path(os.environ.get("CLAUDE_HOOK_TELEMETRY_DIR") or HOOK_DIR / ".telemetry")
 CONFIG_PATH = HOOK_DIR / "autonomous-skill-router.config.json"
 MAX_NAGS = int(os.environ.get("INVOKE_SUITE_GATE_MAX_NAGS", "1") or "1")
 GRACE = timedelta(seconds=90)  # absorb push-vs-prompt ordering jitter
@@ -63,6 +69,20 @@ try:
 except Exception:  # pragma: no cover - fail-open
     _cf = None
 
+_SHELL_SKILL_READ = re.compile(  # anchored: the read command must head the segment
+    r"(?:sudo\s+)?(?:cat|sed|head|tail|less|more|bat)\b[^\n]*?\.claude/skills/([\w.-]+)/SKILL\.md")
+_SHELL_SPLIT = re.compile(r"&&|\|\||;|\n|\|")
+
+
+def _shell_skill_reads(cmd: str) -> set:
+    """Skills whose SKILL.md a shell segment reads (cat/sed/head/…); a grep of one or a
+    commit message naming one is not a load (santa-diff S4)."""
+    out = set()
+    for seg in _SHELL_SPLIT.split(cmd or ""):
+        m = _SHELL_SKILL_READ.match(seg.strip())
+        if m:
+            out.add(_canon(m.group(1)))
+    return out
 _FE_EXT = (".tsx", ".jsx", ".vue", ".svelte", ".css", ".scss", ".html")
 _FE_SEGS = ("/client/", "/web/", "/frontend/", "/components/", "/pages/", "/ui/", "/hooks/")
 
@@ -89,7 +109,9 @@ def _is_fe(path: str) -> bool:
 
 
 def skill_matches_writes(meta: dict, code_files: list) -> bool:
-    """True when a written code file falls in the skill's surface."""
+    """True when a written code file falls in the skill's surface: a `paths` glob
+    matches, or the skill is one-sided frontend/backend and a file is on that side.
+    A skill with neither (generic, or both surfaces) never matches (audit B2-04)."""
     import fnmatch
     if not code_files:
         return False
@@ -102,7 +124,7 @@ def skill_matches_writes(meta: dict, code_files: list) -> bool:
         return any(_is_fe(f) for f in code_files)
     if "backend" in surf and "frontend" not in surf:
         return any(not _is_fe(f) for f in code_files)
-    return True
+    return False
 
 
 def code_written_this_turn(transcript: str):
@@ -149,7 +171,8 @@ def _turn_dt(transcript: str):
 
 
 def _pushed(cid: str):
-    """All hard push records as (dt, skills, categories). Newest-relevant filtered by caller."""
+    """Push records as (dt, skills, categories, hard). `enforce:"soft"` records
+    (low-confidence router pushes) are kept as advisory-only (hard=False)."""
     p = TELEMETRY_DIR / f"{_safe_cid(cid)}.pushed-skills.jsonl"
     out = []
     if not p.is_file():
@@ -159,14 +182,16 @@ def _pushed(cid: str):
             r = json.loads(line)
         except Exception:
             continue
-        if r.get("enforce", "hard") != "hard":
+        enforce = r.get("enforce", "hard")
+        if enforce not in ("hard", "soft"):
             continue
-        # /invoke-* commands AND router MUST-READ pushes hard-gate the turn
+        # /invoke-* commands AND router MUST-READ pushes gate the turn
         # (2026-07-18 enforcement bridge); other sources stay advisory.
         if r.get("source") not in ("invoke-cmd", "router"):
             continue
         cats = r.get("categories") or []
-        out.append((_dt(r.get("ts")), r.get("skills") or [], cats if isinstance(cats, list) else []))
+        out.append((_dt(r.get("ts")), r.get("skills") or [],
+                    cats if isinstance(cats, list) else [], enforce == "hard"))
     return out
 
 
@@ -329,17 +354,19 @@ def main() -> int:
     transcript = payload.get("transcript_path") or payload.get("transcript") or ""
     turn_dt = _turn_dt(transcript) if transcript and Path(transcript).is_file() else None
     if turn_dt is None:
-        anchors = [d for d, _, _ in pushes if d is not None]
+        anchors = [p[0] for p in pushes if p[0] is not None]
         turn_dt = max(anchors) if anchors else None
     window = (turn_dt - GRACE) if turn_dt else None
 
     expected: list[str] = []
-    seen = set()
+    seen, hard = set(), set()
     turn_cats: list[str] = []
-    for d, skills, pcats in pushes:
+    for d, skills, pcats, is_hard in pushes:
         if window is not None and d is not None and d < window:
             continue
         for s in skills:
+            if is_hard:
+                hard.add(_canon(s))
             if _canon(s) not in seen:
                 seen.add(_canon(s))
                 expected.append(s)
@@ -350,21 +377,31 @@ def main() -> int:
         sys.stdout.write("{}\n"); return 0
 
     invoked = _invoked_since(cid, window)
+    # a SKILL.md read through Bash (cat/sed/head) this turn counts too: the tracker
+    # only sees the Read and Skill tools (e2e S1-after blocked on a `sed -n` read)
+    if _turns is not None and transcript:
+        for cmd in _turns.turn_bash_commands(transcript):
+            invoked |= _shell_skill_reads(cmd)
     missing = sorted(e for e in expected if _canon(e) not in invoked)
 
     # v3: enforce only on turns that wrote code in the skill's surface. No code
     # writes (chat / orchestration / infra-only) or an unreadable transcript → pass.
+    # Soft pushes and skills outside the written surface are advisory (B2-04).
+    advisory: list = []
     if missing:
         code_written = code_written_this_turn(transcript)
         if not code_written:
             sys.stdout.write("{}\n"); return 0
         meta = _skill_meta()
-        missing = [m for m in missing if skill_matches_writes(meta.get(_canon(m), {}), code_written)]
+        enforced = [m for m in missing if _canon(m) in hard
+                    and skill_matches_writes(meta.get(_canon(m), {}), code_written)]
+        advisory = [m for m in missing if m not in enforced]
+        missing = enforced
 
     # v2: agent-backed categories are satisfied by WORK (artifact newer than the
     # invoke, or the agent dispatched this session) — drop their skill roster
     # from the missing set. Agent-less categories keep pure skill-load checking.
-    if missing and turn_cats:
+    if (missing or advisory) and turn_cats:
         cats_cfg = _load_categories()
         dispatched = None  # lazy
         roots = None
@@ -381,7 +418,20 @@ def main() -> int:
                 satisfied |= _category_skill_canon(cc)
         if satisfied:
             missing = [m for m in missing if _canon(m) not in satisfied]
+            advisory = [m for m in advisory if _canon(m) not in satisfied]
 
+    # CLAUDE.md §11: an advisory is for the model, never a line on the user's screen (a Stop
+    # systemMessage shows only to the user, who cannot act on it): queue it for the next prompt
+    advice: dict = {}
+    if advisory:
+        try:
+            sys.path.insert(0, str(Path(__file__).resolve().parent))
+            import dispatch_support as _sup  # noqa: PLC0415
+            _sup.enqueue(cid, "invoke-suite-gate",
+                         "Pushed skills not loaded last turn (advisory): " + ", ".join(advisory)
+                         + ". Load them with the Skill tool when the next step touches their surface.")
+        except Exception:  # noqa: BLE001
+            pass
     state_p = TELEMETRY_DIR / f"{_safe_cid(cid)}.suite-gate.json"
     turn_key = turn_dt.isoformat() if turn_dt else "?"
     try:
@@ -394,7 +444,14 @@ def main() -> int:
     if not missing:
         try: state_p.unlink()
         except Exception: pass
-        sys.stdout.write("{}\n"); return 0
+        sys.stdout.write(json.dumps(advice) + "\n"); return 0
+
+    # Unknown turn ("?"): a persisted count would leak into the next "?" turn
+    # (santa-diff P5) — block once per Stop chain via stop_hook_active instead.
+    if turn_key == "?":
+        if payload.get("stop_hook_active"):
+            sys.stdout.write(json.dumps(advice) + "\n"); return 0
+        st = {"turn": turn_key, "nags": 0}
 
     nags = int(st.get("nags", 0)) + 1
     if nags > MAX_NAGS:
@@ -402,19 +459,24 @@ def main() -> int:
             f"⚠️ SUITE GATE failed open after {MAX_NAGS} nags — pushed skills never "
             f"invoked this turn: {', '.join(missing)}. Allowing stop.\n"
         )
-        try: state_p.unlink()
-        except Exception: pass
-        sys.stdout.write("{}\n"); return 0
+        # keep the spent nag for this turn: deleting it re-armed the gate on the
+        # next Stop of the same turn (audit B2-03)
+        if turn_key != "?":
+            try: state_p.write_text(json.dumps({"turn": turn_key, "nags": nags}), encoding="utf-8")
+            except Exception: pass
+        sys.stdout.write(json.dumps(advice) + "\n"); return 0
 
     st["nags"] = nags
     try:
-        TELEMETRY_DIR.mkdir(parents=True, exist_ok=True)
-        state_p.write_text(json.dumps(st), encoding="utf-8")
+        if turn_key != "?":
+            TELEMETRY_DIR.mkdir(parents=True, exist_ok=True)
+            state_p.write_text(json.dumps(st), encoding="utf-8")
     except Exception:
         pass
 
     reason = (
-        f"SUITE GATE ({nags}/{MAX_NAGS}): {len(expected) - len(missing)}/{len(expected)} "
+        f"SUITE GATE ({nags}/{MAX_NAGS}): "
+        f"{len(expected) - len(missing) - len(advisory)}/{len(expected)} "
         f"pushed skills loaded. You did NOT load these this turn:\n  - "
         + "\n  - ".join(missing)
         + "\nLoad each one now via the Skill tool, or Read ~/.claude/skills/<name>/SKILL.md "

@@ -28,39 +28,12 @@ Strategic compaction at logical boundaries:
 - **After completing a milestone** — Fresh start for next phase
 - **Before major context shifts** — Clear exploration context before different task
 
-## How It Works
+## How It Works Here
 
-The `suggest-compact.js` script runs on PreToolUse (Edit/Write) and:
-
-1. **Tracks tool calls** — Counts tool invocations in session
-2. **Threshold detection** — Suggests at configurable threshold (default: 50 calls)
-3. **Periodic reminders** — Reminds every 25 calls after threshold
-
-## Hook Setup
-
-Add to your `~/.claude/settings.json`:
-
-```json
-{
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Edit",
-        "hooks": [{ "type": "command", "command": "node ~/.claude/skills/strategic-compact/suggest-compact.js" }]
-      },
-      {
-        "matcher": "Write",
-        "hooks": [{ "type": "command", "command": "node ~/.claude/skills/strategic-compact/suggest-compact.js" }]
-      }
-    ]
-  }
-}
-```
-
-## Configuration
-
-Environment variables:
-- `COMPACT_THRESHOLD` — Tool calls before first suggestion (default: 50)
+The upstream bundle shipped a `suggest-compact.js` PreToolUse hook that counted tool
+calls and suggested `/compact` past a threshold. It was not ported to this workbench
+(and `settings.json` is generated from `settings.template.json`, never hand-edited), so
+apply the decision guide below yourself.
 
 ## Compaction Decision Guide
 
@@ -103,9 +76,12 @@ Instead of loading full skill content at session start, use a trigger table that
 
 | Trigger | Skill | Load When |
 |---------|-------|-----------|
-| "test", "tdd", "coverage" | tdd-workflow | User mentions testing |
-| "security", "auth", "xss" | security-review | Security-related work |
-| "deploy", "ci/cd" | deployment-patterns | Deployment context |
+| "test", "tdd", "coverage" | test-driven-development | User mentions testing |
+| "security", "auth", "xss" | owasp-security | Security-related work |
+| "deploy", "ci/cd" | ci-cd-and-automation | Deployment context |
+
+On this workbench the prompt router already does this from each skill's
+`metadata.triggers.keywords` (`hooks/skills-index.json`).
 
 ### Context Composition Awareness
 Monitor what's consuming your context window:
@@ -128,4 +104,3 @@ Common sources of duplicate context:
 
 - [The Longform Guide](https://x.com/affaanmustafa/status/2014040193557471352) — Token optimization section
 - Memory persistence hooks — For state that survives compaction
-- `continuous-learning` skill — Extracts patterns before session ends

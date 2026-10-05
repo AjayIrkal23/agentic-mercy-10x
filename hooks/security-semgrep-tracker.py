@@ -11,13 +11,16 @@ Legacy pre-tool-use mode kept for backward compatibility but does not set semgre
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
 
-from tool_compat import is_shell_tool, tool_name
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lib.platform import locked_update  # noqa: E402
+from tool_compat import is_shell_tool, tool_name  # noqa: E402
 
-STATE_DIR = Path(__file__).resolve().parent / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or Path(__file__).resolve().parent / ".state")
 SEMGREP_RE = re.compile(r"\bsemgrep\s+(scan|ci)\b", re.I)
 FAKE_RE = re.compile(r"^\s*(echo|which|type)\s+.*semgrep", re.I)
 
@@ -26,20 +29,14 @@ def _safe_cid(cid: str) -> str:
     return "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
 
 
-def _load_state(cid: str) -> dict:
-    p = STATE_DIR / f"{_safe_cid(cid)}.security-scan.json"
-    if not p.is_file():
-        return {"security_files": [], "reminded": False}
-    try:
-        return json.loads(p.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
-        return {"security_files": [], "reminded": False}
-
-
-def _save_state(cid: str, state: dict) -> None:
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    p = STATE_DIR / f"{_safe_cid(cid)}.security-scan.json"
-    p.write_text(json.dumps(state, indent=2), encoding="utf-8")
+def _update_state(cid: str, fn) -> None:
+    """security-scan-gate writes the same file: locked RMW (audit J-01)."""
+    def apply(state: dict) -> dict:
+        state.setdefault("security_files", [])
+        state.setdefault("reminded", False)
+        fn(state)
+        return state
+    locked_update(STATE_DIR / f"{_safe_cid(cid)}.security-scan.json", apply)
 
 
 def _command_from(payload: dict) -> str:
@@ -104,12 +101,13 @@ def post_tool_use(payload: dict) -> int:
         cid = payload.get("conversation_id") or payload.get("session_id") or ""
         if not cid:
             return 0
-        state = _load_state(cid)
-        state["semgrep_ran"] = True
-        state["semgrep_command"] = name
-        state["semgrep_findings"] = max(int(state.get("semgrep_findings") or 0),
-                                        _mcp_findings(payload))
-        _save_state(cid, state)
+        found = _mcp_findings(payload)
+
+        def mark_mcp(state: dict) -> None:
+            state["semgrep_ran"] = True
+            state["semgrep_command"] = name
+            state["semgrep_findings"] = max(int(state.get("semgrep_findings") or 0), found)
+        _update_state(cid, mark_mcp)
         return 0
     if not is_shell_tool(name):
         return 0
@@ -121,12 +119,11 @@ def post_tool_use(payload: dict) -> int:
     cid = payload.get("conversation_id") or payload.get("session_id") or ""
     if not cid:
         return 0
-    state = _load_state(cid)
-    state["semgrep_ran"] = True
-    state["semgrep_command"] = command[:500]
-    if "semgrep_findings" not in state:
-        state["semgrep_findings"] = 0
-    _save_state(cid, state)
+    def mark_cli(state: dict) -> None:
+        state["semgrep_ran"] = True
+        state["semgrep_command"] = command[:500]
+        state.setdefault("semgrep_findings", 0)
+    _update_state(cid, mark_cli)
     return 0
 
 

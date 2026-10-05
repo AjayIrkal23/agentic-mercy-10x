@@ -1,6 +1,6 @@
 {
  "_about": "Declarative install contract for the ~/.claude workbench, read by installer/{deps,verify,doctor,selfheal}.py. Idempotent + fail-visible. Tokens: {PYTHON} {NODE} {CLAUDE_DIR} (from detect.py). `network:true` / `ci_stub:true` steps only PLAN (WOULD-*) under `install.py --ci` / `--dry-run`. `env_from` adds `-e NAME=$NAME` to an MCP registration only when NAME is set in the installer's environment (secrets never live in this file). MCP servers are registered user-scope into ~/.claude.json (the single live MCP store; settings.template.json has no mcpServers). Counts (skills, agents) are always computed from disk, never pinned here.",
- "version": "3.0.0",
+ "version": "4.0.0",
  "min_python": "3.10",
  "prereqs": [
   {
@@ -58,7 +58,7 @@
   {
    "id": "pipx",
    "which": "pipx",
-   "install": ["{PYTHON}", "-m", "pip", "install", "--user", "pipx"],
+   "install_windows": ["{PYTHON}", "-m", "pip", "install", "--user", "pipx"],
    "note": "Windows installer for the Python MCP engines (POSIX uses uv). Run `pipx ensurepath` once.",
    "optional": true,
    "ci_stub": true
@@ -66,22 +66,22 @@
   {
    "id": "pyyaml",
    "import": "yaml",
+   "install_posix": ["uv", "pip", "install", "--quiet", "--python", "{PYTHON}", "--target", "{USER_SITE}", "pyyaml==6.0.3"],
    "install": ["{PYTHON}", "-m", "pip", "install", "--quiet", "pyyaml"],
-   "optional": true,
-   "note": "Skill-validator front-matter parser (full R10 fidelity). Runtime hooks are pure stdlib."
+   "note": "REQUIRED by validate_skills.py (without it a naive parser raises false R12 HARD failures) and gen-agent-skill-blocks.py. POSIX: uv into the user site (a fresh Ubuntu has no pip and PEP 668 refuses `pip install`); hooks stay pure stdlib."
   },
   {
    "id": "semgrep",
    "which": "semgrep",
-   "install_posix": ["uv", "tool", "install", "semgrep"],
-   "install_windows": ["pipx", "install", "semgrep"],
+   "install_posix": ["uv", "tool", "install", "semgrep==1.178.0"],
+   "install_windows": ["pipx", "install", "semgrep==1.178.0"],
    "note": "Also the `semgrep mcp` server.",
    "ci_stub": true
   },
   {
    "id": "lean-ctx",
    "which": "lean-ctx",
-   "install": ["npm", "install", "-g", "lean-ctx-bin"],
+   "install": ["npm", "install", "-g", "lean-ctx-bin@3.10.5"],
    "note": "lean-ctx MCP server only (no hooks). installer writes ~/.config/lean-ctx/config.toml (shadow_mode=false, no rule/skill/hook injection, auto_update_mcp=false).",
    "ci_stub": true
   },
@@ -102,6 +102,7 @@
    "id": "tdd-guard-pytest",
    "import": "tdd_guard_pytest",
    "install": ["{PYTHON}", "-m", "pip", "install", "--user", "tdd-guard-pytest"],
+   "install_posix": ["uv", "pip", "install", "--quiet", "--python", "{PYTHON}", "--target", "{USER_SITE}", "tdd-guard-pytest"],
    "note": "PyPI package (not npm). Usually installed into each project's venv instead; PEP 668 systems may refuse --user.",
    "ci_stub": true,
    "optional": true
@@ -109,8 +110,8 @@
   {
    "id": "jcodemunch-mcp",
    "which": "jcodemunch-mcp",
-   "install_posix": ["uv", "tool", "install", "--upgrade", "jcodemunch-mcp[openai]"],
-   "install_windows": ["pipx", "install", "jcodemunch-mcp[openai]"],
+   "install_posix": ["uv", "tool", "install", "--upgrade", "jcodemunch-mcp[openai]==1.108.319"],
+   "install_windows": ["pipx", "install", "jcodemunch-mcp[openai]==1.108.319"],
    "note": "Code-intelligence MCP (PyPI). [openai] extra = embeddings via a local ollama OpenAI-compatible endpoint (all-minilm).",
    "ci_stub": true
   },
@@ -125,16 +126,16 @@
   {
    "id": "graphify",
    "which": "graphify",
-   "install_posix": ["uv", "tool", "install", "graphifyy"],
-   "install_windows": ["uv", "tool", "install", "graphifyy"],
-   "note": "graphify CLI (PyPI: graphifyy) — `graphify update <repo>` builds a repo graph.",
+   "install_posix": ["uv", "tool", "install", "graphifyy==0.9.70"],
+   "install_windows": ["uv", "tool", "install", "graphifyy==0.9.70"],
+   "note": "graphify CLI (PyPI: graphifyy) — `graphify update <repo>` builds a repo graph. The serve venv below pins its own graphifyy (0.9.18); aligning the two is a deliberate, separately verified bump.",
    "ci_stub": true,
    "optional": true
   },
   {
    "id": "graphify-serve-venv",
    "exists": "~/.local/share/claude-graphify-venv",
-   "install_posix": ["sh", "-c", "uv venv --clear \"$HOME/.local/share/claude-graphify-venv\" && uv pip install --python \"$HOME/.local/share/claude-graphify-venv/bin/python\" graphifyy==0.9.18 mcp"],
+   "install_posix": ["sh", "-c", "uv venv --clear \"$HOME/.local/share/claude-graphify-venv\" && uv pip install --python \"$HOME/.local/share/claude-graphify-venv/bin/python\" graphifyy==0.9.18 mcp==1.28.1"],
    "note": "The venv hooks/graphify_launcher.py serves the graphify MCP from (graphifyy + mcp).",
    "ci_stub": true,
    "optional": true
@@ -161,15 +162,16 @@
   {"name": "jdocmunch", "add": ["claude", "mcp", "add", "--scope", "user", "jdocmunch", "-e", "JDOCMUNCH_EMBEDDING_PROVIDER=openai-compatible", "-e", "JDOCMUNCH_OPENAI_COMPAT_URL=http://localhost:11434/v1", "-e", "JDOCMUNCH_OPENAI_COMPAT_MODEL=all-minilm", "-e", "JDOCMUNCH_SHARE_SAVINGS=0", "-e", "JDOCMUNCH_EMBED_WARMUP=0", "--", "jdocmunch-mcp"], "ci_stub": true, "note": "semantic doc search via the local ollama all-minilm embeddings; telemetry off."},
   {"name": "graphify", "add": ["claude", "mcp", "add", "--scope", "user", "graphify", "--", "{PYTHON}", "{CLAUDE_DIR}/hooks/graphify_launcher.py"], "ci_stub": true},
   {"name": "lean-ctx", "add": ["claude", "mcp", "add", "--scope", "user", "lean-ctx", "-e", "LEAN_CTX_NO_UPDATE_CHECK=1", "-e", "LEAN_CTX_VALUE_DISPLAY=off", "--", "lean-ctx"], "ci_stub": true, "note": "requires lean-ctx >= 3.10.4 (detached ctx_shell)."},
-  {"name": "memory", "add": ["claude", "mcp", "add", "--scope", "user", "memory", "-e", "MEMORY_FILE_PATH={CLAUDE_DIR}/memory/memory.jsonl", "--", "npx", "-y", "@modelcontextprotocol/server-memory"], "ci_stub": true},
-  {"name": "sequential-thinking", "add": ["claude", "mcp", "add", "--scope", "user", "sequential-thinking", "--", "npx", "-y", "@modelcontextprotocol/server-sequential-thinking"], "ci_stub": true},
-  {"name": "context7", "env_from": ["CONTEXT7_API_KEY"], "add": ["claude", "mcp", "add", "--scope", "user", "context7", "--", "npx", "-y", "@upstash/context7-mcp"], "ci_stub": true, "note": "export CONTEXT7_API_KEY before installing for higher rate limits (works without)."},
-  {"name": "github", "posix_only": true, "add": ["claude", "mcp", "add", "--scope", "user", "github", "--", "sh", "-c", "GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) exec npx -y @modelcontextprotocol/server-github"], "windows_add": ["claude", "mcp", "add", "--scope", "user", "github", "--", "{PYTHON}", "{CLAUDE_DIR}/scripts/github-mcp-launcher.py"], "ci_stub": true, "note": "token read at launch from `gh auth token` (never stored). Windows has no `sh`: windows_add runs scripts/github-mcp-launcher.py, which does the same."},
-  {"name": "playwright", "add": ["claude", "mcp", "add", "--scope", "user", "playwright", "--", "npx", "-y", "@playwright/mcp@0.0.82", "--browser", "chromium"], "ci_stub": true, "note": "--browser chromium: the default 'chrome' channel needs Google Chrome at a system path; bundled chromium comes from post-step playwright-chromium."},
+  {"name": "memory", "add": ["claude", "mcp", "add", "--scope", "user", "memory", "-e", "MEMORY_FILE_PATH={CLAUDE_DIR}/memory/memory.jsonl", "--", "npx", "-y", "@modelcontextprotocol/server-memory@2026.8.31"], "ci_stub": true},
+  {"name": "sequential-thinking", "add": ["claude", "mcp", "add", "--scope", "user", "sequential-thinking", "--", "npx", "-y", "@modelcontextprotocol/server-sequential-thinking@2026.8.31"], "ci_stub": true},
+  {"name": "context7", "env_from": ["CONTEXT7_API_KEY"], "add": ["claude", "mcp", "add", "--scope", "user", "context7", "--", "npx", "-y", "@upstash/context7-mcp@4.1.1"], "ci_stub": true, "note": "export CONTEXT7_API_KEY before installing for higher rate limits (works without)."},
+  {"name": "github", "posix_only": true, "deprecated": "npm @modelcontextprotocol/server-github is unmaintained (last 2025.4.8): migrate to github/github-mcp-server", "add": ["claude", "mcp", "add", "--scope", "user", "github", "--", "sh", "-c", "GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) exec npx -y @modelcontextprotocol/server-github@2025.4.8"], "windows_add": ["claude", "mcp", "add", "--scope", "user", "github", "--", "{PYTHON}", "{CLAUDE_DIR}/scripts/github-mcp-launcher.py"], "ci_stub": true, "note": "token read at launch from `gh auth token` (never stored). Windows has no `sh`: windows_add runs scripts/github-mcp-launcher.py, which does the same."},
+  {"name": "playwright", "add": ["claude", "mcp", "add", "--scope", "user", "playwright", "--", "npx", "-y", "@playwright/mcp@0.0.83", "--browser", "chromium"], "ci_stub": true, "note": "--browser chromium: the default 'chrome' channel needs Google Chrome at a system path; bundled chromium comes from post-step playwright-chromium (same version)."},
   {"name": "browser-tools-mcp", "add": ["claude", "mcp", "add", "--scope", "user", "browser-tools-mcp", "--", "npx", "-y", "@agentdeskai/browser-tools-mcp@2.0.2"], "ci_stub": true},
-  {"name": "markdownify", "add": ["claude", "mcp", "add", "--scope", "user", "markdownify", "--", "npx", "-y", "mcp-markdownify-server"], "ci_stub": true},
+  {"name": "markdownify", "add": ["claude", "mcp", "add", "--scope", "user", "markdownify", "--", "npx", "-y", "mcp-markdownify-server@1.1.0"], "ci_stub": true},
   {"name": "semgrep", "add": ["claude", "mcp", "add", "--scope", "user", "semgrep", "-e", "SEMGREP_MCP_DISABLE_TRACING=true", "-e", "SEMGREP_FINDINGS_DISABLED=true", "-e", "SEMGREP_SCAN_SUPPLY_CHAIN_DISABLED=true", "--", "semgrep", "mcp"], "ci_stub": true, "note": "tracing off; login-only tools hidden. Callers pass an explicit config (p/default …)."},
-  {"name": "reticle", "add": ["claude", "mcp", "add", "--scope", "user", "reticle", "-e", "RETICLE_TELEMETRY=0", "--", "npx", "-y", "@reticlehq/server@3.3.0", "mcp"], "ci_stub": true},
+  {"name": "reticle", "add": ["claude", "mcp", "add", "--scope", "user", "reticle", "-e", "RETICLE_TELEMETRY=0", "--", "npx", "-y", "@reticlehq/server@3.5.0", "mcp"], "ci_stub": true},
+  {"name": "drawio", "add": ["claude", "mcp", "add", "--scope", "user", "drawio", "--", "npx", "-y", "@drawio/mcp@1.6.3"], "ci_stub": true, "note": "draw.io diagrams (open_drawio_xml / _mermaid / _csv); was live-only before 2026-10-05."},
   {"name": "higgsfield", "add": ["claude", "mcp", "add", "--scope", "user", "--transport", "http", "higgsfield", "https://mcp.higgsfield.ai/mcp"], "ci_stub": true, "note": "HTTP + OAuth: authorize once via /mcp inside Claude Code."},
   {"name": "openart", "add": ["claude", "mcp", "add", "--scope", "user", "--transport", "http", "openart", "https://mcp.openart.ai/mcp"], "ci_stub": true, "note": "HTTP + OAuth: authorize once via /mcp inside Claude Code."}
  ],
@@ -184,13 +186,12 @@
   ],
   "install": [
    {"id": "andrej-karpathy-skills@karpathy-skills"},
-   {"id": "claude-session-driver@superpowers-marketplace"},
    {"id": "elements-of-style@superpowers-marketplace"},
    {"id": "firecrawl@claude-plugins-official"},
    {"id": "frontend-design@claude-plugins-official"},
    {"id": "gopls-lsp@claude-plugins-official"},
    {"id": "nateherk-design@nateherk"},
-   {"id": "ponytail@ponytail", "note": "Mandatory: the ponytail+caveman gate denies all tools if disabled."},
+   {"id": "ponytail@ponytail", "mandatory": true, "note": "Mandatory: the ponytail+caveman gate denies all tools if disabled."},
    {"id": "pyright-lsp@claude-plugins-official", "note": "needs the pyright dep on PATH"},
    {"id": "superpowers-lab@superpowers-marketplace"},
    {"id": "superpowers@claude-plugins-official"},
@@ -229,20 +230,62 @@
    "summarizer_model": "qwen2.5-coder:3b"
   }
  },
+ "mods": {
+  "_about": "Claude Code mods (in-process TypeScript function-hook plugins) kept in this repo under mods/<id>/. render.py turns `enabled` into env.CLAUDE_CODE_PLUGIN_DIRS (absolute paths, os.pathsep-joined) so every session on every machine loads them. The mods API is early access: `claude_version` is the minimum verified release; the doctor passes any later patch of the same minor and warns below it or on a newer minor (bump it after `scripts/validate_mods.py` passes there). Disable a mod by removing it here and re-rendering.",
+  "claude_version": "2.1.288",
+  "enabled": ["mercy"]
+ },
+ "user_space": {
+  "_about": "Base tools a brand-new Linux/macOS user lacks, installed WITHOUT sudo into ~/.local by installer/userspace.py (node/claude/uv/gh), installer/ollama_setup.py (ollama + models) and installer/ostools.py (apt-only OS tools: tried with root or `sudo -n`, otherwise ONE batched command printed at the end; never a failure). Claude Code is pinned to mods.claude_version so the mods row passes on a fresh machine.",
+  "node": {"major": 22, "min": 18},
+  "claude": {"installer": "https://claude.ai/install.sh"},
+  "gh": {
+   "version": "2.102.0",
+   "download": "https://github.com/cli/cli/releases/download/v{version}/gh_{version}_linux_{arch}.tar.gz",
+   "sha256": {
+    "amd64": "bb766f710eef8ede859c18578c72c327597cd4c8a85b06001b1f3843c6019386",
+    "arm64": "7862c86c72f43df3a2d93ddde6f473285b4e2af61b494849846827e513ef6484"
+   },
+   "note": "pinned release + SHA-256 (the release's checksums.txt); bump both together."
+  },
+  "ollama": {
+   "version": "v0.35.1",
+   "download": "https://github.com/ollama/ollama/releases/download/{version}/ollama-{os}-{arch}.tar.zst",
+   "sha256": {
+    "linux-amd64": "9fcd79ac4575b2bd31b992eee18b1000c8ad126b451627c8f8cd091714cfbb10",
+    "linux-arm64": "b1b1c85d25136b256d3740f6ecd2f7c0105e8ca71642fd6ff2fc199f3cefd69d"
+   },
+   "models": ["all-minilm", "qwen2.5-coder:3b"],
+   "note": "pinned release + SHA-256 (the release's sha256sum.txt) into ~/.local (no sudo); a `systemctl --user` unit ONLY when none exists and this is the binary the installer put in ~/.local/bin, else a detached `ollama serve` while the models are pulled."
+  },
+  "os_tools": [
+   {"bin": "canberra-gtk-play", "apt": ["gnome-session-canberra", "libcanberra-gtk3-module"], "why": "UI deck sounds"},
+   {"bin": "notify-send", "apt": ["libnotify-bin"], "why": "UI deck desktop notifications"},
+   {"bin": "ss", "apt": ["iproute2"], "why": "/ports card and the ports watch"},
+   {"bin": "pw-play", "apt": ["pipewire-bin"], "why": "UI deck sound fallback"},
+   {"bin": "curl", "apt": ["curl"], "why": "uv and Claude Code installers"}
+  ],
+  "human_only": [
+   "Run `claude` once and sign in (account login).",
+   "Inside Claude Code run /mcp and authorize higgsfield and openart (OAuth).",
+   "Run `gh auth login` (the github MCP reads its token from it)."
+  ]
+ },
  "post_steps": [
-  {"id": "playwright-chromium", "cmd": ["npx", "-y", "@playwright/mcp@0.0.82", "install-browser", "chrome-for-testing", "--no-remove"], "network": true, "optional": true, "note": "the browser build the pinned MCP itself expects (--browser chromium = chrome-for-testing, chromium-1246 for 0.0.82); keep the version in step with the mcp entry. --no-remove keeps other projects' browsers."},
+  {"id": "playwright-chromium", "cmd": ["npx", "-y", "@playwright/mcp@0.0.83", "install-browser", "chrome-for-testing", "--no-remove"], "network": true, "optional": true, "note": "the browser build the pinned MCP itself expects (--browser chromium = chrome-for-testing); keep the version in step with the mcp entry (tests/test_manifest_wp7.py). --no-remove keeps other projects' browsers."},
   {"id": "vendor-skills", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/scripts/vendor_skill.py", "--all"], "network": true, "optional": true, "note": "re-vendor all third-party skills at their pinned refs (hooks/skills-sources.json) + rebaseline R10."},
   {"id": "gen-invoke-skills", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/hooks/gen-invoke-skills.py"], "optional": true, "note": "render the /invoke delegator skills from model-policy + categories."},
   {"id": "gen-agent-skill-blocks", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/hooks/gen-agent-skill-blocks.py"], "optional": true, "note": "sync agent skill-loading blocks from routing config."},
   {"id": "build-skills-index", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/hooks/build-skills-index.py"], "optional": true, "note": "rebuild the ranked skills catalog."},
   {"id": "build-trigger-floor", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/hooks/build-trigger-floor.py"], "optional": true, "note": "rebuild the never-miss trigger floor."},
-  {"id": "validate-skills", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/scripts/validate_skills.py"], "note": "R1..R10 incl. R9 floor guard + R10 upstream-intactness (fails the install on a broken catalog or an edited locked skill)."}
+  {"id": "validate-skills", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/scripts/validate_skills.py"], "note": "R1..R10 incl. R9 floor guard + R10 upstream-intactness (fails the install on a broken catalog or an edited locked skill)."},
+  {"id": "validate-mods", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/scripts/validate_mods.py"], "note": "static contract per manifest mod, then `claude plugin validate --strict` + `claude plugin test` when the claude CLI is on PATH (static only otherwise)."}
  ],
  "doctor_probes": {
   "link_doctor": true,
   "ollama": {"url": "http://localhost:11434/api/tags", "models": ["all-minilm", "qwen2.5-coder:3b"], "note": "all-minilm = jcodemunch/jdocmunch semantic-search embeddings; qwen2.5-coder:3b = jcodemunch AI summaries (WARN-only). Install: https://ollama.com then `ollama pull all-minilm qwen2.5-coder:3b`."},
   "interpreter_check": true,
-  "mcp_roster": ["jcodemunch", "jdocmunch", "graphify", "lean-ctx", "memory", "sequential-thinking", "context7", "github", "playwright", "browser-tools-mcp", "markdownify", "semgrep", "reticle", "higgsfield", "openart"],
+  "mcp_roster": ["jcodemunch", "jdocmunch", "graphify", "lean-ctx", "memory", "sequential-thinking", "context7", "github", "playwright", "browser-tools-mcp", "markdownify", "semgrep", "reticle", "drawio", "higgsfield", "openart"],
   "generated_checks": [
    ["{PYTHON}", "{CLAUDE_DIR}/hooks/gen-invoke-skills.py", "--check"],
    ["{PYTHON}", "{CLAUDE_DIR}/hooks/gen-agent-skill-blocks.py", "--check"]

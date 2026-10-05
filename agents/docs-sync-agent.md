@@ -36,7 +36,7 @@ Preloaded skills (frontmatter `skills:`): `update-docs` (repo-level doc lifecycl
 
 ## ARTIFACT
 
-Updated doc files plus `DOCS-SYNC-REPORT.md` in the project root. Required sections:
+Updated doc files plus `DOCS-SYNC-REPORT.md` at the path the dispatch names (under `/invoke`: the run folder), else the repo root. Required sections:
 1. `## Change Ledger` — every behavioral change in the diff, one row each: change -> doc file updated OR "no doc impact: <why>".
 2. `## Dox Tree` — touched directories and their CLAUDE.md status (updated / already accurate).
 3. `## ADRs` — created ADRs with the 3-part test result, and decisions that failed the test with which part failed.

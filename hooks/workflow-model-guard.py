@@ -3,51 +3,36 @@
 workflow-model-guard.py — PreToolUse hook for the **Workflow** tool.
 
 THE PROBLEM IT SOLVES (the real token burn):
-  The Workflow tool's `agent(prompt, opts)` calls inherit the main-loop model when
-  `opts.model` is omitted. The main session runs on Opus, so EVERY workflow agent
-  that forgets a model silently fans out on Opus. These dispatches happen INSIDE the
-  workflow runtime and never pass through `opus-guard.py` (which only sees the Agent
-  tool). A single workflow can spawn dozens of agents — all on Opus. That is the
-  burn the user reported.
+  A Workflow `agent(prompt, opts)` call inherits the main-loop model when `opts.model`
+  is omitted. The main session runs on Opus, so every workflow agent that forgets a
+  model silently fans out on Opus. These dispatches happen INSIDE the workflow runtime
+  and never pass through `opus-guard.py` (which only sees the Agent tool).
 
 THE FIX:
-  Rewrite the inline workflow `script` before it runs so that every `agent(...)` call
-  routes through a tiny injected wrapper `__wfAgent` that:
-    - HONORS an explicit `opts.model` (sonnet/opus/fable) — your deliberate per-task
-      override is never touched;
-    - auto-promotes the opus-pinned judge agents (model-policy agent_pins.opus: UI/UX,
-      santa, plan, spec, debug, team-lead) to opus and keeps Explore/claude-code-guide
-      on sonnet (mirrors opus-guard's pins; its per-prompt escalation is not applied here);
+  Rewrite the inline workflow `script` before it runs so every `agent(...)` call goes
+  through an injected wrapper `__wfAgent` (lib/workflow_script.build_wrapper) that:
+    - HONORS an explicit `opts.model` (sonnet/opus/fable);
+    - pins the model-policy agent_pins: the opus judges (santa, uiux, plan, spec,
+      debug) to opus, Explore/claude-code-guide to sonnet; opus-guard's per-prompt
+      escalation is not applied here;
     - otherwise DEFAULTS to sonnet (never inherits the Opus parent);
-    - and if a session flag is set, FORCES that model on every agent (kill-switch):
-        ~/.claude/state/sonnet-only-mode -> force sonnet (wins over everything)
-        ~/.claude/state/opus-only-mode   -> force opus
-        ~/.claude/state/fable-only-mode  -> force fable
-
-  The rewrite is a single safe token substitution (`agent(` -> `__wfAgent(`) plus a
-  prepended wrapper; it does NOT try to parse each opts object, so it is robust.
-
-  The injected `__wfAgent` wrapper (see `_build_wrapper`) is arg-drop safe:
-    - it forwards EVERY argument via `(p, opts, ...rest) => __wfOrigAgent(p, o, ...rest)`
-      (a 3rd+ positional arg — callback, abort signal, args payload — is never lost);
-    - a 2nd arg that is not a plain object (string / function / number / array) is passed
-      through completely untouched (a shape we can't safely rewrite is never corrupted).
+    - FORCES one model on every agent when a session flag
+      (~/.claude/state/{sonnet,opus,fable}-only-mode, sonnet wins) or the per-project
+      mode (lib/model_mode) is set.
+  The rewrite is one safe token substitution (`agent(` -> `__wfAgent(`) plus the
+  prepended wrapper, which forwards every argument and passes a non-object 2nd arg
+  through untouched.
 
 SAFETY (fail-open, never corrupt a script):
   - Only inline `script` is rewritten. `scriptPath` / `name` (saved/on-disk workflows)
-    are left untouched with an advisory — we never silently mutate a file on disk.
-  - If the script is already processed (`__wfAgent` present) -> left unchanged.
-  - No `export const meta = {` block -> the wrapper is prepended at position 0 (it only
-    references the `agent` runtime global, so it is safe at the top) and pinning still
-    happens. Only a meta block whose braces cannot be matched -> left unchanged + advisory.
+    are left untouched with an advisory — a file on disk is never mutated.
+  - Already processed (`__wfAgent` present) -> unchanged.
+  - No `export const meta = {` block -> the wrapper goes at position 0 and pinning still
+    happens; a meta block whose braces cannot be matched -> unchanged + advisory.
   - Any exception -> allow unchanged. The hook can never block a workflow.
 
-Protocol:
-  stdin:  {"tool_name":"Workflow","tool_input":{"script":"...", ...}}
-  stdout: {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow",
-           "updatedInput":{...},"additionalContext":"..."}}  to rewrite + allow,
-          or {} to allow unchanged.
-  exit:   always 0 (fail-open).
+Protocol: stdin {"tool_name":"Workflow","tool_input":{"script":"...", ...}}; stdout a
+PreToolUse `updatedInput` + `additionalContext`, or {} to allow unchanged; exit 0.
 """
 from __future__ import annotations
 
@@ -63,6 +48,10 @@ try:
     from lib import model_mode as _mm
 except Exception:  # noqa: BLE001 - never let the per-project layer brick the guard
     _mm = None  # type: ignore
+try:
+    from lib import workflow_script as _ws
+except Exception:  # noqa: BLE001 - no wrapper builder -> allow unchanged
+    _ws = None  # type: ignore
 
 MARKER = "__wfAgent"
 # Match a bare `agent(` call (the workflow global) — not `__wfAgent(`, `myagent(`,
@@ -71,20 +60,13 @@ AGENT_CALL_RE = re.compile(r"(?<![\w.])agent\s*\(")
 META_RE = re.compile(r"export\s+const\s+meta\s*=\s*\{")
 
 # --- model-policy.json: the single model truth (P2). ---------------------------
-# workflow-model-guard consumes it for the session-flag dir/names/precedence and the
-# opus/sonnet agent pins injected into the wrapper. Fail-open to these literals if the
-# file is missing/corrupt. NOTE: sourcing agent_pins from the policy aligns the workflow
-# opus set with opus-guard (the judge agents). Execution agents run on the sonnet default;
-# opus-guard's per-prompt escalation is NOT applied inside workflow scripts — pass
-# opts.model 'opus' there. Explicit model params and force flags still win.
+# Session-flag dir/names/precedence and the agent pins injected into the wrapper.
+# Fail-open to these literals if the file is missing/corrupt. Execution agents run on
+# the sonnet default; pass opts.model 'opus' in a script to escalate one.
 POLICY_PATH = Path(__file__).resolve().parent / "model-policy.json"
 
 _DEFAULT_FLAG_DIR = "state"
-_DEFAULT_FLAG_NAMES = {
-    "sonnet": "sonnet-only-mode",
-    "opus": "opus-only-mode",
-    "fable": "fable-only-mode",
-}
+_DEFAULT_FLAG_NAMES = {"sonnet": "sonnet-only-mode", "opus": "opus-only-mode", "fable": "fable-only-mode"}
 _DEFAULT_FLAG_PRECEDENCE = ["sonnet", "opus", "fable"]
 _DEFAULT_OPUS_AGENTS = ["frontend-uiux-designer", "santa-reviewer"]
 _DEFAULT_SONNET_AGENTS = ["explore", "claude-code-guide"]
@@ -182,84 +164,6 @@ def _forced_model(cwd: str | None = None) -> str | None:
     return None
 
 
-def _meta_end_index(script: str) -> int | None:
-    """Return the index just past the meta declaration (after its closing brace and
-    an optional trailing semicolon), or None if it can't be safely located.
-
-    Brace-matches from the meta object's opening `{`, skipping braces inside string
-    literals (', ", `). meta is a 'pure literal', so this is reliable in practice.
-    """
-    m = META_RE.search(script)
-    if not m:
-        return None
-    i = m.end() - 1  # position of the opening '{'
-    depth = 0
-    n = len(script)
-    quote: str | None = None
-    while i < n:
-        c = script[i]
-        if quote is not None:
-            if c == "\\":
-                i += 2
-                continue
-            if c == quote:
-                quote = None
-            i += 1
-            continue
-        if c in ("'", '"', "`"):
-            quote = c
-            i += 1
-            continue
-        if c == "{":
-            depth += 1
-        elif c == "}":
-            depth -= 1
-            if depth == 0:
-                j = i + 1
-                # consume an optional trailing semicolon
-                while j < n and script[j] in " \t":
-                    j += 1
-                if j < n and script[j] == ";":
-                    j += 1
-                return j
-        i += 1
-    return None
-
-
-def _build_wrapper(forced: str | None) -> str:
-    forced_js = f"'{forced}'" if forced else "null"
-    sonnet_agents, opus_agents, fable_agents = _agent_sets()
-    fable_js = json.dumps(fable_agents)
-    opus_js = json.dumps(opus_agents)
-    sonnet_js = json.dumps(sonnet_agents)
-    return (
-        "\n/* injected by workflow-model-guard: default subagents to sonnet */\n"
-        "const __wfOrigAgent = agent;\n"
-        "const __wfForce = " + forced_js + ";\n"
-        "const __wfFableAgents = new Set(" + fable_js + ");\n"
-        "const __wfOpusAgents = new Set(" + opus_js + ");\n"
-        "const __wfSonnetAgents = new Set(" + sonnet_js + ");\n"
-        "const __wfAgent = (p, opts, ...rest) => {\n"
-        # Defect 2: a 2nd arg we can't safely rewrite (string/function/number/array) is
-        # passed through with ALL args untouched — never replaced by {} or mutated.
-        "  if (opts !== undefined && (typeof opts !== 'object' || Array.isArray(opts))) {\n"
-        "    return __wfOrigAgent(p, opts, ...rest);\n"
-        "  }\n"
-        "  const o = opts ? { ...opts } : {};\n"
-        # Defect 1: forward every trailing argument via ...rest, never truncate to 2.
-        "  if (__wfForce) { o.model = __wfForce; return __wfOrigAgent(p, o, ...rest); }\n"
-        "  if (!o.model) {\n"
-        "    const at = (o.agentType || '').toLowerCase();\n"
-        "    if (__wfFableAgents.has(at)) o.model = 'fable';\n"
-        "    else if (__wfOpusAgents.has(at)) o.model = 'opus';\n"
-        "    else if (__wfSonnetAgents.has(at)) o.model = 'sonnet';\n"
-        "    else o.model = 'sonnet';\n"
-        "  }\n"
-        "  return __wfOrigAgent(p, o, ...rest);\n"
-        "};\n"
-    )
-
-
 def main() -> int:
     try:
         payload = json.load(sys.stdin)
@@ -286,21 +190,17 @@ def main() -> int:
             )
         return _allow_unchanged()
 
-    # Already processed (e.g. resume) -> leave it alone.
-    if MARKER in script:
-        return _allow_unchanged()
-
-    # No agent() calls -> nothing to do.
-    if not AGENT_CALL_RE.search(script):
+    # Already processed (e.g. resume) or no agent() calls -> leave it alone.
+    if MARKER in script or not AGENT_CALL_RE.search(script) or _ws is None:
         return _allow_unchanged()
 
     try:
-        # Defect 3: distinguish "no meta block" (prepend the wrapper at the top and pin)
-        # from "meta present but braces unmatched" (truly unparseable -> advise, no mutate).
+        # "no meta block" -> wrapper at position 0 and pin; "meta present but braces
+        # unmatched" -> truly unparseable -> advise, no mutation.
         if META_RE.search(script) is None:
-            end = 0  # no meta -> the whole script is the body; wrapper goes at position 0
+            end = 0
         else:
-            end = _meta_end_index(script)
+            end = _ws.meta_end_index(script)
             if end is None:
                 return _advisory(
                     "workflow-model-guard: the meta block's braces could not be matched, "
@@ -314,7 +214,7 @@ def main() -> int:
         body = script[end:]
         # Single safe substitution in the body: agent( -> __wfAgent(
         new_body = AGENT_CALL_RE.sub(MARKER + "(", body)
-        new_script = head + _build_wrapper(forced) + new_body
+        new_script = head + _ws.build_wrapper(forced, *_agent_sets()) + new_body
     except Exception:
         return _allow_unchanged()
 
@@ -329,9 +229,9 @@ def main() -> int:
     else:
         note = (
             "workflow-model-guard: workflow agent() calls without an explicit model now "
-            "default to SONNET (UI/UX agentType -> opus). Pass {model:'opus'} or "
-            "{model:'fable'} per agent to override; this stops workflow agents from "
-            "inheriting the Opus parent and burning tokens."
+            "default to SONNET; the model-policy agent pins apply (the opus judges: "
+            "santa, uiux, plan, spec, debug). Pass {model:'opus'} or {model:'fable'} per "
+            "agent to override; this stops workflow agents from inheriting the Opus parent."
         )
 
     print(json.dumps({

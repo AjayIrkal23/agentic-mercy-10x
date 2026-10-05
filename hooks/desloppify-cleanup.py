@@ -19,16 +19,18 @@ Fires once per conversation after N code writes.
 from __future__ import annotations
 
 import json
+import os
 import sys
 from pathlib import Path
 
 from tool_compat import is_write_tool, tool_name
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-STATE_DIR = SCRIPT_DIR / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or SCRIPT_DIR / ".state")
 
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
+from lib.platform import locked_update  # noqa: E402
 try:
     from lib.code_files import is_code_file as _is_code_file  # noqa: E402
 except Exception:  # pragma: no cover - fail-open (count nothing)
@@ -40,26 +42,29 @@ except Exception:  # pragma: no cover - fail-open (count nothing)
 WRITES_THRESHOLD = 8
 
 
-def _get_state(cid: str) -> dict:
-    if not cid:
-        return {"code_writes": 0, "fired": False, "code_files": []}
+def _record_write(cid: str, file_path: str) -> tuple[int, bool]:
+    """Count the write and remember the unique path under the file lock (parallel
+    PostToolUse runs lost updates, audit J-01). Returns (writes, fire_now)."""
     safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
-    state_file = STATE_DIR / f"{safe}.desloppify.json"
-    if state_file.is_file():
-        try:
-            return json.loads(state_file.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
-            pass
-    return {"code_writes": 0, "fired": False, "code_files": []}
+    result = {"writes": 0, "fire": False}
 
+    def update(state: dict) -> dict:
+        # Always record — even after the reminder fired — so the completion gate's
+        # thresholds (santa/dead-code) see the UNIQUE code files touched this session.
+        state["code_writes"] = int(state.get("code_writes") or 0) + 1
+        files = state.get("code_files") or state.get("code_paths") or []
+        norm = file_path.replace("\\", "/")
+        if norm not in files:
+            files.append(norm)
+        state["code_files"] = files[-500:]
+        state.pop("code_paths", None)  # legacy key (renamed 2026-09-27)
+        result["writes"] = state["code_writes"]
+        result["fire"] = not state.get("fired") and state["code_writes"] >= WRITES_THRESHOLD
+        state["fired"] = bool(state.get("fired")) or result["fire"]
+        return state
 
-def _save_state(cid: str, state: dict) -> None:
-    if not cid:
-        return
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
-    state_file = STATE_DIR / f"{safe}.desloppify.json"
-    state_file.write_text(json.dumps(state), encoding="utf-8")
+    locked_update(STATE_DIR / f"{safe}.desloppify.json", update)
+    return result["writes"], result["fire"]
 
 
 def main() -> int:
@@ -85,28 +90,9 @@ def main() -> int:
         print("{}")
         return 0
 
-    state = _get_state(cid)
+    writes, fire = _record_write(cid, file_path)
 
-    # Always record — even after the reminder fired — so the completion gate's
-    # thresholds (santa/dead-code) see the UNIQUE code files touched this session.
-    state["code_writes"] = state.get("code_writes", 0) + 1
-    files = state.get("code_files") or state.get("code_paths") or []
-    norm = file_path.replace("\\", "/")
-    if norm not in files:
-        files.append(norm)
-    state["code_files"] = files[-500:]
-    state.pop("code_paths", None)  # legacy key (renamed 2026-09-27)
-    writes = state["code_writes"]
-
-    if state.get("fired"):
-        _save_state(cid, state)
-        print("{}")
-        return 0
-
-    if writes >= WRITES_THRESHOLD:
-        state["fired"] = True
-        _save_state(cid, state)
-
+    if fire:
         msg = (
             "🧹 WRAP-UP PASS DUE — {writes} code writes done. Before completing, "
             "run a dedicated cleanup sweep on ALL files you touched:\n"
@@ -127,7 +113,6 @@ def main() -> int:
 
         print(json.dumps({"additionalContext": msg}))
     else:
-        _save_state(cid, state)
         print("{}")
 
     return 0

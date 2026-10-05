@@ -8,13 +8,16 @@ same SessionStart chain).
   path = ~/.claude.json -> mcpServers.memory.env.MEMORY_FILE_PATH
          else <claude_dir>/memory/memory.jsonl
 Entities whose name contains the active repo's name, or starts with
-``pref::global``, are emitted: <=5 entities x <=3 (latest) observations,
-<=1,200 chars. {} when the file is absent or nothing matches. Fail-open.
+``pref::global``, are emitted: <=5 entities ranked fragile > decision > pattern >
+other (newest first), each an equal share of <=1,200 chars with its latest
+observations clipped as whole lines. {} when the file is absent or nothing
+matches. Fail-open.
 """
 from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -71,21 +74,51 @@ def load_entities(path: Path) -> list[dict]:
     return out
 
 
+_KIND_RANK = {"pref": 0, "fragile": 1, "decision": 2, "pattern": 3}
+
+
+def _newest(ent: dict) -> str:
+    """Latest `[YYYY-MM-DD]` observation date ('' when undated)."""
+    return max((str(o)[1:11] for o in ent.get("observations") or []
+                if str(o)[:1] == "[" and str(o)[11:12] == "]"), default="")
+
+
 def select(entities: list[dict], repo_name: str) -> list[dict]:
-    needle = (repo_name or "").lower()
+    """Global prefs + entities naming the repo, ranked fragile > decision > pattern
+    > other, newest first within a kind (not file order)."""
+    def norm(s: str) -> str:  # WATCH_SDK ~ watch-sdk ~ "watch sdk" (audit F-10)
+        return re.sub(r"[_\s]+", "-", (s or "").lower())
+
+    needle = norm(repo_name)
     picked = [e for e in entities
               if e["name"].lower().startswith("pref::global")
-              or (needle and needle in e["name"].lower())]
+              or (needle and needle in norm(e["name"]))]
+    picked.sort(key=_newest, reverse=True)
+    picked.sort(key=lambda e: _KIND_RANK.get(e["name"].lower().split("::", 1)[0], 9))
     return picked[:MAX_ENTITIES]
 
 
+def _clip(text: str, room: int) -> str:
+    return text if len(text) <= room else text[:max(room - 1, 0)] + "…"
+
+
 def render(picked: list[dict]) -> str:
-    lines = ["## Stored project memory (Memory MCP)"]
+    """Every picked entity gets an equal share of MAX_CHARS: its title, then its
+    latest observations, each clipped as a whole line (never a mid-block cut)."""
+    head = "## Stored project memory (Memory MCP)"
+    lines = [head]
+    share = (MAX_CHARS - len(head)) // max(len(picked), 1)
     for ent in picked:
-        lines.append(f"- {ent['name']} [{ent.get('entityType', '')}]")
-        obs = [str(o) for o in (ent.get("observations") or [])][-MAX_OBS:]
-        lines.extend(f"  - {o[:200]}" for o in obs)
-    return "\n".join(lines)[:MAX_CHARS]
+        title = _clip(f"- {ent['name']} [{ent.get('entityType', '')}]", share - 1)
+        lines.append(title)
+        room = share - len(title) - 1
+        for o in reversed([str(o) for o in (ent.get("observations") or [])][-MAX_OBS:]):
+            if room < 40:
+                break
+            line = _clip(f"  - {o}", room - 1)
+            lines.append(line)
+            room -= len(line) + 1
+    return "\n".join(lines)
 
 
 def main() -> int:
@@ -94,6 +127,9 @@ def main() -> int:
         payload = json.loads(raw) if raw.strip().startswith("{") else {}
     except Exception:  # noqa: BLE001
         payload = {}
+    if payload.get("source") == "resume":  # the resumed transcript already holds it (NEW-03)
+        print("{}")
+        return 0
     try:
         repo = _rc.active_repo(payload) if _rc is not None else None
         repo_name = repo.name if repo else Path(payload.get("cwd") or os.getcwd()).name

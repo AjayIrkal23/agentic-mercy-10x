@@ -26,7 +26,7 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-STATE_DIR = SCRIPT_DIR / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or SCRIPT_DIR / ".state")
 CONFIG = SCRIPT_DIR / "dox-tree-guard.config.json"
 
 sys.path.insert(0, str(SCRIPT_DIR))

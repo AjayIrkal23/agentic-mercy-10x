@@ -1,9 +1,9 @@
 {
  "_meta": {
-  "purpose": "UI/UX trigger vocabulary for the prompt router (source 5 of build-trigger-floor.py). Restored 2026-09-27 from ui-ux-stack-orchestrator.config.json (deleted 2026-07-19); keywords of <= 3 chars are kept only when in classify._SHORT_ALLOW. Additions welcome; removals require a floor charter bump.",
+  "purpose": "UI/UX trigger vocabulary for the prompt router (source 5 of build-trigger-floor.py). Restored 2026-09-27 from ui-ux-stack-orchestrator.config.json (deleted 2026-07-19); keywords of <= 3 chars are kept only when in classify._SHORT_ALLOW. Additions welcome; removals require a floor charter bump. 2026-10-05 (audit C-07): bare 'mobile' removed — in an Expo/React Native repo it names the native app, not web UI; 'mobile first' / 'mobile-first' stay.",
   "source": "ui-ux-stack-orchestrator.config.json.bak-emil-20260719",
   "counts": {
-   "ui_keywords": 412,
+   "ui_keywords": 411,
    "ui_path_suffixes": 10,
    "exclude_keywords": 25
   }
@@ -92,7 +92,6 @@
   "microinteraction",
   "micro-interaction",
   "responsive",
-  "mobile",
   "tablet",
   "breakpoint",
   "media query",

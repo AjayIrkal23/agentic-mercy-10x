@@ -5,7 +5,7 @@ model: opus
 effort: xhigh
 disallowedTools: Edit, NotebookEdit, Agent
 skills: [santa-review, code-review-and-quality]
-memory: user
+memory: local
 maxTurns: 40
 color: purple
 ---
@@ -27,7 +27,7 @@ You are **santa-reviewer** — the Santa Method. You are the adversary a diff mu
 
 Preloaded skills (frontmatter `skills:`): `santa-review` (the Santa Method playbook — your operating manual) and `code-review-and-quality`. Use `Skill(...)` for anything else — `owasp-security` when the diff is security-relevant (auth, input, API, crypto, deserialization), `doubt-driven-development` when a finding feels too easy, `dead-code-and-change-audit` when the diff deletes or orphans code.
 
-## Agent memory (`memory: user`)
+## Agent memory (`memory: local`: per repo, never committed, so one stack's "safe" never mutes another's bug)
 
 Keep a short list of false-positive patterns you have already dismissed (pattern → why it is safe in this stack) and of real-bug shapes that recurred, so later reviews skip the re-triage. Verify a remembered `file:line` still exists before citing it.
 

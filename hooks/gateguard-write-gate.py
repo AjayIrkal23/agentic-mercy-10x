@@ -4,8 +4,10 @@
 When the target file is imported by >= THRESHOLD other files, emit
 permissionDecision:"ask" so the user gets a yes/no prompt with a detailed
 impact report (every importing file, the actual import line, exported
-symbols of the target). Once acknowledged for a file in a conversation,
-subsequent writes pass through.
+symbols of the target). The file is acknowledged only once the write actually ran:
+``gateguard-write-gate.py post-tool-use`` (dispatch link ``gateguard-ack``) moves it
+from ``pending_ask`` to ``acked_files``, so a declined ask asks again (B1-08). TS/JS
+importers need a quoted specifier ending in ``/<stem>``; comment lines never count.
 
 Skips: new files, test files, docs, config, state files, lock files.
 """
@@ -35,7 +37,7 @@ SKIP_PATTERNS = (
 )
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-STATE_DIR = SCRIPT_DIR / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or SCRIPT_DIR / ".state")
 
 
 def _should_skip(file_path: str) -> bool:
@@ -64,7 +66,8 @@ def _find_project_root(file_path: str) -> str:
 
 
 _EXCLUDE_DIRS = {"node_modules", ".git", "dist", "build", "__pycache__", ".venv", "venv"}
-_SCAN_BUDGET_S = 8.0  # like the old grep timeout: an over-budget scan fails open
+_SCAN_BUDGET_S = 5.0  # stays under the 8 s dispatch link timeout: an over-budget scan fails open
+_COMMENT_HEADS = ("//", "/*", "*", "#")
 
 
 def _import_regex_for(file_path: str) -> tuple[re.Pattern, tuple[str, ...]]:
@@ -80,7 +83,12 @@ def _import_regex_for(file_path: str) -> tuple[re.Pattern, tuple[str, ...]]:
         w = r"[^A-Za-z0-9_]"
         return re.compile(rf"^\s*(from\s+([.A-Za-z0-9_]*[.])?{s}\s+import"
                           rf"|(from\s+[.A-Za-z0-9_]+\s+)?import\s(.*{w})?{s}({w}|$))"), (".py",)
-    return re.compile(f"from.*/{s}|require.*/{s}"), (".ts", ".tsx", ".js", ".jsx")
+    # A quoted module specifier ending in /<stem> (optional extension or /index): a
+    # comment like `// moved from ./Widget` or a sibling `./WidgetGroup` is no importer
+    # (B1-08). Covers `from '…'`, `require('…')`, `import('…')`, `export … from '…'`.
+    spec = rf"""['"][^'"\n]*/{s}(?:\.[A-Za-z]+|/index(?:\.[A-Za-z]+)?)?['"]"""
+    return (re.compile(rf"""(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(\s*|^\s*import\s+){spec}"""),
+            (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"))
 
 
 def _gather_importers(file_path: str, search_root: str) -> list[dict]:
@@ -110,7 +118,8 @@ def _gather_importers(file_path: str, search_root: str) -> list[dict]:
             try:
                 with open(path, encoding="utf-8", errors="replace") as fh:
                     hits = [{"lineno": i, "text": line.rstrip("\r\n")}
-                            for i, line in enumerate(fh, 1) if rx.search(line)]
+                            for i, line in enumerate(fh, 1)
+                            if not line.lstrip().startswith(_COMMENT_HEADS) and rx.search(line)]
             except OSError:
                 continue
             if hits:
@@ -348,15 +357,18 @@ def main() -> int:
 
     cid = (payload.get("conversation_id") or payload.get("session_id") or "")
     state = _get_conversation_state(cid)
+    acked_files = state.get("acked_files") or state.get("warned_files") or []
+    pending = state.get("pending_ask") or []
 
-    # blast-bypass: once the user types "blast-bypass" this session, stay
-    # bypassed for the rest of it (resets next session). Also honors the
-    # optional env var / manual marker overrides.
-    if _bypass_active(payload, cid, state):
+    if sys.argv[1:2] == ["post-tool-use"]:
+        # The write ran, so an asked-about file was approved: acknowledge it now. Acking
+        # at ask time let the next write through even after the user said no (B1-08).
+        if file_path in pending:
+            state["pending_ask"] = [p for p in pending if p != file_path]
+            state["acked_files"] = acked_files + [file_path]
+            _save_conversation_state(cid, state)
         print("{}")
         return 0
-
-    acked_files = state.get("acked_files") or state.get("warned_files") or []
 
     if file_path in acked_files:
         print("{}")
@@ -376,9 +388,12 @@ def main() -> int:
         state["importer_cache"] = importer_cache
 
     ref_count = len(importers)
-    if ref_count >= THRESHOLD:
-        acked_files.append(file_path)
-        state["acked_files"] = acked_files
+    # blast-bypass: once the user types "blast-bypass" this session, stay bypassed for
+    # the rest of it (resets next session); env var / marker overrides too. Checked
+    # only when about to ask, so ordinary writes never read the transcript.
+    if ref_count >= THRESHOLD and not _bypass_active(payload, cid, state):
+        if file_path not in pending:
+            state["pending_ask"] = pending + [file_path]
         _save_conversation_state(cid, state)
 
         basename = os.path.basename(file_path)
@@ -390,8 +405,6 @@ def main() -> int:
             report_path.write_text(full_report + "\n", encoding="utf-8")
         except OSError:
             pass
-
-        print(full_report, file=sys.stderr)
 
         first_five = []
         for entry in importers[:5]:
@@ -407,7 +420,7 @@ def main() -> int:
             f"`{basename}` is imported by {ref_count} other file(s): "
             f"{importers_preview}. "
             f"Full impact report (every importer + import line + exports detected) "
-            f"saved to {report_path} and printed to hook stderr. "
+            f"saved to {report_path}. "
             f"Approve to proceed with this write; deny to re-scope."
         )
         print(json.dumps({
@@ -425,4 +438,8 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    try:
+        raise SystemExit(main())
+    except Exception:  # noqa: BLE001 - fail open: a broken gate must not block writes
+        print("{}")
+        raise SystemExit(0)

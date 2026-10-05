@@ -77,8 +77,8 @@ def _advisory(reason: str) -> str:
         reason = reason[:700] + "…"
     msg = (
         "⚠️ TDD GUARD (advisory — not blocking): " + reason +
-        "\nPreferred path: write the failing test first (golang-testing / "
-        "test-driven-development skill), `make tdd`, then implement. Proceeding as requested."
+        "\nPreferred path: write the failing test first (test-driven-development skill), "
+        "run it red with the project's test command, then implement. Proceeding as requested."
     )
     return json.dumps({
         "hookSpecificOutput": {

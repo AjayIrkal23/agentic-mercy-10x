@@ -17,41 +17,15 @@ metadata:
   token-cost: 2209
   triggers:
     keywords:
-    - claude.md
-    - code
-    - directory
-    - doc
-    - docs
-    - documentation
     - dox
-    - editing
-    - edits
-    - establishes
-    - exists
-    - follow
-    - git
-    - hard-gated
-    - incomplete
-    - local
-    - maintains
-    - mandatory
-    - missing
-    - missing/stubbed
-    - project
-    - read
-    - repo
-    - reports
-    - root
-    - rules
-    - scaffolding
-    - sessionstart
-    - target
-    - tree
-    - undocumented
-    - until
-    - update
-    - work
-    - writes
+    - doc tree
+    - claude.md tree
+    - local claude.md
+    - directory docs
+    - agents.md
+    - undocumented directory
+    - stub claude.md
+    - scaffold claude.md
     paths: []
     intents:
     - docs
@@ -189,7 +163,7 @@ dox is the **per-directory local-rules layer**. It is distinct from:
   missing (doc/scaffold writes are always allowed; re-issue the exact edit once to
   override). The Tier-2 soft-ask is skipped while `autoCreateChildren` is on (the
   PostToolUse hook creates the local doc for you).
-- Full doctrine: `~/.claude/rules/dox-doc-tree.md`.
+- Doctrine: `~/.claude/CLAUDE.md` §6 and `rules/02-lifecycle.md` phase 7; this skill is the procedure.
 
 ## Config (`dox-tree-guard.config.json`)
 

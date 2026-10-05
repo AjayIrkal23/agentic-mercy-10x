@@ -14,27 +14,13 @@ metadata:
   token-cost: 1147
   triggers:
     keywords:
-    - afk
-    - agent
-    - bugs
-    - create
-    - driven
-    - feature
-    - incoming
-    - issue
-    - issues
-    - machine
-    - manage
-    - prepare
-    - requests
-    - review
-    - roles
-    - state
-    - through
     - triage
-    - user
-    - wants
-    - workflow
+    - triage issues
+    - bug triage
+    - incoming bugs
+    - feature requests
+    - label issues
+    - afk agent
     paths: []
     intents:
     - general

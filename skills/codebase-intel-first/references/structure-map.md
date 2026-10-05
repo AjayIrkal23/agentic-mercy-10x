@@ -27,15 +27,15 @@
 - Tool-selection guidance.
 
 ## Combine With
-- `repo-memory-sync` when repo memory exists already or should be refreshed after mapping.
-- `jcodemunch-code-finder` when locating files, symbols, references, dependencies, or blast radius.
+- The memory MCP (`mcp__memory__search_nodes`) when repo memory exists already or should be refreshed after mapping.
+- `jcodemunch` when locating files, symbols, references, dependencies, or blast radius.
 - Any implementation or debugging skill that needs a path map.
 - Scaffolding guidance when you are creating new modules.
 - Layer-specific frontend or backend standards once the impacted files are known.
 
 ## Workflow
-1. If inside a repository and stored repo memory could help, load `repo-memory-sync` first.
-2. Use `jcodemunch-code-finder` as the code-discovery companion. If the repo is indexed, start with `jcodemunch` file tree, symbol search, and reference tracing for broad entry-point discovery; use shell/file tools for exact paths, literal text, dirty or untracked files, stale indexes, direct verification reads, and execution output.
+1. If inside a repository and stored repo memory could help, run `mcp__memory__search_nodes("<repo> <topic>")` first.
+2. Use `jcodemunch` as the code-discovery companion. If the repo is indexed, start with `jcodemunch` file tree, symbol search, and reference tracing for broad entry-point discovery; use shell/file tools for exact paths, literal text, dirty or untracked files, stale indexes, direct verification reads, and execution output.
 3. Read local docs, manifests, and nearby files to confirm the current codebase conventions.
 4. Trace outward to the adjacent layers that can affect behavior.
 5. Record the observed paths before creating new folders or files.

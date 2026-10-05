@@ -20,38 +20,25 @@ metadata:
   origin: ECC
   triggers:
     keywords:
-    - based
-    - best
-    - coverage
-    - creating
-    - designing
-    - efficiency
-    - files
-    - index
-    - indexes
-    - migration
-    - patterns
     - postgres
     - postgresql
-    - practices
-    - prepared
-    - queries
-    - query
-    - reviewing
+    - sql query
+    - sql queries
+    - sql schema
+    - sql migration
+    - sql index
+    - row-level security
     - rls
-    - row-level
-    - schemas
-    - security
-    - statements
     - supabase
-    - writing
+    - explain analyze
+    - prepared statements
     paths: []
     intents:
     - general
 ---
 # PostgreSQL Patterns
 
-Quick reference for PostgreSQL best practices. For detailed guidance, use the `database-reviewer` agent.
+Quick reference for PostgreSQL best practices. For a full review, pair it with `backend-performance-standards` and `code-review-and-quality`.
 
 ## When to Activate
 
@@ -183,9 +170,9 @@ SELECT pg_reload_conf();
 
 ## Related
 
-- Agent: `database-reviewer` - Full database review workflow
-- Skill: `clickhouse-io` - ClickHouse analytics patterns
-- Skill: `backend-patterns` - API and backend patterns
+- Skill: `backend-performance-standards` - index-backed queries and read projections
+- Skill: `backend-standards-always-follow` - API and backend baseline
+- Skill: `mongoose-patterns` - the MongoDB counterpart
 
 ---
 

@@ -32,13 +32,15 @@ One line each. FE/BE specifics load by path; skill bodies load on demand.
 
 `/invoke <acts...> [-- task]` runs one specialist per act in canonical order: audit spec
 plan debug test impl refactor design clean security review docs verify. Closers (clean,
-review, docs, verify) run after code-mutating acts and never duplicate an explicit act.
+review, docs, verify; security when sensitive paths changed) run after code-mutating acts
+and never duplicate an explicit act.
 Artifacts land in `.claude/runs/<ts>-<slug>/`. Models come from `hooks/model-policy.json`.
 
 ## Stop gates (`hard-completion-gate`)
 
 Gate 2 docs (hard, only when the repo has `server_docs/` / `frontend_docs/`), Gate 3
 security (semgrep on security-sensitive files), Gate 4 Santa (3+ files), Gate 5
-dead-code (2+ files). At most one block per turn: satisfy the gate or state why it does
-not apply, then it passes. `blocking-doc-enforcer` blocks `git commit` without doc
+dead-code (3+ files). Each Stop gate (this one, `invoke-suite-gate`, the mercy verify
+gate) blocks at most once per human turn: satisfy it or state why it does not apply,
+then it passes. `blocking-doc-enforcer` blocks `git commit` without doc
 updates when the repo has doc trees.

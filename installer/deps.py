@@ -14,6 +14,7 @@ import json
 import os
 import re
 import shutil
+import site
 import sys
 from pathlib import Path
 
@@ -21,7 +22,11 @@ _ROOT = Path(__file__).resolve().parents[1]
 _HOOKS = _ROOT / "hooks"
 if str(_HOOKS) not in sys.path:
     sys.path.insert(0, str(_HOOKS))
+if str(_ROOT / "installer") not in sys.path:  # doctor_mcp (pin_drift) lives beside this file
+    sys.path.insert(0, str(_ROOT / "installer"))
 from lib import platform as plat  # noqa: E402
+import mcp_restore  # noqa: E402
+import npm_pack  # noqa: E402
 
 MANIFEST = _ROOT / "installer" / "manifest.json"
 
@@ -45,7 +50,8 @@ def _exec_tokens(env) -> dict:
     ~/.claude (``_ROOT == real``) this is byte-identical to the old behavior."""
     real = env.real_dir or str(plat.claude_dir())
     claude_dir = str(_ROOT) if str(_ROOT) != real else real
-    return {"PYTHON": env.python, "NODE": env.node, "CLAUDE_DIR": claude_dir}
+    return {"PYTHON": env.python, "NODE": env.node, "CLAUDE_DIR": claude_dir,
+            "USER_SITE": str(Path(site.getusersitepackages()))}
 
 
 def _sub(cmd: list, tokens: dict) -> list:
@@ -124,7 +130,8 @@ def install_deps(env, *, ci: bool = False, dry_run: bool = False) -> list[tuple[
         if dry_run:
             results.append((did, f"WOULD-INSTALL: {' '.join(install_cmd)}"))
             continue
-        cp = plat.run(_sub(install_cmd, _exec_tokens(env)), timeout=600)
+        argv = _sub(install_cmd, _exec_tokens(env))
+        cp = npm_pack.install(argv) if npm_pack.needs_pack(argv) else plat.run(argv, timeout=600)
         ok = cp.returncode == 0
         results.append((did, ("INSTALLED" + _link_bins(dep.get("link_bins", []), env, False))
                         if ok else f"WARN(rc={cp.returncode})"))
@@ -318,12 +325,35 @@ def reconcile_mcp_env(*, dry_run: bool = False) -> list[tuple[str, str]]:
         if dry_run or not shutil.which("claude"):
             out.append((name, f"WOULD-SET-ENV: {sorted(missing)}"))
             continue
-        new = {**entry, "env": {**cur, **missing}}
-        plat.run(["claude", "mcp", "remove", "--scope", "user", name], timeout=60)
-        cp = plat.run(["claude", "mcp", "add-json", "--scope", "user", name, json.dumps(new)], timeout=60)
-        if cp.returncode != 0:  # never leave the server unregistered
-            plat.run(["claude", "mcp", "add-json", "--scope", "user", name, json.dumps(entry)], timeout=60)
-        out.append((name, f"ENV-SET {sorted(missing)}" if cp.returncode == 0 else f"WARN(rc={cp.returncode}, restored)"))
+        out.append((name, mcp_restore.replace_entry(
+            name, {**entry, "env": {**cur, **missing}}, entry, f"ENV-SET {sorted(missing)}")))
+    return out
+
+
+def reconcile_mcp_pins(*, dry_run: bool = False) -> list[tuple[str, str]]:
+    """Re-register user-scope npx/uvx MCP servers whose live package spec differs from the
+    manifest's exact pin: remove + ``add-json`` of the SAME entry with only the spec in
+    ``args`` swapped (env copied verbatim, restore on failure). OAuth/http servers and
+    servers the manifest does not pin are skipped. Idempotent; takes effect next session."""
+    import doctor_mcp  # type: ignore
+    try:
+        live = json.loads(user_config_file().read_text(encoding="utf-8")).get("mcpServers") or {}
+    except (OSError, ValueError):
+        return []
+    out: list[tuple[str, str]] = []
+    for name, have, want in doctor_mcp.pin_drift(_load_manifest(), live):
+        entry = live[name]
+        args = [str(a) for a in entry.get("args") or []]
+        new_args = [doctor_mcp.swap_spec(a, have, want) for a in args]
+        spec = f"{have} -> {want}"
+        if new_args == args:
+            out.append((name, f"SKIP(spec-not-in-args): {spec}"))
+        elif dry_run:
+            out.append((name, f"WOULD-PIN: {spec}"))
+        elif not shutil.which("claude"):
+            out.append((name, "SKIP(no-claude-cli)"))
+        else:
+            out.append((name, mcp_restore.replace_entry(name, {**entry, "args": new_args}, entry, f"PINNED {spec}")))
     return out
 
 

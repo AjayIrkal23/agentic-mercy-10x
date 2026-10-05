@@ -14,27 +14,18 @@ metadata:
   token-cost: 1966
   triggers:
     keywords:
-    - authoritative
-    - building
-    - code
-    - correctness
-    - decision
-    - development
-    - documentation
-    - driven
-    - every
-    - framework
-    - free
-    - grounds
-    - implementation
-    - library
-    - matters
-    - official
-    - outdated
-    - patterns
-    - source
+    - official docs
+    - official documentation
+    - check the docs
+    - library api
+    - framework docs
+    - latest version
+    - current api
+    - cite sources
     - source-cited
-    - want
+    - outdated api
+    - migration guide
+    - upgrade to the latest
     paths: []
     intents:
     - general

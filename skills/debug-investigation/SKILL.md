@@ -15,61 +15,23 @@ metadata:
   token-cost: 860
   triggers:
     keywords:
-    - approach
-    - behavior
-    - break
-    - broken/throwing/failing
-    - bug
-    - bugs
-    - builds
-    - cause
-    - crash
     - debug
     - debugging
-    - describes
-    - diagnose
-    - diagnosis
-    - disciplined
-    - doesn
-    - encounter
-    - error
-    - evidence
-    - expectations
-    - fail
-    - failures
-    - finding
-    - fix
-    - fixing
-    - guessing
-    - guides
-    - hard
-    - hypothesise
-    - instrument
-    - investigation
-    - isolate
-    - issue
-    - loop
-    - match
-    - minimise
-    - need
-    - needed
-    - performance
-    - proposing
-    - rather
+    - bug
+    - crash
+    - crashes
+    - root cause
+    - stack trace
     - regression
-    - regression-test
-    - regressions
-    - reports
+    - not working
+    - doesn't work
+    - broken
+    - flaky
+    - fails randomly
+    - unexpected behavior
     - reproduce
-    - root
-    - root-cause
-    - says
-    - something
-    - systematic
-    - tests
-    - unexpected
-    - unknown
-    - user
+    - diagnose
+    - figure out why
     paths: []
     intents:
     - debug
@@ -99,8 +61,8 @@ It does not assume frontend and backend both matter. It classifies the failing s
 Choose the failing surface first:
 
 - Backend-only: load the mandatory Backend Core Compliance Set before forming hypotheses: `backend-standards-always-follow`, `service-layer-standards`, `backend-api-standards`, `backend-error-handling`, and `backend-performance-standards`. Preserve `api-contract-standards` for envelope/contract work and `scaffold-standards` for domain or skeleton creation.
-- Frontend-only: select and load the matching Build Web Apps plugin skill when available, then load the mandatory Frontend Core Compliance Set: `build-web-apps:frontend-app-builder` for visual-surface failures or `build-web-apps:react-best-practices` for React/Vite/UI/code failures, plus `frontend-standards-always-follow`, `frontend-structure-standards`, `frontend-response-handling`, `frontend-server-data-patterns`, and `react-hooks-patterns`.
-- Cross-surface: load the matching Build Web Apps plugin plus Frontend Core Compliance Set and Backend Core Compliance Set, then narrow to the actual failing handoff.
+- Frontend-only: load the Frontend Core Compliance Set before forming hypotheses: `vite-react-best-practices` for React/Vite/UI/code failures (`expo-react-native` for React Native / Expo; `debug-broken-ui` when the app is running), plus `frontend-standards-always-follow`, `frontend-structure-standards`, `frontend-response-handling`, `frontend-server-data-patterns`, and `react-hooks-patterns`.
+- Cross-surface: load the Frontend Core Compliance Set and Backend Core Compliance Set, then narrow to the actual failing handoff.
 
 Use `project-reference-linkage` when tracing linked layers.
 Use `mcp-usage-standards` when repo, DB, logs, or external system truth must be verified.

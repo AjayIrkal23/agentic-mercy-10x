@@ -1,0 +1,138 @@
+{
+  "name": "mercy",
+  "version": "1.0.0",
+  "description": "Workflow intelligence for agentic-mercy-10x: session ledger, Python hook bridge (advisories off the critical path), guards, verification gate, repo brain, router governor, skill-listing focus, auto-resume after usage limits, and the UI deck (pane, action band, toasts, sounds, desktop notifications, git/CI/usage views, slash command cards)",
+  "author": { "name": "Ajay Irkal" },
+  "license": "MIT",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "bridge": {
+      "type": "string",
+      "title": "Python hook bridge",
+      "description": "on: the mod decides when owned dispatch.py links run (advisories in the background, rare links only when they can fire). off: dispatch.py runs every link synchronously as before.",
+      "default": "on",
+      "options": ["on", "off"]
+    },
+    "tddGuard": {
+      "type": "string",
+      "title": "tdd-guard timing",
+      "description": "async: validate after the write and deliver the advisory on the next step (no blocking). sync: the old blocking PreToolUse behaviour. off: skip tdd-guard.",
+      "default": "async",
+      "options": ["async", "sync", "off"]
+    },
+    "guard": {
+      "type": "string",
+      "title": "Guard",
+      "description": "Deny dev servers and watchers, subagent commits and pushes, and live-looking secrets in writes.",
+      "default": "on",
+      "options": ["on", "off"]
+    },
+    "verifyGate": {
+      "type": "string",
+      "title": "Verification gate",
+      "description": "block: once per turn, stop the model from finishing when code changed after the last passing test/typecheck/build and a verify command is known. advise: toast only.",
+      "default": "block",
+      "options": ["block", "advise", "off"]
+    },
+    "dedupeWindow": {
+      "type": "number",
+      "title": "Router dedupe window (turns)",
+      "description": "Drop prompt-router blocks and skill pushes repeated within this many turns (0 = governor off).",
+      "default": 6,
+      "min": 0,
+      "max": 50
+    },
+    "brain": {
+      "type": "string",
+      "title": "Repo brain",
+      "description": "Learn verified commands, fixes and notes per repo across sessions; show them as one stable system prompt section.",
+      "default": "on",
+      "options": ["on", "off"]
+    },
+    "focus": {
+      "type": "string",
+      "title": "Skill listing focus",
+      "description": "Inside a git repo, leave the business-plugin skill families listed in focusHide out of the model's skill listing (they still run by name).",
+      "default": "on",
+      "options": ["on", "off"]
+    },
+    "focusHide": {
+      "type": "string",
+      "title": "Hidden skill families",
+      "description": "Comma-separated plugin prefixes left out of the skill listing in code repos.",
+      "default": "small-business,sales,legal,finance,human-resources,marketing,operations,customer-support,enterprise-search,product-management,productivity,cowork-plugin-management,postiz"
+    },
+    "autoResume": {
+      "type": "string",
+      "title": "Auto-resume after usage limits",
+      "description": "When a turn dies on a usage limit or overload, resume the task automatically when the limit resets.",
+      "default": "on",
+      "options": ["on", "off"]
+    },
+    "pulse": {
+      "type": "string",
+      "title": "UI mode",
+      "description": "full: status, action band, pane on wide terminals, toasts, sound, desktop notifications, compact rows. focus: no auto pane, toasts for failures only, no restyled rows. quiet: status line only. off: nothing visible. /ui overrides it across sessions.",
+      "default": "full",
+      "options": ["full", "focus", "quiet", "off"]
+    },
+    "sound": {
+      "type": "string",
+      "title": "Sounds",
+      "description": "Play the desktop sound theme when a long turn ends, a turn fails, or Claude waits for you (canberra-gtk-play, then pw-play, paplay, afplay).",
+      "default": "on",
+      "options": ["on", "off"]
+    },
+    "soundAfter": {
+      "type": "number",
+      "title": "Sound after (seconds)",
+      "description": "A finished turn plays the done sound and toasts only when it ran at least this long.",
+      "default": 20,
+      "min": 0,
+      "max": 3600
+    },
+    "notify": {
+      "type": "string",
+      "title": "Desktop notifications",
+      "description": "notify-send when a long turn ends or Claude waits for a permission answer.",
+      "default": "on",
+      "options": ["on", "off"]
+    },
+    "notifyAfter": {
+      "type": "number",
+      "title": "Notify after (seconds)",
+      "description": "A finished turn sends a desktop notification only when it ran at least this long.",
+      "default": 60,
+      "min": 0,
+      "max": 3600
+    },
+    "quietHours": {
+      "type": "string",
+      "title": "Quiet hours",
+      "description": "No sound or desktop notification in this local time window, e.g. 22-07 or 22:30-07:00. Empty: never quiet.",
+      "default": ""
+    },
+    "paneAuto": {
+      "type": "string",
+      "title": "Open the pane by itself",
+      "description": "In full mode, open the /pulse pane at session start; the engine seats an unasked pane only on terminals 144+ columns wide.",
+      "default": "on",
+      "options": ["on", "off"]
+    },
+    "ci": {
+      "type": "string",
+      "title": "GitHub CI watch",
+      "description": "Poll the current branch's PR checks (or workflow runs) with gh every 3 minutes and after a push; toast and band on a change.",
+      "default": "on",
+      "options": ["on", "off"]
+    },
+    "autoCompact": {
+      "type": "number",
+      "title": "Compact between turns at (context %)",
+      "description": "After a turn ends with context at or above this, mercy compacts the conversation before your next prompt, keeping the plan, open tasks and unverified files, instead of the engine compacting mid-task. At most every 10 minutes. 0 turns it off.",
+      "default": 85,
+      "min": 0,
+      "max": 99
+    }
+  }
+}

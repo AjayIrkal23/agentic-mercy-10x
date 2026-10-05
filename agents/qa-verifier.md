@@ -39,7 +39,7 @@ Browser evidence: when a reticle session is connected (`reticle_*` tools present
 
 ## ARTIFACT
 
-File: `VERIFY-REPORT.md` in the project root (screenshots in `verify-artifacts/` alongside it). Required sections:
+File: `VERIFY-REPORT.md` at the path the dispatch names (under `/invoke`: the run folder), else the repo root (screenshots in `verify-artifacts/` alongside it). Required sections:
 1. `## Criteria` — V-IDs with source (spec/plan/brief).
 2. `## Static Gate` — build/lint/test commands + captured final output.
 3. `## Behavioral Evidence` — per criterion: command(s) run, real output, PASS/FAIL.

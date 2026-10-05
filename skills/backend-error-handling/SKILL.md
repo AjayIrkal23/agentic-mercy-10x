@@ -18,19 +18,16 @@ metadata:
   token-cost: 482
   triggers:
     keywords:
-    - backend
-    - behavior
-    - centralized
-    - client-safe
-    - defining
-    - error
-    - handler
-    - handling
-    - logging
-    - mapping
-    - redaction
-    - safe
-    - taxonomy
+    - error handler
+    - error handling
+    - central error handler
+    - error taxonomy
+    - error mapping
+    - apperror
+    - client-safe errors
+    - error logging
+    - redact errors
+    - status codes
     paths: []
     intents:
     - backend
@@ -57,6 +54,10 @@ This skill owns the error taxonomy, centralized handler behavior, and the rule t
 - Performance tuning without error-handling impact.
 
 ## Standard Error Envelope
+
+Default for new APIs. The project contract wins: when the repo's `CLAUDE.md`, `CODEX.md`
+or API docs define an error envelope (for example a flat `{success:false, message, code}`),
+follow it and never migrate it unasked.
 
 ```json
 {

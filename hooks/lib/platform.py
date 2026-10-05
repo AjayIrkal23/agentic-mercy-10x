@@ -21,6 +21,7 @@ Exports:
   materialize(template, subs)   {PLACEHOLDER} substitution in a command list
   slugify_path(path)            filesystem-safe slug of an arbitrary path
   atomic_write(path, data)      write-to-temp + os.replace atomic file write
+  locked_update(path, fn)       read-modify-write a JSON dict under a file lock
 """
 
 from __future__ import annotations
@@ -52,7 +53,9 @@ def hooks_dir() -> Path:
 
 
 def state_dir() -> Path:
-    d = claude_dir() / "state"
+    # CLAUDE_HOOK_STATE_DIR isolates test runs (tests/conftest.py)
+    env = os.environ.get("CLAUDE_HOOK_STATE_DIR")
+    d = Path(env).expanduser() if env else claude_dir() / "state"
     try:
         d.mkdir(parents=True, exist_ok=True)
     except OSError:
@@ -61,7 +64,9 @@ def state_dir() -> Path:
 
 
 def telemetry_dir() -> Path:
-    d = claude_dir() / "telemetry"
+    # CLAUDE_HOOK_TELEMETRY_DIR isolates test and doctor runs (tests/conftest.py)
+    env = os.environ.get("CLAUDE_HOOK_TELEMETRY_DIR")
+    d = Path(env).expanduser() if env else claude_dir() / "telemetry"
     try:
         d.mkdir(parents=True, exist_ok=True)
     except OSError:
@@ -327,6 +332,44 @@ def atomic_write(path: str | os.PathLike, data: str, *, encoding: str = "utf-8")
         return False
 
 
+def _lock(fh) -> None:
+    if IS_WINDOWS:
+        import msvcrt
+        fh.seek(0)
+        msvcrt.locking(fh.fileno(), msvcrt.LK_LOCK, 1)  # retries ~10 s, then raises
+    else:
+        import fcntl
+        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+
+
+def locked_update(path: str | os.PathLike, fn, *, default=None) -> dict:
+    """Read-modify-write a per-session JSON state file that several hooks share
+    (audit J-01: plain read + write_text lost concurrent updates, and a torn read
+    reset the evidence). Holds an exclusive lock on `<path>.lock`, applies
+    `fn(data) -> data`, writes atomically. A missing or unreadable file starts from
+    `default` (a fresh dict). Never raises; returns the dict it wrote (or tried to).
+    """
+    import json
+
+    target = Path(path)
+    data = dict(default or {})
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        with open(target.with_name(target.name + ".lock"), "a+") as lock:
+            _lock(lock)  # released when the handle closes
+            try:
+                loaded = json.loads(target.read_text(encoding="utf-8"))
+                if isinstance(loaded, dict):
+                    data = loaded
+            except (OSError, ValueError):
+                pass
+            data = fn(data)
+            atomic_write(target, json.dumps(data, indent=2))
+    except Exception:  # noqa: BLE001 - state is best-effort; callers stay fail-open
+        pass
+    return data
+
+
 __all__ = [
     "IS_WINDOWS",
     "claude_dir",
@@ -344,4 +387,5 @@ __all__ = [
     "materialize",
     "slugify_path",
     "atomic_write",
+    "locked_update",
 ]

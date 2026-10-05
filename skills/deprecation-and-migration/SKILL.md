@@ -13,23 +13,20 @@ metadata:
   token-cost: 2177
   triggers:
     keywords:
-    - another
-    - apis
-    - code
-    - deciding
     - deprecation
-    - existing
-    - features
-    - implementation
-    - maintain
-    - manages
+    - deprecated
+    - deprecate
+    - migrate
     - migrating
-    - migration
-    - removing
+    - migration guide
+    - upgrade the dependency
+    - upgrade dependencies
+    - dependency upgrade
+    - major version
+    - breaking upgrade
     - sunset
-    - systems
-    - users
-    - whether
+    - codemod
+    - remove the old
     paths: []
     intents:
     - general

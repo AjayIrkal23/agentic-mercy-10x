@@ -1,11 +1,12 @@
-"""model_advice.py — S3 delegate: main-session /model advice (P2-T4, filled here).
+"""model_advice.py — S3 delegate: main-session heavy-task advice (P2-T4, filled here).
 
-Re-homes the model-router's per-prompt /model advice, INVERTED from the old
-Opus bias (Spec A §3.2 / plan P2-T4): advise ``/model <opus_id>`` ONLY when the
-TaskProfile hits an opus row of ``task_matrix`` AND ``heavy_qualifiers`` pass
-(size L AND risk >= min_risk). Otherwise SILENT — no per-prompt model nag. All
-ids come from ``hooks/model-policy.json`` (the single model truth); fail-open to
-no advice when the policy is missing/corrupt.
+Per-prompt advice, INVERTED from the old Opus bias (Spec A §3.2 / plan P2-T4): fires
+ONLY when the TaskProfile hits an opus row of ``task_matrix`` AND ``heavy_qualifiers``
+pass (size L AND risk >= min_risk). Otherwise SILENT — no per-prompt model nag. The
+line is for the model, never the user (autonomy §11): it says to dispatch the Opus judge
+agent named in ``main_session_advice.agents`` for the heavy part (opus-guard pins it);
+nothing asks for a ``/model`` switch. All ids come from ``hooks/model-policy.json`` (the
+single model truth); fail-open to no advice when the policy is missing/corrupt.
 
 This module is import-safe and pure — it does NOT wrap a stdin hook, so it is
 exempt from the delegate enable-gate concern (no legacy state to double-fire);
@@ -61,7 +62,7 @@ def _override_suppresses(profile, policy: dict) -> bool:
 
 
 def advise(profile) -> str | None:
-    """Return the /model advice string, or None (silent)."""
+    """Return the heavy-task dispatch advice string, or None (silent)."""
     policy = _policy()
     if not policy:
         return None
@@ -79,9 +80,15 @@ def advise(profile) -> str | None:
         return None
     if _override_suppresses(profile, policy):
         return None
-    opus_id = policy.get("model_ids", {}).get("opus", "opus")
-    return (f"Heavy task ({hit}, size {profile.size}, risk {profile.risk}): "
-            f"consider /model {opus_id} for this work.")
+    agents = policy.get("main_session_advice", {}).get("agents", {})
+    key = hit
+    if hit == "HEAVY_ARCHITECTURE" and "SPEC" in profile.intents and "PLAN" not in profile.intents:
+        key = "HEAVY_ARCHITECTURE_SPEC"
+    agent = agents.get(key) or agents.get(hit)
+    if not agent:
+        return None
+    return (f"Heavy task ({hit}, size {profile.size}, risk {profile.risk}): dispatch the {agent} "
+            "agent (Opus, via the Agent tool) for the heavy part now.")
 
 
 def items(payload: dict, ctx: dict) -> list[dict]:

@@ -87,6 +87,6 @@ Options: `--style`, `--industry`, `--prompt`
 ## Setup
 
 ```bash
-# No API key needed — image generation goes through the Higgsfield MCP connector.
-pip install google-genai
+# No API key and no install needed — image generation goes through the Higgsfield MCP
+# connector; scripts/logo/generate.py is legacy and must not be run.
 ```

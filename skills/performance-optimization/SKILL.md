@@ -1,6 +1,7 @@
 ---
 name: performance-optimization
-description: Optimizes application performance. Use when performance requirements exist, when you suspect performance regressions, or when Core Web Vitals or load times need improvement. Use when profiling reveals bottlenecks that need fixing.
+description: 'Measure-first performance work: profile, find the bottleneck, fix it and prove the gain, across slow endpoints and queries, re-renders, bundle size and Core Web Vitals.'
+when_to_use: Use when something is slow (page, endpoint, query, render), when a performance regression is suspected, or when Core Web Vitals or load times must improve.
 metadata:
   schema: 1
   category: general
@@ -13,25 +14,23 @@ metadata:
   token-cost: 2783
   triggers:
     keywords:
-    - application
-    - bottlenecks
-    - core
-    - exist
-    - fixing
-    - improvement
-    - load
-    - need
-    - optimization
-    - optimizes
     - performance
+    - slow
+    - too slow
+    - slow page
+    - slow endpoint
+    - slow query
+    - profile
     - profiling
-    - regressions
-    - requirements
-    - reveals
-    - suspect
-    - times
-    - vitals
-    - web
+    - profiler
+    - re-renders
+    - rerenders
+    - core web vitals
+    - bundle size
+    - memory leak
+    - latency
+    - bottleneck
+    - optimize performance
     paths: []
     intents:
     - general

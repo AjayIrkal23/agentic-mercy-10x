@@ -1,10 +1,11 @@
 ---
 name: backend-performance-standards
 description: Backend query efficiency, repeated DB work, file-size pressure, scaling risk, and safe optimization boundaries.
-when_to_use: Use when reviewing repositories, stores, SQL, or hot paths for N+1 queries, missing indexes, or scaling risk.
+when_to_use: Use when reviewing repositories, models, SQL, or hot paths for N+1 queries, missing indexes, or scaling risk.
 paths:
-- '**/repository/**'
-- '**/store/**'
+- '**/{repository,repositories}/**'
+- '**/*.model.{ts,js}'
+- '**/server/**/models/**/*.{ts,js}'
 - '**/*.sql'
 metadata:
   schema: 1
@@ -18,21 +19,16 @@ metadata:
   token-cost: 264
   triggers:
     keywords:
-    - backend
-    - boundaries
-    - efficiency
-    - file-size
-    - optimization
-    - performance
-    - pressure
-    - query
-    - repeated
-    - reviewing
-    - risk
-    - safe
-    - scaling
-    - standards
-    - work
+    - n+1 query
+    - n+1 queries
+    - missing index
+    - slow query
+    - slow endpoint
+    - query efficiency
+    - repeated queries
+    - scaling risk
+    - hot path
+    - backend performance
     paths:
     - cmd/
     - internal/

@@ -25,7 +25,7 @@ HOME = Path.home()
 INDEX_DIR = HOME / ".doc-index" / "local"
 HOOKS_DIR = Path(__file__).parent
 CONFIG_PATH = HOOKS_DIR / "jdocmunch-enforce.config.json"
-STATE_DIR = HOOKS_DIR / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or HOOKS_DIR / ".state")
 
 
 def _load_config() -> dict:
@@ -34,9 +34,24 @@ def _load_config() -> dict:
     except Exception:
         return {
             "doc_exts": [".md", ".mdx", ".markdown", ".rst", ".adoc"],
-            "skip_names": ["CLAUDE.md", "AGENTS.md"],
+            "skip_names": ["CLAUDE.md", "AGENTS.md", "CODEX.md"],
+            "min_bytes": 6000,
             "max_reminders_per_session": 6,
         }
+
+
+def _noop():
+    json.dump({}, sys.stdout)
+
+
+def _small_or_sliced(target: str, tool_input: dict, cfg: dict) -> bool:
+    """A sliced read or a doc under min_bytes gains nothing from the index."""
+    if tool_input.get("offset") or tool_input.get("limit"):
+        return True
+    try:
+        return Path(target).stat().st_size < int(cfg.get("min_bytes", 6000))
+    except (OSError, ValueError):
+        return False
 
 
 def _state_path(cid: str) -> Path:
@@ -126,7 +141,7 @@ def handle_pre_tool_use():
     try:
         hook_input = json.load(sys.stdin)
     except Exception:
-        json.dump({"continue": True}, sys.stdout)
+        _noop()
         return
 
     tool_input = hook_input.get("tool_input", {}) or {}
@@ -134,23 +149,23 @@ def handle_pre_tool_use():
     cfg = _load_config()
 
     target = _target_path(tool_input)
-    if not target or not _is_doc_file(target, cfg):
-        json.dump({"continue": True}, sys.stdout)
+    if not target or not _is_doc_file(target, cfg) or _small_or_sliced(target, tool_input, cfg):
+        _noop()
         return
 
     root = _repo_root()
     if not _under(target, root) or not _has_doc_index(root):
-        json.dump({"continue": True}, sys.stdout)
+        _noop()
         return
 
     state = _load_state(session_id)
     if state.get("remind_count", 0) >= cfg.get("max_reminders_per_session", 6):
-        json.dump({"continue": True}, sys.stdout)
+        _noop()
         return
 
     state["remind_count"] = state.get("remind_count", 0) + 1
     _save_state(session_id, state)
-    json.dump({"continue": True, "additionalContext": _reminder(root)}, sys.stdout)
+    json.dump({"additionalContext": _reminder(root)}, sys.stdout)
 
 
 if __name__ == "__main__":
@@ -159,6 +174,6 @@ if __name__ == "__main__":
         if mode == "pre-tool-use":
             handle_pre_tool_use()
         else:
-            json.dump({"continue": True}, sys.stdout)
+            _noop()
     except Exception:
-        json.dump({"continue": True}, sys.stdout)
+        _noop()

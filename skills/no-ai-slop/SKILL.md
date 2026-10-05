@@ -3,8 +3,9 @@ name: no-ai-slop
 description: Edit drafts into sharper, more human writing while preserving the writer's personal voice,
   or detect AI-slop patterns without rewriting. Use when the user wants a draft clearer, more direct,
   more opinionated, or less AI-sounding, or asks whether writing reads as AI.
-when_to_use: 'Always active (core-skill-set.json, full) for every piece of prose written to the user or
-  into files: chat, docs, commit messages, PR bodies. Explicit edit/detect when the user pastes a draft.'
+when_to_use: 'Always on (named in core-skill-set.json; load the body with the Skill tool before writing
+  prose) for every piece of prose written to the user or into files: chat, docs, commit messages, PR bodies.
+  Explicit edit/detect when the user pastes a draft.'
 metadata:
   category: general
   surfaces:

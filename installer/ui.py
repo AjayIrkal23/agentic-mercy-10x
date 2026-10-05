@@ -72,6 +72,8 @@ def _run_install() -> None:
         _selfheal.pin_config_dir(_STATE["target"])
         res = _selfheal.self_heal(Path(_STATE["target"]),
                                   emit=lambda k, n, s: _append(k, n, s))
+        for line in res.get("todo") or []:  # the one batched sudo line + human-only steps
+            _append("todo", line.strip(), "TODO")
         with _LOCK:
             _JOB["ok"] = True
             _JOB["success"] = bool(res.get("success"))

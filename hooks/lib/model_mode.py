@@ -90,4 +90,69 @@ def set_mode(cwd: str | os.PathLike | None, model: str | None) -> bool:
         return False
 
 
-__all__ = ["MODES", "modes_dir", "repo_key", "forced_mode", "set_mode"]
+_DEFAULT_FLAGS = {"sonnet": "sonnet-only-mode", "opus": "opus-only-mode", "fable": "fable-only-mode"}
+
+
+def global_flags(policy: dict | None = None) -> list[str]:
+    """Active global kill-switch flags, in precedence order. Same files the guards read:
+    ``<claude_dir>/<session_flags.dir>/<session_flags.<model>>`` (fail-open to literals)."""
+    sf = (policy or {}).get("session_flags")
+    sf = sf if isinstance(sf, dict) else {}
+    base = _claude_dir() / (sf.get("dir") if isinstance(sf.get("dir"), str) and sf.get("dir") else "state")
+    prec = sf.get("precedence")
+    prec = prec if isinstance(prec, list) and prec and all(p in _DEFAULT_FLAGS for p in prec) else list(MODES)
+    out = []
+    for m in prec:
+        name = sf.get(m) if isinstance(sf.get(m), str) and sf.get(m) else _DEFAULT_FLAGS[m]
+        if (base / name).is_file():
+            out.append(m)
+    return out
+
+
+def user_phrase(model: str, transcript_path, phrases: dict | None) -> str | None:
+    """The override phrase for ``model`` (policy ``override_phrases``) found in the user's
+    last real prompt of the transcript, or None. Meta rows, tool results and task
+    notifications are not the user's words (lib.turns). Any error -> None."""
+    if not transcript_path or not isinstance(phrases, dict):
+        return None
+    try:
+        from lib import turns  # noqa: PLC0415 - only on the explicit-model path
+        _, text = turns.last_user_turn(transcript_path)
+    except Exception:  # noqa: BLE001
+        return None
+    low = (text or "").lower()
+    for p in phrases.get(model) or []:
+        if isinstance(p, str) and p and p.lower() in low:
+            return p
+    return None
+
+
+def escalation_reason(policy: dict, subagent_type: str, text: str, cwd: str | None) -> str | None:
+    """Why an execution agent is lifted to ``escalation.to``, or None. Fail-open:
+    a retry marker, else (no plan marker) prompt_router.classify size/risk >= heavy_qualifiers."""
+    esc = policy.get("escalation")
+    if not isinstance(esc, dict) or not esc.get("enabled"):
+        return None
+    if subagent_type not in {str(a).lower() for a in esc.get("agents") or []}:
+        return None
+    try:
+        import re  # noqa: PLC0415
+        if any(re.search(p, text, re.IGNORECASE) for p in esc.get("retry_markers") or []):
+            return "previous attempt failed"
+        if any(re.search(p, text, re.IGNORECASE) for p in esc.get("plan_markers") or []):
+            return None  # a plan/spec/contract drives the work: Sonnet executes it
+        from prompt_router.classify import classify  # noqa: PLC0415 - only on this path
+
+        prof = classify({"prompt": text, "cwd": cwd or ""})
+        hq = policy.get("heavy_qualifiers") or {}
+        rank = {"S": 1, "M": 2, "L": 3}
+        if (rank.get(prof.size, 0) >= rank.get(hq.get("min_size", "L"), 3)
+                and prof.risk >= int(hq.get("min_risk", 2))):
+            return f"large task with no plan (size {prof.size}, risk {prof.risk})"
+    except Exception:  # noqa: BLE001 - escalation must never break routing
+        return None
+    return None
+
+
+__all__ = ["MODES", "modes_dir", "repo_key", "forced_mode", "set_mode", "global_flags",
+           "user_phrase", "escalation_reason"]

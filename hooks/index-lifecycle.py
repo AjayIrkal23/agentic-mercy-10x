@@ -21,6 +21,11 @@ Modes (argv[1]):
                     systemd watch-daemon-session-end.py — no systemd anything).
     build           the DETACHED single-shot worker: --root/--key/--surfaces
                     [--incremental] [--journal FILE]. Refuses a mismatched key.
+    reprobe         CLI: --root <abs>. Probe that root exactly like session-start,
+                    spawn the detached builders for STALE/MISSING surfaces, print ONE
+                    JSON line {"surfaces": {...}, "spawned": [...]} within ~2 s.
+                    Idempotent; also what a HEAD-moving Bash git command triggers
+                    (post-write, one detached worker).
 
 Design invariants (Spec B §3, Charter §7):
   * Active repo ONLY — the root is resolved exclusively by lib/repo_context.py.
@@ -43,10 +48,11 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import sys
+import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeout
 from pathlib import Path
 
 HOOK_DIR = Path(__file__).resolve().parent
@@ -69,7 +75,7 @@ except Exception:  # pragma: no cover - defensive; hook must never hard-crash
 HOME = Path.home()
 CODE_INDEX_DIR = HOME / ".code-index"
 DOC_INDEX_DIR = HOME / ".doc-index" / "local"
-STATE_DIR = HOOK_DIR / ".state" / "index"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or HOOK_DIR / ".state") / "index"
 CONFIG_FILE = HOOK_DIR / "index-lifecycle.config.json"
 
 FRESH, STALE, MISSING, BUILDING, FAILED, UNAVAILABLE = (
@@ -92,16 +98,28 @@ DOC_GLOBS = ["*.md", "*.mdx", "*.markdown", "*.rst", "*.adoc", "*.txt",
 _DEFAULT_CONFIG = {
     "debounce": {"writes_threshold": 5, "seconds_threshold": 45},
     "probe_timeouts_ms": {"jcodemunch": 500, "jdocmunch": 800, "graphify": 3000, "dox": 300},
-    "build_timeouts_s": {"jcodemunch": 300, "jdocmunch": 120, "graphify": 120, "dox": 60},
+    "build_timeouts_s": {"jcodemunch": 300, "jdocmunch": 120, "graphify": 300, "dox": 60},
     "max_build_failures": 3,
-    "lock_ttl_minutes": 30,
+    "lock_ttl_minutes": 30,  # must outlive the longest build cap + summarizer wait
     "max_doc_stats": 5000,
     "incremental_file_cap": 20,
     "surfaces_enabled": {"jcodemunch": True, "jdocmunch": True, "graphify": True, "dox": True},
     "relax_read_gate_while_building": True,
     "summarizer_healthcheck": {"enabled": True, "url": "http://localhost:11434/api/tags",
-                               "timeout_ms": 800},
+                               "timeout_ms": 800, "wait_s": 90},
 }
+
+NEUTRAL_DEFER_LINE = "summarizer unavailable; index refresh deferred, retrying automatically"
+# reprobe CLI budget: the caller (mercy mod) allows 3 s end to end.
+REPROBE_WALL_S = 1.8
+REPROBE_PROBE_CAP_MS = 1200
+# Bash commands that move HEAD or rewrite the tree in bulk (mid-session reprobe trigger).
+_GIT_MOVES_RE = re.compile(
+    r"(?:^|[;&|(\s])git(?:\s+(?:-[Cc]\s+\S+|--[\w-]+(?:=\S+)?))*\s+"
+    r"(?:commit|pull|merge|checkout|switch|rebase|reset|cherry-pick|revert|am|stash\s+pop)"
+    r"(?![\w-])")
+_sleep = time.sleep  # indirection so tests never really wait
+_LAST_ERR = [""]  # the last builder failure tail, read by mode_build for the build_fail row
 
 
 # --------------------------------------------------------------------------- #
@@ -134,6 +152,34 @@ def _run(cmd, timeout, env=None):
                               timeout=timeout, check=False, env=env)
     except Exception as exc:  # noqa: BLE001
         return subprocess.CompletedProcess(cmd, 127, "", str(exc))
+
+
+# key = value / "key": "value" / Authorization: Bearer …  (quotes allowed around both sides)
+_SECRET_KV_RE = re.compile(
+    r"(?i)\b([\w-]*(?:key|token|secret|passw(?:or)?d|authorization|credentials?))[\"']?"
+    r"\s*[:=]\s*[\"']?(?:bearer\s+)?[^\s\"',}]+")
+_SECRET_TOKEN_RE = re.compile(
+    r"\b(?:sk-[\w-]{8,}|gh[pousr]_\w{10,}|xox[abp]-[\w-]{8,}|AKIA[0-9A-Z]{16}|AIza[\w-]{30,}"
+    r"|hf_\w{20,}|eyJ[\w-]+\.[\w-]+\.[\w-]*)")
+_URL_CREDS_RE = re.compile(r"(?<=://)[^/\s:@]+:[^@\s/]+(?=@)")  # https://user:pass@host
+
+
+def _scrub(text: str) -> str:
+    """Drop credential-looking values from builder output before it reaches telemetry."""
+    text = _URL_CREDS_RE.sub("***:***", text)
+    return _SECRET_TOKEN_RE.sub("***", _SECRET_KV_RE.sub(r"\1=***", text))
+
+
+def _ok(cp) -> bool:
+    """True when the builder exited 0; else remember the last ~400 chars of its
+    stderr (stdout when stderr is empty: jcodemunch reports errors there) in
+    ``_LAST_ERR`` for the ``build_fail`` row. Secrets are scrubbed."""
+    if cp.returncode == 0:
+        return True
+    body = (cp.stderr or "").strip() or (cp.stdout or "").strip()
+    head = "timeout; " if cp.returncode == 124 else ""
+    _LAST_ERR[0] = _scrub(f"{head}rc={cp.returncode} {body}")[-400:]
+    return False
 
 
 def _summarizer_alive(url: str, timeout_ms: int) -> bool:
@@ -436,28 +482,58 @@ def _dirty_sha(root: Path) -> str:
     return hashlib.sha1(body.encode("utf-8", "replace")).hexdigest()[:16]
 
 
+_UNREADABLE = object()
+
+
+def _db_meta(db: Path, key: str):
+    """The meta value, None when absent, `_UNREADABLE` when the db cannot be read."""
+    try:
+        conn = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        try:
+            row = conn.execute("SELECT value FROM meta WHERE key=?", (key,)).fetchone()
+        finally:
+            conn.close()
+        return row[0] if row else None
+    except Exception:
+        return _UNREADABLE
+
+
+def _index_db_for(root: Path):
+    """The jcodemunch db that indexed THIS checkout. Matched on the db's recorded
+    `source_root`: a same-named clone (worktree, scratch copy) must not borrow
+    another path's index (audit MAIN-01). Dbs without the field (older
+    jcodemunch) keep the old name order: exact `<owner>-<name>.db` first, the fuzzy
+    globs matched sibling clones (SubStore ↔ SubStore-laneCI)."""
+    ordered: list = []
+    for pat in (f"*-{root.name}.db", f"*-{root.name}*.db", f"*{root.name}*.db"):
+        for db in sorted(CODE_INDEX_DIR.glob(pat)):
+            if db not in ordered:
+                ordered.append(db)
+    want = os.path.realpath(str(root))
+    legacy = []
+    for db in ordered:
+        src = _db_meta(db, "source_root")
+        if src is _UNREADABLE:
+            continue  # locked/corrupt: never borrow it as "legacy"
+        if not src:
+            legacy.append(db)
+        elif os.path.realpath(src) == want:
+            return db
+    return legacy[0] if legacy else None
+
+
 def _probe_jcodemunch(root: Path, prior: dict) -> tuple:
     if not _which("jcodemunch-mcp"):
         return (UNAVAILABLE, {}, "jcodemunch-mcp not installed")
-    # Exact `<owner>-<name>.db` first; the fuzzy globs matched sibling clones
-    # (SubStore ↔ SubStore-laneCI) and judged staleness from the wrong index.
-    dbs = sorted(CODE_INDEX_DIR.glob(f"*-{root.name}.db")) or \
-        sorted(CODE_INDEX_DIR.glob(f"*-{root.name}*.db")) or \
-        sorted(CODE_INDEX_DIR.glob(f"*{root.name}*.db"))
+    db = _index_db_for(root)
     head_cp = _git(root, ["rev-parse", "HEAD"], timeout=5)
     head = head_cp.stdout.strip() if head_cp.returncode == 0 else None
     dirty = _dirty_sha(root)
     fp = {"git_head": head, "dirty_sha": dirty}
-    if not dbs:
-        return (MISSING, fp, "no index db")
-    indexed_head = None
-    try:
-        conn = sqlite3.connect(str(dbs[0]))
-        cur = conn.execute("SELECT value FROM meta WHERE key='git_head'")
-        row = cur.fetchone()
-        conn.close()
-        indexed_head = row[0] if row else None
-    except Exception:
+    if db is None:
+        return (MISSING, fp, "no index db for this checkout")
+    indexed_head = _db_meta(db, "git_head")
+    if indexed_head is _UNREADABLE:
         indexed_head = None
     if indexed_head and head and indexed_head != head:
         return (STALE, fp, "git HEAD moved since index")
@@ -467,8 +543,39 @@ def _probe_jcodemunch(root: Path, prior: dict) -> tuple:
     return (FRESH, fp, "")
 
 
+_DOC_SRC_RE = re.compile(r'"source_root"\s*:\s*"((?:[^"\\]|\\.)*)"')
+
+
+def _doc_source_root(manifest: Path):
+    """The manifest's recorded `source_root`, or None. jdocmunch writes it near the
+    end of a manifest that can be hundreds of MB, so only the tail is read."""
+    try:
+        with manifest.open("rb") as f:
+            f.seek(0, os.SEEK_END)
+            f.seek(max(0, f.tell() - 65536))
+            hits = _DOC_SRC_RE.findall(f.read().decode("utf-8", "replace"))
+        return json.loads(f'"{hits[-1]}"') if hits else None
+    except (OSError, ValueError):
+        return None
+
+
+def _doc_name_for(root: Path) -> str:
+    """The jdocmunch index name for THIS checkout (audit NEW-06). The bare basename
+    when its manifest records this root (or none, legacy); else `<name>-<sha8>`, so
+    a same-named copy never borrows or overwrites another checkout's doc index."""
+    want = os.path.realpath(str(root))
+    suffixed = f"{root.name}-{hashlib.sha1(want.encode('utf-8')).hexdigest()[:8]}"
+    bare = DOC_INDEX_DIR / f"{root.name}.json"
+    if bare.is_file():
+        src = _doc_source_root(bare)
+        if not src or os.path.realpath(src) == want:
+            return root.name
+        return suffixed
+    return suffixed if (DOC_INDEX_DIR / f"{suffixed}.json").is_file() else root.name
+
+
 def _probe_jdocmunch(root: Path, prior: dict, max_stats: int) -> tuple:
-    name = root.name
+    name = _doc_name_for(root)
     manifest = DOC_INDEX_DIR / f"{name}.json"
     if not manifest.is_file():
         return (MISSING, {}, "no doc manifest")
@@ -547,23 +654,35 @@ _PROBE = {
 }
 
 
-def _probe_all(ctx, state: dict, cfg: dict) -> dict:
-    """Probe every enabled surface in parallel; fail-open to FRESH on timeout."""
+def _probe_all(ctx, state: dict, cfg: dict, wall: float | None = None) -> dict:
+    """Probe every enabled surface in parallel; fail-open to FRESH on timeout.
+
+    Daemon threads + a bounded join (not a ThreadPoolExecutor, whose exit blocks on a
+    hung probe): a stuck probe is abandoned and the caller still returns in ``wall``.
+    """
     enabled = [s for s in SURFACES if cfg["surfaces_enabled"].get(s, True)]
     root = Path(ctx.root)
-    results: dict = {}
-    wall = max(cfg["probe_timeouts_ms"].values()) / 1000.0 + 1.0
-    with ThreadPoolExecutor(max_workers=max(1, len(enabled))) as pool:
-        futs = {
-            pool.submit(_PROBE[s], root, state.get("surfaces", {}).get(s, {}), cfg): s
-            for s in enabled
-        }
-        for fut, s in futs.items():
-            try:
-                results[s] = fut.result(timeout=wall)
-            except (FutureTimeout, Exception):  # noqa: BLE001
-                _telem("probe_timeout", surface=s, key=ctx.key)
-                results[s] = (FRESH, {}, "probe timeout (assumed fresh)")
+    if wall is None:
+        wall = max(cfg["probe_timeouts_ms"].values()) / 1000.0 + 1.0
+    done: dict = {}
+
+    def work(s: str) -> None:
+        try:
+            done[s] = _PROBE[s](root, state.get("surfaces", {}).get(s, {}), cfg)
+        except Exception:  # noqa: BLE001 - a broken probe is "assume fresh"
+            pass
+
+    threads = [threading.Thread(target=work, args=(s,), daemon=True) for s in enabled]
+    for t in threads:
+        t.start()
+    deadline = time.time() + wall
+    for t in threads:
+        t.join(max(0.0, deadline - time.time()))
+    results = dict(done)  # snapshot: a straggler must not mutate what we return
+    for s in enabled:
+        if s not in results:
+            _telem("probe_timeout", surface=s, key=ctx.key)
+            results[s] = (FRESH, {}, "probe timeout (assumed fresh)")
     return results
 
 
@@ -582,17 +701,42 @@ def _summarizer_down(cfg: dict) -> bool:
     return enabled and not _summarizer_alive(url, timeout_ms)
 
 
+def _wait_summarizer(cfg: dict) -> bool:
+    """Wait (backoff 2, 4, 8, 16, 20 s ... capped by ``wait_s``, default 90 s total)
+    for the local summarizer. True once it answers or the check is disabled. Runs only
+    inside the detached builder, so nothing ever blocks on it. ollama is a systemd
+    service: this never starts it."""
+    enabled, url, timeout_ms = _summarizer_cfg(cfg)
+    if not enabled:
+        return True
+    total = float((cfg.get("summarizer_healthcheck") or {}).get("wait_s", 90))
+    waited, delay = 0.0, 2.0
+    while not _summarizer_alive(url, timeout_ms):
+        if waited >= total:
+            return False
+        step = min(delay, total - waited)
+        _sleep(step)
+        waited += step
+        delay = min(delay * 2, 20.0)
+    return True
+
+
 def _build_jcodemunch(root: Path, incremental: bool, paths, cfg: dict):
-    """True/False, or "DEFERRED" when the AI summarizer (ollama) is down."""
+    """True/False, or "DEFERRED" when the AI summarizer (ollama) stays down.
+
+    Summarizer down: wait for it first. Still down after the wait: a MISSING index
+    (nothing to overwrite) builds with ``--no-ai-summaries``; an existing index is left
+    untouched (a reindex would replace good prose summaries with signature fallback)
+    and the next probe retries."""
     if not _which("jcodemunch-mcp"):
         return False
-    # Fail loud, never degrade silently: with the summarizer down a reindex would
-    # overwrite good prose summaries with signature fallback AND report success.
-    # Leave the index untouched and let the worker retry later (mode_build).
-    if _summarizer_down(cfg):
-        _telem("summarizer_down_build_deferred", surface="jcodemunch",
-               key=_repo_key(root), incremental=bool(incremental))
-        return "DEFERRED"
+    no_ai = False
+    if not _wait_summarizer(cfg):
+        if incremental or _index_db_for(root) is not None:
+            _telem("summarizer_down_build_deferred", surface="jcodemunch",
+                   key=_repo_key(root), incremental=bool(incremental))
+            return "DEFERRED"
+        no_ai = True
     env = _jcodemunch_env()
     to = cfg["build_timeouts_s"]["jcodemunch"]
     if incremental and paths and len(paths) <= cfg["incremental_file_cap"]:
@@ -608,20 +752,20 @@ def _build_jcodemunch(root: Path, incremental: bool, paths, cfg: dict):
         failed = 0
         for pth in code_paths:
             cp = _run(["jcodemunch-mcp", "index-file", str(pth)], timeout=to, env=env)
-            if cp.returncode != 0:
+            if not _ok(cp):
                 failed += 1
                 _telem("index_file_fail", surface="jcodemunch", path=str(pth)[-120:],
-                       rc=cp.returncode)
+                       rc=cp.returncode, err=_LAST_ERR[0][-200:])
         return failed < len(code_paths)
-    cp = _run(["jcodemunch-mcp", "index", str(root)], timeout=to, env=env)
-    return cp.returncode == 0
+    cmd = ["jcodemunch-mcp", "index"] + (["--no-ai-summaries"] if no_ai else []) + [str(root)]
+    return _ok(_run(cmd, timeout=to, env=env))
 
 
 def _build_jdocmunch(root: Path, incremental: bool, paths, cfg: dict) -> bool:
     if not _which("jdocmunch-mcp"):
         return False
     to = cfg["build_timeouts_s"]["jdocmunch"]
-    name = root.name
+    name = _doc_name_for(root)
     if incremental and paths:
         docs = [str(p) for p in paths
                 if Path(p).suffix.lower() in
@@ -632,25 +776,22 @@ def _build_jdocmunch(root: Path, incremental: bool, paths, cfg: dict) -> bool:
         listing = STATE_DIR / f".jdoc-paths-{os.getpid()}-{int(time.time())}.txt"
         try:
             listing.write_text("\n".join(docs) + "\n", encoding="utf-8")
-            cp = _run(["jdocmunch-mcp", "index-local", "--path", str(root),
-                       "--name", name, "--paths-from", str(listing)], timeout=to)
-            return cp.returncode == 0
+            return _ok(_run(["jdocmunch-mcp", "index-local", "--path", str(root),
+                             "--name", name, "--paths-from", str(listing)], timeout=to))
         finally:
             try:
                 listing.unlink()
             except OSError:
                 pass
-    cp = _run(["jdocmunch-mcp", "index-local", "--path", str(root),
-               "--name", name], timeout=to)
-    return cp.returncode == 0
+    return _ok(_run(["jdocmunch-mcp", "index-local", "--path", str(root),
+                     "--name", name], timeout=to))
 
 
 def _build_graphify(root: Path, incremental: bool, paths, cfg: dict) -> bool:
     if not _which("graphify"):
         return False
-    cp = _run(["graphify", "update", str(root)],
-              timeout=cfg["build_timeouts_s"]["graphify"])
-    return cp.returncode == 0
+    return _ok(_run(["graphify", "update", str(root)],
+                    timeout=cfg["build_timeouts_s"]["graphify"]))
 
 
 def _build_dox(root: Path, incremental: bool, paths, cfg: dict) -> bool:
@@ -666,9 +807,8 @@ def _build_dox(root: Path, incremental: bool, paths, cfg: dict) -> bool:
             return True
     except OSError:
         pass
-    cp = _run([_python_exe(), str(HOOK_DIR / "dox_engine.py"), "sweep", str(root)],
-              timeout=cfg["build_timeouts_s"]["dox"])
-    return cp.returncode == 0
+    return _ok(_run([_python_exe(), str(HOOK_DIR / "dox_engine.py"), "sweep", str(root)],
+                    timeout=cfg["build_timeouts_s"]["dox"]))
 
 
 _BUILD = {
@@ -751,19 +891,10 @@ def _flush(ctx, state: dict, cfg: dict) -> None:
 # --------------------------------------------------------------------------- #
 # Modes
 # --------------------------------------------------------------------------- #
-def mode_session_start(payload: dict, cfg: dict) -> int:
-    ctx = _active_ctx(payload)
-    if ctx is None:
-        print("{}")
-        return 0
-    state = _load_state(ctx)
-
-    # Drain a journal left behind by a killed session before probing.
-    if (state.get("journal") or {}).get("entries"):
-        _flush(ctx, state, cfg)
-        state = _load_state(ctx)
-
-    probes = _probe_all(ctx, state, cfg)
+def _apply_probes(ctx, state: dict, probes: dict, cfg: dict) -> tuple:
+    """Turn probe results into per-surface records (mutates ``state``), claiming a
+    build lock per STALE/MISSING surface. Returns ``(status lines, surfaces to build)``.
+    Shared by the session-start probe and ``reprobe`` so both decide identically."""
     ttl = cfg["lock_ttl_minutes"]
     maxf = cfg["max_build_failures"]
     lines: list[str] = []
@@ -789,21 +920,12 @@ def mode_session_start(payload: dict, cfg: dict) -> int:
                 rec["failures"] = 0
             lines.append(f"{surface} index: FRESH — `{ctx.name}`")
         else:  # STALE or MISSING
-            if surface == "jcodemunch" and _summarizer_down(cfg):
-                # ollama DOWN: a rebuild would overwrite good AI summaries with
-                # signature fallback. Skip it, keep the state, tell the user loudly;
-                # the next session-start re-probes and retries. Keep the INDEXED
-                # fingerprint: saving `fp` would make the retry probe FRESH.
-                rec["state"] = st
+            # ollama DOWN: the detached builder waits for it, then builds without AI
+            # summaries (MISSING index) or defers (existing index). Keep the INDEXED
+            # fingerprint meanwhile: saving `fp` would let a retry probe FRESH.
+            down = surface == "jcodemunch" and _summarizer_down(cfg)
+            if down:
                 rec["fingerprint"] = prior.get("fingerprint", {})
-                lines.append(
-                    f"⚠️ ACTION NEEDED — AI summarizer (ollama, {_summarizer_cfg(cfg)[1]}) "
-                    f"is DOWN. jcodemunch reindex for `{ctx.name}` was SKIPPED so "
-                    f"existing AI summaries are not overwritten with fallback. Start "
-                    f"ollama, then reindex (`mcp__jcodemunch__index_folder` or open a "
-                    f"new session).")
-                state.setdefault("surfaces", {})[surface] = rec
-                continue
             failures = prior.get("failures", 0)
             backed_off = (prior.get("state") == FAILED
                           and failures >= maxf
@@ -818,13 +940,64 @@ def mode_session_start(payload: dict, cfg: dict) -> int:
             elif _claim_lock(ctx.key, surface, f"session-start {surface}"):
                 rec["state"] = BUILDING
                 to_build.append(surface)
-                lines.append(f"{surface} index: {st} for `{ctx.name}` — "
+                lines.append(f"{surface} index: {NEUTRAL_DEFER_LINE}" if down else
+                             f"{surface} index: {st} for `{ctx.name}` — "
                              f"building in background (no action needed)")
             else:
                 rec["state"] = BUILDING
                 lines.append(f"{surface} index: {st} — building in background…")
         state.setdefault("surfaces", {})[surface] = rec
+    return lines, to_build
 
+
+def reprobe(root: str, cfg: dict | None = None) -> dict:
+    """Probe every surface of ``root`` like the session-start probe, spawn the detached
+    builders for STALE/MISSING ones, report. Cheap and idempotent (a live lock means
+    BUILDING and no second spawn); bounded to ~2 s. Never raises. A non-git or
+    NEVER_INDEX root is ``{"surfaces": {}, "spawned": []}``.
+
+    States: FRESH | STALE | MISSING | BUILDING | FAILED; UNAVAILABLE (tool not
+    installed) is reported as FAILED and listed under ``unavailable``."""
+    out: dict = {"surfaces": {}, "spawned": []}
+    try:
+        cfg = cfg or _load_config()
+        ctx = _active_ctx({"cwd": str(root)})
+        if ctx is None:
+            return out
+        state = _load_state(ctx)
+        fast = json.loads(json.dumps(cfg))
+        fast["probe_timeouts_ms"] = {k: min(int(v), REPROBE_PROBE_CAP_MS)
+                                     for k, v in cfg["probe_timeouts_ms"].items()}
+        probes = _probe_all(ctx, state, fast, wall=REPROBE_WALL_S)
+        _lines, to_build = _apply_probes(ctx, state, probes, cfg)
+        _save_state(ctx, state)
+        if to_build:
+            _spawn_build(ctx, to_build, incremental=False, journal_file=None)
+        recs = state.get("surfaces", {})
+        unavailable = [s for s in SURFACES if recs.get(s, {}).get("state") == UNAVAILABLE]
+        out["surfaces"] = {s: (FAILED if s in unavailable else recs[s]["state"])
+                           for s in SURFACES if s in probes and s in recs}
+        out["spawned"] = list(to_build)
+        if unavailable:
+            out["unavailable"] = unavailable
+    except Exception:  # noqa: BLE001 - the CLI always prints one JSON line
+        pass
+    return out
+
+
+def mode_session_start(payload: dict, cfg: dict) -> int:
+    ctx = _active_ctx(payload)
+    if ctx is None:
+        print("{}")
+        return 0
+    state = _load_state(ctx)
+
+    # Drain a journal left behind by a killed session before probing.
+    if (state.get("journal") or {}).get("entries"):
+        _flush(ctx, state, cfg)
+        state = _load_state(ctx)
+
+    lines, to_build = _apply_probes(ctx, state, _probe_all(ctx, state, cfg), cfg)
     _save_state(ctx, state)
 
     if to_build:
@@ -858,9 +1031,32 @@ def _journal_touch(payload: dict, ctx, state: dict) -> bool:
     return True
 
 
+def _git_moves_head(payload: dict) -> bool:
+    """True for a shell tool call whose command moves HEAD or rewrites the tree
+    (``_GIT_MOVES_RE``); every other tool and command is False."""
+    tool = str(payload.get("tool_name") or payload.get("tool") or "").lower()
+    if tool != "bash" and not tool.endswith("shell"):
+        return False
+    cmd = (payload.get("tool_input") or {}).get("command")
+    return isinstance(cmd, str) and bool(_GIT_MOVES_RE.search(cmd))
+
+
+def _spawn_reprobe(root: str) -> None:
+    """ONE detached ``reprobe`` worker for ``root`` (the hook itself returns at once).
+    No-op under the doctor's dry-fire."""
+    if os.environ.get("CLAUDE_HOOK_DOCTOR"):
+        return
+    _spawn_detached([_python_exe(), str(Path(__file__).resolve()), "reprobe",
+                     "--root", str(root)], cwd=root)
+
+
 def mode_post_write(payload: dict, cfg: dict) -> int:
     ctx = _active_ctx(payload)
     if ctx is None:
+        print("{}")
+        return 0
+    if _git_moves_head(payload):  # HEAD moved mid-session: refresh the stale surfaces
+        _spawn_reprobe(ctx.root)
         print("{}")
         return 0
     state = _load_state(ctx)
@@ -943,10 +1139,12 @@ def mode_build(args, cfg: dict) -> int:
     for surface in surfaces:
         _rewrite_lock(ctx.key, surface, f"build {surface}")
         ok = False
+        _LAST_ERR[0] = ""
         try:
             ok = _BUILD[surface](root, args.incremental, paths, cfg)
         except Exception as exc:  # noqa: BLE001
             _telem("build_error", surface=surface, key=ctx.key, error=str(exc)[:200])
+            _LAST_ERR[0] = _scrub(f"exception: {exc}")[-400:]
             ok = False
         finally:
             _release_lock(ctx.key, surface)
@@ -957,10 +1155,12 @@ def mode_build(args, cfg: dict) -> int:
         prior = state.get("surfaces", {}).get(surface, {})
         if ok == "DEFERRED":
             # Summarizer down — index left intact. NOT a failure (no backoff): keep
-            # the prior fingerprint/failures so the next session-start re-probes
-            # STALE and retries once ollama is back.
+            # the prior fingerprint/failures so the next probe re-probes STALE and
+            # retries once ollama is back. The dirty-tree hash is poisoned so edits
+            # that never reached the index still probe STALE (not "unchanged").
             state.setdefault("surfaces", {})[surface] = {
-                "state": STALE, "fingerprint": prior.get("fingerprint", {}),
+                "state": STALE,
+                "fingerprint": dict(prior.get("fingerprint") or {}, dirty_sha="deferred"),
                 "checked_at": int(time.time()), "built_at": prior.get("built_at"),
                 "failures": prior.get("failures", 0)}
             _telem("build_deferred", surface=surface, key=ctx.key,
@@ -985,7 +1185,8 @@ def mode_build(args, cfg: dict) -> int:
                 "fingerprint": prior.get("fingerprint", {}),
                 "checked_at": int(time.time()),
                 "built_at": prior.get("built_at"), "failures": failures}
-            _telem("build_fail", surface=surface, key=ctx.key, failures=failures)
+            _telem("build_fail", surface=surface, key=ctx.key, failures=failures,
+                   err=_LAST_ERR[0][-400:])
         _save_state(ctx, state)
 
     if args.journal:
@@ -1056,6 +1257,16 @@ def main(argv=None) -> int:
         if _is_never_index(args.root):
             return 0  # a queued/stale build for an infra dir — drop it
         return mode_build(args, cfg)
+
+    if mode == "reprobe":  # CLI (the mercy mod, graphify launcher): no stdin payload
+        parser = argparse.ArgumentParser(prog="index-lifecycle reprobe")
+        parser.add_argument("--root", default="")
+        try:
+            args = parser.parse_args(argv[1:])
+        except SystemExit:
+            args = argparse.Namespace(root="")
+        print(json.dumps(reprobe(args.root, cfg) if args.root else {"surfaces": {}, "spawned": []}))
+        return 0
 
     payload = _read_payload()
     if mode == "session-start":

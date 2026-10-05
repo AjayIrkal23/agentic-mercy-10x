@@ -36,7 +36,7 @@ Preloaded skills (frontmatter `skills:`): `dead-code-and-change-audit` (the chan
 
 ## ARTIFACT
 
-Cleanup diff (committed or left staged per the orchestrator's brief) plus `REAP-REPORT.md` in the project root. Required sections:
+Cleanup diff, left uncommitted in the working tree (CLAUDE.md §2), plus `REAP-REPORT.md` at the path the dispatch names (under `/invoke`: the run folder), else the repo root. Required sections:
 1. `## Removed` — counts and itemized list (X imports, Y orphaned symbols, Z files), each with its check_delete_safe verdict.
 2. `## Noted, Not Touched` — pre-existing dead code found along the way, with file:line, left for a future audit.
 3. `## Lint/Format` — what fix-lint-format corrected.

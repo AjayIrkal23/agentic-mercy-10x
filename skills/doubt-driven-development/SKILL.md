@@ -14,39 +14,14 @@ metadata:
   token-cost: 4001
   triggers:
     keywords:
-    - adversarial
-    - cheaper
-    - code
-    - confident
-    - correctness
-    - debug
-    - decision
-    - development
     - doubt
-    - driven
-    - every
-    - fresh-context
-    - high
+    - second opinion
+    - fresh-context review
+    - adversarial check
+    - challenge my assumption
+    - double check this decision
+    - am i sure
     - irreversible
-    - later
-    - logic
-    - matters
-    - non-trivial
-    - now
-    - operations
-    - output
-    - production
-    - review
-    - security-sensitive
-    - speed
-    - stakes
-    - stands
-    - subjects
-    - time
-    - unfamiliar
-    - verify
-    - working
-    - would
     paths: []
     intents:
     - general

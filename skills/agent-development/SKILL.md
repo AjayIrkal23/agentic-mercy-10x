@@ -2,11 +2,9 @@
 name: agent-development
 description: 'Create or revise reusable agent definitions: trigger text, system prompts, tool grants and frontmatter for autonomous helpers.'
 when_to_use: Use when adding or editing files under .claude/agents/ or writing an agent's description or prompt.
-disable-model-invocation: true
 paths:
-- '**/.claude/hooks/**'
 - '**/.claude/agents/**'
-- '**/.claude/skills/**'
+- 'agents/*.md'
 metadata:
   schema: 1
   category: general
@@ -19,18 +17,13 @@ metadata:
   token-cost: 372
   triggers:
     keywords:
-    - agent
-    - autonomous
-    - creating
-    - definitions
-    - development
-    - helpers
-    - prompts
-    - reusable
-    - revising
-    - system
-    - text
-    - trigger
+    - agent definition
+    - new agent
+    - subagent definition
+    - agent prompt
+    - agent frontmatter
+    - agent description
+    - tool grants
     paths: []
     intents:
     - general

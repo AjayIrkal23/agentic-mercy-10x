@@ -19,27 +19,18 @@ metadata:
   token-cost: 436
   triggers:
     keywords:
-    - adapts
-    - checks
-    - code
-    - commands
-    - committing
-    - ensure
-    - errors
-    - examples
-    - failures
-    - fix
-    - format
-    - formatting
-    - have
-    - issues
     - lint
-    - node
-    - passes
-    - project
-    - react
-    - repo
-    - upstream
+    - lint errors
+    - lint step
+    - linter
+    - eslint
+    - prettier
+    - ruff
+    - formatting
+    - format the code
+    - no-explicit-any
+    - golangci-lint
+    - type errors
     paths: []
     intents:
     - general

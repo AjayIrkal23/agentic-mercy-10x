@@ -1,7 +1,7 @@
 ---
 name: verification-loop
-description: 'Verification before claiming done: run the real build, tests, lint, and checks and read the output. Evidence before assertions.'
-when_to_use: Use before claiming any work complete, fixed, or passing.
+description: 'Verification before claiming done: run the repo''s own build, type, lint and test commands, scan changed security-sensitive files with semgrep, and read the output before any claim.'
+when_to_use: Use before claiming any work complete, fixed, or passing, and before opening a PR.
 metadata:
   schema: 1
   category: general
@@ -11,138 +11,72 @@ metadata:
   - linux
   - darwin
   - windows
-  token-cost: 592
+  token-cost: 560
   origin: ECC
   triggers:
     keywords:
-    - claude
-    - code
-    - comprehensive
-    - loop
-    - sessions
-    - system
+    - verify it works
+    - verify the change
+    - run the checks
+    - before claiming done
+    - before i merge
+    - is it passing
+    - quality gates
     - verification
     paths: []
     intents:
-    - general
+    - VERIFY
 ---
-# Verification Loop Skill
+# Verification Loop
 
-A comprehensive verification system for Claude Code sessions.
+Evidence before assertions. A claim ("fixed", "passing", "done") needs a command you ran
+in this turn and its output, read by you.
 
-## When to Use
+## 1. Find the repo's commands (do not guess)
 
-Invoke this skill:
-- After completing a feature or significant code change
-- Before creating a PR
-- When you want to ensure quality gates pass
-- After refactoring
+Read, in order: the repo's `CLAUDE.md` / `AGENTS.md` / `CODEX.md`, then the manifest
+(`package.json` scripts, `Makefile`, `pyproject.toml`, `go.mod`, `Cargo.toml`), then CI
+(`.github/workflows/*`). Use exactly what they declare, from the package root they declare
+(monorepos: `npm --prefix server run build`, not the root script). Examples, only when
+the repo names them:
 
-## Verification Phases
+| Stack | build / types | lint | tests (one-shot) |
+|---|---|---|---|
+| Node/TS | `npm run build`, `npx tsc --noEmit` | `npm run lint` | `npm test` (vitest: `vitest run`, never bare `vitest`) |
+| Python | `pyright` / `mypy` if configured | `ruff check .` | `python3 -m pytest -q` |
+| Go | `go build ./...` | `go vet ./...` / `golangci-lint run` | `go test ./... -race` |
 
-### Phase 1: Build Verification
-```bash
-# Check if project builds
-npm run build 2>&1 | tail -20
-# OR
-pnpm build 2>&1 | tail -20
-```
+Never start dev servers, watchers or the app to "check"; the user runs those.
 
-If build fails, STOP and fix before continuing.
+## 2. Run, smallest scope first, then the suite
 
-### Phase 2: Type Check
-```bash
-# TypeScript projects
-npx tsc --noEmit 2>&1 | head -30
+1. The test you wrote or the one that covers the change; watch it pass (and, for new
+   behaviour, watch it fail first).
+2. Types and lint for the touched package.
+3. The package's full test command. A failure you did not cause is still reported, by
+   name.
+4. Build, when the change can break it (config, imports, types, routing).
 
-# Python projects
-pyright . 2>&1 | head -30
-```
+## 3. Security and hygiene on the diff
 
-Report all type errors. Fix critical ones before continuing.
+- Auth, session, middleware, input handling or API files changed →
+  `mcp__semgrep__semgrep_scan` on those files (fallback: the `semgrep` CLI). Secrets are
+  found by semgrep and the repo's secret scanner, not by ad hoc greps.
+- `git diff --stat` and read each hunk: unintended edits, debug output left in, new files
+  you forgot, files over the repo's size limit.
+- Coverage: only report it when the repo defines a threshold; do not invent one.
 
-### Phase 3: Lint Check
-```bash
-# JavaScript/TypeScript
-npm run lint 2>&1 | head -30
-
-# Python
-ruff check . 2>&1 | head -30
-```
-
-### Phase 4: Test Suite
-```bash
-# Run tests with coverage
-npm run test -- --coverage 2>&1 | tail -50
-
-# Check coverage threshold
-# Target: 80% minimum
-```
-
-Report:
-- Total tests: X
-- Passed: X
-- Failed: X
-- Coverage: X%
-
-### Phase 5: Security Scan
-```bash
-# Check for secrets
-grep -rn "sk-" --include="*.ts" --include="*.js" . 2>/dev/null | head -10
-grep -rn "api_key" --include="*.ts" --include="*.js" . 2>/dev/null | head -10
-
-# Check for console.log
-grep -rn "console.log" --include="*.ts" --include="*.tsx" src/ 2>/dev/null | head -10
-```
-
-### Phase 6: Diff Review
-```bash
-# Show what changed
-git diff --stat
-git diff HEAD~1 --name-only
-```
-
-Review each changed file for:
-- Unintended changes
-- Missing error handling
-- Potential edge cases
-
-## Output Format
-
-After running all phases, produce a verification report:
+## 4. Report
 
 ```
-VERIFICATION REPORT
-==================
-
-Build:     [PASS/FAIL]
-Types:     [PASS/FAIL] (X errors)
-Lint:      [PASS/FAIL] (X warnings)
-Tests:     [PASS/FAIL] (X/Y passed, Z% coverage)
-Security:  [PASS/FAIL] (X issues)
-Diff:      [X files changed]
-
-Overall:   [READY/NOT READY] for PR
-
-Issues to Fix:
-1. ...
-2. ...
+VERIFY
+  tests:   <command> -> <final line, e.g. "42 passed, 1 skipped">
+  types:   <command> -> <errors or "clean">
+  lint:    <command> -> <errors/warnings or "clean">
+  build:   <command> -> <ok / error> (or "not run: <reason>")
+  semgrep: <files> -> <findings or "0"> (or "n/a: no security-sensitive files")
+  diff:    <N files>, unintended changes: <none / list>
+  NOT VERIFIED: <what needs a running app, device or real database>
 ```
 
-## Continuous Mode
-
-For long sessions, run verification every 15 minutes or after major changes:
-
-```markdown
-Set a mental checkpoint:
-- After completing each function
-- After finishing a component
-- Before moving to next task
-
-Run: /verify
-```
-
-## Integration with Hooks
-
-This skill complements PostToolUse hooks but provides deeper verification.
-Hooks catch issues immediately; this skill provides comprehensive review.
+"Ready" only when every run line is clean and the NOT VERIFIED list is stated.

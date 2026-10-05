@@ -10,28 +10,64 @@
     "repo": "https://github.com/higgsfield-ai/skills.git",
     "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "subpath": "higgsfield-generate",
-    "notes": "Higgsfield skills 0.13.0 (upstream VERSION)."
+    "frontmatter_overrides": {
+      "description": "Generate images, video, 3D (GLB) and audio through the Higgsfield CLI: generic generation, workflows, Marketing Studio ads and the virality predictor.",
+      "when_to_use": "Generate, edit, animate or reframe an image or video, make a 3D model, sound effect or music, or a UGC/product ad. Not for Soul training, brand kits, photoshoots, marketplace cards, thumbnails, explainers, games or TTS (their own higgsfield-* skills).",
+      "metadata": {"category": "frontend", "surfaces": ["frontend"], "triggers": {"keywords": [
+        "generate an image", "make a video", "image-to-video", "animate this photo", "text-to-image",
+        "3d model", "glb", "sound effect", "make music", "ugc video", "marketing studio", "higgsfield"],
+        "intents": ["design"]}}
+    },
+    "notes": "Higgsfield skills 0.13.0 (upstream VERSION). Listing entries shortened via frontmatter_overrides (audit 2026-10-05 D-15: 8 skills were ~6.7k listing chars in every repo)."
   },
   "higgsfield-marketplace-cards": {
     "repo": "https://github.com/higgsfield-ai/skills.git",
     "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
-    "subpath": "higgsfield-marketplace-cards"
+    "subpath": "higgsfield-marketplace-cards",
+    "frontmatter_overrides": {
+      "description": "Marketplace product image cards through Higgsfield: a compliant main image, secondary product images and A+ content modules.",
+      "when_to_use": "Marketplace listing images, product detail cards, product infographics, A+ content. Not for brand photography outside a listing (higgsfield-product-photoshoot), video or UGC ads (higgsfield-generate), or Soul training (higgsfield-soul-id).",
+      "metadata": {"category": "frontend", "surfaces": ["frontend"], "triggers": {"keywords": [
+        "marketplace listing", "listing images", "product detail card", "a+ content", "amazon listing",
+        "product infographic", "marketplace cards"], "intents": ["design"]}}
+    }
   },
   "higgsfield-product-photoshoot": {
     "repo": "https://github.com/higgsfield-ai/skills.git",
     "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
-    "subpath": "higgsfield-product-photoshoot"
+    "subpath": "higgsfield-product-photoshoot",
+    "frontmatter_overrides": {
+      "description": "Brand-quality product images through Higgsfield product-photoshoot prompt enhancement: studio, lifestyle, hero/banner, carousel, ad creative, virtual try-on, restyle.",
+      "when_to_use": "Product photo, studio shot, lifestyle or hands-on closeup, Pinterest pin, Meta ad creative, a model wearing the product. Not for images without a product (higgsfield-generate) or marketplace cards; never freehand the prompt.",
+      "metadata": {"category": "frontend", "surfaces": ["frontend"], "triggers": {"keywords": [
+        "product photo", "product shot", "studio shot", "lifestyle image", "virtual try-on", "ad creative",
+        "meta ads", "pinterest pin", "hero banner image", "product photoshoot"], "intents": ["design"]}}
+    }
   },
   "higgsfield-soul-id": {
     "repo": "https://github.com/higgsfield-ai/skills.git",
     "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
-    "subpath": "higgsfield-soul-id"
+    "subpath": "higgsfield-soul-id",
+    "frontmatter_overrides": {
+      "description": "Train a Higgsfield Soul Character on a person's face for identity-faithful image and video generation (one-time; returns a reference_id for higgsfield-generate --soul-id).",
+      "when_to_use": "Create my Soul, train my face, a digital twin or an avatar of me. Not for one-shot face swaps or non-photo characters (higgsfield-generate).",
+      "metadata": {"category": "frontend", "surfaces": ["frontend"], "triggers": {"keywords": [
+        "soul id", "train my face", "digital twin", "avatar of me", "soul character", "my face in"],
+        "intents": ["design"]}}
+    }
   },
   "higgsfield-websites": {
     "repo": "https://github.com/higgsfield-ai/skills.git",
     "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "subpath": "higgsfield-websites",
-    "notes": "Creates its own Cloudflare repos; never run its dev server for the user."
+    "frontmatter_overrides": {
+      "description": "Build, edit and deploy websites, apps and games hosted on Higgsfield via `higgsfield website …` (React 19 + TanStack Start on one Cloudflare Worker), plus game art.",
+      "when_to_use": "Only when the site, app or game is built and hosted with the Higgsfield CLI, or for game art (spritesheets, tileable textures, game music/SFX). Not for an existing repo's own frontend (local frontend skills) or single media assets (higgsfield-generate).",
+      "metadata": {"category": "frontend", "surfaces": ["frontend"], "triggers": {"keywords": [
+        "higgsfield website", "deploy on higgsfield", "higgsfield app", "spritesheet", "tileable texture",
+        "game art", "multiplayer game"], "intents": ["design"]}}
+    },
+    "notes": "Creates its own Cloudflare repos; never run its dev server for the user. Trigger narrowed to Higgsfield-hosted builds so it no longer competes with the local frontend stack (D-15)."
   },
   "higgsfield-brandkit": {
     "repo": "https://github.com/higgsfield-ai/skills.git",
@@ -39,17 +75,38 @@
     "subpath": "higgsfield-brandkit",
     "prune": ["agents"],
     "prepend_body": "> **Local guard (vendor patch, ~/.claude):** never run the `curl … | sh` CLI installer or `npx playwright install` from `references/prerequisites.md` without an explicit yes from the user; if a prerequisite is missing, name it and stop.\n\n",
+    "frontmatter_overrides": {
+      "description": "Complete visual brand systems through the Higgsfield CLI and local tooling: palettes, SVG logo marks, typography, mockups, packaging, signage and editable PPTX/PDF brandbooks.",
+      "when_to_use": "Create a brand kit or visual identity, a logo plus brandbook, branded assets from a logo, packaging or signage. Not for unbranded images (higgsfield-generate), catalog photos (higgsfield-product-photoshoot) or websites.",
+      "metadata": {"category": "frontend", "surfaces": ["frontend"], "triggers": {"keywords": [
+        "brand kit", "brandkit", "visual identity", "brandbook", "packaging design", "signage", "brand system"],
+        "intents": ["design"]}}
+    },
     "notes": "scripts/ fetch the user-named brand site (urllib) and shell out to local renderers; agents/openai.yaml is Codex-only (pruned)."
   },
   "higgsfield-video-explainer": {
     "repo": "https://github.com/higgsfield-ai/skills.git",
     "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
-    "subpath": "higgsfield-video-explainer"
+    "subpath": "higgsfield-video-explainer",
+    "frontmatter_overrides": {
+      "description": "Narrated non-photoreal explainer or story videos built from ordered 10-second blocks: one narrator, one style key, a Seed Audio take and a clip per block, server-side assembly.",
+      "when_to_use": "Make an explainer video, turn a topic or document into a narrated video, or a faceless narrated or animated story video. Not for photoreal films, ads/UGC, talking heads, podcasts or editing a finished video.",
+      "metadata": {"category": "frontend", "surfaces": ["frontend"], "triggers": {"keywords": [
+        "explainer video", "narrated video", "faceless video", "animated story video", "explain this in a video"],
+        "intents": ["design"]}}
+    }
   },
   "higgsfield-youtube-thumbnail": {
     "repo": "https://github.com/higgsfield-ai/skills.git",
     "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
-    "subpath": "higgsfield-youtube-thumbnail"
+    "subpath": "higgsfield-youtube-thumbnail",
+    "frontmatter_overrides": {
+      "description": "High-click-through YouTube thumbnails and vertical video covers through the Higgsfield CLI: a truthful information-gap concept, up to three identities, logos and variants.",
+      "when_to_use": "YouTube thumbnail, Shorts or Instagram video cover, MrBeast-style cover. Not for the video itself (higgsfield-generate), catalog photos or marketplace cards.",
+      "metadata": {"category": "frontend", "surfaces": ["frontend"], "triggers": {"keywords": [
+        "youtube thumbnail", "thumbnail for this video", "shorts cover", "video cover", "mrbeast style",
+        "instagram video cover"], "intents": ["design"]}}
+    }
   },
   "find-skills": {
     "repo": "https://github.com/vercel-labs/skills.git",
@@ -404,7 +461,7 @@
     "subpath": "skills/no-ai-slop",
     "prune": ["agents"],
     "frontmatter_overrides": {
-      "when_to_use": "Always active (core-skill-set.json, full) for every piece of prose written to the user or into files: chat, docs, commit messages, PR bodies. Explicit edit/detect when the user pastes a draft.",
+      "when_to_use": "Always on (named in core-skill-set.json; load the body with the Skill tool before writing prose) for every piece of prose written to the user or into files: chat, docs, commit messages, PR bodies. Explicit edit/detect when the user pastes a draft.",
       "metadata": {
         "category": "general",
         "surfaces": ["general"],

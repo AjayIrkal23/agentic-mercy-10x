@@ -15,34 +15,13 @@ metadata:
   token-cost: 2898
   triggers:
     keywords:
-    - analysis
-    - both
-    - changes
-    - code
-    - codebase
-    - context7
-    - decomposition
-    - direct
-    - discipline
-    - documentation
-    - enforces
+    - plan mode
+    - enter plan mode
     - enterplanmode
-    - gate
-    - governs
-    - implementation
-    - jcodemunch
-    - lookup
-    - mandatory
-    - mode
-    - plan
-    - planning
     - pre-flight
-    - sequential
-    - skill
-    - superpowers
-    - thinking
-    - work
-    - writing
+    - preflight check
+    - before planning
+    - before writing a plan
     paths: []
     intents:
     - planning
@@ -120,12 +99,12 @@ Before exploring, planning, or implementing:
 
 1. **Read `using-superpowers` skill** to refresh discipline
 2. **Scan user request for skill triggers:**
-   - "design", "UI", "UX", "component", "page" → `frontend-design-gate`, ``, ``
-   - "test", "tdd", "coverage" → `tdd-workflow`, `test-driven-development`
+   - "design", "UI", "UX", "component", "page" → `frontend-standards-always-follow`, `frontend-design:frontend-design`
+   - "test", "tdd", "coverage" → `test-driven-development`
    - "bug", "fix", "error", "failure" → `systematic-debugging`
    - "plan", "architecture", "design doc" → `brainstorming`, `writing-plans`
-   - "refactor", "clean up" → `refactoring-patterns`, `code-review`
-   - "deploy", "CI/CD" → `deployment-patterns`
+   - "refactor", "clean up" → `code-simplification`, `code-review-and-quality`
+   - "deploy", "CI/CD" → `ci-cd-and-automation`, `shipping-and-launch`
    - "security", "auth", "XSS" → `security-review`
 3. **Invoke ALL matching skills BEFORE any action**
 4. **Process skills first** (brainstorming, debugging, writing-plans), then domain skills
@@ -244,7 +223,7 @@ Only after all gates pass and design is approved:
 - Exact file paths, complete code, exact commands
 - No placeholders ("TBD", "implement later", "add validation")
 - Self-review: spec coverage, placeholder scan, type consistency
-- **Visualize the plan**: invoke `claude-mermaid:mermaid-diagrams` (plugin) to render the phase flow and dependency graph with `mermaid_preview`. Embed the diagram (or its `mermaid_save` path) into the plan file before exiting plan mode. Required for any plan with >2 phases or cross-surface dependencies.
+- **Visualize the plan**: draw the phase flow and dependency graph as a fenced `mermaid` block in the plan file before exiting plan mode (preview with the drawio MCP `open_drawio_mermaid` when it is connected). Required for any plan with >2 phases or cross-surface dependencies.
 - Save plan to **two locations** (both are mandatory):
   1. **Project root (primary):** `plan-YYYY-MM-DD-<feature-name>.md` at the repo/project root (e.g., `plan-2026-05-15-feature-name.md`) — committed with the project
   2. **Docs directory (secondary):** `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md` — existing convention, kept as archive copy
@@ -271,10 +250,10 @@ Complete Gates 1–4 above. Announce PLAN_GATE status.
 
 ### Step 2: Skill-Specific Execution
 Follow the skills identified in Gate 1:
-- Frontend work → `frontend-design-gate` + design skills
-- Backend work → `backend-patterns` + relevant domain skills
+- Frontend work → `frontend-standards-always-follow` + design skills
+- Backend work → `backend-standards-always-follow` + relevant domain skills
 - Bug fix → `systematic-debugging` (root cause first)
-- Testing → `tdd-workflow` or `test-driven-development`
+- Testing → `test-driven-development`
 
 ### Step 3: Tracking
 - Use `TodoWrite` to track progress
@@ -311,14 +290,14 @@ When multiple skills apply, use this order:
 1. **plan-mode-gate** (this skill) — Always first
 2. **using-superpowers** — Skill discipline
 3. **Process skills** — How to approach (brainstorming, systematic-debugging, writing-plans)
-4. **`claude-mermaid:mermaid-diagrams`** (plugin) — Visualize the plan. Render the phase / dependency / architecture diagram for any plan that touches multiple surfaces or >2 phases. Plugin path: `~/.claude/plugins/marketplaces/claude-mermaid/skills/mermaid-diagrams/SKILL.md`.
-5. **Domain skills** — What to build (frontend-design-gate, backend-patterns, tdd-workflow)
+4. **Mermaid diagram** — Visualize the plan. Draw the phase / dependency / architecture diagram as a fenced `mermaid` block for any plan that touches multiple surfaces or >2 phases.
+5. **Domain skills** — What to build (frontend-standards-always-follow, backend-standards-always-follow, test-driven-development)
 6. **Execution skills** — How to execute (executing-plans, subagent-driven-development)
 7. **Finishing skills** — How to complete (finishing-a-development-branch, verification-before-completion)
 
-## Integration with frontend-design-gate
+## Integration with frontend work
 
 If the task involves frontend/UI work:
 1. Complete `plan-mode-gate` first (this skill)
-2. Then follow `frontend-design-gate` for design-specific workflow
-3. The two gates are complementary: `plan-mode-gate` ensures proper planning process; `frontend-design-gate` ensures proper design skills
+2. Then follow `frontend-standards-always-follow` (and `frontend-design:frontend-design` for new or redesigned visual surfaces)
+3. They are complementary: `plan-mode-gate` ensures proper planning process; the frontend skills ensure proper design standards

@@ -222,8 +222,8 @@ def build_item(profile, ctx: dict) -> dict | None:
         for h in hits:
             loc = f"{h['file']}:{h['line']}"
             summ = "" if _is_placeholder(h["summary"]) else " ".join(h["summary"].split())
-            if len(summ) > 110:
-                summ = summ[:107].rstrip() + "..."
+            if len(summ) > 72:  # the model reads the source next; this only disambiguates (C-11)
+                summ = summ[:69].rstrip() + "..."
             desc = f" — {summ}" if summ else ""
             lines.append(f"  {h['name']} ({h['kind']}) {loc}{desc}")
 

@@ -14,18 +14,11 @@ metadata:
   token-cost: 729
   triggers:
     keywords:
-    - context
-    - conversation
-    - create
-    - current
-    - issue
     - prd
-    - project
-    - publish
-    - tracker
-    - turn
-    - user
-    - wants
+    - write a prd
+    - product requirements
+    - product requirements document
+    - publish the prd
     paths: []
     intents:
     - general

@@ -14,23 +14,11 @@ metadata:
   token-cost: 2332
   triggers:
     keywords:
-    - agent
-    - applies
-    - current
-    - discover
-    - discovered
-    - discovers
-    - governs
-    - invoked
-    - invokes
+    - which skill
+    - what skill applies
+    - skill discovery
+    - list skills
     - meta-skill
-    - need
-    - other
-    - session
-    - skill
-    - skills
-    - starting
-    - task
     paths: []
     intents:
     - general
@@ -47,7 +35,7 @@ Claude Code injects context through the hooks registered in **`~/.claude/setting
 
 Read **`skill-linkage-story`** when you need the full spine (Superpowers + agent skills + hooks): [`~/.claude/skills/skill-linkage-story/SKILL.md`](../skill-linkage-story/SKILL.md) → [`references/graph-and-stories.md`](../skill-linkage-story/references/graph-and-stories.md), [`references/hooks-rules-e2e.md`](../skill-linkage-story/references/hooks-rules-e2e.md).
 
-**Personal routing spine:** open **`~/.claude/rules/agent-lifecycle-routing.md`** for phase → skill → Superpowers → hooks in one skim (supplements this tree).
+**Personal routing spine:** open [`workflow-orchestrator/references/agent-lifecycle-routing.md`](../workflow-orchestrator/references/agent-lifecycle-routing.md) for phase → skill → Superpowers → hooks in one skim (supplements this tree).
 
 ## Skill Discovery
 

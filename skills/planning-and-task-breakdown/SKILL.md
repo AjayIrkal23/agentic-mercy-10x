@@ -14,28 +14,18 @@ metadata:
   token-cost: 1876
   triggers:
     keywords:
-    - break
-    - breakdown
-    - breaks
-    - clear
+    - task breakdown
+    - break down
+    - break this down
+    - break it down
+    - plan the work
+    - plan how to
+    - implementation plan
+    - in what order
+    - ordered tasks
     - estimate
-    - feels
-    - have
-    - implementable
-    - large
-    - need
-    - ordered
-    - parallel
-    - planning
-    - possible
-    - requirements
-    - scope
-    - spec
-    - start
-    - task
-    - tasks
-    - too
-    - work
+    - vertical slices
+    - milestones
     paths: []
     intents:
     - planning
@@ -91,7 +81,7 @@ Database schema
 
 Implementation order follows the dependency graph bottom-up: build foundations first.
 
-**Render the dependency graph with `claude-mermaid:mermaid-diagrams`** (plugin) — a Mermaid flowchart makes parallelization opportunities and blocking edges obvious at a glance. Call `mermaid_preview` to iterate, `mermaid_save` to embed the rendered diagram into the plan file.
+**Draw the dependency graph as a fenced `mermaid` flowchart in the plan file** — it makes parallelization opportunities and blocking edges obvious at a glance (preview with the drawio MCP `open_drawio_mermaid` when it is connected).
 
 ### Step 3: Slice Vertically
 
@@ -185,7 +175,7 @@ If a task is L or larger, it should be broken into smaller tasks. An agent perfo
 1. `plan-YYYY-MM-DD-<feature-name>.md` at the **project root** (primary; committed with the project)
 2. `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md` (secondary archive copy)
 
-Use the same `<feature-name>` kebab-case slug in both. See `~/.claude/rules/plan-root-save.md`.
+Use the same `<feature-name>` kebab-case slug in both. See `~/.claude/rules/02-lifecycle.md` phase 1.
 
 ```markdown
 # Implementation Plan: [Feature/Project Name]
@@ -195,7 +185,7 @@ Use the same `<feature-name>` kebab-case slug in both. See `~/.claude/rules/plan
 
 ## Phase Flow Diagram
 
-Render with `claude-mermaid:mermaid-diagrams` via `mermaid_preview`. Save with `mermaid_save` when the plan is approved.
+A fenced `mermaid` flowchart of the phases (preview with drawio `open_drawio_mermaid` when connected).
 
 ```mermaid
 flowchart LR

@@ -11,15 +11,14 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
+from lib.platform import locked_update  # noqa: E402
+
 # Alias -> canonical resolution (alias stub skills no longer exist on disk).
 try:
-    from lib.skill_aliases import canonical as _canonical, collapse as _collapse
+    from lib.skill_aliases import canonical as _canonical
 except Exception:  # noqa: BLE001 — fail open: identity mapping
     def _canonical(name: str) -> str:  # type: ignore[misc]
         return name
-
-    def _collapse(names):  # type: ignore[misc]
-        return list(dict.fromkeys(names))
 
 # Smart router — selects 3 ranked skills instead of dumping the whole list.
 # Falls back gracefully if skill_router.py is missing or broken.
@@ -38,8 +37,8 @@ except Exception:
     _format_compact = None  # type: ignore[assignment]
 
 # Canonical baseline sets (no aliases; every name is a real skills/<name>/SKILL.md).
-# Consumed here (manifest/telemetry), by gen-agent-skill-blocks.py (agent `skills:`
-# frontmatter) and by the weight updater (never weighted below baseline).
+# Consumed here (fallback reminder lines), by gen-agent-skill-blocks.py (agent
+# `skills:` frontmatter) and by the weight updater (never weighted below baseline).
 FRONTEND_SKILLS = [
     "frontend-standards-always-follow",
     "frontend-structure-standards",
@@ -94,23 +93,6 @@ BACKEND_SKILLS = [
     "mcp-usage-standards",
 ]
 
-# Quality / shipping one-liners appended at Stop.
-QUALITY_SKILLS = _collapse([
-    "performance-optimization",
-    "owasp-security",
-    "code-simplification",
-    "debug-investigation",
-])
-
-SHIPPING_SKILLS = _collapse([
-    "ci-cd-and-automation",
-    "git-workflow-and-versioning",
-    "shipping-and-launch",
-    "deprecation-and-migration",
-    "update-docs",
-    "fix-lint-format",
-])
-
 # Segments used to detect context for the extended one-liner
 _AUTH_SEGMENTS = ["auth", "middleware", "session", "cookie", "guard", "jwt", "token"]
 _GO_SEGMENTS = [".go", "internal/", "cmd/", "pkg/", "server/"]
@@ -128,25 +110,6 @@ NATIVE_PATHS_NOTE = (
 
 CONFIG_PATH = SCRIPT_DIR / "fullstack-skills-reminder.config.json"
 SKILL_ROOT = Path.home() / ".claude" / "skills"
-PLUGINS_ROOT = Path.home() / ".claude" / "plugins"
-
-
-def _discover_superpowers_skills_dir() -> Path | None:
-    env = (os.environ.get("SUPERPOWERS_SKILLS_ROOT") or "").strip()
-    if env:
-        p = Path(env).expanduser()
-        if p.is_dir():
-            return p
-    try:
-        for super_dir in PLUGINS_ROOT.glob("**/superpowers"):
-            if not super_dir.is_dir():
-                continue
-            for child in super_dir.iterdir():
-                if child.is_dir() and (child / "skills").is_dir():
-                    return child / "skills"
-    except OSError:
-        pass
-    return None
 
 
 def _skill_resolved(name: str) -> str:
@@ -175,7 +138,7 @@ def _load_config() -> tuple[list[str], list[str], list[str]]:
 
 def _state_path(cid: str) -> Path:
     safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
-    d = SCRIPT_DIR / ".state"
+    d = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or SCRIPT_DIR / ".state")
     d.mkdir(parents=True, exist_ok=True)
     return d / f"{safe}.fullstack.json"
 
@@ -191,7 +154,15 @@ def _load_state(cid: str) -> dict:
 
 
 def _save_state(cid: str, data: dict) -> None:
-    _state_path(cid).write_text(json.dumps(data, indent=2), encoding="utf-8")
+    """Locked merge onto the current file (audit J-01): first-write-skill-gate owns
+    `skills_hint_surfaces` in the same file, and this hook's flags only go True."""
+    def merge(fresh: dict) -> dict:
+        hints = set(fresh.get("skills_hint_surfaces") or []) | set(data.get("skills_hint_surfaces") or [])
+        fresh.update(data)
+        if hints:
+            fresh["skills_hint_surfaces"] = sorted(hints)
+        return fresh
+    locked_update(_state_path(cid), merge)
 
 
 def _norm(p: str) -> str:
@@ -267,11 +238,17 @@ def _classify(ti: dict, roots: list[str], fe_segs: list[str], be_segs: list[str]
 
 
 def _doc_hit(ti: dict, roots: list[str], doc_segs: list[str]) -> bool:
+    # Same rule as _classify: a real path decides; the blob (file content)
+    # counts only when the call carries no path. Segments match whole path
+    # components, so `docs/` does not hit `ant-docs/`.
     paths = _paths_from(ti)
-    blob = _norm(json.dumps(ti))
-    if any(_path_hits_segments(p, roots, doc_segs) for p in paths):
-        return True
-    return _matches_any("", blob, doc_segs)
+    if paths:
+        for p in paths:
+            n = "/" + _norm(p).lstrip("/")
+            if any(_norm(s) and "/" + _norm(s).lstrip("/") in n for s in doc_segs):
+                return True
+        return False
+    return _matches_any("", _norm(json.dumps(ti)), doc_segs)
 
 
 def _onb() -> str:
@@ -299,85 +276,6 @@ def _attach_engineering_once(st: dict, lines: list[str]) -> list[str]:
         return lines
     st["engineering_skills_sent"] = True
     return [*lines, *_engineering_lines()]
-
-
-def _surface_skill_list(surface: str) -> list[str]:
-    if surface == "frontend":
-        return list(FRONTEND_SKILLS)
-    if surface == "backend":
-        return list(BACKEND_SKILLS)
-    return list(dict.fromkeys([*FRONTEND_SKILLS, *BACKEND_SKILLS]))
-
-
-def _manifest_init(st: dict, surface: str, reminded: list[str]) -> None:
-    key_pending = f"manifest_pending_{surface}"
-    key_reminded = f"manifest_reminded_{surface}"
-    if key_pending in st:
-        return
-    all_names = _surface_skill_list(surface)
-    already = set(reminded or [])
-    st[key_pending] = [n for n in all_names if n not in already]
-    st[key_reminded] = list(already)
-
-
-def _remember_stop_skills(st: dict, surface: str, skills: list[dict]) -> None:
-    names = [s["name"] for s in skills if s.get("priority") != "CROSS-CUT"]
-    pending = st.get(f"manifest_pending_{surface}")
-    if isinstance(pending, list) and pending:
-        names = list(dict.fromkeys([*names, *pending]))
-    if not names:
-        return
-    if surface == "frontend":
-        st["stop_fe_skills"] = names
-    else:
-        st["stop_be_skills"] = names
-
-
-def _stop_path_for_surface(st: dict, surface: str) -> str:
-    key = "last_fe_write_path" if surface == "frontend" else "last_be_write_path"
-    saved = st.get(key) or st.get("last_write_path")
-    if isinstance(saved, str) and saved.strip():
-        return saved
-    return "src/components/App.tsx" if surface == "frontend" else "internal/service/service.go"
-
-
-def _stop_skill_reminder_lines(ft: bool, bt: bool, st: dict) -> list[str]:
-    """One-line pre-close reminder using skills captured at first Write."""
-    fe_saved = st.get("stop_fe_skills") if isinstance(st.get("stop_fe_skills"), list) else None
-    be_saved = st.get("stop_be_skills") if isinstance(st.get("stop_be_skills"), list) else None
-
-    if fe_saved or be_saved:
-        lines = ["Re-verify mandatory skills from first Write:"]
-        if ft and fe_saved:
-            lines.append("- FE: " + ", ".join(f"`{n}`" for n in fe_saved))
-        if bt and be_saved:
-            lines.append("- BE: " + ", ".join(f"`{n}`" for n in be_saved))
-        lines.append("Confirm compliance, then summarize.")
-        return lines
-
-    if _SMART_ROUTER_AVAILABLE:
-        lines = ["Re-verify mandatory skills from first Write:"]
-        if ft:
-            fp = _stop_path_for_surface(st, "frontend")
-            skills = _select_skills(fp, "frontend", is_first_write=False)
-            primary = [s["name"] for s in skills if s.get("priority") != "CROSS-CUT"][:3]
-            lines.append("- FE: " + ", ".join(f"`{n}`" for n in primary))
-        if bt:
-            fp = _stop_path_for_surface(st, "backend")
-            skills = _select_skills(fp, "backend", is_first_write=False)
-            primary = [s["name"] for s in skills if s.get("priority") != "CROSS-CUT"][:3]
-            lines.append("- BE: " + ", ".join(f"`{n}`" for n in primary))
-        lines.append("Confirm compliance, then summarize.")
-        return lines
-
-    if ft and bt:
-        return [
-            "Re-verify both stacks — see skills injected at first Write.",
-            "Confirm compliance, then summarize.",
-        ]
-    if ft:
-        return ["Re-verify frontend skills from first Write.", "Confirm compliance, then summarize."]
-    return ["Re-verify backend skills from first Write.", "Confirm compliance, then summarize."]
 
 
 def _fullstack_grouped_lines() -> list[str]:
@@ -481,13 +379,6 @@ def _post(payload: dict) -> dict:
         return {}
 
     st = _load_state(cid)
-    fp = _paths_from(ti)
-    if fp:
-        st["last_write_path"] = fp[0]
-        if fe_hit:
-            st["last_fe_write_path"] = fp[0]
-        if be_hit:
-            st["last_be_write_path"] = fp[0]
     if fe_hit:
         st["frontend_touched"] = True
     if be_hit:
@@ -522,10 +413,6 @@ def _post(payload: dict) -> dict:
                 mode = _cross_cut_mode_for_path(fp_str)
                 fe_skills = _select_skills(fp_str, "frontend", is_first_write=is_first, cross_cut_mode=mode)
                 be_skills = _select_skills(fp_str, "backend", is_first_write=False, cross_cut_mode=mode)
-                _manifest_init(st, "frontend", [s["name"] for s in fe_skills])
-                _manifest_init(st, "backend", [s["name"] for s in be_skills])
-                _remember_stop_skills(st, "frontend", fe_skills)
-                _remember_stop_skills(st, "backend", be_skills)
                 fe_block = _format_compact(fp_str, "frontend", fe_skills)
                 be_block = _format_compact(fp_str, "backend", be_skills)
                 lines = (
@@ -556,8 +443,6 @@ def _post(payload: dict) -> dict:
             fp_str = fp[0] if fp else ""
             mode = _cross_cut_mode_for_path(fp_str)
             skills = _select_skills(fp_str, "frontend", is_first_write=True, cross_cut_mode=mode)
-            _manifest_init(st, "frontend", [s["name"] for s in skills])
-            _remember_stop_skills(st, "frontend", skills)
             compact = _format_compact(fp_str, "frontend", skills)
             lines = ("[Hook: mandatory skills — frontend start]\n" + compact).splitlines()
         else:
@@ -580,8 +465,6 @@ def _post(payload: dict) -> dict:
             fp_str = fp[0] if fp else ""
             mode = _cross_cut_mode_for_path(fp_str)
             skills = _select_skills(fp_str, "backend", is_first_write=True, cross_cut_mode=mode)
-            _manifest_init(st, "backend", [s["name"] for s in skills])
-            _remember_stop_skills(st, "backend", skills)
             compact = _format_compact(fp_str, "backend", skills)
             lines = ("[Hook: mandatory skills — backend start]\n" + compact).splitlines()
         else:
@@ -608,213 +491,18 @@ def _post(payload: dict) -> dict:
     return out
 
 
-def _verification_close_followup_fragment() -> str:
-    slugs: list[str] = []
-    sp_dir_stop = _discover_superpowers_skills_dir()
-    if sp_dir_stop:
-        for sp_slug in (
-            "verification-before-completion",
-            "finishing-a-development-branch",
-        ):
-            if (sp_dir_stop / sp_slug / "SKILL.md").is_file():
-                slugs.append(sp_slug)
-    if (SKILL_ROOT / "code-review-and-quality" / "SKILL.md").is_file():
-        slugs.append("code-review-and-quality")
-    if not slugs:
-        return ""
-    return "Lifecycle: " + ", ".join(f"`{s}`" for s in slugs)
-
-
-def _current_write_count(cid: str) -> int:
-    """Read code_writes from desloppify state for stop-refill logic."""
-    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
-    p = SCRIPT_DIR / ".state" / f"{safe}.desloppify.json"
-    if not p.is_file():
-        return 0
-    try:
-        return int(json.loads(p.read_text(encoding="utf-8")).get("code_writes", 0))
-    except Exception:
-        return 0
-
-
-def _write_effectiveness_record(cid: str, st: dict, ft: bool, bt: bool) -> None:
-    """Diff reminded vs invoked skills; append one JSONL record to skill-effectiveness.jsonl.
-
-    Reads:  ~/.claude/hooks/.telemetry/{safe_cid}.skill-invocations.jsonl  (from task 27)
-    Writes: ~/.claude/hooks/.telemetry/skill-effectiveness.jsonl  (cross-session aggregate)
-    """
-    import datetime as _dt
-
-    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
-    telemetry_dir = SCRIPT_DIR / ".telemetry"
-
-    # Collect all reminded skills (both surfaces)
-    reminded_fe: list[str] = list(st.get("manifest_reminded_frontend") or [])
-    reminded_be: list[str] = list(st.get("manifest_reminded_backend") or [])
-    reminded_all = list(dict.fromkeys(reminded_fe + reminded_be))  # preserve order, dedup
-
-    if not reminded_all:
-        return  # Nothing was reminded — nothing to measure
-
-    # Collect all invoked skills from tracker JSONL
-    invocations_path = telemetry_dir / f"{safe}.skill-invocations.jsonl"
-    invoked_set: set[str] = set()
-    if invocations_path.is_file():
-        try:
-            for line in invocations_path.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    entry = json.loads(line)
-                    skill = (entry.get("skill") or "").strip()
-                    if skill:
-                        invoked_set.add(skill)
-                except (json.JSONDecodeError, AttributeError):
-                    continue
-        except OSError:
-            pass
-
-    reminded_set = set(reminded_all)
-    not_invoked = sorted(reminded_set - invoked_set)
-    invoked_list = sorted(invoked_set)
-
-    surfaces: list[str] = []
-    if ft:
-        surfaces.append("frontend")
-    if bt:
-        surfaces.append("backend")
-
-    write_count = _current_write_count(cid)
-
-    record = {
-        "ts":          _dt.datetime.now(_dt.timezone.utc).isoformat(),
-        "cid":         cid,
-        "reminded":    reminded_all,
-        "invoked":     invoked_list,
-        "not_invoked": not_invoked,
-        "surfaces":    surfaces,
-        "write_count": write_count,
-    }
-
-    try:
-        telemetry_dir.mkdir(parents=True, exist_ok=True)
-        effectiveness_path = telemetry_dir / "skill-effectiveness.jsonl"
-        with effectiveness_path.open("a", encoding="utf-8") as fh:
-            fh.write(json.dumps(record, ensure_ascii=False) + "\n")
-            fh.flush()
-    except OSError:
-        pass  # Fail open — telemetry error must never block the stop hook
-
-
-def _stop(payload: dict) -> dict:
-    cid = payload.get("conversation_id") or payload.get("session_id") or ""
-    if not cid:
-        return {}
-
-    # NOTE (P4-T9): the former `payload["status"]` gate is REMOVED — Claude Code's
-    # Stop payload has no `status` field (verified root cause, Spec A §0), so the
-    # gate always short-circuited here and the skill-effectiveness telemetry loop
-    # never ran. Stop always proceeds now; the effectiveness record below is what
-    # feeds the self-tuning weight updater.
-
-    verify_tail = _verification_close_followup_fragment()
-
-    st = _load_state(cid)
-    ft, bt = bool(st.get("frontend_touched")), bool(st.get("backend_touched"))
-
-    # ── Telemetry: diff reminded vs invoked ───────────────────────────────────
-    _write_effectiveness_record(cid, st, ft, bt)
-    # ─────────────────────────────────────────────────────────────────────────
-
-    stop_lines: list[str] | None = None
-
-    quality_checks = "Quality: " + ", ".join(f"`{s}`" for s in QUALITY_SKILLS)
-    ship_checks = "Ship: " + ", ".join(f"`{s}`" for s in SHIPPING_SKILLS)
-
-    # ── Re-fire logic: replace boolean flag with write-count integer ──────────
-    current_write_count = _current_write_count(cid)
-    last_stop_wc = st.get("last_stop_write_count")
-    REFILL_WRITES = 8  # re-fire stop reminder after 8 new writes
-
-    if ft and bt:
-        already_stopped = last_stop_wc is not None
-        writes_since_last = (current_write_count - last_stop_wc) if already_stopped else 0
-        if already_stopped and writes_since_last < REFILL_WRITES:
-            _save_state(cid, st)
-            return {}
-        st["last_stop_write_count"] = current_write_count
-        stop_lines = [
-            "[Hook: pre-close — fullstack]",
-            *_stop_skill_reminder_lines(True, True, st),
-            quality_checks,
-            ship_checks,
-        ]
-    elif ft:
-        fe_last_wc = st.get("last_fe_stop_write_count")
-        fe_already_stopped = fe_last_wc is not None
-        fe_writes_since = (current_write_count - fe_last_wc) if fe_already_stopped else 0
-        if fe_already_stopped and fe_writes_since < REFILL_WRITES:
-            _save_state(cid, st)
-            return {}
-        st["last_fe_stop_write_count"] = current_write_count
-        stop_lines = [
-            "[Hook: pre-close — frontend]",
-            *_stop_skill_reminder_lines(True, False, st),
-            quality_checks,
-            ship_checks,
-        ]
-    elif bt:
-        be_last_wc = st.get("last_be_stop_write_count")
-        be_already_stopped = be_last_wc is not None
-        be_writes_since = (current_write_count - be_last_wc) if be_already_stopped else 0
-        if be_already_stopped and be_writes_since < REFILL_WRITES:
-            _save_state(cid, st)
-            return {}
-        st["last_be_stop_write_count"] = current_write_count
-        stop_lines = [
-            "[Hook: pre-close — backend]",
-            *_stop_skill_reminder_lines(False, True, st),
-            quality_checks,
-            ship_checks,
-        ]
-
-    if stop_lines is None:
-        return {}
-
-    msg = "\n".join(stop_lines)
-    if verify_tail.strip():
-        msg += "\n" + verify_tail.strip()
-    if (
-        (ft or bt)
-        and st.get("engineering_skills_sent")
-        and not st.get("engineering_stop_nudge_sent")
-    ):
-        st["engineering_stop_nudge_sent"] = True
-        msg += (
-            "\n\nEngineering: confirm `to-prd` / `to-issues` / `grill-with-docs` / `debug-investigation` if used this session."
-        )
-
-    _save_state(cid, st)
-    return {"followup_message": msg}
-
-
 def main() -> int:
+    """`post-tool-use` is the only mode. The old `stop` mode (pre-close reminder +
+    skill-effectiveness writer) was wired to no event since 2026-09-28 and was
+    removed (audit B2-14); any other mode prints {}."""
     if len(sys.argv) < 2:
         return 0
-    mode = sys.argv[1]
     try:
         payload = json.load(sys.stdin)
     except (json.JSONDecodeError, EOFError):
         print("{}")
         return 0
-    if mode == "post-tool-use":
-        out = _post(payload)
-    elif mode == "stop":
-        out = _stop(payload)
-    else:
-        out = {}
-
+    out = _post(payload) if sys.argv[1] == "post-tool-use" else {}
     print(json.dumps(out))
     return 0
 

@@ -1,7 +1,8 @@
 """test_model_advice.py — P2-T4 coverage for the model_advice S3 delegate.
 
-model_advice.py re-homes the legacy model-router's per-prompt /model nudge with
-its opus bias INVERTED (Spec A §3.2 / plan P2-T4): it advises `/model <opus>`
+model_advice.py re-homes the legacy model-router's per-prompt heavy-task nudge with
+its opus bias INVERTED (Spec A §3.2 / plan P2-T4): it says to dispatch the Opus judge
+agent (WP-C autonomy: never a `/model` switch for the user to type)
 ONLY when the S1 TaskProfile hits an opus row of model-policy `task_matrix` AND
 the `heavy_qualifiers` gate passes (size L AND risk >= 2); otherwise it is
 silent. All ids come from model-policy `model_ids`; it fails open (no advice)
@@ -28,7 +29,7 @@ from prompt_router.classify import TaskProfile          # noqa: E402
 from prompt_router.modules import model_advice as MA    # noqa: E402
 
 _POLICY = json.loads((_HOOKS / "model-policy.json").read_text(encoding="utf-8"))
-_OPUS_ID = _POLICY["model_ids"]["opus"]
+_AGENTS = _POLICY["main_session_advice"]["agents"]
 
 
 def _profile(**kw) -> TaskProfile:
@@ -59,26 +60,26 @@ def test_silent_when_heavy_qualifier_risk_fails():
 # --------------------------------------------------------------------------- #
 # firing: every opus task_matrix row, when the heavy gate passes
 # --------------------------------------------------------------------------- #
-def test_design_heavy_fires_with_opus_id_from_policy():
+def test_design_heavy_fires_with_the_agent_from_policy():
     out = MA.advise(_profile(intents={"DESIGN": 1}, size="L", risk=2, text="design a system"))
-    assert out and "/model" in out
-    assert _OPUS_ID in out                    # id sourced from model-policy model_ids
+    assert out and "/model" not in out
+    assert _AGENTS["DESIGN"] in out           # agent sourced from model-policy main_session_advice
     assert "DESIGN" in out
 
 
 def test_heavy_architecture_fires_via_is_arch():
     out = MA.advise(_profile(is_arch=True, size="L", risk=2, text="architect the platform"))
-    assert out and "HEAVY_ARCHITECTURE" in out and _OPUS_ID in out
+    assert out and "HEAVY_ARCHITECTURE" in out and _AGENTS["HEAVY_ARCHITECTURE"] in out
 
 
 def test_deep_debug_fires():
     out = MA.advise(_profile(intents={"DEBUG": 1}, size="L", risk=2, text="debug the crash"))
-    assert out and "DEEP_DEBUG" in out and _OPUS_ID in out
+    assert out and "DEEP_DEBUG" in out and _AGENTS["DEEP_DEBUG"] in out
 
 
 def test_implement_suite_fires():
     out = MA.advise(_profile(intents={"IMPLEMENT": 1}, size="L", risk=2, text="implement the suite"))
-    assert out and "IMPLEMENT_SUITE" in out and _OPUS_ID in out
+    assert out and "IMPLEMENT_SUITE" in out and _AGENTS["IMPLEMENT_SUITE"] in out
 
 
 # --------------------------------------------------------------------------- #
@@ -107,7 +108,7 @@ def test_items_emits_model_section_item_when_heavy():
     assert len(items) == 1
     it = items[0]
     assert it["id"] == "model:advice" and it["tier"] == 3 and it["section"] == "MODEL"
-    assert _OPUS_ID in it["text"]
+    assert _AGENTS["DESIGN"] in it["text"]
 
 
 def test_items_empty_when_light():
@@ -167,13 +168,13 @@ def _ac(prompt: str, sid: str, argv=None) -> str:
 def test_router_live_injects_model_advice_for_heavy_prompt():
     body = _ac(_HEAVY, _uid("heavy-live"))
     assert "[Model]" in body
-    assert "/model" in body and _OPUS_ID in body
+    assert "/model" not in body and "Agent tool" in body
 
 
 def test_router_live_silent_model_for_light_prompt():
     body = _ac(_LIGHT, _uid("light-live"))
     assert "[Model]" not in body
-    assert "/model " + _OPUS_ID not in body
+    assert "Heavy task" not in body
 
 
 def _run_all():

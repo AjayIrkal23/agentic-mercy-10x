@@ -1,37 +1,18 @@
 #!/usr/bin/env python3
-"""
-opus-guard.py — PreToolUse mutator for the Agent tool: aligns the [label] in
-`description` with the `model` that will actually run (D2).
+"""opus-guard.py — PreToolUse mutator for the Agent tool: sets `model` and the [label]
+in `description` to the model that will actually run (D2). Sonnet executes, Opus judges
+(pins in model-policy.json), executors escalate, Fable only on the user's word.
 
-Sonnet 5.5 executes (default); Opus judges — the pinned review / UI / plan / spec /
-debug agents (model-policy.json) or an explicit [opus] label. Execution agents are
-escalated to Opus on a failed previous attempt or large unplanned work. Fable runs
-ONLY when explicitly asked — never automatically.
+Order (first hit wins): 1 session flags state/<m>-only-mode · 2 per-project mode
+(lib/model_mode) · 3 explicit `model` / [label] — outright only for an unguarded agent;
+a pinned agent, an escalation executor or fable needs the user's own override phrase
+this turn (E-04) · 4 agent_pins · 5 escalation (retry marker, or no plan marker and
+classify() size/risk >= heavy_qualifiers) · 6 default sonnet.
 
-Resolution order (first hit wins):
-  1. session kill-switch flags   state/{sonnet,opus,fable}-only-mode
-  2. per-project mode            state/model-modes/<repo_key>   (lib/model_mode, D4)
-  3. explicit `model` param      the user's explicit word wins over a pin
-  4. agent_pins                  model-policy.json
-  5. escalation                  execution agents: retry marker, or no plan marker and
-                                 classify() size/risk >= heavy_qualifiers (fail-open)
-  6. [label] prefix in description
-  7. default                     sonnet
-
-Every decision is appended to .telemetry/<session>.model-routing.jsonl
-({ts, agent, model, reason}) so routing can be audited.
-
-Emits `updatedInput` (FULL tool_input echo — only `model` / `description` changed)
-only when something actually changes. It never touches `prompt` (the write protocol
-is delivered by the SubagentStart hook, D3) or `name` (names are a teams decision,
-not a labeling convention, D1).
-
-Protocol:
-  stdin:  {"tool_name":"Agent","tool_input":{...},"cwd":"..."}
-  stdout: {} to allow unchanged, or
-          {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow",
-           "updatedInput":{...},"additionalContext":"..."}}
-  exit:   always 0 (fail-open).
+Each decision goes to .telemetry/<session>.model-routing.jsonl {ts, agent, model,
+reason}; an ignored request is named in the reason. Emits the FULL tool_input echo
+with only `model` / `description` changed, and only when something changes; never
+touches `prompt` or `name`. stdout `{}` or a PreToolUse `updatedInput`; exit always 0.
 """
 from __future__ import annotations
 
@@ -54,18 +35,13 @@ PREFIX_RE = re.compile(r"^\[(sonnet|opus|fable)\]\s", re.IGNORECASE)
 
 # --- model-policy.json: the single model truth. Fail-open to these literals. -----
 POLICY_PATH = _HOOKS / "model-policy.json"
-_TELEMETRY_DIR = _HOOKS / ".telemetry"
+_TELEMETRY_DIR = Path(os.environ.get("CLAUDE_HOOK_TELEMETRY_DIR") or _HOOKS / ".telemetry")
 
 _DEFAULT_FLAG_DIR = "state"
-_DEFAULT_FLAG_NAMES = {
-    "sonnet": "sonnet-only-mode",
-    "opus": "opus-only-mode",
-    "fable": "fable-only-mode",
-}
+_DEFAULT_FLAG_NAMES = {"sonnet": "sonnet-only-mode", "opus": "opus-only-mode", "fable": "fable-only-mode"}
 _DEFAULT_FLAG_PRECEDENCE = ["sonnet", "opus", "fable"]
 _DEFAULT_SONNET_ONLY_AGENTS = {"explore", "claude-code-guide"}
 _DEFAULT_OPUS_ONLY_AGENTS = {"frontend-uiux-designer", "santa-reviewer"}
-_SIZE_RANK = {"S": 1, "M": 2, "L": 3}
 _DEFAULT_VALID_MODELS = {"sonnet", "opus", "fable"}
 _DEFAULT_MODEL = "sonnet"
 
@@ -145,31 +121,6 @@ def _allow_unchanged() -> int:
     return 0
 
 
-def _escalation(subagent_type: str, text: str, cwd: str | None) -> str | None:
-    """Reason to lift an execution agent to escalation.to, or None. Fail-open."""
-    policy = _load_policy()
-    esc = policy.get("escalation")
-    if not isinstance(esc, dict) or not esc.get("enabled"):
-        return None
-    if subagent_type not in {str(a).lower() for a in esc.get("agents") or []}:
-        return None
-    try:
-        if any(re.search(p, text, re.IGNORECASE) for p in esc.get("retry_markers") or []):
-            return "previous attempt failed"
-        if any(re.search(p, text, re.IGNORECASE) for p in esc.get("plan_markers") or []):
-            return None  # a plan/spec/contract drives the work: Sonnet executes it
-        from prompt_router.classify import classify  # noqa: PLC0415 - only on this path
-
-        prof = classify({"prompt": text, "cwd": cwd or ""})
-        hq = policy.get("heavy_qualifiers") or {}
-        if (_SIZE_RANK.get(prof.size, 0) >= _SIZE_RANK.get(hq.get("min_size", "L"), 3)
-                and prof.risk >= int(hq.get("min_risk", 2))):
-            return f"large task with no plan (size {prof.size}, risk {prof.risk})"
-    except Exception:  # noqa: BLE001 - escalation must never break routing
-        return None
-    return None
-
-
 def _log_route(sid: str, agent: str, model: str, reason: str) -> None:
     """Append one routing decision to .telemetry/<sid>.model-routing.jsonl."""
     if not sid or os.environ.get("CLAUDE_HOOK_DOCTOR"):
@@ -185,11 +136,33 @@ def _log_route(sid: str, agent: str, model: str, reason: str) -> None:
         pass
 
 
+def _routed(subagent_type: str, text: str, cwd: str | None) -> tuple[str, str]:
+    """Pin -> escalation -> default, ignoring any explicit request."""
+    sonnet_agents, opus_agents, fable_agents = _agent_sets()
+    for mdl, agents in (("fable", fable_agents), ("opus", opus_agents), ("sonnet", sonnet_agents)):
+        if subagent_type in agents:
+            return mdl, f"'{subagent_type}' is a pinned {mdl} agent"
+    policy = _load_policy()
+    why = _mm.escalation_reason(policy, subagent_type, text, cwd) if _mm is not None else None
+    target = (policy.get("escalation") or {}).get("to", "opus")
+    if why and target in _valid_models():
+        return target, f"escalated: {why}"
+    return _default_model(), "default (no opus/fable signal)"
+
+
+def _guarded(subagent_type: str) -> bool:
+    """Pinned agents and escalation executors: a request alone may not move them."""
+    esc = _load_policy().get("escalation")
+    esc_agents = {str(a).lower() for a in (esc.get("agents") or [])} if isinstance(esc, dict) else set()
+    return subagent_type in set().union(*_agent_sets(), esc_agents)
+
+
 def _resolve_required(subagent_type: str, model: str, description: str,
-                      cwd: str | None = None, prompt: str = "") -> tuple[str, str]:
-    """Return (required_model, reason). Order:
-    session flags -> per-project mode -> explicit model param -> agent pins ->
-    escalation -> [label] -> default."""
+                      cwd: str | None = None, prompt: str = "",
+                      transcript: str | None = None) -> tuple[str, str]:
+    """Return (required_model, reason). Order: session flags -> per-project mode ->
+    explicit model / [label] (guarded agents and fable need the user's phrase) ->
+    agent pins -> escalation -> default."""
     flag_paths = _flag_paths()
     for mdl in _flag_precedence():
         fp = flag_paths.get(mdl)
@@ -202,23 +175,23 @@ def _resolve_required(subagent_type: str, model: str, description: str,
             pm = None
         if pm:
             return pm, "per-project model mode"
+    label = PREFIX_RE.match(description)
     if model in _valid_models():
-        return model, "explicit model param"
-    sonnet_agents, opus_agents, fable_agents = _agent_sets()
-    if subagent_type in fable_agents:
-        return "fable", f"'{subagent_type}' is a pinned fable agent"
-    if subagent_type in opus_agents:
-        return "opus", f"'{subagent_type}' is a pinned opus agent"
-    if subagent_type in sonnet_agents:
-        return "sonnet", f"'{subagent_type}' is a pinned sonnet agent"
-    why = _escalation(subagent_type, f"{description}\n{prompt}", cwd)
-    target = (_load_policy().get("escalation") or {}).get("to", "opus")
-    if why and target in _valid_models():
-        return target, f"escalated: {why}"
-    m = PREFIX_RE.match(description)
-    if m:
-        return m.group(1).lower(), "description label"
-    return _default_model(), "default (no opus/fable signal)"
+        asked, src = model, "explicit model param"
+    else:
+        asked, src = (label.group(1).lower(), "description label") if label else (None, "")
+    if asked and asked != "fable" and not _guarded(subagent_type):
+        return asked, src
+    if asked and _mm is not None:
+        phrase = _mm.user_phrase(asked, transcript, _load_policy().get("override_phrases"))
+        if phrase:
+            return asked, f"{src} (user said '{phrase}')"
+    required, reason = _routed(subagent_type, f"{description}\n{prompt}", cwd)
+    if asked and asked != required:
+        reason += f"; {src} '{asked}' ignored (no '{asked}' override phrase in the user's turn)"
+    elif model and model not in _valid_models():
+        reason += f"; explicit model '{model}' is not a policy model"
+    return required, reason
 
 
 def main() -> int:
@@ -239,10 +212,10 @@ def main() -> int:
     subagent_type = (tool_input.get("subagent_type") or "").lower()
     cwd = payload.get("cwd")
 
-    prompt = tool_input.get("prompt") or ""
+    prompt, transcript = tool_input.get("prompt"), payload.get("transcript_path")
     required, reason = _resolve_required(
         subagent_type, model, description, cwd if isinstance(cwd, str) else None,
-        prompt if isinstance(prompt, str) else "")
+        prompt if isinstance(prompt, str) else "", transcript if isinstance(transcript, str) else None)
     _log_route(str(payload.get("session_id") or ""), subagent_type or "general-purpose",
                required, reason)
 
@@ -264,17 +237,12 @@ def main() -> int:
     full_input = dict(tool_input)
     full_input.update(updated)
 
-    note = (f"opus-guard: subagent runs on [{required}] ({reason}); sonnet executes by "
-            "default, opus for pinned judge agents (review/UI/plan/spec/debug), escalated "
-            "execution agents or an explicit [opus] label, fable only on explicit request.")
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "allow",
-            "updatedInput": full_input,
-            "additionalContext": note,
-        }
-    }))
+    note = (f"opus-guard: subagent runs on [{required}] ({reason}). Omit `model` on Agent "
+            "calls: pins and escalation decide; a pinned judge, an executor or fable moves "
+            "only on the user's own phrase this turn ('use opus' / 'use sonnet' / 'use fable').")
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "PreToolUse", "permissionDecision": "allow",
+        "updatedInput": full_input, "additionalContext": note}}))
     return 0
 
 

@@ -145,5 +145,37 @@ def test_ambiguous_ts_in_backend_path_is_backend():
     assert be, ".ts under /internal/ should resolve to backend"
 
 
+# --- documentation hit: same rule as _classify (audit 2026-10-05 B1-05) ------
+
+def doc_hit(ti: dict) -> bool:
+    return FSR._doc_hit(ti, [], _DOC_SEGS)
+
+
+@pytest.mark.parametrize("path", [
+    "/repo/docs/guide.md",
+    "/repo/server_docs/11-feature.md",
+    "/repo/frontend_docs/README.md",
+    "/repo/PROJECT_LINKAGES.md",
+    "docs/intro.md",
+])
+def test_doc_paths_hit(path):
+    assert doc_hit({"file_path": path, "content": "x"})
+
+
+def test_doc_hit_ignores_content_when_a_path_is_present():
+    """A notes file whose TEXT mentions docs/ is not a documentation write."""
+    ti = {"file_path": "/repo/plans/audit/enforcement.md",
+          "content": "see docs/CHANGELOG.md and server_docs/ for details"}
+    assert not doc_hit(ti)
+
+
+def test_doc_segment_matches_whole_path_segments_only():
+    assert not doc_hit({"file_path": "/repo/ant-docs/notes.md", "content": ""})
+
+
+def test_doc_blob_fallback_only_without_a_path():
+    assert doc_hit({"command": "edit docs/intro.md"})
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-v"]))

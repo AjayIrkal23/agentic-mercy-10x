@@ -7,9 +7,9 @@ Modes (sys.argv[1]):
 
 The reminder names the reachable graphify MCP tools AND a CLI/file fallback
 (`graphify query`, GRAPH_REPORT.md), so it stays actionable whether or not the
-graphify MCP server is connected this session. It also flags a STALE graph
-(older than the latest commit) with a one-line rebuild directive — the
-query-time freshness signal that complements index-lifecycle's rebuild engine.
+graphify MCP server is connected this session. A graph older than the latest
+commit triggers `index-lifecycle.py reprobe` (detached rebuild) and gets a
+one-line "rebuilding in the background" note — never a manual directive.
 """
 
 import json
@@ -23,7 +23,7 @@ from tool_compat import is_agent_tool, is_shell_tool, tool_name as compat_tool_n
 
 HOOKS_DIR = Path(__file__).parent
 CONFIG_PATH = HOOKS_DIR / "graphify-enforce.config.json"
-STATE_DIR = HOOKS_DIR / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or HOOKS_DIR / ".state")
 
 
 def _load_config():
@@ -69,10 +69,35 @@ def _session_id(hook_input: dict) -> str:
     return "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
 
 
+def _reprobe_graphify(root) -> str:
+    """Run `index-lifecycle.py reprobe` for ``root`` (it spawns the detached graph build
+    when the graph is STALE/MISSING) and return the graphify state it reports, "" on any
+    failure. No-op under the doctor's dry-fire."""
+    if os.environ.get("CLAUDE_HOOK_DOCTOR"):
+        return ""
+    try:
+        cp = subprocess.run(
+            [sys.executable or "python3", str(HOOKS_DIR / "index-lifecycle.py"),
+             "reprobe", "--root", str(root)],
+            capture_output=True, text=True, timeout=3,
+        )
+        return str((json.loads(cp.stdout).get("surfaces") or {}).get("graphify") or "")
+    except Exception:
+        return ""
+
+
+def _graph_rebuilding(root, graph) -> bool:
+    """Graph older than the latest commit AND the lifecycle probe says a rebuild is
+    running (it was just started, or already was). A graph the probe calls FRESH is
+    not worth a warning."""
+    return _graph_stale(root, graph) and _reprobe_graphify(root) == "BUILDING"
+
+
 def _graph_stale_cached(cid: str, root, graph) -> bool:
-    """Per-session cache of the `git log` staleness probe (was one subprocess per hit)."""
+    """Per-session cache of the staleness probe (was one subprocess per hit); True =
+    stale and rebuilding in the background."""
     if not cid:
-        return _graph_stale(root, graph)
+        return _graph_rebuilding(root, graph)
     state = _load_state(cid)
     cache = state.get("stale_cache") or {}
     try:
@@ -84,7 +109,7 @@ def _graph_stale_cached(cid: str, root, graph) -> bool:
     if (cache.get("graph_mtime") == mtime
             and now - float(cache.get("checked_at") or 0) < _STALE_CACHE_TTL_S):
         return bool(cache.get("stale"))
-    stale = _graph_stale(root, graph)
+    stale = _graph_rebuilding(root, graph)
     state["stale_cache"] = {"graph_mtime": mtime, "checked_at": now, "stale": stale}
     try:
         _save_state(cid, state)
@@ -134,7 +159,7 @@ def _graph_stale(root: Path, graph: Path) -> bool:
 def _reminder(root: Path, graph: Path, *, compact: bool = False, cid: str = "") -> str:
     lines = ["[Graphify] Architecture/dependency graph is available for this repo."]
     if _graph_stale_cached(cid, root, graph):
-        lines.append(f"  ⚠️ Graph looks STALE (older than the latest commit) — refresh: `graphify update {root}`")
+        lines.append("  graph rebuilding in the background; answers may lag the last commit")
     lines.append("  Use graphify BEFORE broad exploration / Explore agents:")
     lines.append('    MCP: mcp__graphify__query_graph "<q>" · get_neighbors "<node>" · god_nodes · shortest_path "<A>" "<B>" · graph_stats')
     lines.append("    Fallback if graphify MCP tools are not listed this session:")

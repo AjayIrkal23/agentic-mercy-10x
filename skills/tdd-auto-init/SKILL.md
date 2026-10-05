@@ -17,48 +17,14 @@ metadata:
   token-cost: 887
   triggers:
     keywords:
-    - activating
-    - adding
-    - advisory
-    - appears
-    - auto
-    - auto-initialized
-    - auto-initializes
-    - change
-    - config
-    - customize
-    - debug
-    - drive
-    - enforcement
-    - files/folders
-    - firing
-    - go/vitest/jest/pytest
-    - guards
-    - index
-    - init
-    - isn
-    - jcodemunch/graphify
-    - like
-    - mode
-    - non-blocking
-    - operate
-    - pausing/forcing/troubleshooting
-    - project
-    - repo
-    - reporter
-    - runs
-    - scope
-    - self-maintains
-    - setting
-    - shouldn
-    - skill
-    - stack
-    - system
-    - tdd
     - tdd-guard
-    - test
-    - warn
-    - wiring
+    - tdd guard
+    - tdd guard blocking
+    - tdd-guard config
+    - tdd-guard reporter
+    - tdd guard warning
+    - init tdd-guard
+    - pause tdd-guard
     paths: []
     intents:
     - testing

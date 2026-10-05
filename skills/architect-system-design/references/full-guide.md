@@ -18,7 +18,6 @@ metadata:
     - frontend-structure-standards
     - frontend-response-handling
     - frontend-server-data-patterns
-    - frontend-api-standards
     - react-hooks-patterns
     - mcp-usage-standards
     - 
@@ -36,7 +35,7 @@ Do not begin implementation unless explicitly requested.
 
 # 0) Skill Context Awareness (MANDATORY)
 
-Frontend architecture must load the matching Build Web Apps plugin plus the full Frontend Core Compliance Set before planning frontend interfaces, state, UI structure, or handoffs. Backend architecture must load the Backend Core Compliance Set before planning backend/server interfaces, contracts, services, or handoffs.
+Frontend architecture must load the Frontend Core Compliance Set before planning frontend interfaces, state, UI structure, or handoffs. Backend architecture must load the Backend Core Compliance Set before planning backend/server interfaces, contracts, services, or handoffs.
 
 This project already enforces strict standards via skills. Your architecture output MUST align with them:
 

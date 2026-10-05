@@ -11,7 +11,7 @@ metadata:
   platforms: [linux, darwin, windows]
   token-cost: 2585
   triggers:
-    keywords: [folder layout, module boundaries, file decomposition, frontend types, src/types, src/pages, src/components, feature hooks, store slice, domain-first, structure]
+    keywords: [folder layout, module boundaries, file decomposition, frontend types, src/types, src/pages, src/components, feature hooks, store slice, domain-first, folder structure]
     paths: [/router/, /routes/, /store/, reducer., redux, route.ts, route.tsx, routes.ts, selector., slice., src/schemas/, src/types/]
     intents: [implement, refactor]
 ---

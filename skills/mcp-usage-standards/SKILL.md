@@ -11,7 +11,7 @@ metadata:
   - linux
   - darwin
   - windows
-  token-cost: 900
+  token-cost: 1571
   triggers:
     keywords:
     - mcp

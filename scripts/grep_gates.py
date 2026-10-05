@@ -18,6 +18,8 @@ Gates (Charter §7 portability; Spec C §3):
       is retained only for the 30-day flip-back window and retires in P7).
   G5  no bare ``.read_text()``: without ``encoding=`` Windows decodes UTF-8 as
       cp1252 and crashes on bytes like 0x9D (a ``”``), unless PYTHONUTF8 is set.
+  G6  no ``/home/<user>/`` or ``/Users/<user>/`` in any git-TRACKED ``*.md`` (docs,
+      archive included; the repo is public — write ``~``).
 
 Scan scope = the code THIS overhaul owns and ships: ``hooks/`` (py+js),
 ``scripts/``, ``installer/``, ``install.py``, ``tests/`` (py). Excluded:
@@ -78,7 +80,10 @@ def _scan_files() -> list[Path]:
         (ROOT / "scripts", ("*.py",)),
         (ROOT / "installer", ("*.py",)),
         (ROOT / "tests", ("*.py",)),
+        # Claude Code mods; the engine-laid .claude-plugin/types/ is git-ignored, dropped below
+        (ROOT / "mods", ("*.ts", "*.tsx", "*.mts", "*.cts", "*.js", "*.jsx", "*.mjs", "*.cjs", "*.json")),
     ]
+    mod_files: list[Path] = []
     for base, globs in roots:
         if not base.exists():
             continue
@@ -89,7 +94,9 @@ def _scan_files() -> list[Path]:
                 # skip frozen legacy snapshots (data, not live code)
                 if p.name.startswith("legacy-"):
                     continue
-                out.append(p)
+                (mod_files if base.name == "mods" else out).append(p)
+    ignored = _git_ignored(mod_files)
+    out.extend(p for p in mod_files if p.resolve() not in ignored)
     # install contract data: the shipped template/manifest/dispatch config
     for single in (ROOT / "install.py", ROOT / "settings.template.json",
                    ROOT / "installer" / "manifest.json", HOOKS / "dispatch.config.json"):
@@ -113,6 +120,26 @@ def _git_ignored(paths: list[Path]) -> set[Path]:
         return {(ROOT / ln.strip()).resolve() for ln in cp.stdout.splitlines() if ln.strip()}
     except Exception:
         return set()
+
+
+def doc_home_literals(root: Path = ROOT) -> list[str]:
+    """G6: ``file:line`` of every machine home literal in TRACKED Markdown (the repo is
+    public; ignored files such as CLAUDE.machines.local.md are out of scope). Fail-open
+    to [] without git."""
+    try:
+        import subprocess
+        cp = subprocess.run(["git", "-C", str(root), "ls-files", "-z", "--", "*.md"],
+                            capture_output=True, text=True, timeout=15)
+    except Exception:
+        return []
+    hits = []
+    for rel in filter(None, cp.stdout.split("\0")):
+        try:
+            text = (Path(root) / rel).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        hits += [f"{rel}:{i}" for i, line in enumerate(text.splitlines(), 1) if _HOME_RE.search(line)]
+    return hits
 
 
 def run_gates() -> tuple[list[str], list[str]]:
@@ -187,6 +214,12 @@ def run_gates() -> tuple[list[str], list[str]]:
         failures.append('G5 read_text() without encoding="utf-8":\n    ' + "\n    ".join(g5))
     else:
         passes.append("G5 every read_text() names its encoding")
+
+    g6 = doc_home_literals(ROOT)
+    if g6:
+        failures.append("G6 home literals in tracked Markdown (use ~):\n    " + "\n    ".join(g6))
+    else:
+        passes.append("G6 no home literals in tracked Markdown")
 
     return failures, passes
 

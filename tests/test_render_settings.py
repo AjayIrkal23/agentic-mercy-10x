@@ -57,6 +57,30 @@ def test_semantic_check_ignores_claude_managed_keys(tmp_path):
     assert not ok and "env.EXTRA" in msg
 
 
+def test_granted_allow_rules_are_claude_managed(tmp_path):
+    """An "always allow" granted in Claude Code's own dialog lands in permissions.allow: the
+    equivalence check ignores it and a re-render (the daily self-heal) keeps it, so the user
+    is never asked twice (CLAUDE.md §11). User-added deny/ask rules are carried the same way
+    (tests/test_settings_carry.py); only template-owned drift fails the check."""
+    r = _load_render()
+    live = json.loads(r.render(user_path=None, subs=r.machine_subs()))
+    live.setdefault("permissions", {})["allow"] = ["mcp__reticle"]
+    p = tmp_path / "settings.json"
+    p.write_text(json.dumps(live))
+    ok, msg = r.check_equivalence(live_path=p, user_path=None)
+    assert ok, msg
+    data = json.loads(r.carry_managed(r.render(user_path=None), p))
+    assert data["permissions"]["allow"] == ["mcp__reticle"]
+    live["permissions"]["deny"] = ["Bash(rm:*)"]
+    p.write_text(json.dumps(live))
+    ok, msg = r.check_equivalence(live_path=p, user_path=None)
+    assert ok, msg  # a user-added deny rule is carried by the re-render, not drift
+    live["hooks"] = {}
+    p.write_text(json.dumps(live))
+    ok, msg = r.check_equivalence(live_path=p, user_path=None)
+    assert not ok and "hooks" in msg
+
+
 def test_render_refuses_lean_ctx_and_carries_managed_keys(tmp_path):
     import pytest
     r = _load_render()
@@ -109,3 +133,51 @@ def test_posix_claude_dir_token_stays_home_literal(monkeypatch):
     fake_env = type("Env", (), {"tokens": {"PYTHON": "python3", "CLAUDE_DIR": "${HOME}/.claude"}})
     monkeypatch.setitem(sys.modules, "detect", type("M", (), {"detect": staticmethod(lambda: fake_env)}))
     assert r.machine_subs()["CLAUDE_DIR"] == "${HOME}/.claude"
+
+
+def _mod_tree(tmp_path, ids, enabled):
+    for mod_id in ids:
+        (tmp_path / "mods" / mod_id / ".claude-plugin").mkdir(parents=True)
+        (tmp_path / "mods" / mod_id / ".claude-plugin" / "plugin.json").write_text(json.dumps({"name": mod_id}))
+    manifest = tmp_path / "manifest.json"
+    manifest.write_text(json.dumps({"mods": {"enabled": enabled}}))
+    return manifest
+
+
+def test_mod_dirs_are_absolute_enabled_and_present(tmp_path):
+    """CLAUDE_CODE_PLUGIN_DIRS only loads absolute or ~ paths: never the ${HOME} token."""
+    r = _load_render()
+    manifest = _mod_tree(tmp_path, ["mercy", "spare"], ["mercy", "missing", "Bad_Id", "has-lean-ctx"])
+    dirs = r.mod_dirs(tmp_path, manifest)
+    assert dirs == [(tmp_path / "mods" / "mercy").as_posix()]
+    assert all(Path(d).is_absolute() and "${HOME}" not in d for d in dirs)
+
+
+def test_windows_mod_dirs_join_with_semicolon(tmp_path, monkeypatch):
+    r = _load_render()
+    manifest = _mod_tree(tmp_path, ["a", "b"], ["a", "b"])
+    monkeypatch.setattr(r, "mod_dirs", lambda *a, **k: ["/w/mods/a", "/w/mods/b"])
+    monkeypatch.setattr(r, "PATHSEP", ";")
+    data = json.loads(r.render(user_path=None))
+    assert data["env"]["CLAUDE_CODE_PLUGIN_DIRS"] == "/w/mods/a;/w/mods/b"
+    assert manifest.exists()
+
+
+def test_no_enabled_mods_drops_the_env_key(monkeypatch):
+    r = _load_render()
+    monkeypatch.setattr(r, "mod_dirs", lambda *a, **k: [])
+    assert "CLAUDE_CODE_PLUGIN_DIRS" not in json.loads(r.render(user_path=None))["env"]
+
+
+def test_plugin_dirs_compare_as_a_set_and_plugin_configs_are_carried(tmp_path, monkeypatch):
+    r = _load_render()
+    monkeypatch.setattr(r, "mod_dirs", lambda *a, **k: ["/x/mods/a", "/x/mods/b"])
+    live = json.loads(r.render(user_path=None, subs=r.machine_subs()))
+    live["env"]["CLAUDE_CODE_PLUGIN_DIRS"] = r.PATHSEP.join(["/x/mods/b/", "/x/mods/a"])
+    live["pluginConfigs"] = {"mercy@inline": {"options": {"pulse": "quiet"}}}
+    p = tmp_path / "settings.json"
+    p.write_text(json.dumps(live))
+    ok, msg = r.check_equivalence(live_path=p, user_path=None)
+    assert ok, msg
+    carried = json.loads(r.carry_managed(r.render(user_path=None), p))
+    assert carried["pluginConfigs"] == {"mercy@inline": {"options": {"pulse": "quiet"}}}

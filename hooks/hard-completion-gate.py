@@ -19,9 +19,14 @@ Gate summary:
                        SECURITY-REPORT.md all count)
   Gate 4 (santa)     — SEMI-HARD — review not dispatched for >= 3 unique code files
   Gate 5 (dead code) — SEMI-HARD — dead-code audit not recorded for >= 3 unique code files
+  Gate 7 (memory)    — the human prompt said remember / going forward / we decided /
+                       from now on / always.. / never.. and the turn saved nothing
+                       (lib/memory_gate.py; Gate 6 stays advisory)
 
 Thresholds count UNIQUE code files (desloppify `code_files`, classified by
-`lib.code_files.is_code_file`), never raw write counts.
+`lib.code_files.is_code_file`), never raw write counts, and never ~/.claude infra
+paths (`_INFRA_PATH_MARKERS`, audit B2-05). An unknown turn key ("?") gets no
+same-turn override (santa-diff P5).
 
 State files read (all under STATE_DIR / {safe_cid}.*):
   .desloppify.json    — code_files (unique paths; legacy code_paths honoured)
@@ -44,8 +49,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 HOOK_DIR = Path(__file__).resolve().parent
-STATE_DIR = HOOK_DIR / ".state"
-TELEMETRY_DIR = HOOK_DIR / ".telemetry"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or HOOK_DIR / ".state")
+TELEMETRY_DIR = Path(os.environ.get("CLAUDE_HOOK_TELEMETRY_DIR") or HOOK_DIR / ".telemetry")
 
 if str(HOOK_DIR) not in sys.path:
     sys.path.insert(0, str(HOOK_DIR))
@@ -58,6 +63,10 @@ try:
     from lib import turns as _turns  # noqa: E402
 except Exception:  # pragma: no cover - fail-open
     _turns = None
+try:
+    from lib import memory_gate as _memgate  # noqa: E402
+except Exception:  # pragma: no cover - fail-open
+    _memgate = None
 
 MIN_FILES_SANTA = 3   # unique code files that require a Santa review
 MIN_FILES_DEAD = 3    # unique code files that require a dead-code audit
@@ -65,23 +74,33 @@ MIN_FILES_DEAD = 3    # unique code files that require a dead-code audit
 # The user said stop — honour it. The WHOLE message must be consent clauses
 # ("stop", "Stop. Don't do anything else", "that's all"); "stop the server and fix X"
 # is a task, not consent (Santa P7).
-_CONSENT_CLAUSE = (r"(?:(?:ok(?:ay)?|please)[,\s]+)?"
-                   r"(?:stop(?:\s+(?:now|here|there))?|don'?t do anything(?:\s+else)?"
+# Kept in step with mods/mercy/hooks/lib/consent.ts (test_lead_wp8 parity cases).
+_CONSENT_CLAUSE = (r"(?:(?:ok(?:ay)?|please|just)[,\s]+)?"
+                   r"(?:stop(?:\s+(?:now|here|there))?|don['’]?t do anything(?:\s+else)?"
                    r"|do nothing(?:\s+else)?|leave it(?:\s+there)?|no more changes"
-                   r"|that'?s (?:all|it|enough))")
+                   r"|that['’]?s (?:all|it|enough)|skip (?:the )?verif(?:y|ication))")
 CONSENT_RE = re.compile(
     rf"^\s*{_CONSENT_CLAUSE}(?:\s*[.,;!]+\s*{_CONSENT_CLAUSE})*\s*[.!]*\s*$", re.I)
 
 # Agents whose dispatch counts as the security scan having happened.
 SECURITY_AGENTS = {"security-sentinel"}
 
-# ~/.claude config/hook paths — Santa adversarial review not required there.
+# ~/.claude config/hook paths — Santa adversarial review not required there, and
+# jcodemunch never indexes ~/.claude (index-lifecycle NEVER_INDEX), so Gate 5's
+# dead-code tools cannot run on them either.
 _INFRA_PATH_MARKERS = (
     ".claude/hooks/",
     ".claude/rules/",
     ".claude/scripts/",
     ".claude/docs/",
     ".claude/mcp.profiles/",
+    ".claude/installer/",
+    ".claude/tests/",
+    ".claude/mods/",
+    ".claude/workflows/",
+    ".claude/plans/",
+    ".claude/agents/",
+    ".claude/skills/",
 )
 
 
@@ -145,6 +164,17 @@ def _load_gate_state(cid: str) -> dict:
 
 def _save_gate_state(cid: str, state: dict) -> None:
     _save_json(_gate_state_path(cid), state)
+
+
+def _to_model(cid: str, text: str) -> None:
+    """CLAUDE.md §11: a note only the model can act on goes to the advisory queue the next
+    prompt delivers, never to the user's screen (a Stop systemMessage shows only to the user)."""
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import dispatch_support as _sup  # noqa: PLC0415
+        _sup.enqueue(cid, "hard-completion-gate", text)
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def _code_files(cid: str) -> list:
@@ -294,8 +324,8 @@ def gate2_docs(cid: str, workspace_roots: "list | None" = None) -> tuple:
     detail = (
         f"{len(code_files)} code file(s) written but docs not updated. "
         f"Missing: {', '.join(missing)}. "
-        f"Fix: dispatch the docs-sync-agent specialist (Agent tool, subagent_type "
-        f"\"docs-sync-agent\") or run /invoke-docs."
+        f"Fix: dispatch the docs-sync-agent now (Agent tool, subagent_type "
+        f"\"docs-sync-agent\")."
     )
     return False, "Gate 2 (docs)", detail
 
@@ -325,8 +355,8 @@ def gate3_security(cid: str, roots: list, turn_ts: "datetime | None") -> tuple:
 
     detail = (
         f"{len(files)} security-sensitive file(s) modified but no scan recorded. "
-        "Fix: dispatch the security-sentinel specialist (Agent tool, subagent_type "
-        "\"security-sentinel\") or run /invoke-security — or run semgrep "
+        "Fix: dispatch the security-sentinel agent now (Agent tool, subagent_type "
+        "\"security-sentinel\") — or run semgrep "
         "(`semgrep scan --config auto` or mcp__semgrep__semgrep_scan) on the changed "
         "auth/API files yourself, then retry."
     )
@@ -342,7 +372,7 @@ def gate4_santa(cid: str, n_files: int) -> tuple:
         return True, "Gate 4 (santa)", ""
     detail = (
         f"{n_files} code file(s) written. Santa Method adversarial review not dispatched. "
-        "Fix: run /santa-review (or dispatch the santa-reviewer agent — Agent tool, "
+        "Fix: dispatch the santa-reviewer agent now (Agent tool, "
         "subagent_type \"santa-reviewer\") to run the BREAKER + SIMPLIFIER + VERIFIER "
         "passes on the diff and confirm real bugs before completing."
     )
@@ -360,8 +390,8 @@ def gate5_dead_code(cid: str, n_files: int) -> tuple:
         return True, "Gate 5 (dead code)", ""
     detail = (
         f"{n_files} code file(s) written but no dead-code audit recorded. "
-        "Fix: dispatch the deadcode-reaper specialist (Agent tool, subagent_type "
-        "\"deadcode-reaper\") or run /invoke-clean — or run "
+        "Fix: dispatch the deadcode-reaper agent now (Agent tool, subagent_type "
+        "\"deadcode-reaper\") — or run "
         "mcp__jcodemunch__find_dead_code / get_dead_code_v2 on your changes yourself."
     )
     return False, "Gate 5 (dead code)", detail
@@ -429,8 +459,8 @@ def main() -> int:
             return 0
         turn_key = turn_ts.isoformat() if turn_ts else "?"
 
-        code_files = _code_files(cid)
-        n_files = len(code_files)
+        # thresholds count project files only: infra never needs Santa/dead-code (B2-05)
+        n_files = len([f for f in _code_files(cid) if not _is_infra_path(f)])
         roots = _roots(payload)
         gate_state = _load_gate_state(cid)
 
@@ -442,14 +472,15 @@ def main() -> int:
             gate5_dead_code(cid, n_files),
             gate6_decision_capture(cid, n_files),
         ]
+        if _memgate is not None:  # a "remember this" prompt must end with a saved memory
+            results.append(_memgate.gate7_memory(transcript, last_prompt))
         hard_failures = [(label, detail) for ok, label, detail in results if not ok]
         advisories = [detail for ok, label, detail in results if ok and detail]
 
         if not hard_failures:
             out: dict = {}
             if advisories and not gate_state.get("pass_advisories_sent"):
-                out = {"systemMessage": "Completion gate: all checks passed.\n"
-                       + "\n".join(f"- {a}" for a in advisories)}
+                _to_model(cid, "Completion gate: all checks passed.\n" + "\n".join(f"- {a}" for a in advisories))
                 gate_state["pass_advisories_sent"] = True
             gate_state.update({"turn_key": turn_key, "blocked_this_turn": False,
                                "failed_gates": []})
@@ -459,13 +490,17 @@ def main() -> int:
 
         failed_labels = [label for label, _ in hard_failures]
 
-        # Second Stop in the SAME turn → allow, say what was forced past.
-        if gate_state.get("turn_key") == turn_key and gate_state.get("blocked_this_turn"):
+        # Second Stop in the SAME turn → allow, say what was forced past. An unknown
+        # turn ("?") never matches: it would carry the override into the next turn
+        # (santa-diff P5); stop_hook_active above still bounds it to one block.
+        if (turn_key != "?" and gate_state.get("turn_key") == turn_key
+                and gate_state.get("blocked_this_turn")):
             gate_state["failed_gates"] = failed_labels
             gate_state["override_ts"] = datetime.now(timezone.utc).isoformat()
             _save_gate_state(cid, gate_state)
-            sys.stdout.write(json.dumps({
-                "systemMessage": "Completion gate override: " + ", ".join(failed_labels)}))
+            _to_model(cid, "Completion gate override: " + ", ".join(failed_labels)
+                      + " were left open last turn; close them now unless the user said to skip them.")
+            sys.stdout.write("{}")
             return 0
 
         # First Stop this turn with failures → block once.

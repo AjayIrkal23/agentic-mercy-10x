@@ -50,6 +50,7 @@ FLOOR = _HOOKS / "trigger-floor.json"
 INDEX = _HOOKS / "skills-index.json"
 ALIASES = _HOOKS / "skill-aliases.json"
 INSTALLED_PLUGINS = sl.CLAUDE_DIR / "plugins" / "installed_plugins.json"
+TEMPLATE = sl.CLAUDE_DIR / "settings.template.json"
 
 # Legacy top-level custom keys (pre-2026-09-27) that now live under ``metadata:``.
 LEGACY_META_KEYS = ("schema", "triggers", "surfaces", "category", "platforms",
@@ -189,10 +190,14 @@ def _entry(name: str, fm: dict, floor_map: dict, *, source_kind: str | None = No
 
 
 def _plugin_skill_files() -> list[tuple[str, Path]]:
-    """[(plugin_short_name, SKILL.md path)] for every installed plugin skill."""
+    """[(plugin_short_name, SKILL.md path)] for every installed plugin skill, minus
+    plugins the template disables (their skills cannot load)."""
     out: list[tuple[str, Path]] = []
     plugins = _load(INSTALLED_PLUGINS).get("plugins") or {}
+    enabled = _load(TEMPLATE).get("enabledPlugins") or {}
     for key, installs in plugins.items():
+        if enabled.get(key) is False:
+            continue
         short = str(key).split("@", 1)[0]
         for inst in installs if isinstance(installs, list) else []:
             root = Path(str((inst or {}).get("installPath") or ""))

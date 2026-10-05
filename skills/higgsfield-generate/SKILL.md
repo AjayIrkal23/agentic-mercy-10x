@@ -1,27 +1,33 @@
 ---
 version: 0.13.0
 name: higgsfield-generate
-description: |
-  Generate images/videos/3D assets/audio via Higgsfield AI. Defaults:
-  GPT Image 2.5 for image/design/text, Seedance 2.5 for
-  video, Nano Banana 2 for cartoon characters, Marketing
-  Studio for ads, Seed Audio 1.0 for audio.
-  Use when: "generate an image", "make a video", "animate
-  this photo", "image-to-video", "edit/stylize/remix this
-  image", "reframe this video", "edit this video from a
-  sketch", "create a 3D model/GLB", "create a sound effect",
-  "make music", "text-to-audio", "create an ad", "make a UGC
-  video", "unboxing", "presenter video", "import product from
-  URL", or "analyze video virality". Supports generic generation,
-  workflows, Marketing Studio, and Virality Predictor.
-  Chain with higgsfield-soul-id for face/identity consistency.
-  NOT for: Soul training, brand systems/brandbooks (use
-  higgsfield-brandkit), photoshoots, cards, YouTube thumbnails
-  (use higgsfield-youtube-thumbnail), explainers (use
-  higgsfield-video-explainer), playable games/assets (use
-  higgsfield-websites), or TTS.
-argument-hint: "[prompt-or-analysis-request] [--model <name>] [--image|--video <path-or-id>]"
+description: 'Generate images, video, 3D (GLB) and audio through the Higgsfield CLI: generic generation,
+  workflows, Marketing Studio ads and the virality predictor.'
+argument-hint: '[prompt-or-analysis-request] [--model <name>] [--image|--video <path-or-id>]'
 allowed-tools: Bash
+when_to_use: Generate, edit, animate or reframe an image or video, make a 3D model, sound effect or music,
+  or a UGC/product ad. Not for Soul training, brand kits, photoshoots, marketplace cards, thumbnails,
+  explainers, games or TTS (their own higgsfield-* skills).
+metadata:
+  category: frontend
+  surfaces:
+  - frontend
+  triggers:
+    keywords:
+    - generate an image
+    - make a video
+    - image-to-video
+    - animate this photo
+    - text-to-image
+    - 3d model
+    - glb
+    - sound effect
+    - make music
+    - ugc video
+    - marketing studio
+    - higgsfield
+    intents:
+    - design
 ---
 
 # Higgsfield Generate

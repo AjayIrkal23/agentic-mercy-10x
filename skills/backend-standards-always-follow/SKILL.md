@@ -3,10 +3,8 @@ name: backend-standards-always-follow
 description: Always-on backend baseline for APIs, routes, controllers, schemas, services, persistence, auth, validation, workers, queues, and integrations.
 when_to_use: Use for any backend or server-side task (planning, implementing, debugging, reviewing) before the other backend skills.
 paths:
-- '**/internal/**'
-- '**/server/**'
-- '**/cmd/**'
 - '**/*.go'
+- '**/server/**/*.{ts,js,mjs,cjs,py}'
 metadata:
   schema: 1
   category: backend
@@ -19,42 +17,19 @@ metadata:
   token-cost: 711
   triggers:
     keywords:
-    - acceptance
-    - always
-    - always-on
-    - api
-    - auth
-    - backend
-    - backend/server
-    - baseline
-    - behavior
-    - bugfix
-    - completion
-    - compliance
-    - contract
+    - backend task
+    - backend change
+    - backend endpoint
+    - server-side
+    - api endpoint
+    - new endpoint
+    - add an endpoint
     - controller
-    - core
-    - debugging
-    - delegation
-    - follow
-    - implementation
-    - integration
-    - member
-    - part
-    - persistence
-    - planning
-    - queue
-    - requested
-    - review
-    - route
-    - schema
-    - server/fastify
-    - service
-    - standards
-    - surface
-    - trigger
-    - validation
-    - worker
+    - route handler
+    - service layer
+    - background worker
+    - queue worker
+    - backend baseline
     paths:
     - /models/
     - controller
@@ -67,32 +42,27 @@ metadata:
 ---
 # Backend Standards Always Follow
 
-> ## 🔒 MANDATORY COMPANION BUNDLE — load ALL now, every time, no exceptions
+> **Companions load lazily.** Load a companion only when the task needs what it owns,
+> and only the ones that match the repo's stack (check `go.mod` / `package.json` /
+> `pyproject.toml` first):
 >
-> Reading this skill is the trigger. Before doing ANY backend work you MUST
-> immediately `Skill`-invoke **all** of the following, end to end. Not "when the
-> work clearly needs them" — **always**, as a set, the moment this baseline loads:
->
-> 1. `backend-api-standards`
-> 2. `service-layer-standards`
-> 3. `backend-error-handling`
-> 4. `backend-performance-standards`
-> 5. `code-review-and-quality`
-> 6. `api-contract-standards`
-> 7. `scaffold-standards`
-> 8. `golang-patterns`
-> 9. `golang-testing`
-> 10. `postgres-patterns`
->
-> These 10 are the companion skills for backend work — NAMED here as trigger
-> pointers so none is lost. Load a companion's BODY lazily, only when the task
-> actually needs it — not all 10 in full up front.
+> | Need | Skill |
+> |---|---|
+> | list/search endpoints, pagination, filters | `backend-api-standards` |
+> | controller/service boundaries | `service-layer-standards` |
+> | error taxonomy, central handler | `backend-error-handling` |
+> | slow queries, N+1, indexes | `backend-performance-standards` |
+> | envelopes, contract compatibility | `api-contract-standards` |
+> | new domain or feature skeleton | `scaffold-standards` |
+> | Fastify routes, hooks, Ajv | `fastify-patterns` |
+> | Mongoose models, queries, aggregations | `mongoose-patterns` |
+> | Go code / Go tests | `golang-patterns` / `golang-testing` |
+> | SQL / Postgres | `postgres-patterns` |
+> | reviewing a diff | `code-review-and-quality` |
 
 ## Overview
 
-This is the always-on backend baseline. Examples are Go-first; Node/TS/Fastify/Mongo variants live in `references/node-stack.md`. Pick the block that matches the repo's actual stack (check `go.mod` / `package.json` / `pyproject.toml` first).
-
-Start here for any backend task. The companion bundle above is NAMED (trigger pointers); load each companion's body LAZILY, only when the task needs it — not all in full every time.
+This is the always-on backend baseline. Examples are Go-first; Node/TS/Fastify/Mongo variants live in `references/node-stack.md`. Pick the block that matches the repo's actual stack.
 
 ## Always Apply
 

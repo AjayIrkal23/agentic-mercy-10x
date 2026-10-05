@@ -14,44 +14,13 @@ metadata:
   token-cost: 698
   triggers:
     keywords:
-    - accuracy
-    - active
-    - affect
-    - always
-    - always-on
-    - articles
     - caveman
-    - code
-    - communication
-    - cuts
-    - dropping
-    - filler
-    - full
-    - hook
-    - keeping
-    - logic
-    - mandatory
-    - mode
-    - model
-    - needed
-    - operational
-    - output
-    - phrase
-    - pleasantries
-    - processing
-    - prompts
-    - reasoning
-    - routing
-    - skill
-    - subagent
-    - technical
-    - text
-    - token
-    - trigger
+    - caveman mode
+    - stop caveman
+    - terse
+    - fewer tokens
+    - less verbose
     - ultra-compressed
-    - usage
-    - user-facing
-    - while
     paths: []
     intents:
     - general

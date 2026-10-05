@@ -19,25 +19,18 @@ metadata:
   token-cost: 962
   triggers:
     keywords:
-    - api
-    - backend
-    - endpoint
-    - filtering
-    - list
-    - needs
+    - list endpoint
+    - search endpoint
     - pagination
-    - query
-    - response
-    - rest
-    - rules
-    - search
-    - shapes
-    - sorting
-    - stable
-    - standards
-    - strict
-    - task
-    - validation
+    - paginate
+    - filter params
+    - sort params
+    - query params
+    - page and limit
+    - sortby
+    - server-side filtering
+    - rest endpoint
+    - request validation
     paths: []
     intents:
     - backend

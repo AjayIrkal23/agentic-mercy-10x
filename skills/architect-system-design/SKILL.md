@@ -14,18 +14,17 @@ metadata:
   token-cost: 858
   triggers:
     keywords:
+    - system design
+    - architecture
     - architect
-    - begin
-    - changes
-    - code
+    - decompose the system
     - decomposition
-    - design
-    - implementation
-    - interface
-    - main
-    - planning
-    - system
-    - task
+    - module boundaries
+    - service boundaries
+    - interface design
+    - data flow
+    - design doc
+    - how should we architect
     paths: []
     intents:
     - planning
@@ -57,8 +56,8 @@ It does not assume frontend and backend both matter. It classifies the touched s
 Choose the touched surface first:
 
 - Backend-only: load the mandatory Backend Core Compliance Set before design decisions: `backend-standards-always-follow`, `service-layer-standards`, `backend-api-standards`, `backend-error-handling`, and `backend-performance-standards`. Preserve `api-contract-standards` for envelope/contract work, and `scaffold-standards` for new domain/feature skeleton planning and concrete backend skeleton details.
-- Frontend-only: select and load the matching Build Web Apps plugin skill when available, then load the mandatory Frontend Core Compliance Set: `frontend-standards-always-follow:frontend-app-builder` for new/redesign/visual surfaces or `frontend-standards-always-follow:react-best-practices` for React/Vite/UI/code planning, plus `frontend-standards-always-follow`, `frontend-structure-standards`, `frontend-response-handling`, `frontend-server-data-patterns`, `frontend-api-standards`, and `react-hooks-patterns`.
-- Cross-surface: load the matching Build Web Apps plugin plus Frontend Core Compliance Set and Backend Core Compliance Set, then only the preserved add-ons required by the actual design.
+- Frontend-only: load the Frontend Core Compliance Set: `frontend-design:frontend-design` (plugin) for new/redesign/visual surfaces or `vite-react-best-practices` for React/Vite/UI/code planning (`expo-react-native` for React Native / Expo), plus `frontend-standards-always-follow`, `frontend-structure-standards`, `frontend-response-handling`, `frontend-server-data-patterns`, and `react-hooks-patterns`.
+- Cross-surface: load the Frontend Core Compliance Set and Backend Core Compliance Set, then only the preserved add-ons required by the actual design.
 
 Use `project-reference-linkage` when the design crosses shared contracts or linked modules.
 Use `mcp-usage-standards` when external verification or MCP choice affects the design.
@@ -67,10 +66,10 @@ Use `dead-code-and-change-audit` if the design becomes a coding task or changes 
 ## Workflow
 
 1. Restate the problem, users, and success condition.
-2. Identify the touched surfaces, load the matching Build Web Apps plugin for frontend surfaces, and load the Frontend Core Compliance Set or Backend Core Compliance Set required by those surfaces.
+2. Identify the touched surfaces and load the Frontend Core Compliance Set or Backend Core Compliance Set required by those surfaces.
 3. Extract requirements, constraints, and contract implications.
 4. Define boundaries, interfaces, and key data flow.
-5. Render the system design (boundaries, interfaces, data flow) as a Mermaid diagram via `claude-mermaid:mermaid-diagrams` (plugin path `~/.claude/plugins/marketplaces/claude-mermaid/skills/mermaid-diagrams/SKILL.md`). Use flowchart for module boundaries, sequence diagram for cross-service flows, state diagram for lifecycle work, ER diagram for new data models. Iterate with `mermaid_preview`; persist via `mermaid_save` into the design doc.
+5. Draw the system design (boundaries, interfaces, data flow) as a fenced `mermaid` block in the design doc. Use flowchart for module boundaries, sequence diagram for cross-service flows, state diagram for lifecycle work, ER diagram for new data models. Preview with the drawio MCP `open_drawio_mermaid` when it is connected.
 6. Call out risks, bottlenecks, and validation needs.
 7. Produce an implementation-ready plan with phases and acceptance criteria.
 
@@ -79,7 +78,7 @@ Use `dead-code-and-change-audit` if the design becomes a coding task or changes 
 - Clear problem framing.
 - Touched surfaces and loaded domain standards.
 - Interface and boundary decisions.
-- Mermaid system / sequence / ER diagram (rendered via `claude-mermaid:mermaid-diagrams`) embedded in the design doc.
+- Mermaid system / sequence / ER diagram (fenced `mermaid` block) embedded in the design doc.
 - Risks, assumptions, and acceptance criteria.
 - An implementation-ready phase plan.
 

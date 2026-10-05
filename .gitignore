@@ -161,3 +161,16 @@ plugins/synced/
 /SECURITY-REPORT.md
 /VERIFY-REPORT.md
 .claude/runs/
+
+# --- Claude Code mods (mods/<id>/ is tracked source) ---
+# the per-session hot-reload folder the plugin-authoring skill writes into
+/dev-mods/
+# engine-laid API types (the engine also drops its own `*` .gitignore there)
+/mods/*/.claude-plugin/types/
+# runtime litter: session cron lock, ponytail per-directory modes (absolute paths in
+# the names), the 1.8 MB plugin directory cache
+/scheduled_tasks.lock
+/ponytail-modes/
+/plugins/plugin-directory-cache*.json
+# Claude Code --debug logs (full transcripts, may hold secrets)
+/debug/

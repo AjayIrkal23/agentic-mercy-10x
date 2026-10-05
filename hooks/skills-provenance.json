@@ -145,8 +145,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-brandkit",
     "hashBasis": "content-hash",
-    "baselineHash": "d706ed43534f6ecfbbb9b558a0d65c543ea3b65c2a3de8f77db147c6f34ff266",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "ca7ce0882e8c8d4dd5a897138f92b0b7e0081b4dd4db0c0cb12ae1cdc779a527",
+    "capturedAt": "2026-10-05"
   },
   "higgsfield-generate": {
     "family": "vendored-git",
@@ -158,8 +158,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-generate",
     "hashBasis": "content-hash",
-    "baselineHash": "ecadc097f66cec3e7f3358732b2330044eaf362623a60810cb46f5c6ef5acbc2",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "4f8f1068323eae78c5fade0edc7432c35371ae20bd02d2972ff413452d2e9c21",
+    "capturedAt": "2026-10-05"
   },
   "higgsfield-marketplace-cards": {
     "family": "vendored-git",
@@ -171,8 +171,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-marketplace-cards",
     "hashBasis": "content-hash",
-    "baselineHash": "e06be9ac90a8915115dbdff63bb9b28892bcfe7a9d834f6b4ef75d2f07014624",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "27524a0d851bdaad8ab4cd195cf37b2d9aa9e16d14248d80eb2c52e5ad095c48",
+    "capturedAt": "2026-10-05"
   },
   "higgsfield-product-photoshoot": {
     "family": "vendored-git",
@@ -184,8 +184,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-product-photoshoot",
     "hashBasis": "content-hash",
-    "baselineHash": "62243693c480d1873d9eeec784dfbd0fa9da4755ec5956ec95e3c35fba2e3f9d",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "94b0a20ef2e8fb86465dcf4e32725b3f9a43ab07598d64e3bc008a8e2097e624",
+    "capturedAt": "2026-10-05"
   },
   "higgsfield-soul-id": {
     "family": "vendored-git",
@@ -197,8 +197,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-soul-id",
     "hashBasis": "content-hash",
-    "baselineHash": "b34a2b50514b16037ee27a95fb72e628e6ff4943700a8192cd110bfd91e9efff",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "7064b93e782b9bcb59db3d50bdc1051fb5175ac4b4235c9a20b4a3e4ee7d456f",
+    "capturedAt": "2026-10-05"
   },
   "higgsfield-video-explainer": {
     "family": "vendored-git",
@@ -210,8 +210,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-video-explainer",
     "hashBasis": "content-hash",
-    "baselineHash": "e42893bdca0f651fe6a12a34fd7c1c3a1ef10a18386de9514afed8fd584344cc",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "bcf65a807d59efb2fef0a4e156fb2b380063242716ccab585e19a1b1babdc967",
+    "capturedAt": "2026-10-05"
   },
   "higgsfield-websites": {
     "family": "vendored-git",
@@ -223,8 +223,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-websites",
     "hashBasis": "content-hash",
-    "baselineHash": "25cc88013495405f9c9f1b49226d4e5fb6213029db3be13b32b346aa1ff8a4b7",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "24923bc55de869135e26dd68fe4dd7ef0d33a92a3fce98eb88b5a186aea4eae8",
+    "capturedAt": "2026-10-05"
   },
   "higgsfield-youtube-thumbnail": {
     "family": "vendored-git",
@@ -236,8 +236,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-youtube-thumbnail",
     "hashBasis": "content-hash",
-    "baselineHash": "2954d46cca38a44c82166f86d55b0c6112ec214bb2b29b4c4c909f28fd2bfdfe",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "b2a50e4b8f31fe6a667f9dfd60181c8b494236552c9b642a01fdf8500eb9ff39",
+    "capturedAt": "2026-10-05"
   },
   "img2threejs": {
     "family": "vendored-git",
@@ -301,8 +301,8 @@
     "sha": "000650b156983f5159695b441477f4e63b25dc85",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py no-ai-slop",
     "hashBasis": "content-hash",
-    "baselineHash": "77559106199196abd29290bfe2cb490fbf0c9fb79fd1ba07844a15ff814ae03c",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "77547d91e6480e895330cb69d2b97a036e64e8dbfd6fe2bc92877975fb0318f0",
+    "capturedAt": "2026-10-05"
   },
   "test-error-states": {
     "family": "vendored-git",

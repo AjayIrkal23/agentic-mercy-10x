@@ -71,7 +71,10 @@ def test_python_stdlib_and_local_imports_ignored(tmp_path, monkeypatch):
 
 
 def test_fe_component_hint_only_when_app_running(tmp_path, monkeypatch):
-    fp = _repo(tmp_path) / "src" / "components" / "Badge.tsx"
+    repo = _repo(tmp_path)
+    # reticle is named only where the repo carries its plugin (audit G-14; WP1 test_router_wp1_mcp.py)
+    (repo / "package.json").write_text('{"devDependencies": {"@reticlehq/vite": "^1"}}')
+    fp = repo / "src" / "components" / "Badge.tsx"
     assert not any("reticle" in h for h in _run(monkeypatch, _edit(fp, "x"), {}, port=None))
     assert any("reticle" in h and ":5173" in h for h in _run(monkeypatch, _edit(fp, "x"), {}, port=5173))
 

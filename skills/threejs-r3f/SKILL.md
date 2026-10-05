@@ -1,10 +1,10 @@
 ---
 name: threejs-r3f
 description: Three.js in React via React Three Fiber (@react-three/fiber v9 + drei) — Canvas setup, loading GLB models with useGLTF + Suspense, DPR cap, on-demand frameloop, disposal, draco/meshopt compression, reduced-motion and static-poster fallbacks. Consumes GLB assets from Higgsfield generate_3d; procedural code models come from img2threejs. Pull exact API from Context7 /pmndrs/react-three-fiber and /pmndrs/drei.
-when_to_use: Use when adding or editing a 3D scene, hero, or product viewer in React — files importing three, @react-three/fiber, or @react-three/drei, .glb assets, or folders named three/3d/scene/models/webgl/r3f.
+when_to_use: Use when adding or editing a 3D scene, hero, or product viewer in React — files importing three, @react-three/fiber, or @react-three/drei, .glb assets, or folders named three/3d/scene/webgl/r3f.
 user-invocable: true
 paths:
-  - "**/{three,3d,scene,scenes,models,webgl,r3f}/**/*.{ts,tsx,js,jsx}"
+  - "**/{three,3d,scene,scenes,webgl,r3f}/**/*.{ts,tsx,js,jsx}"
   - "**/*.glb"
 metadata:
   category: frontend

@@ -14,26 +14,14 @@ metadata:
   token-cost: 822
   triggers:
     keywords:
-    - break
-    - convert
-    - create
-    - down
-    - implementation
-    - independently-grabbable
-    - issue
-    - issues
-    - plan
-    - prd
-    - project
-    - slices
-    - spec
+    - create issues
+    - github issues
+    - break into issues
+    - turn the plan into issues
+    - implementation tickets
     - tickets
     - tracer-bullet
-    - tracker
-    - user
-    - vertical
-    - wants
-    - work
+    - issue tracker
     paths: []
     intents:
     - general

@@ -182,13 +182,22 @@ def gate(tmp_path, monkeypatch):
     return {"mod": hcg, "payload": payload, "transcript": transcript, "state": state}
 
 
+def _load_drain():
+    """dispatch_support.drain: the advisory queue the next prompt delivers to the model."""
+    spec = importlib.util.spec_from_file_location("sup_gates", _HOOKS / "dispatch_support.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.drain
+
+
 def test_gate_blocks_once_then_allows_same_turn(gate, monkeypatch):
     first = _run_main(gate["mod"], gate["payload"], monkeypatch)
     assert first.get("decision") == "block"
     assert "Gate 4 (santa)" in first["reason"] and "Gate 5 (dead code)" in first["reason"]
     second = _run_main(gate["mod"], gate["payload"], monkeypatch)
-    assert "decision" not in second
-    assert second["systemMessage"].startswith("Completion gate override:")
+    assert "decision" not in second and "systemMessage" not in second  # CLAUDE.md §11: not on the user's screen
+    queued = _load_drain()(gate["payload"]["session_id"])
+    assert any(t.startswith("Completion gate override:") for t in queued)
     third = _run_main(gate["mod"], gate["payload"], monkeypatch)
     assert "decision" not in third  # still the same turn — never re-blocks
 
@@ -216,6 +225,19 @@ def test_gate_thresholds_count_unique_files(gate, monkeypatch):
         "code_writes": 6, "code_files": ["/work/u/CODE_FILES/app/src/a.ts",
                                           "/work/u/CODE_FILES/app/src/b.ts"]}))
     assert "decision" not in _run_main(gate["mod"], gate["payload"], monkeypatch)
+
+
+def test_gates_skip_sessions_that_only_touched_claude_infra(gate, monkeypatch):
+    # mods/, installer/ and tests/ are ~/.claude infra like hooks/: jcodemunch never
+    # indexes them, so Gate 5 could never be satisfied there.
+    infra = ["/work/u/.claude/mods/mercy/hooks/lib/a.ts", "/work/u/.claude/installer/render.py",
+             "/work/u/.claude/tests/test_x.py", "/work/u/.claude/hooks/dispatch.py"]
+    (gate["state"] / "sess-1.desloppify.json").write_text(json.dumps({"code_writes": 4, "code_files": infra}))
+    assert "decision" not in _run_main(gate["mod"], gate["payload"], monkeypatch)
+    # infra never counts toward the 3-file thresholds (B2-05): 3 project files block
+    mixed = infra + [f"/work/u/CODE_FILES/app/src/{n}.ts" for n in "abc"]
+    (gate["state"] / "sess-1.desloppify.json").write_text(json.dumps({"code_writes": 7, "code_files": mixed}))
+    assert _run_main(gate["mod"], gate["payload"], monkeypatch).get("decision") == "block"
 
 
 def test_gate3_credits_security_sentinel_dispatch(gate, monkeypatch):
@@ -251,7 +273,7 @@ def _suite_gate_run(tmp_path, cid: str, tool_uses: list, now: str = "") -> dict:
     turn made ``tool_uses`` [(name, file_path)], run the gate, return its JSON."""
     from datetime import datetime, timezone
     now = now or datetime.now(timezone.utc).isoformat()
-    tel = _HOOKS / ".telemetry"
+    tel = _tel_dir()
     tel.mkdir(parents=True, exist_ok=True)
     (tel / f"{cid}.pushed-skills.jsonl").write_text(json.dumps(
         {"ts": now, "skills": ["react-hooks-patterns"], "categories": [],
@@ -268,9 +290,14 @@ def _suite_gate_run(tmp_path, cid: str, tool_uses: list, now: str = "") -> dict:
     return json.loads(cp.stdout.strip().splitlines()[-1])
 
 
+def _tel_dir() -> Path:
+    """The suite gate's telemetry dir (conftest.py points it at a temp dir)."""
+    return Path(os.environ.get("CLAUDE_HOOK_TELEMETRY_DIR") or _HOOKS / ".telemetry")
+
+
 def _isg_cleanup(cid: str) -> None:
     for suffix in ("pushed-skills.jsonl", "suite-gate.json"):
-        (_HOOKS / ".telemetry" / f"{cid}.{suffix}").unlink(missing_ok=True)
+        (_tel_dir() / f"{cid}.{suffix}").unlink(missing_ok=True)
 
 
 def test_suite_gate_passes_turn_without_code_writes(tmp_path):
@@ -285,7 +312,8 @@ def test_suite_gate_passes_turn_without_code_writes(tmp_path):
 
 def test_suite_gate_ignores_code_outside_skill_surface(tmp_path):
     cid = f"isg-be-{os.getpid()}"
-    assert _suite_gate_run(tmp_path, cid, [("Edit", "/app/server/internal/handler.go")]) == {}
+    # not enforced; named in an advisory systemMessage instead (audit B2-04)
+    assert "decision" not in _suite_gate_run(tmp_path, cid, [("Edit", "/app/server/internal/handler.go")])
     _isg_cleanup(cid)
 
 
@@ -296,6 +324,51 @@ def test_suite_gate_nags_once_per_turn_on_matching_code_write(tmp_path):
     first = _suite_gate_run(tmp_path, cid, [("Edit", "/app/src/hooks/useThing.ts")], now)
     assert first.get("decision") == "block" and "react-hooks-patterns" in first["reason"]
     assert _suite_gate_run(tmp_path, cid, [("Edit", "/app/src/hooks/useThing.ts")], now) == {}
+    _isg_cleanup(cid)
+
+
+def test_suite_gate_counts_a_skill_read_through_bash(tmp_path):
+    """e2e S1-after: the model read SKILL.md with `sed -n`, the gate saw no load and blocked."""
+    from datetime import datetime, timezone
+    cid = f"isg-bashread-{os.getpid()}"
+    now = datetime.now(timezone.utc).isoformat()
+    tel = _tel_dir()
+    tel.mkdir(parents=True, exist_ok=True)
+    (tel / f"{cid}.pushed-skills.jsonl").write_text(json.dumps(
+        {"ts": now, "skills": ["react-hooks-patterns"], "categories": [], "source": "router",
+         "enforce": "hard"}) + "\n", encoding="utf-8")
+    rows = [{"type": "user", "timestamp": now, "message": {"role": "user", "content": "do it"}}]
+    for name, inp in (("Bash", {"command": "sed -n '1,80p' /x/.claude/skills/react-hooks-patterns/SKILL.md"}),
+                      ("Edit", {"file_path": "/app/src/hooks/useThing.ts"})):
+        rows.append({"type": "assistant", "timestamp": now, "message": {"role": "assistant", "content": [
+            {"type": "tool_use", "name": name, "input": inp}]}})
+    tr = tmp_path / "t.jsonl"
+    tr.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+    cp = subprocess.run([sys.executable, str(_HOOKS / "invoke-suite-gate.py")],
+                        input=json.dumps({"session_id": cid, "transcript_path": str(tr)}),
+                        text=True, capture_output=True, timeout=20, check=False)
+    assert json.loads(cp.stdout.strip().splitlines()[-1]) == {}
+    _isg_cleanup(cid)
+
+
+def test_shell_skill_read_needs_the_read_command_as_segment_head():
+    """santa-diff S4: grep of a SKILL.md or a commit message naming one is not a load."""
+    isg = _load("isg_s4", "invoke-suite-gate.py")
+    assert isg._shell_skill_reads("cd x && sed -n 1,80p ~/.claude/skills/react-hooks-patterns/SKILL.md") == {"react-hooks-patterns"}
+    assert isg._shell_skill_reads("sudo cat /h/.claude/skills/a/SKILL.md | head -5") == {"a"}
+    assert isg._shell_skill_reads('grep -n "tail" /h/.claude/skills/a/SKILL.md') == set()
+    assert isg._shell_skill_reads('git commit -m "cat ~/.claude/skills/a/SKILL.md"') == set()
+
+
+def test_suite_gate_third_stop_in_a_turn_still_passes(tmp_path):
+    """B2-03: failing open must keep the spent nag, not delete it (3rd Stop re-blocked)."""
+    from datetime import datetime, timezone
+    cid = f"isg-fe3-{os.getpid()}"
+    now = datetime.now(timezone.utc).isoformat()
+    runs = [_suite_gate_run(tmp_path, cid, [("Edit", "/app/src/hooks/useThing.ts")], now)
+            for _ in range(3)]
+    assert runs[0].get("decision") == "block"
+    assert runs[1] == {} and runs[2] == {}
     _isg_cleanup(cid)
 
 

@@ -12,6 +12,7 @@ local `CLAUDE.md`.
 | [`hooks/tests/CLAUDE.md`](../hooks/tests/CLAUDE.md) | hook tests |
 | [`hooks/tools/CLAUDE.md`](../hooks/tools/CLAUDE.md) | link doctor, state cleanup |
 | [`installer/CLAUDE.md`](../installer/CLAUDE.md) | one-command installer |
+| [`mods/CLAUDE.md`](../mods/CLAUDE.md) | Claude Code mods: loading, validator rules; the mercy mod's features, Python bridge, file map |
 | [`scripts/CLAUDE.md`](../scripts/CLAUDE.md) | maintenance scripts |
 | [`tests/CLAUDE.md`](../tests/CLAUDE.md) | installer/template tests |
 | [`templates/CLAUDE.md`](../templates/CLAUDE.md) | per-project MCP templates |

@@ -16,9 +16,10 @@ harness's "do not call the Agent tool unless the user requested it" line asks fo
 - Omit `model` on `Agent` calls: `opus-guard` sets `model` and the `[sonnet|opus|fable]`
   description label. Sonnet executes (the default); Opus judges (review, UI/UX, plan,
   spec, debug agents); executors escalate to Opus after a failed attempt or on large
-  unplanned work. Pass `model` only to honor my model request or a deliberate override —
-  an explicit `model` beats pins and escalation. Fable only when I ask for it in that
-  turn ("use fable for this").
+  unplanned work. Pass `model` only to honor my model request: opus-guard lets an explicit
+  `model` move a pinned judge, an executor or fable only when my own turn names that model
+  ("use opus / sonnet / fable"); otherwise pins and escalation win and the ignored request
+  is logged. Fable only when I ask for it in that turn ("use fable for this").
 - Pins, escalation and effort tiers live in `hooks/model-policy.json`. Do not restate
   them anywhere else.
 - `name` is OPTIONAL and is a team decision, not a labeling convention: with agent teams
@@ -88,3 +89,12 @@ Hosts, SSH, sudo and the Windows replica live in a gitignored per-machine file (
 is public). Copy it between machines by hand; never commit it.
 
 @CLAUDE.machines.local.md
+
+## 11. Autonomy by default (standing request, 2026-10-05)
+
+I only prompt and develop; I never run slash commands, scripts, re-indexing or setup steps.
+Every part of this workbench (hooks, the mercy mod and its UI, skills, model routing, code
+intelligence, rules, docs/dox, memory, MCP servers, packages and tool installs) triggers by
+itself, is on by default and recovers on its own. Build features automatic first; a command is an optional extra. Never end a turn
+with "run X" when a hook, the mod or you can do X. Ask me only for human-only steps
+(OAuth logins, commits, deleting my data), once and batched.

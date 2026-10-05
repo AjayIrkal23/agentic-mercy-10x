@@ -14,24 +14,17 @@ metadata:
   token-cost: 2508
   triggers:
     keywords:
-    - branching
-    - change
-    - code
-    - committing
-    - conflicts
     - git
-    - making
-    - multiple
-    - need
-    - organize
-    - parallel
-    - practices
-    - resolving
-    - streams
-    - structures
+    - commit
+    - atomic commits
+    - commit message
+    - branching
+    - feature branch
+    - rebase
+    - merge conflict
+    - git history
+    - worktree
     - versioning
-    - work
-    - workflow
     paths: []
     intents:
     - general

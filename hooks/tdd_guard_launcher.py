@@ -12,8 +12,13 @@
                    (the old `<cwd>/.claude/tdd-guard` lookup made every session
                    started in `~` pay an LLM round-trip per write — A03-B2).
   TodoWrite      -> exit 0 (not a code write).
+  Non-code target (``lib.code_files.is_code_file`` false: docs, config, notes)
+                 -> exit 0 before the validator runs (B1-20).
 
-Wired on PreToolUse(Write|Edit|MultiEdit) via dispatch. Fails OPEN on any error.
+Wired on PreToolUse(Write|Edit|MultiEdit) via dispatch as a ``"defer": true``
+advisory: dispatch runs it detached and delivers the advisory on the session's next
+tool event, so a 0.2-15 s validator never holds the write (B1-02). The mod's
+``--only`` lane still runs it synchronously in the background. Fails OPEN on any error.
 """
 
 from __future__ import annotations
@@ -33,7 +38,7 @@ try:
 except Exception:  # pragma: no cover - fail-open
     _plat = None
 try:
-    from lib.code_files import git_root, is_home  # noqa: E402
+    from lib.code_files import git_root, is_code_file, is_home  # noqa: E402
 except Exception:  # pragma: no cover - fail-open (no root → inactive)
     def git_root(path):  # type: ignore
         return None
@@ -41,9 +46,22 @@ except Exception:  # pragma: no cover - fail-open (no root → inactive)
     def is_home(root):  # type: ignore
         return True
 
+    def is_code_file(path):  # type: ignore
+        return True
+
 # Matches the grep the .sh used: "guardEnabled" : false (tolerant of raw/malformed JSON).
 _DISABLED_RE = re.compile(r'"guardEnabled"\s*:\s*false')
 _GATE_TIMEOUT_S = 16  # > tdd-guard-gate.TDD_TIMEOUT_S, < the dispatch link timeout
+
+
+def _repo_relative(target: str, root: str) -> str:
+    """``/<path inside the repo>`` so skip segments judge the repo layout, not where
+    the checkout lives (a repo under /tmp is still a repo)."""
+    try:
+        rel = os.path.relpath(os.path.abspath(target), root)
+    except ValueError:
+        return target
+    return target if rel.startswith("..") else "/" + rel.replace(os.sep, "/")
 
 
 def main() -> int:
@@ -53,9 +71,12 @@ def main() -> int:
         stdin_data = ""
 
     try:
-        tool = str((json.loads(stdin_data or "{}") or {}).get("tool_name") or "")
+        payload = json.loads(stdin_data or "{}") or {}
+        tool = str(payload.get("tool_name") or "")
+        ti = payload.get("tool_input") if isinstance(payload.get("tool_input"), dict) else {}
+        target = str(ti.get("file_path") or ti.get("path") or "")
     except Exception:
-        tool = ""
+        tool, target = "", ""
     if tool == "TodoWrite":
         return 0
 
@@ -63,6 +84,8 @@ def main() -> int:
     root = git_root(project_dir)
     if root is None or is_home(root):
         return 0  # HOME / not a git repo -> never a tdd project
+    if target and not is_code_file(_repo_relative(target, str(root))):
+        return 0  # docs/config/notes need no test (B1-20): never pay a validator call
     project_dir = str(root)
     cfg = root / ".claude" / "tdd-guard" / "data" / "config.json"
 

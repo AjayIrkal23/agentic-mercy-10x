@@ -17,25 +17,15 @@ metadata:
   token-cost: 1028
   triggers:
     keywords:
-    - api
-    - auth
-    - backend
-    - behavior
-    - contract
-    - controller
-    - integration
-    - layer
-    - persistence
-    - queue
-    - requested
-    - route
-    - schema
-    - server
-    - service
-    - standards
-    - task
-    - validation
-    - worker
+    - service layer
+    - thin controller
+    - controllers thin
+    - business logic
+    - move logic into a service
+    - controller and service
+    - service boundary
+    - transaction
+    - persistence layer
     paths:
     - /models/
     - controller

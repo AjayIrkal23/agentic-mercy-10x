@@ -11,14 +11,15 @@ Global kill-switch (every repo, wins over the per-repo pin):
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "hooks"))
+_HOOKS = Path(__file__).resolve().parent.parent / "hooks"
+sys.path.insert(0, str(_HOOKS))
 try:
     from lib import model_mode as mm
-    from lib import platform as _plat
 except Exception as exc:  # pragma: no cover
     print(f"model-mode: cannot load helper ({exc})", file=sys.stderr)
     raise SystemExit(1)
@@ -42,8 +43,11 @@ def main(argv: list[str]) -> int:
         print(f"[model-mode] {key} pin cleared -> smart routing")
         return 0
     if arg in ("show", "status"):
-        state = _plat.state_dir()
-        flags = [m for m in mm.MODES if (state / f"{m}-only-mode").is_file()]
+        try:  # the guards' flag files: <claude_dir>/<session_flags.dir>/, not state_dir() (P7)
+            policy = json.loads((_HOOKS / "model-policy.json").read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            policy = {}
+        flags = mm.global_flags(policy)
         pin = mm.forced_mode(cwd)
         print(f"repo key            : {key}")
         print(f"this-repo pin       : {pin or '(none)'}")

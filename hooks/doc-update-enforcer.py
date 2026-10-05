@@ -71,7 +71,7 @@ FE_INDICATORS = ["/client/", "/src/", ".tsx", ".ts", ".jsx", ".js"]
 
 def _state_path(cid: str) -> Path:
     safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
-    d = SCRIPT_DIR / ".state"
+    d = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or SCRIPT_DIR / ".state")
     d.mkdir(parents=True, exist_ok=True)
     return d / f"{safe}.doc-enforcer.json"
 

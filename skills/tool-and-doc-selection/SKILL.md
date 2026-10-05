@@ -14,28 +14,13 @@ metadata:
   token-cost: 582
   triggers:
     keywords:
-    - among
-    - choose
-    - consult
-    - deciding
-    - doc
-    - docs
-    - external
-    - files
-    - installed
-    - integrations
-    - local
-    - mcp
-    - right
-    - search
-    - selection
-    - source
-    - task
-    - tool
-    - tools
-    - truth
-    - web
-    - workspace
+    - which docs
+    - which tool
+    - source of truth
+    - where to look
+    - web search
+    - docs lookup
+    - local docs
     paths: []
     intents:
     - docs
@@ -43,7 +28,7 @@ metadata:
 # Tool And Doc Selection
 
 ## Use When
-- You need to decide whether local code, `jcodemunch`, local docs, Deepvue MCP, Context7, or web browsing is the right source.
+- You need to decide whether local code, `jcodemunch`, local docs (`jdocmunch`), Context7, or web browsing is the right source.
 - A task depends on current library or framework docs.
 - You are about to use tools for evidence gathering or verification.
 
@@ -65,17 +50,17 @@ metadata:
 
 ## Combine With
 - Any skill that needs current docs or evidence.
-- External `find-docs`, `deepvue-docs`, and `context7-mcp` for library, framework, SDK, API, and CLI questions.
-- `workflow-overlay-optimizer` when recurring tool or source-selection patterns should become durable personal routing preferences.
-- Web search only after local sources and docs skills are insufficient.
+- The Context7 MCP (`mcp__context7__resolve-library-id` → `query-docs`) for library, framework, SDK, API, and CLI questions.
+- The memory MCP (`mcp__memory__add_observations`) when a recurring tool or source-selection pattern should become a durable preference.
+- Web search only after local sources and docs tools are insufficient.
 
 ## Workflow
-1. Prefer local code, `jcodemunch`, local docs, and repo manifests for repo truth; apply the hybrid `jcodemunch`-first rule from `~/.codex/skill-routing-matrix.md`.
-2. Use external docs skills for library and framework questions.
-3. Use `deepvue-docs` for Deepvue questions and `context7-mcp` for other external docs when `find-docs` routes there.
+1. Prefer local code, `jcodemunch`, local docs, and repo manifests for repo truth; apply the `jcodemunch`-first rule from `~/.claude/rules/00-tool-precedence.md`.
+2. Use Context7 for library and framework questions.
+3. Use `jdocmunch` for indexed doc sets; `Read` a single doc file directly.
 4. Use MCP or web tools only when they add evidence that local sources and `jcodemunch` cannot provide.
 5. Record which source was authoritative when the choice matters.
-6. If the same routing preference keeps repeating across sessions, refresh it through `workflow-overlay-optimizer`.
+6. If the same routing preference keeps repeating across sessions, record it in the memory MCP (`decision::` entity).
 7. Avoid stale tool names or unnecessary tool usage.
 
 ## Output Contract

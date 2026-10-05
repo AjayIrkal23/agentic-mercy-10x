@@ -17,7 +17,6 @@ metadata:
     - frontend-structure-standards
     - frontend-response-handling
     - frontend-server-data-patterns
-    - frontend-api-standards
     - react-hooks-patterns
     - backend-performance-standards
     - mcp-usage-standards
@@ -25,7 +24,7 @@ metadata:
 
 # Debug Mode — Root Cause Analysis Skill (Skill-Aware)
 
-Frontend debugging must load the matching Build Web Apps plugin plus the full Frontend Core Compliance Set before forming hypotheses on UI, React, Vite, browser UX, hooks, or client-data failures. Backend debugging must load the Backend Core Compliance Set before forming hypotheses on API, service, persistence, auth, validation, worker, queue, integration, Fastify, or server failures.
+Frontend debugging must load the Frontend Core Compliance Set before forming hypotheses on UI, React, Vite, browser UX, hooks, or client-data failures. Backend debugging must load the Backend Core Compliance Set before forming hypotheses on API, service, persistence, auth, validation, worker, queue, integration, Fastify, or server failures.
 
 You are acting as a **software debugging specialist and production investigator**.
 

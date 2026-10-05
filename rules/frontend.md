@@ -7,6 +7,11 @@ paths:
 ---
 # Frontend (loads on FE files)
 
+**React Native / Expo files** (an app with `app.json`/`app.config.*` and `react-native` in
+its `package.json`) also match these globs, but the DOM, CSS, Tailwind, `motion/react`
+and Higgsfield-web-asset rules below do not apply there: use `expo-react-native` and the
+app's own `CLAUDE.md`.
+
 **Baseline skills:** `frontend-standards-always-follow` + `frontend-structure-standards`
 first; the rest (`react-hooks-patterns`, `frontend-response-handling`,
 `frontend-server-data-patterns`, `tailwind-design-system`, `ui-styling`,
@@ -29,7 +34,10 @@ otherwise assets come from Higgsfield below.
 
 **Assets — Higgsfield (`mcp__higgsfield__*`) is the default engine.** Placeholders,
 gray boxes, `bg-gradient` stand-ins, stock/unsplash URLs, lorem-image services and
-emoji-as-icon are a hard fail wherever Higgsfield can generate the real thing.
+emoji-as-icon are a hard fail wherever Higgsfield can generate the real thing. When it
+needs its one-time login (the router says so once per session), ask me once, batched with
+any other login, use `mcp__higgsfield__authenticate`, and report the assets as pending
+until then.
 
 | Need | Tool | Default model (higgsfield skills 0.13) |
 |---|---|---|

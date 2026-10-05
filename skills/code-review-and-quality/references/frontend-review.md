@@ -17,9 +17,9 @@ Stick to the checklist below for every applicable file and mode.
 
 ## Checklist
 
-See [references/code-quality.md](references/code-quality.md), [references/performance.md](references/performance.md).
+See [code-quality.md](frontend-code-review/references/code-quality.md), [performance.md](frontend-code-review/references/performance.md).
 
-**Dify-specific rules** (only if the codebase matches Dify patterns — e.g. paths under `web/app/components/workflow/`): see [references/upstream-dify/business-logic.md](references/upstream-dify/business-logic.md).
+**Dify-specific rules** (only if the codebase matches Dify patterns — e.g. paths under `web/app/components/workflow/`): see [upstream-dify/business-logic.md](frontend-code-review/references/upstream-dify/business-logic.md).
 
 Flag each rule violation with urgency metadata so future reviewers can prioritize fixes.
 

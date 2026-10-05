@@ -1,19 +1,26 @@
 ---
 version: 0.13.0
 name: higgsfield-video-explainer
-description: |
-  Build a complete non-photoreal narrated explainer or story video from
-  ordered 10-second blocks: one narrator, one universal style key, one Seed
-  Audio take and one Gemini Omni clip per block, then server-side assembly
-  with explainer_video. Use when: "make an explainer video", "explain this in
-  a video", "turn this topic or document into a narrated video", "tell this
-  story as an animated video", "make a faceless narrated video", or "show me
-  explainer styles". Supports live CMS presets, custom style references,
-  mascot/faceless modes, two aspects, and optional burned subtitles. NOT for:
-  photoreal films, ads/UGC, talking heads, podcasts, motion typography reels,
-  one-off clips without narration, or editing a finished video.
-argument-hint: "[topic or source files] [duration] [language] [aspect ratio]"
+description: 'Narrated non-photoreal explainer or story videos built from ordered 10-second blocks: one
+  narrator, one style key, a Seed Audio take and a clip per block, server-side assembly.'
+argument-hint: '[topic or source files] [duration] [language] [aspect ratio]'
 allowed-tools: Bash
+when_to_use: Make an explainer video, turn a topic or document into a narrated video, or a faceless narrated
+  or animated story video. Not for photoreal films, ads/UGC, talking heads, podcasts or editing a finished
+  video.
+metadata:
+  category: frontend
+  surfaces:
+  - frontend
+  triggers:
+    keywords:
+    - explainer video
+    - narrated video
+    - faceless video
+    - animated story video
+    - explain this in a video
+    intents:
+    - design
 ---
 
 # Higgsfield Video Explainer

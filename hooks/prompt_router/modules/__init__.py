@@ -3,7 +3,8 @@
 ``surface``      FE/BE/API/docs surface detection (prompt paths, vocab, cwd, repo stack)
 ``mcp_routes``   availability-aware MCP pointers from tool-intelligence.json
 ``code_intel``   indexed-symbol lookup (jcodemunch sqlite index)
-``model_advice`` heavy-task /model nudge from model-policy.json
+``model_advice`` heavy-task "dispatch the Opus judge agent" line from model-policy.json
+``asset_auth``   one login line per session when Higgsfield is registered but needs auth
 
 Each returns an empty result on any error; none wraps stdin or keeps state beyond
 the stack-fingerprint cache.

@@ -1,7 +1,7 @@
 ---
 name: kokonutui
-description: On-demand KokonutUI block source — invoke ONLY when the user explicitly says "KokonutUI" / "kokonut" / "kokonut ui". Not a default and never auto-fired for generic component/page/dashboard requests (those stay with shadcn + design-taste-frontend). 100+ animated React/TS components and blocks built on shadcn/ui + Tailwind v4 + Motion, installed via the shadcn CLI registry (`npx shadcn@latest add @kokonutui/<name>`); every pulled block is reconciled to the project's tokens and the motion-dev craft bar before ship. Docs via Context7 `/websites/kokonutui`.
-when_to_use: Only when the user names KokonutUI / kokonut explicitly; never for a generic UI request.
+description: On-demand KokonutUI block source - 100+ animated React/TS blocks on shadcn/ui, Tailwind v4 and Motion, pulled with the shadcn CLI and reconciled to the project's tokens.
+when_to_use: Only when the user names KokonutUI / kokonut explicitly; never for a generic UI request (those stay with shadcn + design-taste-frontend).
 metadata:
   category: frontend
   surfaces: [frontend]

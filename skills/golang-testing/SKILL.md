@@ -18,25 +18,17 @@ metadata:
   origin: ECC
   triggers:
     keywords:
-    - adding
-    - apply
-    - benchmarks
-    - coverage
-    - created
-    - file
-    - files
-    - fuzz
-    - golang
-    - modified
-    - reviewing
-    - service
+    - go test
+    - go tests
+    - golang tests
     - table-driven
-    - targets
-    - test
-    - test.go
-    - testing
-    - tests
-    - writing
+    - table driven tests
+    - t.run
+    - httptest
+    - go benchmark
+    - fuzz test
+    - race detector
+    - _test.go
     paths: []
     intents:
     - testing

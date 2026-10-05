@@ -18,7 +18,7 @@ metadata:
 > `generate_video` / `generate_3d` / `generate_audio`. Any Gemini / Imagen path in this skill's
 > `scripts/` is legacy and must not be run. Use this skill for its *voice, identity, messaging,
 > and consistency reasoning*; hand pixel generation to Higgsfield. See
-> `~/.claude/rules/higgsfield-frontend-mandate.md`.
+> the Assets section of `~/.claude/rules/frontend.md`.
 
 # Brand
 

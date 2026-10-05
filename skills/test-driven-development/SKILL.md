@@ -4,8 +4,10 @@ description: 'Red-green-refactor: write the failing test first, make it pass, th
 when_to_use: Use when implementing logic, fixing a bug, or changing behavior that needs proof it works.
 paths:
 - '**/*_test.go'
-- '**/*.test.{ts,tsx}'
+- '**/*.{test,spec}.{ts,tsx,js,jsx,mjs}'
+- '**/__tests__/**'
 - '**/test_*.py'
+- '**/*_test.py'
 metadata:
   schema: 1
   category: testing
@@ -19,43 +21,22 @@ metadata:
   token-cost: 3620
   triggers:
     keywords:
-    - arrives
-    - asks
-    - behavior
-    - bug
-    - bugs
-    - build
-    - changing
-    - code
-    - development
-    - driven
-    - drives
-    - existing
-    - features
-    - fix
-    - fixing
-    - functionality
-    - implementing
-    - integration
-    - logic
-    - loop
-    - mentions
-    - modify
-    - need
-    - prove
-    - red-green-refactor
-    - report
     - tdd
-    - test
     - test-driven
+    - test driven
     - test-first
-    - tests
-    - user
-    - wants
-    - works
+    - test first
+    - failing test
+    - failing test first
+    - red green refactor
+    - red-green-refactor
+    - write tests
+    - write a test
+    - regression test
+    - add tests
     paths: []
     intents:
-    - testing
+    - TEST
 ---
 # Test-Driven Development
 

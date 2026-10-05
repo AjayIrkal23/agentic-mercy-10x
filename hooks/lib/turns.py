@@ -37,22 +37,32 @@ def to_aware(value) -> Optional[datetime]:
     return dt
 
 
+_NOT_HUMAN_PREFIXES = ("<task-notification>", "[Request interrupted", "<cross-session-message")
+
+
 def _prompt_text(entry: dict) -> Optional[str]:
-    """Text of a real user prompt, or None for tool_result / non-user entries."""
-    if entry.get("type") != "user":
+    """Text of a real (human) user prompt, or None for tool results, meta rows
+    (Stop-hook feedback, skill bodies), task notifications and interrupt markers.
+    A slash command's non-meta ``<command-name>`` row counts as human."""
+    if entry.get("type") != "user" or entry.get("isMeta") or entry.get("isCompactSummary"):
+        return None
+    origin = entry.get("origin")
+    if isinstance(origin, dict) and origin.get("kind") == "task-notification":
         return None
     msg = entry.get("message")
     content = msg.get("content") if isinstance(msg, dict) else None
+    text = None
     if isinstance(content, str):
-        return content if content.strip() else None
-    if isinstance(content, list):
+        text = content if content.strip() else None
+    elif isinstance(content, list):
         if any(isinstance(b, dict) and b.get("type") == "tool_result" for b in content):
             return None
         texts = [b.get("text", "") for b in content
                  if isinstance(b, dict) and b.get("type") == "text"]
-        joined = "\n".join(t for t in texts if t).strip()
-        return joined or None
-    return None
+        text = "\n".join(t for t in texts if t).strip() or None
+    if text and text.lstrip().startswith(_NOT_HUMAN_PREFIXES):
+        return None
+    return text
 
 
 def last_user_turn(transcript_path) -> Tuple[Optional[datetime], Optional[str]]:
@@ -136,5 +146,32 @@ def turn_written_files(transcript_path) -> Optional[list]:
     return files
 
 
+def turn_bash_commands(transcript_path) -> list:
+    """Bash commands run since the last real user prompt, in order ([] when unknown)."""
+    try:
+        with Path(str(transcript_path)).open(encoding="utf-8", errors="replace") as fh:
+            tail = deque(fh, maxlen=TAIL_LINES)
+    except Exception:
+        return []
+    cmds: list = []
+    for line in tail:
+        try:
+            entry = json.loads(line)
+        except Exception:
+            continue
+        if not isinstance(entry, dict):
+            continue
+        if _prompt_text(entry) is not None:
+            cmds = []
+            continue
+        msg = entry.get("message")
+        for b in (msg.get("content") if isinstance(msg, dict) else None) or []:
+            if isinstance(b, dict) and b.get("type") == "tool_use" and b.get("name") == "Bash":
+                cmd = (b.get("input") or {}).get("command") if isinstance(b.get("input"), dict) else None
+                if isinstance(cmd, str) and cmd:
+                    cmds.append(cmd)
+    return cmds
+
+
 __all__ = ["TAIL_LINES", "WRITE_TOOLS", "to_aware", "last_user_turn", "last_user_turn_ts",
-           "turn_key", "turn_written_files"]
+           "turn_key", "turn_written_files", "turn_bash_commands"]

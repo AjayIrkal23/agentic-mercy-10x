@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
 import sys
 from pathlib import Path
 
@@ -37,6 +38,9 @@ def sandbox_home(tmp_path, monkeypatch):
     monkeypatch.setenv("USERPROFILE", str(home))
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(home / ".claude"))
     monkeypatch.setenv("CLAUDE_HOOK_DOCTOR", "1")
+    # audit I-17: never depend on the installed claude CLI / tsc (offline, fresh clone)
+    real_which = shutil.which
+    monkeypatch.setattr(shutil, "which", lambda n, *a, **k: None if n in ("claude", "tsc") else real_which(n, *a, **k))
     return home
 
 

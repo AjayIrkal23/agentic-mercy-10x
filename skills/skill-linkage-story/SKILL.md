@@ -6,6 +6,8 @@ paths:
 - '**/.claude/hooks/**'
 - '**/.claude/agents/**'
 - '**/.claude/skills/**'
+- 'hooks/**/*.py'
+- 'skills/*/SKILL.md'
 metadata:
   schema: 1
   category: general
@@ -21,9 +23,9 @@ metadata:
     - dispatch
     - prompt-router
     - paths
-    - skill
-    - reminder
-    - missing
+    - skill reminder
+    - skill not loading
+    - missing skill
     - linkage
     - onboarding
     - sessionstart
@@ -46,14 +48,14 @@ per Claude Code event) or in native skill/rule frontmatter. Skill names everywhe
 
 | Link | Effect |
 |------|--------|
-| `session-start-aggregator.py` | Injects the always-active core set from `hooks/core-skill-set.json` (body digests for `codebase-intel-first`, `project-reference-linkage`, `caveman`, `mcp-usage-standards`, `verification-loop`; pointers for the rest), MCP roster, plan-gate hint |
+| `session-start-aggregator.py` | Injects the always-active core set from `hooks/core-skill-set.json` (the `caveman` body, capped; one-line pointers for the rest, because only one short body fits the ~4.3k chars left of the 5,500-char budget), MCP roster, plan-gate hint |
 | `memory-load-on-start.py` | Top memory entities for the repo |
 | `skills-index-guard` (`build-skills-index.py --hook`) | Rebuilds `hooks/skills-index.json` when any SKILL.md, the alias map, or the plugin list is newer |
 
 ## 2. UserPromptSubmit — `prompt_router/router.py` (single process)
 
 classify (word-boundary intents) → surface (repo stack fingerprint + prompt paths) →
-rank ≤5 skills from `skills-index.json` (metadata keywords, aliases collapsed, plugin
+rank ≤4 skills (`max_skill_pushes` in `router.config.json`) from `skills-index.json` (metadata keywords, aliases collapsed, plugin
 skills as `plugin:skill`) → ≤1 deep body → MCP routes → agent suggestion → model advice →
 `hookSpecificOutput.additionalContext`.
 

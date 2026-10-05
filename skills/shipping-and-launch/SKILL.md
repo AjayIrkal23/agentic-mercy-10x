@@ -13,23 +13,21 @@ metadata:
   token-cost: 2366
   triggers:
     keywords:
-    - checklist
     - deploy
+    - deploy to production
+    - deploy to prod
+    - production deploy
     - launch
-    - launches
-    - monitoring
-    - need
-    - planning
-    - pre-launch
-    - prepares
-    - preparing
-    - production
-    - rollback
+    - release
+    - go live
     - rollout
-    - setting
-    - shipping
-    - staged
-    - strategy
+    - staged rollout
+    - rollback
+    - roll back
+    - health check
+    - pre-launch checklist
+    - feature flag
+    - monitoring
     paths: []
     intents:
     - general
@@ -246,7 +244,7 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     userId: req.user?.id,
   });
 
-  // Don't expose internals to users
+  // Don't expose internals to users. Shape: the project contract wins (use the repo's own error envelope)
   res.status(500).json({
     error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' },
   });

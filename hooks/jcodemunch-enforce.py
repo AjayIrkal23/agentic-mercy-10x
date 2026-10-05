@@ -47,7 +47,7 @@ CODE_EXTS = {
 
 INDEX_DIR = Path.home() / ".code-index"
 ENFORCE_CONFIG_FILE = Path(__file__).parent / "jcodemunch-enforce.config.json"
-STATE_DIR = Path(__file__).parent / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or Path(__file__).resolve().parent / ".state")
 
 # ---------------------------------------------------------------------------
 # Config helpers
@@ -82,27 +82,58 @@ def _is_strict_mode(cfg: dict) -> bool:
     return bool(cfg.get("strict_mode", True))
 
 
-def _index_building(payload: dict) -> bool:
-    """True if index-lifecycle.py is building the active repo's index right now.
-
-    While a MISSING/STALE index self-heals in the background, the read gate is
-    relaxed so the agent is never bricked waiting on infrastructure (Spec B
-    §3.3). Loaded lazily and only when a block is otherwise imminent, so the
-    common (non-blocking) path pays nothing. Fail-open: any error → not building
-    → the gate behaves normally.
-    """
+def _lifecycle():
+    """index-lifecycle.py loaded as a module (its file name has a dash); None on any
+    error. Loaded lazily, only when a block is otherwise imminent."""
     try:
         import importlib.util
 
         p = Path(__file__).resolve().parent / "index-lifecycle.py"
         if not p.is_file():
-            return False
+            return None
         spec = importlib.util.spec_from_file_location("_index_lifecycle_probe", p)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)
-        return bool(mod.is_building(payload))
+        return mod
+    except Exception:
+        return None
+
+
+def _index_building(payload: dict) -> bool:
+    """True if index-lifecycle.py is building the active repo's index right now.
+
+    While a MISSING/STALE index self-heals in the background, the read gate is
+    relaxed so the agent is never bricked waiting on infrastructure (Spec B
+    §3.3). Fail-open: any error → not building → the gate behaves normally.
+    """
+    try:
+        mod = _lifecycle()
+        return bool(mod and mod.is_building(payload))
     except Exception:
         return False
+
+
+def _start_index_build(payload: dict, root) -> tuple:
+    """Start (or find already running) the lifecycle build of the ACTIVE repo's missing
+    jcodemunch index. ``(handled, note)``: handled=True means never block this read
+    (note is the one line for the model, "" = stay silent); handled=False means the
+    build cannot be started (foreign repo, backed off, tool missing): the budgeted
+    block is all that is left. Never raises."""
+    try:
+        if root is None:
+            return False, ""
+        from lib.repo_context import active_repo
+        ctx = active_repo(payload)
+        if ctx is None or Path(ctx.root).resolve() != Path(root).resolve():
+            return False, ""  # active repo ONLY (index-lifecycle's invariant)
+        mod = _lifecycle()
+        state = (mod.reprobe(str(root)).get("surfaces") or {}).get("jcodemunch") if mod else None
+        if state == "BUILDING":
+            return True, ("jcodemunch index is building in the background; "
+                          "use Read for this file.")
+        return (state == "FRESH"), ""  # lifecycle sees an index: nothing to demand
+    except Exception:
+        return False, ""
 
 
 # ---------------------------------------------------------------------------
@@ -287,7 +318,7 @@ def _save_state(conversation_id: str, state: dict) -> None:
 
 def _fullstack_state_path(conversation_id: str) -> Path:
     safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in conversation_id)
-    return Path(__file__).resolve().parent / ".state" / f"{safe}.fullstack.json"
+    return STATE_DIR / f"{safe}.fullstack.json"
 
 
 def _coding_started(conversation_id: str) -> bool:
@@ -508,6 +539,13 @@ def pre_tool_use() -> int:
         # …unless index-lifecycle is already building it in the background —
         # then allow the read (never brick the agent on self-healing infra).
         if _index_building(payload):
+            return 0
+        # …or start that build now (active repo): the read is allowed on the FIRST
+        # hit, with one line saying so. Nobody is told to run index_folder.
+        handled, note = _start_index_build(payload, _find_git_root(Path(target)))
+        if handled:
+            if note:
+                _emit_additional_context("PreToolUse", note)
             return 0
         # Untrackable context (e.g. a subagent whose payload carries no session
         # id, and which may not even hold a jcodemunch tool to satisfy the block)

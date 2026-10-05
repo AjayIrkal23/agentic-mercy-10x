@@ -115,6 +115,7 @@ Read ONLY when the Agent tool is unavailable. Invoke each act's skills via the S
 ## `refactor` — refactor-specialist → `REFACTOR-REPORT.md`
 
 - `code-simplification`
+- `codebase-design`
 - `dead-code-and-change-audit`
 - `golang-patterns`
 - `tech-debt-audit`

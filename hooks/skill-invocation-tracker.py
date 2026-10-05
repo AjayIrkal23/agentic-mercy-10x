@@ -28,8 +28,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 HOOK_DIR   = Path(__file__).resolve().parent
-STATE_DIR  = HOOK_DIR / ".state"
-TELEMETRY_DIR = HOOK_DIR / ".telemetry"
+STATE_DIR  = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or HOOK_DIR / ".state")
+TELEMETRY_DIR = Path(os.environ.get("CLAUDE_HOOK_TELEMETRY_DIR") or HOOK_DIR / ".telemetry")
 
 
 def _safe_cid(cid: str) -> str:

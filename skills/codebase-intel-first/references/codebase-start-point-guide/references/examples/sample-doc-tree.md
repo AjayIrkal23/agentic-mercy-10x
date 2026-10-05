@@ -1,6 +1,6 @@
 # Example: one possible `frontend_docs/` / `server_docs/` tree
 
-**Illustrative only.** Many repositories use different names (`docs/`, `apps/web/docs/`, etc.). See [`../SKILL.md`](../SKILL.md) for how to adapt.
+**Illustrative only.** Many repositories use different names (`docs/`, `apps/web/docs/`, etc.). See [`codebase-intel-first/SKILL.md`](../../../../SKILL.md) for how to adapt.
 
 This snapshot shows a **numbered handbook** style used by some full-stack codebases:
 

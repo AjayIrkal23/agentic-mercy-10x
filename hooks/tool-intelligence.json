@@ -49,7 +49,7 @@
     },
     {
       "id": "context7-import",
-      "server": ["context7", "plugin:context7"],
+      "server": ["context7"],
       "when": {"regex": "(?:\\bimport\\s+(?:[\\w*{}\\s,]+\\s+from\\s+)?|\\brequire\\()\\s*['\"]((?:@[\\w.-]+/)?[a-z][\\w.-]*)['\"]|\\bfrom\\s+([a-z_]\\w*)(?:\\.[\\w.]+)?\\s+import\\s+\\w|\\bimport\\s+\"((?:github\\.com|golang\\.org|gopkg\\.in)/[\\w./-]+)\""},
       "guard": "not_in_repo_symbol",
       "once_per": "match",
@@ -58,8 +58,8 @@
     },
     {
       "id": "context7",
-      "server": ["context7", "plugin:context7"],
-      "when": {"regex": "(?i)\\b(three\\.?js|r3f|react-three-fiber|@react-three/\\w+|drei|anime\\.?js|motion\\.dev|framer[- ]motion|shadcn|prisma|drizzle|tanstack|react[- ]query|zod|supabase|clickhouse|fastify|nestjs|gin-gonic|gorm|sqlx|playwright|vitest|tailwind v4|next\\.?js 1[3-9]|react 19)\\b|\\b(?:how (?:do|to|can) i|what(?:'s| is) the (?:api|syntax|config)|upgrade to|migrate to|deprecated|breaking change|version \\d|v\\d+\\.\\d+)\\b.*\\b(react|next\\.?js|vue|svelte|tailwind|vite|typescript|express|django|fastapi|go|golang|postgres|redis|kafka|docker|kubernetes|terraform)\\b"},
+      "server": ["context7"],
+      "when": {"regex": "(?im)^(?=.*\\b(?:api|docs?|documentation|syntax|config(?:ure|uration)?|how (?:do|to|can) i|usage|example|version|upgrade|migrat\\w*|deprecat\\w*)\\b).*?\\b(three\\.?js|r3f|react-three-fiber|@react-three/\\w+|drei|anime\\.?js|motion\\.dev|framer[- ]motion|shadcn|prisma|drizzle|tanstack|react[- ]query|zod|supabase|clickhouse|fastify|nestjs|gin-gonic|gorm|sqlx|playwright|vitest|tailwind v4|next\\.?js 1[3-9]|react 19)\\b(?!/)|\\b(?:how (?:do|to|can) i|what(?:'s| is) the (?:api|syntax|config)|upgrade to|migrate to|deprecated|breaking change|version \\d|v\\d+\\.\\d+)\\b.*\\b(react|next\\.?js|vue|svelte|tailwind|vite|typescript|express|django|fastapi|golang|postgres|redis|kafka|docker|kubernetes|terraform)\\b"},
       "guard": "not_in_repo_symbol",
       "once_per": "match",
       "tools": ["resolve-library-id", "query-docs"],
@@ -67,11 +67,15 @@
     },
     {
       "id": "browser",
-      "server": ["reticle", "playwright", "plugin:playwright", "browser-tools-mcp"],
+      "server": ["reticle", "playwright", "browser-tools-mcp"],
       "when": {"intents": ["QA", "VERIFY"], "regex": "\\b(screenshot|looks (?:wrong|off|broken)|visually|in the browser|blank page|white screen|console errors?|network errors?|verify the (?:ui|page|flow)|check (?:that )?it works|does it (?:actually )?work)\\b"},
       "guard": "dev_server_listening",
       "tools": ["reticle_look", "reticle_verify", "browser_navigate", "browser_snapshot"],
-      "text": "Your app is running on :{port} → verify with {server} now (reticle: Skill verify-ui-change / debug-broken-ui; playwright: browser_navigate → browser_snapshot). Never start a server."
+      "text": "Your app is running on :{port} → verify with {server} now. Never start a server.",
+      "text_by_server": {
+        "reticle": "Your app is running on :{port} → verify with reticle now (Skill verify-ui-change / debug-broken-ui). Never start a server.",
+        "playwright": "Your app is running on :{port} → verify with playwright now (browser_navigate → browser_snapshot). Never start a server."
+      }
     },
     {
       "id": "higgsfield",

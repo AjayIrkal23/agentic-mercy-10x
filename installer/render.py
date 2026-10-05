@@ -14,6 +14,11 @@ Tokens:
                     on POSIX so Claude Code expands it; a concrete path on Windows)
     {{LEANCTX}}     lean-ctx binary — supported, but the template must NOT use it:
                     render() refuses any output containing "lean-ctx" (see below).
+    {{MOD_DIRS}}    absolute paths of the enabled mods (manifest.json ``mods.enabled``
+                    present under ``mods/<id>/``), joined by ``os.pathsep``. Claude Code
+                    loads ``env.CLAUDE_CODE_PLUGIN_DIRS`` only from absolute or ``~`` paths,
+                    so the POSIX ``${HOME}`` form of {{CLAUDE_DIR}} cannot be reused.
+                    Empty → the env key is dropped.
 
 The equivalence gate is SEMANTIC (parsed JSON, Claude-managed keys ignored), and a
 write carries the existing Claude-managed keys (theme, tui, voice …) over.
@@ -30,25 +35,27 @@ is worse than an error).
 from __future__ import annotations
 
 import argparse
-import copy
 import json
+import os
+import re
 import sys
 from pathlib import Path
+from tempfile import mkstemp
 
 _ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT / "installer") not in sys.path:
+    sys.path.insert(0, str(_ROOT / "installer"))
+import backups  # noqa: E402
+import settings_diff  # noqa: E402
+import settings_seed  # noqa: E402
+from settings_diff import deep_merge, tokenize  # noqa: E402,F401 (public API of render)
 _LIVE = _ROOT / "settings.json"
 _TEMPLATE = _ROOT / "settings.template.json"
 _USER = _ROOT / "settings.user.json"
 
-# Ordered so the longest/most-specific literal is tokenized first.
-# (live literal, token) — tokenize replaces literal->token; render replaces token->value.
-_TOKEN_MAP = [
-    ("${HOME}/.local/bin/lean-ctx", "{{LEANCTX}}"),
-    ("${HOME}/.claude", "{{CLAUDE_DIR}}"),
-    ("python3 ", "{{PYTHON}} "),
-    ("${HOME}/.local/bin/node", "{{NODE}}"),
-    ("/usr/bin/node", "{{NODE}}"),
-]
+PATHSEP = os.pathsep
+PLUGIN_DIRS_KEY = "CLAUDE_CODE_PLUGIN_DIRS"
+_MOD_ID = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 
 # Default substitution values == the live POSIX literals (equivalence gate).
 _DEFAULT_SUBS = {
@@ -56,6 +63,7 @@ _DEFAULT_SUBS = {
     "{{NODE}}": "${HOME}/.local/bin/node",
     "{{CLAUDE_DIR}}": "${HOME}/.claude",
     "{{LEANCTX}}": "${HOME}/.local/bin/lean-ctx",
+    "{{MOD_DIRS}}": "",
 }
 
 # Keys Claude Code itself writes into settings.json (/config, /theme, voice …).
@@ -65,20 +73,13 @@ CLAUDE_MANAGED_KEYS = frozenset({
     "tui", "voice", "voiceEnabled", "theme", "remoteControlAtStartup",
     "agentPushNotifEnabled", "skipWorkflowUsageWarning", "autoCompactWindow",
     "contextWindow", "effortLevel", "modelSettings", "skipDangerousModePermissionPrompt",
-    "switchModelsOnFlag",
+    "switchModelsOnFlag", "pluginConfigs",
 })
 
 # lean-ctx >= 3.10 re-injects its own hooks / statusLine / permissions.deny into
 # any settings.json that mentions it. The rendered file must never contain it
 # (the dispatch matcher spells the MCP prefix as the regex `mcp__lean.ctx__`).
 FORBIDDEN_SUBSTRING = "lean-ctx"
-
-
-def tokenize(text: str) -> str:
-    """Live settings.json text -> tokenized template text."""
-    for literal, token in _TOKEN_MAP:
-        text = text.replace(literal, token)
-    return text
 
 
 def substitute(text: str, subs: dict[str, str] | None = None) -> str:
@@ -91,14 +92,20 @@ def substitute(text: str, subs: dict[str, str] | None = None) -> str:
     return text
 
 
-def deep_merge(base: dict, overlay: dict) -> dict:
-    """Recursive dict merge; overlay (user) wins. Non-dict values replace."""
-    out = copy.deepcopy(base)
-    for k, v in overlay.items():
-        if k in out and isinstance(out[k], dict) and isinstance(v, dict):
-            out[k] = deep_merge(out[k], v)
-        else:
-            out[k] = copy.deepcopy(v)
+def mod_dirs(root: Path = _ROOT, manifest: Path | None = None) -> list[str]:
+    """Absolute (forward-slash) dirs of the enabled mods that exist under ``root/mods``."""
+    try:
+        data = json.loads(Path(manifest or root / "installer" / "manifest.json").read_text(encoding="utf-8"))
+        enabled = (data.get("mods") or {}).get("enabled") or []
+    except (OSError, ValueError, AttributeError):
+        return []
+    out = []
+    for mod_id in enabled:
+        if not isinstance(mod_id, str) or not _MOD_ID.match(mod_id) or FORBIDDEN_SUBSTRING in mod_id:
+            continue
+        folder = Path(root) / "mods" / mod_id
+        if (folder / ".claude-plugin" / "plugin.json").is_file():
+            out.append(folder.as_posix())
     return out
 
 
@@ -109,11 +116,20 @@ def render(
 ) -> str:
     """Return the fully rendered settings.json TEXT (validated JSON)."""
     tmpl_text = Path(template_path).read_text(encoding="utf-8")
-    rendered = substitute(tmpl_text, subs)
+    # mods come from the manifest next to the TEMPLATE, so a sandbox --template never
+    # pulls the live checkout's mods (audit A-11)
+    mods = PATHSEP.join(mod_dirs(Path(template_path).resolve().parent))
+    rendered = substitute(tmpl_text, {"MOD_DIRS": mods, **(subs or {})})
     data = json.loads(rendered)  # fail loud on a broken template
     if user_path and Path(user_path).exists():
         overlay = json.loads(Path(user_path).read_text(encoding="utf-8"))
+        own_hooks = overlay.pop("hooks", None)  # the user's hooks go AFTER the workbench's, never twice
         data = deep_merge(data, overlay)
+        if isinstance(own_hooks, dict):
+            data["hooks"] = settings_seed.append_hooks(data.get("hooks") or {}, own_hooks)
+    env = data.get("env")
+    if isinstance(env, dict) and env.get(PLUGIN_DIRS_KEY) == "":
+        del env[PLUGIN_DIRS_KEY]
     text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     if FORBIDDEN_SUBSTRING in text:
         raise ValueError(f"rendered settings contain {FORBIDDEN_SUBSTRING!r} — lean-ctx would "
@@ -122,35 +138,30 @@ def render(
 
 
 def carry_managed(text: str, existing: Path) -> str:
-    """Keep Claude-managed keys from an existing settings.json (user /config choices)."""
-    try:
-        old = json.loads(Path(existing).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return text
-    data = json.loads(text)
-    for k in CLAUDE_MANAGED_KEYS & set(old):
-        data[k] = old[k]
-    return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    """Keep Claude-managed keys from an existing settings.json (user /config choices) and
+    what the user added: permission allow/deny/ask rules, plugins enabled through /plugin and
+    extra marketplaces (unioned with the template's; ``settings_diff.carry``)."""
+    return settings_diff.carry(text, existing, CLAUDE_MANAGED_KEYS)
 
 
 def emit_template(live_path: Path = _LIVE, out_path: Path = _TEMPLATE) -> str:
     """(Re)generate the template from the live settings.json by tokenizing it."""
     text = tokenize(Path(live_path).read_text(encoding="utf-8"))
+    data = json.loads(text)
+    env = data.get("env")
+    if isinstance(env, dict) and PLUGIN_DIRS_KEY in env:
+        env[PLUGIN_DIRS_KEY] = "{{MOD_DIRS}}"  # machine paths never enter the template
+        text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     Path(out_path).write_text(text, encoding="utf-8", newline="\n")
     return text
 
 
-def _diff_paths(a, b, path="") -> list[str]:
-    if isinstance(a, dict) and isinstance(b, dict):
-        out: list[str] = []
-        for k in sorted(set(a) | set(b)):
-            out += _diff_paths(a.get(k, "<absent>"), b.get(k, "<absent>"), f"{path}.{k}" if path else k)
-        return out
-    return [] if a == b else [path or "<root>"]
-
-
 def _normalized(data: dict) -> dict:
-    return {k: v for k, v in data.items() if k not in CLAUDE_MANAGED_KEYS}
+    out = settings_diff.normalized(data, CLAUDE_MANAGED_KEYS, PLUGIN_DIRS_KEY, PATHSEP)
+    perms = out.get("permissions")
+    if isinstance(perms, dict) and "allow" in perms:  # granted in Claude Code's dialog: Claude-managed
+        out["permissions"] = {k: v for k, v in perms.items() if k != "allow"}
+    return out
 
 
 def machine_subs() -> dict[str, str] | None:
@@ -177,7 +188,9 @@ def check_equivalence(live_path: Path = _LIVE, template_path: Path = _TEMPLATE,
         rendered = json.loads(render(template_path, user_path, machine_subs()))
     except (OSError, ValueError) as exc:
         return False, f"{type(exc).__name__}: {exc}"
-    diffs = _diff_paths(_normalized(rendered), _normalized(live))
+    want = _normalized(rendered)  # entries the user added (rules, /plugin, marketplaces) are not drift
+    diffs = settings_diff.diff_paths(settings_diff.prune_empty_rules(want), settings_diff.prune_empty_rules(
+        settings_diff.without_additions(_normalized(live), want)))
     if not diffs:
         return True, "render(template) semantically equals live settings.json"
     return False, f"{len(diffs)} differing key path(s): {diffs[:8]}"
@@ -198,24 +211,28 @@ def main(argv: list[str]) -> int:
         print(f"wrote template: {args.template}")
         return 0
 
-    if args.check:
-        ok, msg = check_equivalence(_LIVE, args.template)
+    if args.check:  # --out is the file under test, --user its overlay (audit A-11 / I-15)
+        ok, msg = check_equivalence(args.out, args.template, args.user)
         print(("OK   " if ok else "FAIL ") + msg)
         return 0 if ok else 1
 
     text = render(args.template, args.user, machine_subs())
-    if args.out.exists():
+    old = args.out.read_text(encoding="utf-8") if args.out.exists() else None
+    if old is not None:
         text = carry_managed(text, args.out)
     if args.dry_run:
         sys.stdout.write(text)
         return 0
-    from tempfile import mkstemp
-    import os
-
+    if old is not None and old != text:  # bounded, dated backups (audit A-09 / J-11)
+        backups.backup(args.out)
     fd, tmp = mkstemp(dir=str(args.out.parent), prefix=".settings-", suffix=".swap")
-    with os.fdopen(fd, "w", encoding="utf-8") as fh:
-        fh.write(text)
-    os.replace(tmp, args.out)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+        os.replace(tmp, args.out)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
     print(f"rendered -> {args.out}")
     return 0
 

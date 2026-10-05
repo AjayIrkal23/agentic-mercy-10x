@@ -1,18 +1,21 @@
 #!/usr/bin/env python3
 """first-write-skill-gate.py — PreToolUse hook on Write|Edit|MultiEdit.
 
-Blocks the FIRST code write in a session only when there is NO evidence that the
-baseline skills for the touched surface were loaded. Evidence (any one suffices):
+On the first code write of a surface (frontend / backend / unknown) with NO evidence
+that a baseline skill was loaded, it ALLOWS the write and adds context naming the
+baseline SKILL.md files to Read (absolute paths). It never denies: the old one-shot
+deny cost a turn and the retry passed without loading anything (audit 2026-10-05,
+e2e S1-S4/S6/S8). The Stop-time invoke-suite-gate stays the enforcer. Evidence (any
+one suffices):
   * fullstack-skills-reminder state flags (frontend/backend/fullstack_start_sent), or
   * a baseline skill in `.telemetry/{cid}.skill-invocations.jsonl` (Skill tool or a
     `via: read` record written by the tracker).
 
-One-shot: after one deny the gate marks itself cleared and never fires again in the
-conversation. Code-file classification is `lib.code_files.is_code_file`, so
-scratchpad, /tmp, hooks, docs and config writes are never gated (A14 §3).
+Once per session per surface. Code-file classification is `lib.code_files.is_code_file`,
+so scratchpad, /tmp, hooks, docs and config writes are never touched (A14 §3).
 
 Reads:  {cid}.fullstack.json, .telemetry/{cid}.skill-invocations.jsonl
-Writes: {cid}.fullstack.json (skills_gate_cleared flag ONLY)
+Writes: {cid}.fullstack.json (skills_hint_surfaces list ONLY)
 
 Python 3.8+ stdlib only. Exit 0 always. Exception → stderr, exit 0.
 """
@@ -24,8 +27,9 @@ import sys
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-STATE_DIR = SCRIPT_DIR / ".state"
-TELEMETRY_DIR = SCRIPT_DIR / ".telemetry"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or SCRIPT_DIR / ".state")
+TELEMETRY_DIR = Path(os.environ.get("CLAUDE_HOOK_TELEMETRY_DIR") or SCRIPT_DIR / ".telemetry")
+SKILLS_DIR = SCRIPT_DIR.parent / "skills"
 
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
@@ -34,13 +38,14 @@ try:
 except Exception:  # pragma: no cover - fail-open (nothing is a code file → allow)
     def is_code_file(path):  # type: ignore
         return False
+from lib.platform import locked_update  # noqa: E402
 try:
     from lib.skill_aliases import canonical as _canonical  # noqa: E402  (WP-3 lib)
 except Exception:  # pragma: no cover
     def _canonical(name):  # type: ignore
         return name
 
-# The two canonical baseline skills per surface — named in the deny message.
+# The two canonical baseline skills per surface — named in the hint.
 BASELINE = {
     "frontend": ["frontend-standards-always-follow", "project-reference-linkage"],
     "backend": ["backend-standards-always-follow", "project-reference-linkage"],
@@ -90,13 +95,14 @@ def _load_fullstack_state(cid: str) -> dict:
     return {}
 
 
-def _set_gate_cleared(cid: str, state: dict) -> None:
-    state["skills_gate_cleared"] = True
-    try:
-        STATE_DIR.mkdir(parents=True, exist_ok=True)
-        _fullstack_state_path(cid).write_text(json.dumps(state, indent=2), encoding="utf-8")
-    except OSError as exc:
-        print(f"[first-write-skill-gate] Could not write state: {exc}", file=sys.stderr)
+def _mark_hinted(cid: str, state: dict, surface: str) -> None:
+    """fullstack-skills-reminder writes the same file: locked RMW of the one key
+    this hook owns (audit J-01)."""
+    def add(fresh: dict) -> dict:
+        fresh["skills_hint_surfaces"] = sorted(
+            set(fresh.get("skills_hint_surfaces") or []) | {surface})
+        return fresh
+    state.update(locked_update(_fullstack_state_path(cid), add))
 
 
 def _baseline_skill_loaded(cid: str) -> bool:
@@ -123,7 +129,6 @@ def _evidence(cid: str, state: dict) -> bool:
         state.get("frontend_start_sent")
         or state.get("backend_start_sent")
         or state.get("fullstack_start_sent")
-        or state.get("skills_gate_cleared")  # gate already fired once
         or _baseline_skill_loaded(cid)
     )
 
@@ -133,24 +138,25 @@ def _evidence(cid: str, state: dict) -> bool:
 # ---------------------------------------------------------------------------
 
 def _skill_path(name: str) -> str:
-    p = Path.home() / ".claude" / "skills" / name / "SKILL.md"
-    return str(p) if p.exists() else name
+    """Absolute SKILL.md path (the file the model should Read)."""
+    return str(SKILLS_DIR / name / "SKILL.md")
 
 
-def _emit_deny(file_path: str, surface: str) -> None:
+def _emit_hint(file_path: str, surface: str) -> None:
+    """Allow the write and name the skills to read. A deny here only cost a turn: the
+    retry passed without any skill loaded (e2e S2-S4), so the Stop-time suite gate
+    stays the enforcer and this link only points the way."""
     skills = BASELINE[surface]
     label = surface if surface != "unknown" else "this"
-    skill_lines = "\n".join(f"  - Invoke `/{s}` or read {_skill_path(s)}" for s in skills)
-    reason = (
-        f"SKILL GATE: First code write to `{os.path.basename(file_path)}` blocked — "
-        f"no baseline {label} skill has been loaded this session.\n\n"
-        f"Invoke these skills BEFORE writing code:\n{skill_lines}\n\n"
-        f"Your next write will proceed (this gate fires at most once per conversation)."
+    lines = "\n".join(f"  - Read {_skill_path(s)}" for s in skills)
+    msg = (
+        f"SKILL CHECK: first {label} code write (`{os.path.basename(file_path)}`) with no "
+        f"baseline skill loaded this session. Before your next code write:\n{lines}\n"
+        f"The Stop-time suite gate checks that these were read."
     )
     print(json.dumps({"hookSpecificOutput": {
         "hookEventName": "PreToolUse",
-        "permissionDecision": "deny",
-        "permissionDecisionReason": reason,
+        "additionalContext": msg,
     }}))
 
 
@@ -187,13 +193,15 @@ def main() -> int:
             return 0
 
         state = _load_fullstack_state(cid)
-        if _evidence(cid, state):
+        surface = _infer_surface(file_path)
+        hinted = state.get("skills_hint_surfaces") or []
+        if surface in hinted or _evidence(cid, state):
             print("{}")
             return 0
 
-        # No evidence — deny once and mark cleared so the retry passes.
-        _set_gate_cleared(cid, state)
-        _emit_deny(file_path, _infer_surface(file_path))
+        # No evidence — allow, name the skills once per session per surface.
+        _mark_hinted(cid, state, surface)
+        _emit_hint(file_path, surface)
         return 0
 
     except Exception as exc:  # noqa: BLE001

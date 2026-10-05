@@ -18,26 +18,20 @@ metadata:
   origin: ECC
   triggers:
     keywords:
-    - backend
-    - cli
-    - code
-    - concurrency
-    - design
-    - enforce
-    - error
-    - file
     - golang
-    - idiomatic
-    - interface
-    - patterns
-    - refactoring
-    - required
-    - reviewing
-    - safety
-    - service
-    - tool
-    - wrapping
-    - writing
+    - go cli
+    - go program
+    - go code
+    - go service
+    - go module
+    - go package
+    - goroutine
+    - goroutines
+    - channels
+    - idiomatic go
+    - error wrapping
+    - context.context
+    - concurrency
     paths: []
     intents:
     - general

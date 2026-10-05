@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import time
@@ -143,7 +144,6 @@ def test_session_start_compact_reinjects_handoff(tmp_path, monkeypatch):
     sl = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(sl)
     monkeypatch.setattr(sl, "STATE_DIR", tmp_path)
-    monkeypatch.setattr(sl, "BREADCRUMB", tmp_path / "none.json")
     (tmp_path / "sess-9.precompact-handoff.json").write_text(json.dumps(
         {"conversation_id": "sess-9", "write_count": 7}), encoding="utf-8")
 
@@ -161,12 +161,89 @@ def test_session_start_compact_reinjects_handoff(tmp_path, monkeypatch):
     assert "PRE-COMPACT" not in run("startup")
 
 
+def test_the_prompt_delivers_queued_stop_gate_notes(tmp_path):
+    """CLAUDE.md §11: Stop gates queue model-only notes; the next prompt delivers them before
+    any tool runs (they used to wait for the next tool call)."""
+    mod = _load()
+    sid = f"t-q-{os.getpid()}"
+    assert mod._sup.enqueue(sid, "invoke-suite-gate", "Pushed skills not loaded last turn (advisory): update-docs.")
+    out = mod.dispatch("user-prompt-submit", {"session_id": sid, "prompt": "next"}, {"chains": {"user-prompt-submit": []}})
+    ctx = json.dumps(out)
+    assert "update-docs" in ctx
+    assert mod._sup.drain(sid) == []  # delivered once
+
+
 def test_stop_passes_system_message(tmp_path):
     mod = _load()
     gate = tmp_path / "gate.py"
     gate.write_text("print('{\"systemMessage\": \"heads up\"}')\n", encoding="utf-8")
     cfg = {"chains": {"stop": [{"id": "g", "type": "gate", "cmd": [sys.executable, str(gate)]}]}}
     assert mod.dispatch("stop", {}, cfg) == {"systemMessage": "heads up"}
+
+
+def _echo_links(tmp_path) -> dict:
+    """Two advisory links that each print their own id as context."""
+    links = []
+    for lid in ("a", "b"):
+        script = tmp_path / f"{lid}.py"
+        script.write_text(f"print('{{\"additionalContext\": \"from-{lid}\"}}')\n", encoding="utf-8")
+        links.append({"id": lid, "type": "advisory", "tools": "Edit", "cmd": [sys.executable, str(script)]})
+    return {"chains": {"post-tool-use": links}}
+
+
+def _contexts(out: dict) -> str:
+    return (out.get("hookSpecificOutput") or {}).get("additionalContext", "")
+
+
+def _own(monkeypatch, ids: str, session: str = "s1", age_s: float = 0.0):
+    monkeypatch.setenv("MERCY_MOD_OWNED", ids)
+    monkeypatch.setenv("MERCY_MOD_SESSION", session)
+    monkeypatch.setenv("MERCY_MOD_BEAT", str(int((time.time() - age_s) * 1000)))
+
+
+def test_mod_owned_links_skipped_only_for_the_owning_session(tmp_path, monkeypatch):
+    """mods/mercy bridge: owned links are the mod's to run, for its own session only."""
+    mod = _load()
+    cfg = _echo_links(tmp_path)
+    _own(monkeypatch, "a")
+    mine = _contexts(mod.dispatch("post-tool-use", {"session_id": "s1", "tool_name": "Edit"}, cfg))
+    assert "from-b" in mine and "from-a" not in mine
+    other = _contexts(mod.dispatch("post-tool-use", {"session_id": "s2", "tool_name": "Edit"}, cfg))
+    assert "from-a" in other and "from-b" in other
+    monkeypatch.delenv("MERCY_MOD_SESSION")
+    unowned = _contexts(mod.dispatch("post-tool-use", {"session_id": "s1", "tool_name": "Edit"}, cfg))
+    assert "from-a" in unowned
+
+
+def test_a_stale_mod_heartbeat_hands_every_link_back(tmp_path, monkeypatch):
+    """A mod unloaded mid-session leaves its env behind; the aged beat voids ownership."""
+    mod = _load()
+    cfg = _echo_links(tmp_path)
+    _own(monkeypatch, "a", age_s=600)
+    out = _contexts(mod.dispatch("post-tool-use", {"session_id": "s1", "tool_name": "Edit"}, cfg))
+    assert "from-a" in out and "from-b" in out
+
+
+def test_only_runs_the_listed_links_and_ignores_ownership(tmp_path, monkeypatch):
+    mod = _load()
+    cfg = _echo_links(tmp_path)
+    _own(monkeypatch, "a,b")
+    out = _contexts(mod.dispatch("post-tool-use", {"session_id": "s1", "tool_name": "Edit"}, cfg, frozenset({"a"})))
+    assert "from-a" in out and "from-b" not in out
+
+
+def test_only_flag_and_ownership_through_the_cli():
+    """The real config + CLI path the mod uses: `dispatch.py <event> --only <ids>`."""
+    import os
+    payload = _fixture("post-tool-use-failure.json")
+    env = {**os.environ, "CLAUDE_HOOK_DOCTOR": "1", "MERCY_MOD_OWNED": "tool-failure-hint",
+           "MERCY_MOD_SESSION": payload["session_id"], "MERCY_MOD_BEAT": str(int(time.time() * 1000))}
+    owned = subprocess.run([sys.executable, str(DISPATCH), "post-tool-use-failure"], input=json.dumps(payload),
+                           capture_output=True, text=True, timeout=60, env=env)
+    assert json.loads(owned.stdout) == {}
+    only = subprocess.run([sys.executable, str(DISPATCH), "post-tool-use-failure", "--only", "tool-failure-hint"],
+                          input=json.dumps(payload), capture_output=True, text=True, timeout=60, env=env)
+    assert "Read the exact file" in json.loads(only.stdout)["hookSpecificOutput"]["additionalContext"]
 
 
 def _run_cp1252(event: str, payload: dict) -> subprocess.CompletedProcess:

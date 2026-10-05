@@ -3,17 +3,89 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Callable, Iterable
 
 RowWriter = Callable[[list, str, str, str], None]
+_HOME_LITERAL = re.compile(r"/home/(?!\.\.\.)[A-Za-z0-9._-]+/|/Users/[A-Za-z0-9._-]+/|\\\\Users\\\\")
 
 
-def check_palette(rows: list, root: Path, row: RowWriter, passed: str) -> None:
-    """Report live palette counts (computed from disk; never a pinned snapshot)."""
+def interpreters_status(root: Path) -> tuple[str, str]:
+    tmpl = root / "settings.template.json"
+    if not tmpl.exists():
+        return "FAIL", "settings.template.json missing"
+    text = tmpl.read_text(encoding="utf-8")
+    bad = [lit for lit in ("python3 ${HOME}", "/usr/bin/node", "/usr/bin/python", "bash ", ".sh") if lit in text]
+    for f in (tmpl, root / "installer" / "manifest.json"):
+        if _HOME_LITERAL.search(f.read_text(encoding="utf-8")):
+            bad.append(f"home-literal in {f.name}")
+    have_tokens = all(t in text for t in ("{{PYTHON}}", "{{CLAUDE_DIR}}"))
+    # audit I-11: a tokenized template could still point at a renamed/deleted script
+    for rel in sorted(set(re.findall(r"\{\{CLAUDE_DIR\}\}/([\w./-]+\.py)", text))):
+        if not (root / rel).is_file():
+            bad.append(f"missing script {rel}")
+    if bad or not have_tokens:
+        return "FAIL", f"bare literals={bad} tokens={'ok' if have_tokens else 'MISSING'}"
+    return "PASS", "template fully tokenized; no home literals"
+
+
+def settings_safety_status(root: Path) -> tuple[str, str]:
+    bad = []
+    for name in ("settings.template.json", "settings.json"):
+        p = root / name
+        if not p.exists():
+            continue
+        text = p.read_text(encoding="utf-8")
+        if "lean-ctx" in text:
+            bad.append(f'{name} contains "lean-ctx" ({text.count("lean-ctx")}x)')
+        try:
+            deny = (json.loads(text).get("permissions") or {}).get("deny", [])
+        except ValueError:
+            deny = ["<unparseable>"]
+        # the template owns an empty deny list; live deny rules are the user's own (carried
+        # by the re-render), lean-ctx's injected ones are caught by the substring check above
+        if deny and (name == "settings.template.json" or deny == ["<unparseable>"]):
+            bad.append(f"{name} permissions.deny={deny}")
+    return ("FAIL", "; ".join(bad)) if bad else ("PASS", '0 "lean-ctx" substrings; permissions.deny []')
+
+
+def aliases_status(root: Path) -> tuple[str, str]:
+    ap = root / "hooks" / "skill-aliases.json"
+    if not ap.exists():
+        return "WARN", "skill-aliases.json absent"
+    data = json.loads(ap.read_text(encoding="utf-8"))
+    entries = {k: v for k, v in data.items() if not k.startswith("_")}
+    missing = []
+    for alias, target in entries.items():
+        canon = target if isinstance(target, str) else (target.get("canonical") if isinstance(target, dict) else None)
+        if canon and ":" not in canon and not (root / "skills" / canon / "SKILL.md").exists():
+            missing.append(f"{alias}->{canon}")
+    if missing:
+        return "FAIL", f"{len(missing)} aliases point at a missing canonical: {missing[:5]}"
+    return "PASS", f"{len(entries)} aliases resolve"
+
+
+def check_palette(rows: list, root: Path, row: RowWriter, passed: str, failed: str) -> None:
+    """Report live palette counts (computed from disk; never a pinned snapshot).
+    FAIL on an empty catalog (audit I-11: the row could not fail before)."""
     skill_count = len(list((root / "skills").glob("*/SKILL.md")))
     agent_count = len([p for p in (root / "agents").glob("*.md") if p.name not in ("CLAUDE.md", "AGENTS.md", "README.md")])
-    row(rows, "palette-skills", passed, f"{skill_count} SKILL.md, {agent_count} agents (derived from disk)")
+    status = passed if skill_count and agent_count else failed
+    row(rows, "palette-skills", status, f"{skill_count} SKILL.md, {agent_count} agents (derived from disk)")
+
+
+def generated_status(results: list) -> tuple[str, str]:
+    """[(script name, CompletedProcess)] of the generators' --check runs. Non-zero ->
+    FAIL; exit 0 but `drift:` lines on stdout -> WARN (gen-agent-skill-blocks exits 0
+    on drift it cannot fix itself)."""
+    failed = [name for name, cp in results if cp.returncode != 0]
+    if failed:
+        return "FAIL", f"drift: {failed} (re-run the generator)"
+    drift = [ln for _, cp in results for ln in (cp.stdout or "").splitlines() if ln.startswith("drift:")]
+    if drift:
+        return "WARN", f"{len(drift)} drift line(s), e.g. {drift[0][:120]}"
+    return "PASS", "invoke skills + agent skill blocks in sync"
 
 
 def _approved_locked_source(link: Path) -> bool:
@@ -104,6 +176,19 @@ def check_model_routing(
         row(rows, "workflow-args", failed, f"{type(exc).__name__}: {exc}")
 
 
+def _fixture_ok(data) -> bool:
+    """A hook-event fixture names its event and session; a tool event also carries
+    tool_name + a tool_input object (audit I-11: any dict with one key used to pass)."""
+    if not isinstance(data, dict) or not data.get("session_id"):
+        return False
+    event = data.get("hook_event_name") or data.get("event") or ""
+    if not event:
+        return False
+    if "ToolUse" in str(event) or event in ("pre-tool-use", "post-tool-use"):
+        return bool(data.get("tool_name")) and isinstance(data.get("tool_input"), dict)
+    return True
+
+
 def check_fixtures(rows: list, root: Path, row: RowWriter,
                    passed: str, failed: str, warned: str) -> None:
     fixture_dir = root / "tests" / "fixtures" / "hook-events"
@@ -115,8 +200,7 @@ def check_fixtures(rows: list, root: Path, row: RowWriter,
     for fixture in fixtures:
         try:
             data = json.loads(fixture.read_text(encoding="utf-8"))
-            keys = ("hook_event_name", "event", "tool_name", "prompt", "source")
-            if not isinstance(data, dict) or not any(key in data for key in keys):
+            if not _fixture_ok(data):
                 bad.append(fixture.name)
         except ValueError:
             bad.append(fixture.name)

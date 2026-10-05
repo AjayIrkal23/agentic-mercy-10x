@@ -14,35 +14,16 @@ metadata:
   token-cost: 2574
   triggers:
     keywords:
-    - agent
-    - arbitrary
-    - auto-compaction
+    - context engineering
+    - context window
     - compaction
-    - configure
-    - context
-    - degrades
-    - engineering
-    - files
-    - intervals
-    - logical
-    - manual
-    - need
-    - optimizes
-    - output
-    - phases
-    - preserve
-    - project
-    - quality
-    - rather
-    - rules
-    - session
-    - setup
-    - starting
-    - suggests
-    - switching
-    - task
-    - tasks
-    - through
+    - auto-compaction
+    - compact the context
+    - context rot
+    - rules files
+    - claude.md setup
+    - output quality degrades
+    - switching tasks
     paths: []
     intents:
     - general

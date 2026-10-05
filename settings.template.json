@@ -1,11 +1,12 @@
 {
   "agentPushNotifEnabled": true,
   "autoCompactWindow": 900000,
+  "cleanupPeriodDays": 30,
   "contextWindow": 1000000,
   "effortLevel": "xhigh",
   "enabledPlugins": {
     "andrej-karpathy-skills@karpathy-skills": true,
-    "claude-session-driver@superpowers-marketplace": true,
+    "claude-session-driver@superpowers-marketplace": false,
     "elements-of-style@superpowers-marketplace": true,
     "firecrawl@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,
@@ -19,31 +20,33 @@
   },
   "env": {
     "CLAUDE_CODE_SUBAGENT_MODEL": "sonnet",
+    "CLAUDE_CODE_PLUGIN_DIRS": "{{MOD_DIRS}}",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "2",
     "MCP_TIMEOUT": "30000",
     "RETICLE_TELEMETRY": "0",
     "VALIDATION_CLIENT": "sdk",
     "TDD_GUARD_MODEL_VERSION": "claude-sonnet-5-5",
+    "EIO_BACKEND": "posix",
     "PONYTAIL_SUBAGENT_MATCHER": "^(implementation-engineer|backend-implementor-specialist|frontend-implementor-specialist|frontend-uiux-designer|integrator-specialist|refactor-specialist|test-author|deadcode-reaper|docs-sync-agent)$"
   },
   "extraKnownMarketplaces": {
     "karpathy-skills": {
-      "autoUpdate": true,
+      "autoUpdate": false,
       "source": {
         "repo": "forrestchang/andrej-karpathy-skills",
         "source": "github"
       }
     },
     "nateherk": {
-      "autoUpdate": true,
+      "autoUpdate": false,
       "source": {
         "repo": "nateherkai/scroll-craft",
         "source": "github"
       }
     },
     "ponytail": {
-      "autoUpdate": true,
+      "autoUpdate": false,
       "source": {
         "repo": "DietrichGebert/ponytail",
         "source": "github"
@@ -59,15 +62,15 @@
   },
   "hooks": {
     "PreToolUse": [
-      {"matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|Read|Grep|Glob|Agent|Task|Workflow|Skill|mcp__lean.ctx__.*|mcp__jcodemunch__.*",
+      {"matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|Read|Grep|Glob|Agent|Task|Workflow|mcp__lean.ctx__(ctx_read|ctx_search|ctx_patch|ctx_shell|shell|ctx_call)|mcp__claude_ai_.*|mcp__plugin_.*",
        "hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py pre-tool-use", "timeout": 30, "statusMessage": "dispatch: gates"}]}
     ],
     "PostToolUse": [
-      {"matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|Read|Agent|Task|Skill|mcp__jcodemunch__.*|mcp__semgrep__.*",
+      {"matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|Read|Agent|Task|Skill|mcp__jcodemunch__.*|mcp__semgrep__.*|mcp__lean.ctx__(ctx_patch|ctx_shell|shell|ctx_call)",
        "hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py post-tool-use", "timeout": 25}]}
     ],
     "PostToolUseFailure": [
-      {"matcher": "Edit|Write|Bash",
+      {"matcher": "Edit|Write|Bash|mcp__lean.ctx__(ctx_patch|ctx_shell|shell)",
        "hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py post-tool-use-failure", "timeout": 5}]}
     ],
     "UserPromptSubmit": [
@@ -109,5 +112,6 @@
   "remoteControlAtStartup": true,
   "skillListingBudgetFraction": 0.3,
   "skipDangerousModePermissionPrompt": true,
+  "statusLine": {"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/scripts/statusline.py", "padding": 0, "refreshInterval": 10},
   "theme": "dark"
 }

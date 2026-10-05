@@ -17,29 +17,15 @@ metadata:
   token-cost: 1908
   triggers:
     keywords:
-    - backend
-    - crud
-    - domain
-    - entry
-    - feature
-    - file
-    - frontend
-    - full-stack
-    - implementation
-    - list
-    - minimum
-    - plan
-    - planning
-    - points
-    - route/controller/service/schema
     - scaffold
     - scaffolding
     - skeleton
-    - skeletons
-    - standard
-    - standards
-    - structure
-    - tree
+    - new module
+    - new domain
+    - feature skeleton
+    - crud module
+    - boilerplate
+    - full-stack feature
     paths:
     - /router/
     - /routes/

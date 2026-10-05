@@ -9,14 +9,17 @@ Pipeline:
   S1  ONE classification pass -> TaskProfile (classify.py: word-boundary keyword
       matching over the trigger floor + FE/BE/API/docs surfaces from prompt paths,
       prompt vocabulary, cwd and the repo stack fingerprint — modules/surface.py).
-  S2  ranked skill selection (select.py): <= 5 skills above the score floor,
-      aliases collapsed, plugin skills included, core-skill-set never re-pushed;
-      rank 1 = MUST-READ, ranks 2-5 = SHOULD-READ; at most ONE deep-injected body.
+  S2  ranked skill selection (select.py): <= max_skill_pushes (4) skills above the
+      score floor, aliases collapsed, plugin skills included, core-skill-set never
+      re-pushed; rank 1 = MUST-READ, the rest SHOULD-READ; at most ONE deep-injected
+      body. Rank 1 is recorded enforce "hard" only when confident (policy.py, C-05).
+      Chat, questions and one-line renames get no gates/substrate/symbols (C-10).
   S3  substrate precedence (jcodemunch for code, jdocmunch for docs, graphify for
       architecture) + indexed symbols for the prompt (modules/code_intel.py).
   S4  routing: UI signal, availability-aware MCP routes (modules/mcp_routes.py),
-      /invoke act or specialist dispatch (IMPLEMENT surface-routed), per-project
-      model-mode phrase, heavy-task model advice (modules/model_advice.py).
+      specialist dispatch via the Agent tool (IMPLEMENT surface-routed), per-project
+      model-mode phrase, one login line for a waiting asset server
+      (modules/asset_auth.py), heavy-task Opus-agent advice (modules/model_advice.py).
   S5  session-manifest dedup (never suppresses a first fire) -> tier-ordered emit
       as {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",
       "additionalContext": "<!-- prompt-router v3 -->\\n..."}}.
@@ -31,6 +34,7 @@ import json
 import os
 import re
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -47,6 +51,7 @@ if str(_HOOKS) not in sys.path:
 from prompt_router import budget as _budget       # noqa: E402
 from prompt_router import classify as _classify   # noqa: E402
 from prompt_router import manifest as _manifest    # noqa: E402
+from prompt_router import policy as _policy        # noqa: E402
 from prompt_router import select as _select        # noqa: E402
 
 try:
@@ -124,6 +129,8 @@ def _code_intent(profile) -> bool:
 # --------------------------------------------------------------------------- #
 def _gate_items(profile, ctx: dict) -> list[dict]:
     items: list[dict] = []
+    if not (_policy.dev_signal(profile) and _policy.write_gates(profile)):
+        return items  # chat, questions, one-line renames (audit C-10)
     in_repo = ctx.get("repo") is not None
     if profile.first_write_candidate or profile.paths:
         items.append({
@@ -153,20 +160,15 @@ _JCM_BY_INTENT = (
     ("CLEANUP", "get_blast_radius / check_delete_safe before each removal"),
     ("TEST", "get_symbol_source + get_untested_symbols for the code under test"),
 )
-# "how is X wired" / dependency questions the floor's arch keywords can miss.
-_ARCH_RX = re.compile(
-    r"\b(how (?:is|are|does|do) [\w./-]+(?: [\w./-]+){0,3} (?:wired|connected|hooked up|fit together)"
-    r"|who (?:depends on|imports|calls)|what (?:depends on|calls|imports)|depend(?:s|encies) (?:of|on)"
-    r"|call graph|data flow|architecture)\b")
-# Floor explore keywords too generic to mean "architecture question" ("search component").
-_WEAK_ARCH = frozenset({"search", "find", "look", "look for", "explore", "where is", "locate"})
+_ARCH_RX = _policy.ARCH_RX
 
 
-def _mcp_ok(server: str) -> bool:
-    """Availability check shared with mcp_routes (fail-open to True on import error)."""
+def _mcp_ok(server: str, root=None) -> bool:
+    """Availability check shared with mcp_routes (fail-open to True on import error).
+    With ``root``, project-scope servers count and /mcp-disabled ones do not (G-03)."""
     try:
         from prompt_router.modules import mcp_routes as _mcp  # noqa: PLC0415
-        return _mcp.server_available([server]) is not None
+        return _mcp.server_available([server], root) is not None
     except Exception:  # noqa: BLE001
         return True
 
@@ -175,36 +177,37 @@ def _substrate_items(profile, ctx: dict) -> list[dict]:
     """Availability-aware "call X now" lines for the code/doc/graph substrate."""
     items: list[dict] = []
     repo = ctx.get("repo")
-    if (_code_intent(profile) or profile.surfaces & {"frontend", "backend"}) and _mcp_ok("jcodemunch"):
+    root = [getattr(repo, "root", None), (ctx.get("payload") or {}).get("cwd")]  # git root + launch folder
+    if (_policy.dev_signal(profile) and (_code_intent(profile) or profile.surfaces & {"frontend", "backend"})
+            and _mcp_ok("jcodemunch", root)):
         intent, tools = next(((i, t) for i, t in _JCM_BY_INTENT if i in profile.intents),
                              ("CODE", "search_symbols / get_symbol_source (or get_context_bundle)"))
         items.append({
             "id": f"substrate:jcodemunch:{intent}", "tier": 1, "section": "SUBSTRATE",
             "text": f"Code work → call jcodemunch {tools} now — before any Read/Grep of source.",
         })
-    if ("docs" in profile.surfaces or any(k in profile.text for k in _DOC_KEYWORDS)) and _mcp_ok("jdocmunch"):
+    if ("docs" in profile.surfaces or any(k in profile.text for k in _DOC_KEYWORDS)) and _mcp_ok("jdocmunch", root):
         if _doc_index_exists(repo):
             txt = "Docs work → call jdocmunch search_sections / get_toc now, then get_section (not whole-file reads)."
         else:
             txt = ("Docs work → jdocmunch search_sections / get_toc when indexed; this repo is not "
                    "doc-indexed yet (index-lifecycle builds it on writes) — `Read` meanwhile.")
         items.append({"id": "substrate:jdocmunch", "tier": 1, "section": "SUBSTRATE", "text": txt})
-    strong_arch = any(h not in _WEAK_ARCH for h in (profile.arch_hit or []))
-    if (strong_arch or _ARCH_RX.search(profile.text or "")) and _mcp_ok("graphify"):
+    if (_policy.strong_arch(profile) or _ARCH_RX.search(profile.text or "")) and _mcp_ok("graphify", root):
         if _graph_exists(repo):
             txt = ("Architecture/dependency question → call graphify query_graph / god_nodes / "
                    "get_neighbors / shortest_path now, instead of grep or Explore.")
         else:
-            root = repo.root if repo is not None else "<repo-root>"
-            txt = (f"Architecture/dependency question → no graphify graph yet: `graphify update {root}`, "
-                   "then query_graph / god_nodes; meanwhile jcodemunch get_dependency_graph.")
+            txt = ("Architecture/dependency question → no graphify graph yet: graph is building in the "
+                   "background; use jcodemunch get_dependency_graph now, graphify query_graph / "
+                   "god_nodes once it lands.")
         items.append({"id": "substrate:graphify", "tier": 1, "section": "SUBSTRATE", "text": txt})
     return items
 
 
 def _intel_items(profile, ctx: dict) -> list[dict]:
     """Indexed symbols for the prompt — only for code-shaped prompts in a repo."""
-    if ctx.get("repo") is None:
+    if ctx.get("repo") is None or not _policy.code_shaped(profile):
         return []
     top = max(profile.intents.values()) if profile.intents else 0
     if not (profile.surfaces & {"frontend", "backend"}) and top < 3:
@@ -230,24 +233,18 @@ def _skill_items(profile, ctx: dict) -> list[dict]:
     items: list[dict] = []
     for i, (name, score) in enumerate(ranked):
         label = "MUST-READ" if i == 0 else "SHOULD-READ"
-        desc = " ".join(((meta.get(name) or {}).get("description") or "").split())
-        if len(desc) > 120:
-            desc = desc[:117].rstrip() + "..."
-        tail = f" — {desc}" if desc else ""
-        # A `paths:`-scoped skill is not in the Skill tool until a matching file is read
-        # ("Unknown skill"); a Read of its SKILL.md always works and counts as loaded.
-        # The Read tool needs an absolute path, so name the real file.
+        # The Skill tool already lists every description (C-11). A `paths:`-scoped
+        # skill is "Unknown skill" until a matching file is read, so its line names the
+        # absolute SKILL.md to Read instead (a Read counts as loaded).
+        read = None
         if (meta.get(name) or {}).get("paths"):
             path = _select.skill_path(name)
-            path = Path(path).as_posix() if path else f"~/.claude/skills/{name}/SKILL.md"
-            action = f"Read {path} before the related work."
-        else:
-            action = f"Skill(\"{name}\") before the related work."
+            read = Path(path).as_posix() if path else f"~/.claude/skills/{name}/SKILL.md"
         items.append({
             "id": f"skill:{name}:{top_intent}:{surf_salt}", "tier": 2, "section": "SKILLS",
-            "text": f"- **{name}** ({label}){tail}\n  ACTION: {action}",
-            "score": round(score, 2),
+            "text": _policy.skill_line(name, label, read), "score": round(score, 2),
         })
+    ctx["_enforce"] = _policy.enforce_level(ranked, profile, meta, cfg.get("enforce_hard"))
 
     # deep injection: ONE body, rank 1 only, clearly ahead of rank 2, confident intent
     deep: list[str] = []
@@ -267,28 +264,38 @@ def _skill_items(profile, ctx: dict) -> list[dict]:
 
 def _routing_items(profile, ctx: dict) -> list[dict]:
     cfg = ctx.get("config", {})
-    items: list[dict] = []
+    items: list[dict] = _model_mode_items(profile, ctx)  # first: never cut by the routing cap
     if profile.is_ui:
-        items.append({
-            "id": "route:ui", "tier": 2, "section": "ROUTING",
-            "text": ("UI signal → design-taste-frontend is the visual authority; assets via Higgsfield "
-                     "(OpenArt when the project says so); scroll motion → nateherk-design:scroll-craft."),
-        })
+        root = [getattr(ctx.get("repo"), "root", None), (ctx.get("payload") or {}).get("cwd")]
+        items.append({"id": "route:ui", "tier": 2, "section": "ROUTING",  # unavailable asset servers unnamed (C-14)
+                      "text": _policy.ui_line(lambda s: _mcp_ok(s, root))})
+    try:  # asset server waiting on OAuth: one batched ask per session, never placeholders
+        from prompt_router.modules import asset_auth as _aa  # noqa: PLC0415
+        items.extend(_aa.item(profile, ctx))
+    except Exception:  # noqa: BLE001
+        pass
     try:
         from prompt_router.modules import mcp_routes as _mcp  # noqa: PLC0415
-        items.extend(_mcp.items(profile, ctx, max_routes=int(cfg.get("max_mcp_routes", 3))))
+        routes = _mcp.items(profile, ctx, max_routes=int(cfg.get("max_mcp_routes", 3)))
+        if not _policy.dev_signal(profile):  # "should I have lunch" is not reasoning work (C-10)
+            routes = [r for r in routes if r.get("id") != "mcp:seqthink"]
+        items.extend(routes)
     except Exception:  # noqa: BLE001
         pass
     threshold = int(cfg.get("auto_dispatch_threshold", _select.DEFAULT_AUTO_DISPATCH_THRESHOLD))
     max_lines = int(cfg.get("max_route_lines", 3))
     for d in _select.dispatch_tiers(profile, threshold=threshold)[:max_lines]:
-        if d["kind"] == "agent" and d["agent"]:
-            txt = (f"Intent {d['category']} (score {d['score']}): dispatch {d['agent']} "
-                   f"via /invoke {d['act']}.")
+        who = d.get("agent")
+        if d["kind"] == "agent" and who:
+            txt = (f"Intent {d['category']} (score {d['score']}): dispatch {who} "
+                   f"with the Agent tool (act {d['act']}).")
+        elif who:
+            txt = (f"Intent {d['category']} (score {d['score']}): consider dispatching {who} "
+                   f"with the Agent tool (act {d['act']}).")
         else:
-            txt = f"Intent {d['category']} (score {d['score']}): consider /invoke {d['act']}."
+            txt = (f"Intent {d['category']} (score {d['score']}): consider dispatching the "
+                   f"{d['act']} specialist with the Agent tool.")
         items.append({"id": f"route:{d['act']}", "tier": 3, "section": "ROUTING", "text": txt})
-    items.extend(_model_mode_items(profile, ctx))
     return items
 
 
@@ -348,10 +355,12 @@ def _model_mode_items(profile, ctx: dict) -> list[dict]:
         return []
 
 
-def _model_items(profile) -> list[dict]:
+def _model_items(profile, ctx: dict) -> list[dict]:
     try:
         from prompt_router.modules import model_advice as _ma  # noqa: PLC0415
         advice = _ma.advise(profile)
+        if advice and "opus" in _policy.session_model(ctx.get("payload") or {}).lower():
+            advice = None  # already on Opus (C-12)
         if advice:
             return [{"id": "model:advice", "tier": 3, "section": "MODEL", "text": advice}]
     except Exception:  # noqa: BLE001
@@ -365,8 +374,9 @@ def _builtin_items(profile, ctx: dict) -> list[dict]:
     items += _intel_items(profile, ctx)
     items += _skill_items(profile, ctx)
     items += _routing_items(profile, ctx)
-    items += _model_items(profile)
-    return items
+    items += _model_items(profile, ctx)
+    # one total cap on routing lines, code and docs agree (C-17)
+    return _policy.cap_section(items, "ROUTING", int(ctx.get("config", {}).get("max_routing_lines", 5)))
 
 
 def _gather_items(profile, ctx: dict) -> list[dict]:
@@ -433,6 +443,7 @@ def _utc_now() -> str:
 
 
 def run(argv: list[str]) -> int:  # noqa: ARG001 - argv kept for the CLI shape
+    t0 = time.perf_counter()
     payload = _read_payload()
     sid = _sid(payload)
     cfg = _config()
@@ -464,7 +475,8 @@ def run(argv: list[str]) -> int:  # noqa: ARG001 - argv kept for the CLI shape
                     surface_source=profile.surface_source, size=profile.size, risk=profile.risk,
                     n_items=len(items), n_included=len(included), n_suppressed=len(suppressed),
                     emitted_ids=[it.get("id") for it in included],
-                    skills=[n for n, _ in (ctx.get("_ranked") or [])])
+                    skills=[n for n, _ in (ctx.get("_ranked") or [])],
+                    ms=round((time.perf_counter() - t0) * 1000, 2))
     if body:
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit",
@@ -477,18 +489,21 @@ def run(argv: list[str]) -> int:  # noqa: ARG001 - argv kept for the CLI shape
 
 def _record_pushed_skills(sid: str, ctx: dict, included: list, profile) -> None:
     """Enforcement bridge: the rank-1 MUST-READ that actually got emitted is
-    recorded for invoke-suite-gate (source=router, enforce=hard). A deep-injected
-    skill is excluded — its content was delivered inline."""
+    recorded for invoke-suite-gate (source=router). ``enforce`` is "hard" only for a
+    confident, matching rank 1 (policy.enforce_level, audit C-05), else "soft" (the
+    gate ignores soft records). A deep-injected skill is excluded — its content was
+    delivered inline. Doctor dry-fires without an override dir record nothing (D-05)."""
     try:
         must = [n for n in (ctx.get("_must_read") or [])
                 if any((it.get("id") or "").startswith(f"skill:{n}:") for it in included)]
-        if not must:
+        override = os.environ.get("CLAUDE_HOOK_TELEMETRY_DIR")
+        if not must or (os.environ.get("CLAUDE_HOOK_DOCTOR") and not override):
             return
-        tel_dir = _HOOKS / ".telemetry"
+        tel_dir = Path(override or _HOOKS / ".telemetry")
         tel_dir.mkdir(parents=True, exist_ok=True)
         safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in (sid or "unknown"))
-        rec = {"ts": _utc_now(), "skills": must,
-               "categories": sorted(profile.intents or []), "source": "router", "enforce": "hard"}
+        rec = {"ts": _utc_now(), "skills": must, "categories": sorted(profile.intents or []),
+               "source": "router", "enforce": ctx.get("_enforce") or "hard"}
         with open(tel_dir / f"{safe}.pushed-skills.jsonl", "a", encoding="utf-8") as f:
             f.write(json.dumps(rec, ensure_ascii=False) + "\n")
     except Exception:  # noqa: BLE001

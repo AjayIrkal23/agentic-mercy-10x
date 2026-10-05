@@ -14,31 +14,16 @@ metadata:
   token-cost: 772
   triggers:
     keywords:
-    - adrs
-    - against
-    - challenges
-    - context.md
-    - crystallise
-    - decisions
-    - docs
-    - documentation
-    - documented
-    - domain
-    - existing
     - grill
+    - grill me
     - grilling
-    - inline
-    - language
-    - model
-    - plan
-    - project
-    - session
-    - sharpens
-    - stress-test
+    - grill the plan
+    - stress-test the plan
+    - challenge the plan
+    - domain language
     - terminology
-    - updates
-    - user
-    - wants
+    - adrs
+    - context.md
     paths: []
     intents:
     - docs

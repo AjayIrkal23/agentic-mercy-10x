@@ -96,12 +96,11 @@ Never change one side of a contract without validating the other.
 
 Apply the Frontend Core Compliance Set:
 
-- matching Build Web Apps plugin skill first when available; use `build-web-apps:frontend-app-builder` for new UI/redesign/dashboard/game/site/hero/visual surfaces and default narrow React/Vite/UI/code work to `build-web-apps:react-best-practices`
+- `frontend-design:frontend-design` (plugin) for new UI/redesign/dashboard/game/site/hero/visual surfaces; narrow React/Vite/UI/code work defaults to `vite-react-best-practices` (React Native / Expo: `expo-react-native`)
 - `frontend-standards-always-follow`
 - `frontend-structure-standards`
 - `frontend-response-handling`
 - `frontend-server-data-patterns`
-- `frontend-api-standards`
 - `react-hooks-patterns`
 
 Additionally apply when relevant:

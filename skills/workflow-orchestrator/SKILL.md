@@ -14,49 +14,15 @@ metadata:
   token-cost: 783
   triggers:
     keywords:
-    - agent
-    - architect
-    - break
-    - choosing
-    - code
-    - complex
-    - cursor
-    - debug
-    - domains
-    - execution
-    - explicit
-    - first
-    - frontend/backend
-    - gates
-    - implement
-    - implementation
-    - include
-    - mandatory
-    - mode
-    - modes
-    - multiple
-    - need
-    - needs
+    - orchestrate
     - orchestrator
-    - ordering
-    - ownership
-    - phases
-    - plan
-    - planning
-    - quality
-    - roles
-    - route
-    - routing
+    - multi-phase
+    - multiple phases
+    - coordinate agents
+    - cross-surface
+    - end to end
+    - phase owners
     - sequencing
-    - skill
-    - skills
-    - spans
-    - specialist
-    - stacks
-    - superpowers
-    - triggers
-    - work
-    - workflow
     paths: []
     intents:
     - general
@@ -69,7 +35,7 @@ This is the coordination shell.
 
 It does not assume a mixed frontend/backend plan by default. It identifies the touched surfaces, then routes each phase to the right mode and domain stack.
 
-**Canonical orchestrator for this machine:** this skill is the single workflow router. If your setup also ships a separate `agent-skills-orchestrator` skill, do not treat both as the mandatory "first skill" in the same task unless you merge their content yourself. Plan-vs-execution stack ordering lives in `references/stack-ordering.md`.
+**Canonical orchestrator for this machine:** this skill is the single workflow router. Plan-vs-execution stack ordering lives in `references/stack-ordering.md`.
 
 ## Use When
 
@@ -93,7 +59,7 @@ Decide whether the work is:
 
 Then assign phases using the matching baseline skills for each surface instead of assuming both sides always matter.
 
-For frontend phases, select and load the matching Build Web Apps plugin skill when available before the local frontend baseline; use `build-web-apps:react-best-practices` for narrow React/Vite/UI/code work when no more specific plugin fits.
+For frontend phases, load `frontend-standards-always-follow` first; add `frontend-design:frontend-design` (plugin) for new or redesigned visual surfaces, `vite-react-best-practices` for narrow React/Vite code work, and `expo-react-native` instead for React Native / Expo screens.
 For backend phases, load `backend-standards-always-follow` and `service-layer-standards` together.
 
 ## Routing Rule
@@ -110,7 +76,7 @@ Use `mcp-usage-standards` when MCP selection or external verification affects th
 1. Restate the objective and success criteria.
 2. Identify touched surfaces and dependencies.
 3. Break the work into phases.
-4. Render the phase flow with `claude-mermaid:mermaid-diagrams` (plugin path `~/.claude/plugins/marketplaces/claude-mermaid/skills/mermaid-diagrams/SKILL.md`) — flowchart or state diagram — so phase boundaries, parallel work, and quality gates are visible at a glance. Use `mermaid_preview` to iterate; `mermaid_save` when promoted into the plan/PRD/ADR.
+4. Draw the phase flow as a fenced `mermaid` block (flowchart or state diagram) in the plan so phase boundaries, parallel work, and quality gates are visible at a glance; preview with the drawio MCP `open_drawio_mermaid` when it is connected.
 5. Assign each phase to architect, code, or debug.
 6. Mark what can run in parallel and what is blocked.
 7. Define the minimum quality gates before completion.
@@ -120,10 +86,10 @@ Use `mcp-usage-standards` when MCP selection or external verification affects th
 - Objective and success criteria.
 - Touched surfaces.
 - Ordered phases and mode assignment.
-- Mermaid phase diagram (rendered via `claude-mermaid:mermaid-diagrams`) embedded or linked.
+- Mermaid phase diagram (fenced `mermaid` block) embedded or linked.
 - Dependencies, risks, and quality gates.
 - Approval gate only when ambiguity or risk justifies it.
-- **Plan file saved to both:** `plan-YYYY-MM-DD-<feature-name>.md` at project root AND `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md` (see `~/.claude/rules/plan-root-save.md`).
+- **Plan file saved to both:** `plan-YYYY-MM-DD-<feature-name>.md` at project root AND `docs/superpowers/plans/YYYY-MM-DD-<feature-name>.md` (see `~/.claude/rules/02-lifecycle.md` phase 1).
 
 ## References
 

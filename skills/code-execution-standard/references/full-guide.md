@@ -18,7 +18,6 @@ metadata:
     - frontend-structure-standards
     - frontend-response-handling
     - frontend-server-data-patterns
-    - frontend-api-standards
     - react-hooks-patterns
     - mcp-usage-standards
     - 
@@ -35,7 +34,7 @@ You are not just writing code — you are extending a structured framework.
 
 # 0) Skill Context Awareness (MANDATORY)
 
-All implementations MUST align with the configured routing matrix. Frontend implementation must load the matching Build Web Apps plugin plus the full Frontend Core Compliance Set before coding. Backend implementation must load the Backend Core Compliance Set before coding: `backend-standards-always-follow`, `service-layer-standards`, `backend-api-standards`, `backend-error-handling`, and `backend-performance-standards`.
+All implementations MUST align with the configured routing matrix. Frontend implementation must load the Frontend Core Compliance Set before coding. Backend implementation must load the Backend Core Compliance Set before coding: `backend-standards-always-follow`, `service-layer-standards`, `backend-api-standards`, `backend-error-handling`, and `backend-performance-standards`.
 
 ### Structure (project-reference-linkage)
 Use domain-based structure:

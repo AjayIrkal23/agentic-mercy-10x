@@ -102,8 +102,10 @@ def test_doctor_deterministic_checks_pass(monkeypatch, tmp_path):
     by_name = {n: (s, d) for n, s, d in rows}
     # these must PASS on any faithful checkout (render-equivalence SKIPs without settings.json)
     for check in ("interpreters", "palette-skills", "aliases", "locked-source-links",
-                  "plugins-contract", "generated-in-sync"):
+                  "plugins-contract"):
         assert by_name[check][0] == "PASS", f"{check}: {by_name[check]}"
+    # `drift:` lines from a generator that exits 0 are a WARN since WP7 (audit I-11)
+    assert by_name["generated-in-sync"][0] in ("PASS", "WARN"), by_name["generated-in-sync"]
     assert by_name["render-equivalence"][0] in ("PASS", "SKIP")
     fails = [n for n, s, _ in rows if s == "FAIL"]
     assert not fails, f"doctor FAIL rows: {fails}"

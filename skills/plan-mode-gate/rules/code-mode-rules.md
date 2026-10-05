@@ -33,11 +33,11 @@ Before editing ANY code:
 ## Rule 3: Skill-Driven Implementation
 
 Implementation MUST follow the skill identified as most relevant:
-- Frontend → `frontend-design-gate` workflow
-- Backend → `backend-patterns` workflow
+- Frontend → `frontend-standards-always-follow` workflow (`expo-react-native` for React Native)
+- Backend → `backend-standards-always-follow` workflow
 - Bug fix → `systematic-debugging` (root cause first)
-- Testing → `tdd-workflow` or `test-driven-development`
-- Database → `postgres-patterns`, `jpa-patterns`, etc.
+- Testing → `test-driven-development`
+- Database → `postgres-patterns` or `mongoose-patterns`
 
 ## Rule 4: Sequential Thinking for Complex Changes
 

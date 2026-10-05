@@ -2,8 +2,9 @@
 """Tests for hooks/opus-guard.py: policy-driven model routing for the Agent tool.
 
 Covers the resolution order sourced from model-policy.json:
-  session_flags -> per-project mode -> explicit model param -> agent_pins ->
-  escalation (execution agents: retry / large unplanned work) -> [label] -> default
+  session_flags -> per-project mode -> explicit model / [label] (guarded agents and
+  fable need the user's phrase: test_opus_guard_explicit.py) -> agent_pins ->
+  escalation (execution agents: retry / large unplanned work) -> default
 Opus judges (pinned), Sonnet executes (default), escalation lifts execution agents.
 Plus policy-load fail-open (corrupt/missing policy -> hardcoded literals), full-input
 echo (only model/description overridden) and the per-session routing log.
@@ -131,10 +132,11 @@ def test_plan_reference_keeps_large_task_on_sonnet():
     assert resolved(out)["model"] == "sonnet"
 
 
-def test_explicit_model_beats_escalation():
+def test_explicit_model_without_user_phrase_does_not_block_escalation():
+    # E-04: an unprompted model param no longer outranks escalation for an executor
     out = run_agent({"description": "fix", "model": "sonnet", "subagent_type": "implementation-engineer",
                      "prompt": "Previous attempt failed: still broken."})
-    assert out == {} or resolved(out)["model"] == "sonnet"
+    assert resolved(out)["model"] == "opus"
 
 
 def test_non_execution_agents_never_escalate():
@@ -185,10 +187,10 @@ def test_agent_pin_sonnet_beats_opus_label():
 
 
 def test_explicit_model_param_honored():
-    out = run_agent({"description": "special task", "model": "fable", "subagent_type": "general-purpose"})
+    out = run_agent({"description": "special task", "model": "opus", "subagent_type": "general-purpose"})
     ui = resolved(out)
-    assert ui["model"] == "fable"
-    assert ui["description"] == "[fable] special task"
+    assert ui["model"] == "opus"
+    assert ui["description"] == "[opus] special task"
 
 
 def test_label_prefix_used_when_no_pin_or_model():
@@ -265,12 +267,13 @@ def test_name_never_rewritten():
     assert ui["name"] == "impl-crud-opus"
 
 
-def test_explicit_model_param_beats_pin():
-    # the user's explicit word wins over an agent pin (D2)
+def test_explicit_model_param_without_user_phrase_does_not_beat_pin():
+    # E-04: only the user's own phrase this turn moves a pinned judge
+    # (the phrase case: test_opus_guard_explicit.py)
     ui = resolved(run_agent({"description": "build it", "model": "sonnet",
                              "subagent_type": "santa-reviewer"}))
-    assert ui["model"] == "sonnet"
-    assert ui["description"] == "[sonnet] build it"
+    assert ui["model"] == "opus"
+    assert ui["description"] == "[opus] build it"
 
 
 def test_per_project_mode_beats_explicit(monkeypatch, tmp_path):

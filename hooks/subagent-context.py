@@ -53,8 +53,8 @@ def build(payload: dict) -> str:
 
         mode = model_mode.forced_mode(payload.get("cwd"))
         if mode:
-            lines.append(f"Model mode for this repo is pinned to {mode}: pass "
-                         f"model:\"{mode}\" on every Agent call you make.")
+            lines.append(f"Model mode for this repo is pinned to {mode}: opus-guard applies "
+                         "it to every Agent call; omit model.")
     except Exception:  # noqa: BLE001
         pass
     lines.append(_SKILLS)

@@ -30,7 +30,7 @@ from pathlib import Path
 SIGNIFICANT_LINE_THRESHOLD = 30  # lines in content/diff to count as "significant"
 
 # State dir shared with other hooks (24h TTL cleanup keeps sentinels fresh)
-STATE_DIR = Path(__file__).resolve().parent / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or Path(__file__).resolve().parent / ".state")
 
 # Glob-style prefix patterns for high-signal files (matched against file_path)
 HIGH_SIGNAL_PATTERNS = [

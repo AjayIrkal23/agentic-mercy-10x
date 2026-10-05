@@ -408,6 +408,8 @@ def test_summarizer_env_tolerates_missing_or_bad_claude_json(tmp_path, monkeypat
 def test_jcodemunch_build_defers_when_summarizer_down(env, tmp_path, monkeypatch):
     _fake_home(tmp_path, monkeypatch, {"jcodemunch": {"env": _SUMM_ENV}})
     monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: False)
+    monkeypatch.setattr(il, "_sleep", lambda s: None)  # the builder waits; not in tests
+    monkeypatch.setattr(il, "_index_db_for", lambda root: tmp_path / "existing.db")
     calls = _capture_run(monkeypatch)
     assert il._build_jcodemunch(env["repo"], False, [], env["cfg"]) == "DEFERRED"
     assert calls == []  # nothing ran: existing AI summaries are not overwritten
@@ -442,7 +444,9 @@ def test_summarizer_probe_fails_open_on_malfunction(monkeypatch):
     assert _REAL_ALIVE("http://localhost:1/api/tags", 100) is True
 
 
-def test_session_start_loud_line_and_no_spawn_when_summarizer_down(env, monkeypatch):
+def test_session_start_neutral_line_and_builder_spawned_when_summarizer_down(env, monkeypatch):
+    """ollama down: nobody is asked to start it. The detached builder waits for it
+    (see test_autonomy_wpb_builders.py); the model gets one neutral line."""
     _reset(env)
     monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: False)
     for s in il.SURFACES:
@@ -451,9 +455,9 @@ def test_session_start_loud_line_and_no_spawn_when_summarizer_down(env, monkeypa
                         lambda root, prior, cfg: (il.STALE, {}, "detail"))
     out = _silent(il.mode_session_start, env["payload"], env["cfg"])
     blob = json.loads(out).get("additionalContext", "")
-    assert "ACTION NEEDED" in blob and "summarizer" in blob
-    assert env["spawns"] == []  # jcodemunch build NOT spawned
-    assert not il._lock_path(env["ctx"].key, "jcodemunch").exists()
+    assert "ACTION NEEDED" not in blob and "summarizer unavailable" in blob
+    assert env["spawns"] == [(["jcodemunch"], False)]  # builder spawned; it does the waiting
+    assert il._lock_path(env["ctx"].key, "jcodemunch").exists()
 
 
 def test_summarizer_down_keeps_the_indexed_fingerprint(env, monkeypatch):
@@ -608,6 +612,129 @@ def _run_all() -> None:
         finally:
             mp.undo()
     print(f"test_index_lifecycle: {passed} non-parametrized tests PASSED")
+
+
+# --------------------------------------------------------------------------- #
+# jcodemunch db resolution by recorded source_root (audit 2026-10-05 MAIN-01)
+# --------------------------------------------------------------------------- #
+def _fake_db(path: Path, **meta) -> None:
+    import sqlite3
+    con = sqlite3.connect(str(path))
+    con.execute("CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT)")
+    con.executemany("INSERT INTO meta VALUES (?, ?)", list(meta.items()))
+    con.commit()
+    con.close()
+
+
+def test_same_basename_clone_does_not_borrow_another_checkouts_index(tmp_path, monkeypatch):
+    idx = tmp_path / "code-index"
+    idx.mkdir()
+    canonical = _mkrepo(tmp_path / "work" / "proj")
+    clone = _mkrepo(tmp_path / "scratch" / "proj")
+    _fake_db(idx / "owner-proj.db", source_root=str(canonical), git_head="x")
+    monkeypatch.setattr(il, "CODE_INDEX_DIR", idx)
+    monkeypatch.setattr(il, "_which", lambda name: "/bin/true")
+    assert il._probe_jcodemunch(clone, {})[0] == il.MISSING
+
+
+def test_clone_uses_its_own_index_and_canonical_keeps_its_own(tmp_path, monkeypatch):
+    idx = tmp_path / "code-index"
+    idx.mkdir()
+    canonical = _mkrepo(tmp_path / "work" / "proj")
+    clone = _mkrepo(tmp_path / "scratch" / "proj")
+    head = subprocess.run(["git", "-C", str(clone), "rev-parse", "HEAD"],
+                          capture_output=True, text=True).stdout.strip()
+    _fake_db(idx / "owner-proj.db", source_root=str(canonical), git_head="stale-head")
+    _fake_db(idx / "local-proj-1234.db", source_root=str(clone), git_head=head)
+    monkeypatch.setattr(il, "CODE_INDEX_DIR", idx)
+    monkeypatch.setattr(il, "_which", lambda name: "/bin/true")
+    assert il._probe_jcodemunch(clone, {})[0] == il.FRESH
+    assert il._probe_jcodemunch(canonical, {})[0] == il.STALE
+
+
+def test_unreadable_db_is_skipped_not_borrowed(tmp_path, monkeypatch):
+    """santa-diff P6a: a locked/corrupt db must not fall back to 'legacy' and be borrowed."""
+    idx = tmp_path / "code-index"
+    idx.mkdir()
+    clone = _mkrepo(tmp_path / "scratch" / "proj")
+    (idx / "owner-proj.db").write_bytes(b"not a sqlite database at all" * 40)
+    monkeypatch.setattr(il, "CODE_INDEX_DIR", idx)
+    monkeypatch.setattr(il, "_which", lambda name: "/bin/true")
+    assert il._probe_jcodemunch(clone, {})[0] == il.MISSING
+
+
+def test_legacy_db_without_source_root_still_resolves(tmp_path, monkeypatch):
+    idx = tmp_path / "code-index"
+    idx.mkdir()
+    repo = _mkrepo(tmp_path / "proj")
+    _fake_db(idx / "owner-proj.db", git_head="old")
+    monkeypatch.setattr(il, "CODE_INDEX_DIR", idx)
+    monkeypatch.setattr(il, "_which", lambda name: "/bin/true")
+    assert il._probe_jcodemunch(repo, {})[0] == il.STALE
+
+
+# --------------------------------------------------------------------------- #
+# jdocmunch manifest name by recorded source_root (audit 2026-10-05 NEW-06):
+# a same-named copy re-indexed `local/<basename>` and took over the project's
+# doc index, because probe and build keyed on the bare basename.
+# --------------------------------------------------------------------------- #
+def _fake_manifest(path: Path, source_root=None) -> None:
+    body = {"repo": f"local/{path.stem}", "doc_paths": ["README.md"] * 50}
+    if source_root is not None:
+        body["source_root"] = source_root
+    path.write_text(json.dumps(body), encoding="utf-8")
+
+
+def test_doc_name_skips_a_manifest_owned_by_another_checkout(tmp_path, monkeypatch):
+    idx = tmp_path / "doc-index"
+    idx.mkdir()
+    canonical = _mkrepo(tmp_path / "work" / "proj")
+    clone = _mkrepo(tmp_path / "scratch" / "proj")
+    _fake_manifest(idx / "proj.json", str(canonical))
+    monkeypatch.setattr(il, "DOC_INDEX_DIR", idx)
+    assert il._doc_name_for(canonical) == "proj"
+    other = il._doc_name_for(clone)
+    assert other != "proj" and other.startswith("proj-")
+    assert il._probe_jdocmunch(clone, {}, 10)[0] == il.MISSING
+    assert il._doc_name_for(clone) == other  # stable across calls
+
+
+def test_doc_name_finds_the_checkouts_own_suffixed_manifest(tmp_path, monkeypatch):
+    idx = tmp_path / "doc-index"
+    idx.mkdir()
+    canonical = _mkrepo(tmp_path / "work" / "proj")
+    clone = _mkrepo(tmp_path / "scratch" / "proj")
+    _fake_manifest(idx / "proj.json", str(clone))  # the clone took the bare name
+    monkeypatch.setattr(il, "DOC_INDEX_DIR", idx)
+    assert il._doc_name_for(clone) == "proj"
+    mine = il._doc_name_for(canonical)
+    _fake_manifest(idx / f"{mine}.json", str(canonical))
+    assert il._doc_name_for(canonical) == mine
+    assert il._probe_jdocmunch(canonical, {}, 10)[0] == il.FRESH
+
+
+def test_doc_name_keeps_legacy_manifest_without_source_root(tmp_path, monkeypatch):
+    idx = tmp_path / "doc-index"
+    idx.mkdir()
+    repo = _mkrepo(tmp_path / "proj")
+    _fake_manifest(idx / "proj.json")
+    monkeypatch.setattr(il, "DOC_INDEX_DIR", idx)
+    assert il._doc_name_for(repo) == "proj"
+
+
+def test_jdocmunch_build_passes_the_resolved_name(tmp_path, monkeypatch):
+    idx = tmp_path / "doc-index"
+    idx.mkdir()
+    canonical = _mkrepo(tmp_path / "work" / "proj")
+    clone = _mkrepo(tmp_path / "scratch" / "proj")
+    _fake_manifest(idx / "proj.json", str(canonical))
+    monkeypatch.setattr(il, "DOC_INDEX_DIR", idx)
+    monkeypatch.setattr(il, "_which", lambda name: "/bin/true")
+    calls = []
+    monkeypatch.setattr(il, "_run", lambda cmd, timeout=None, env=None: calls.append(cmd) or
+                        subprocess.CompletedProcess(cmd, 0, "", ""))
+    assert il._build_jdocmunch(clone, False, None, il._DEFAULT_CONFIG)
+    assert calls[-1][calls[-1].index("--name") + 1] == il._doc_name_for(clone) != "proj"
 
 
 if __name__ == "__main__":

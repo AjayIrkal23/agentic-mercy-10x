@@ -8,85 +8,28 @@ See also: skill `skill-linkage-story`; `~/.claude/rules/02-lifecycle.md`.
 
 > **Authority note:** Phase 0–7 lifecycle steps are defined in `~/.claude/rules/02-lifecycle.md`. This table maps phases to hooks and skills only — it does not define lifecycle steps.
 
-> **Dispatch reality (100x overhaul):** the hooks named below are no longer 65 separate `settings.json` registrations — they run as **links inside 8 `dispatch.py <event>` orchestrators** (one per Claude Code event), declared in `hooks/dispatch.config.json` with per-link isolation, telemetry, and enable flags. The hook *names* below still identify the logic (each keeps its own file, Charter §3); only the registration shape changed. Prompt-time skill injection is handled by `hooks/prompt_router/router.py` (UserPromptSubmit). See `hooks/README.md`.
+> **Dispatch reality (100x overhaul):** the hooks named below are no longer separate `settings.json` registrations — they run as **links inside the `dispatch.py <event>` orchestrators** (one per Claude Code event), declared in `hooks/dispatch.config.json` with per-link isolation, telemetry, and enable flags. The hook *names* below still identify the logic (each keeps its own file, Charter §3); only the registration shape changed. Prompt-time skill injection is handled by `hooks/prompt_router/router.py` (UserPromptSubmit). See `hooks/README.md`.
 
 | Phase | Hooks | Primary skills |
 |-------|-------|----------------|
-| **0 Session** | `session-start-aggregator`, `session-lifecycle`, `index-lifecycle` (jcodemunch/graphify/jdocmunch freshness) | `codebase-start-point-guide`, `using-agent-skills`, Superpowers `using-superpowers` |
+| **0 Session** | `session-start-aggregator`, `session-lifecycle`, `index-lifecycle` (jcodemunch/graphify/jdocmunch freshness) | `codebase-intel-first`, `using-agent-skills`, Superpowers `using-superpowers` |
 | **1 Plan** | prompt router (plan intent) | `workflow-orchestrator` → `plan-mode-gate` → Superpowers planning chain |
 | **2–3 Code** | `fullstack-skills-reminder` (first Write + session manifest), `skill_router` (path-ranked + cross_cutting) | The FE/BE slugs in `fullstack-skills-reminder.py`; manifest batches pending skills on later writes |
 | **4 Dead code** | `post-write-aggregator` → `desloppify-cleanup` @8 writes | `dead-code-and-change-audit` — **your changes only** for deletes |
-| **5 Lint/security** | `security-scan-gate`, Semgrep via Shell | `owasp-security`, `security-and-hardening`, `fix-lint-format` |
+| **5 Lint/security** | `security-scan-gate`, Semgrep via Shell | `owasp-security`, `fix-lint-format` |
 | **6 Review** | `santa-reviewer` agent (Santa Method — `/santa-review`), `santa-method-writer` (flag), stop re-verify | `santa-review`, `code-review-and-quality`, Superpowers review skills |
 | **7 Docs** | `post-write-aggregator` → `doc-update-enforcer`, `blocking-doc-enforcer`, Gate 2 (repo-aware) | `update-docs`, `project-reference-linkage` |
 
-## Frontend mandatory skills (28)
+## Frontend and backend skill sets
 
-Source: `~/.claude/hooks/fullstack-skills-reminder.py` → `FRONTEND_SKILLS`.
+The write-time baselines are the `FRONTEND_SKILLS` and `BACKEND_SKILLS` tuples in
+`~/.claude/hooks/fullstack-skills-reminder.py`; that file is the only source of truth
+(this doc used to copy them and drifted). Native `paths:` frontmatter on each skill
+surfaces the rest when a matching file is read. Print the current sets with:
 
-| Skill | Router rule ID(s) |
-|-------|-------------------|
-| agent-development | fe_default | (no skill_router route — map-only) |
-| api-contract-standards | fe_types |
-| dead-code-and-change-audit | cross_cutting always |
-| debug-investigation | cross_cutting debug |
-| domain-scaffold-patterns | fe_routes |
-| frontend-api-standards | fe_api |
-| frontend-code-review | fe_default |
-| frontend-response-handling | fe_api (MUST-READ) |
-| frontend-server-data-patterns | fe_api, fe_hooks |
-| frontend-standards-always-follow | fe_default, fe_component_tsx |
-| frontend-structure-standards | fe_store_redux, fe_routes |
-| project-reference-linkage | cross_cutting first_write |
-| project-structure-map | cross_cutting first_write | (no skill_router route — map-only) |
-| react-hooks-patterns | fe_hooks, fe_component_tsx |
-| scaffold-standards | fe_routes |
-| tailwind-design-system | fe_component_tsx, fe_vite_config |
-| tool-and-doc-selection | be_cursor_infra | (no skill_router route — map-only) |
-| webapp-testing | fe_test |
-| architect-system-design | cross_cutting first_write |
-| mcp-usage-standards | session MCP roster |
-| owasp-security | fe_auth |
-| doubt-driven-development | cross_cutting debug |
-| iterative-retrieval | manual / plan-mode-gate |
-| verification-loop | cross_cutting verification |
-| frontend-ui-engineering | fe_ui_design |
-| vite-react-best-practices | fe_vite_config |
-| browser-testing-with-devtools | fe_test |
-
-## Backend mandatory skills (27)
-
-Source: `BACKEND_SKILLS` in same hook file.
-
-| Skill | Router rule ID(s) |
-|-------|-------------------|
-| backend-api-standards | be_controller, be_route, be_schema |
-| api-contract-standards | be_contract (MUST-READ) |
-| backend-code-review | be_default |
-| backend-error-handling | be_service, be_middleware |
-| backend-performance-standards | be_review_perf, be_test |
-| backend-standards-always-follow | be_default, be_go_file |
-| dead-code-and-change-audit | cross_cutting always |
-| debug-investigation | be_debug, cross_cutting debug |
-| domain-scaffold-patterns | be_model |
-| project-reference-linkage | cross_cutting first_write |
-| project-structure-map | cross_cutting first_write | (no skill_router route — map-only) |
-| scaffold-standards | be_route, be_schema |
-| service-layer-standards | be_service, be_controller |
-| tool-and-doc-selection | be_cursor_infra | (no skill_router route — map-only) |
-| architect-system-design | cross_cutting first_write |
-| mcp-usage-standards | session MCP roster |
-| owasp-security | be_middleware |
-| doubt-driven-development | be_debug |
-| forensic-complexity-trends | be_review_perf |
-| forensic-debt-quantification | be_review_perf |
-| eval-harness | manual / GSD eval phases |
-| source-driven-development | be_go_file, cross_cutting implementation |
-| golang-patterns | be_go_file |
-| golang-testing | be_go_test |
-| postgres-patterns | be_migration |
-| api-and-interface-design | greenfield only (see harmonization doc) |
-| security-and-hardening | be_middleware, SECURITY intent |
+```bash
+python3 -c "import importlib.util as u; s=u.spec_from_file_location('f','$HOME/.claude/hooks/fullstack-skills-reminder.py'); m=u.module_from_spec(s); s.loader.exec_module(m); print(m.FRONTEND_SKILLS, m.BACKEND_SKILLS, sep='\n')"
+```
 
 ## Stop gate summary
 
@@ -94,12 +37,10 @@ Source: `BACKEND_SKILLS` in same hook file.
 
 ## Agent wiring (infrastructure, non-sequential)
 
-> Note: this section describes infrastructure agent wiring, not a sequential lifecycle phase. The lifecycle is Phases 0–7 only (defined in `~/.claude/rules/02-lifecycle.md`). "Phase 11" numbering below is legacy and does not imply phases 8–10 exist.
+> Note: this section describes infrastructure agent wiring, not a sequential lifecycle phase. The lifecycle is Phases 0–7 only (defined in `~/.claude/rules/02-lifecycle.md`).
 
 | Flow | Agent | Skill |
 |------|-------|-------|
 | UI polish (ad-hoc) | `frontend-uiux-designer` | Six-skill UI stack |
-| Figma | `figma-implementation`, `figma-code-connect` | When Figma URL present |
-| Vercel | `vercel-ai-architect`, `vercel-deployment-expert` | Deploy/architecture prompts |
 
 Full table: `~/.claude/agents/README.md`.

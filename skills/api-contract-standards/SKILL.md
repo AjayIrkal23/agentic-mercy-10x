@@ -4,7 +4,6 @@ description: Backend response envelopes, list metadata, error shapes, versioning
 when_to_use: 'Use when defining or reviewing an API contract: envelope, pagination metadata, error shape, OpenAPI/GraphQL/gRPC schema, DTO or shared types.'
 paths:
 - '**/schemas/**'
-- '**/types/**'
 - '**/dto/**'
 - '**/*.proto'
 - '**/openapi*.{yaml,yml,json}'
@@ -20,46 +19,19 @@ metadata:
   token-cost: 642
   triggers:
     keywords:
-    - api
-    - apis
-    - backend
-    - boundaries
-    - card
-    - contract
-    - contracts
-    - creating
-    - defined
-    - defining
-    - design
-    - designing
-    - endpoint
-    - endpoints
-    - envelope
-    - envelopes
-    - error
-    - establishing
-    - frontend
-    - graphql
-    - grpc
-    - guides
-    - interface
-    - list
-    - metadata
-    - module
-    - modules
+    - api contract
+    - response envelope
+    - response shape
+    - error envelope
+    - error shape
+    - pagination metadata
+    - breaking change
+    - backward compatible
+    - api versioning
     - openapi
-    - public
-    - response
-    - rest
-    - reviewed
-    - separation
-    - shapes
-    - stable
-    - standards
-    - summary
-    - table
-    - type
-    - versioning
+    - graphql schema
+    - grpc
+    - dto
     paths:
     - src/schemas/
     - src/types/
@@ -100,6 +72,9 @@ Use it when the public wire shape matters: success envelopes, error envelopes, l
 8. Unknown query keys are rejected by default unless explicitly allowed.
 
 ## Standard Success Envelope
+
+Default for new APIs. The project contract wins: when the repo's `CLAUDE.md`, `CODEX.md`
+or API docs define their own envelopes, follow them and never migrate them unasked.
 
 ```json
 {

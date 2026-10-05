@@ -15,7 +15,7 @@ still lives in its own file; `dispatch.py` only orchestrates.
 | `pre-tool-use` | dangerous-bash-gate, first-write-skill-gate, gateguard-write-gate, dox-write-gate-write, bash-write-gate, blocking-doc-enforcer, jcm-gate-read, jcm-gate-leanctx, jdoc-doc-steer, tdd-guard-launcher-pre, graphify-enforce, opus-guard, workflow-model-guard |
 | `post-tool-use` | skill-invocation-tracker, fullstack-post, codex-capture, post-write-aggregator, desloppify-cleanup, santa-method-writer, security-semgrep-tracker, jcm-mcp-used, mcp-post-hints |
 | `post-tool-use-failure` | tool-failure-hint |
-| `stop` | hard-completion-gate, invoke-suite-gate, index-flush (async), session-lifecycle-stop (async), weights-loop (async) |
+| `stop` | hard-completion-gate, invoke-suite-gate, index-flush (async), session-lifecycle-stop (async) |
 | `subagent-start` | subagent-context |
 | `subagent-stop` | session-lifecycle-subagent |
 | `pre-compact` / `post-compact` | session-lifecycle-precompact / -postcompact |
@@ -31,6 +31,14 @@ still lives in its own file; `dispatch.py` only orchestrates.
 | `mutator` | sequential; each returns `updatedInput`, threaded to the next |
 | `advisory` | parallel; `additionalContext` merged in priority order |
 | `exec` | side effects; with `"async": true` spawned detached and never waited on |
+
+Pass order: gates and mutators sequential in declared order, then execs, then advisories
+in parallel. An advisory with `"defer": true` runs detached and lands on the session's next
+PreToolUse/PostToolUse (`--only` keeps it synchronous). A deny ends the chain and carries
+the notes of earlier gates; an `ask` is held while later gates run. The char cap cuts on a
+line boundary and appends `[truncated]`, gate notes first. Raw stdout counts only on exit 0.
+A link with `"enabled": false` stays declared as a retired record (`weights-loop`,
+`session-lifecycle-subagent`, `session-lifecycle-postcompact`).
 
 Per-link fields: `id`, `type`, `cmd` (`{PY}`/`{HOOKS}`/`{NODE}` tokens), optional
 `tools` regex (full-match on `tool_name`), `priority` (0 = never dropped), `timeout_ms`,

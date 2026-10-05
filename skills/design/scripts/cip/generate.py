@@ -30,7 +30,7 @@ print("  then mcp__higgsfield__upscale_image | remove_background | outpaint_imag
 print("")
 print("This skill still owns the STYLE SPEC - use its search commands for the")
 print("style, palette and composition, then generate the pixels via Higgsfield.")
-print("Ref: ~/.claude/rules/higgsfield-frontend-mandate.md")
+print("Ref: ~/.claude/rules/frontend.md (Assets)")
 print("=" * 74)
 _sys.exit(2)
 # ─── end redirect ────────────────────────────────────────────────────────────

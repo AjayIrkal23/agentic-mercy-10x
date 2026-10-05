@@ -70,7 +70,7 @@ HARD_BLOCK = os.environ.get("BASH_WRITE_GATE_HARD_BLOCK", "").strip() == "1"
 BYPASS_DENY_ON = os.environ.get("BASH_WRITE_GATE_DENY_SHELL_WRITES", "").strip() == "1"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-STATE_DIR = SCRIPT_DIR / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or SCRIPT_DIR / ".state")
 
 # Source file extensions to monitor (Layer 2 only). Layer 1 covers every extension.
 SOURCE_EXTENSIONS = frozenset({
@@ -138,17 +138,30 @@ _HEREDOC_REV_RE = re.compile(
     re.IGNORECASE,
 )
 
-# Tee write: tee path (possibly with -a for append)
+# Tee write: tee path (possibly with -a for append). Anchored at a command position
+# (WP3/B1-09): `git commit -m 'note: tee foo.ts'` is a mention, not a write.
 _TEE_RE = re.compile(
-    r"""\btee\s+(?:-a\s+)?(?P<path>[^\s;|&>]+)""",
-    re.IGNORECASE,
+    _CMD_POS + r"""tee\s+(?:-a\s+)?(?P<path>[^\s;|&>]+)""",
+    re.IGNORECASE | re.MULTILINE,
 )
 
-# Echo redirect: echo ... > path or printf ... > path
+# Echo redirect: echo ... > path / >> path, or printf. `>>?` so an append's target is
+# the file, not the second `>` (B1-09).
 _ECHO_RE = re.compile(
-    r"""(?:echo|printf)\s+.{0,200}?>\s*(?P<path>[^\s;|&]+)""",
-    re.IGNORECASE | re.DOTALL,
+    _CMD_POS + r"""(?:echo|printf)\s+.{0,200}?>>?\s*(?P<path>[^\s;|&>]+)""",
+    re.IGNORECASE | re.DOTALL | re.MULTILINE,
 )
+
+# `cat a > b` (no heredoc) and `cp src dst` — both write files without a Write call.
+_CAT_REDIRECT_RE = re.compile(
+    _CMD_POS + r"""cat\s+[^<>|;&\n]*?>>?\s*(?P<path>[^\s;|&>]+)""",
+    re.IGNORECASE | re.MULTILINE,
+)
+_CP_RE = re.compile(
+    _CMD_POS + r"""cp\s+(?:-\S+\s+)*[^\s;|&]+\s+(?P<path>[^\s;|&>-][^\s;|&>]*)""",
+    re.MULTILINE,
+)
+_GREP_TIMEOUT_S = 4  # importer count; stays under the 6 s dispatch link timeout
 
 # A write actually happening inside an interpreter body. Without one of these,
 # `python3 - <<PY ... PY` is a read-only analysis script and is left alone.
@@ -192,7 +205,12 @@ def _looks_like_path(tok: str) -> bool:
 
 
 def _is_allowed_path(p: str) -> bool:
-    return bool(_ALLOW_PATH_RE.search(p.strip().strip("'\"")))
+    """Scratch, logs, build output, and $TMPDIR: rules/01 allows shell writes there."""
+    p = p.strip().strip("'\"")
+    tmpdir = (os.environ.get("TMPDIR") or "").rstrip("/")
+    if tmpdir and len(tmpdir) > 1 and os.path.abspath(os.path.expanduser(p)).startswith(tmpdir + "/"):
+        return True
+    return bool(_ALLOW_PATH_RE.search(p))
 
 
 def _candidate_paths(body: str) -> list[str]:
@@ -225,7 +243,8 @@ def _detect_bypass(cmd: str):
     for rx, label in ((_HEREDOC_RE, "heredoc redirect (cat <<EOF > file)"),
                       (_HEREDOC_REV_RE, "heredoc redirect (cat > file <<EOF)"),
                       (_TEE_RE, "tee write"),
-                      (_ECHO_RE, "echo/printf redirect")):
+                      (_ECHO_RE, "echo/printf redirect"),
+                      (_CAT_REDIRECT_RE, "cat redirect (cat a > file)")):
         for m in rx.finditer(cmd):
             p = m.group("path").strip("'\"")
             if not p or p in ("/dev/null", "/dev/stderr", "/dev/stdout"):
@@ -292,17 +311,14 @@ def _extract_target_paths(cmd: str) -> list[str]:
             if p:
                 paths.append(p)
 
-    for m in _TEE_RE.finditer(cmd):
-        p = m.group("path").strip("'\"")
-        if p and p not in ("/dev/null", "/dev/stderr", "/dev/stdout"):
-            paths.append(p)
+    for rx in (_TEE_RE, _ECHO_RE, _CAT_REDIRECT_RE, _CP_RE):
+        for m in rx.finditer(cmd):
+            p = m.group("path").strip("'\"")
+            if p and p not in ("/dev/null", "/dev/stderr", "/dev/stdout"):
+                paths.append(p)
 
-    for m in _ECHO_RE.finditer(cmd):
-        p = m.group("path").strip("'\"")
-        if p and p not in ("/dev/null", "/dev/stderr", "/dev/stdout"):
-            paths.append(p)
-
-    return [p for p in paths if p.strip()]
+    # scratch, logs and $TMPDIR are sanctioned shell-write targets (rules/01, B1-09)
+    return [p for p in paths if p.strip() and not _is_allowed_path(p)]
 
 
 def _is_source_file(file_path: str) -> bool:
@@ -351,7 +367,7 @@ def _count_references(file_path: str) -> int:
                  "--exclude-dir=node_modules", "--exclude-dir=.git",
                  "--exclude-dir=dist", "--exclude-dir=build",
                  "-E", pattern, search_root],
-                capture_output=True, text=True, timeout=8,
+                capture_output=True, text=True, timeout=_GREP_TIMEOUT_S,
             )
         else:
             pattern = "from.*/" + stem + "|require.*/" + stem
@@ -362,7 +378,7 @@ def _count_references(file_path: str) -> int:
                  "--exclude-dir=node_modules", "--exclude-dir=.git",
                  "--exclude-dir=dist", "--exclude-dir=build",
                  "-E", pattern, search_root],
-                capture_output=True, text=True, timeout=8,
+                capture_output=True, text=True, timeout=_GREP_TIMEOUT_S,
             )
         if result.returncode != 0:
             return 0
@@ -554,7 +570,8 @@ def main() -> int:
                     f"Consider verifying with `incremental-implementation` skill if this "
                     f"is a non-trivial new module."
                 )
-                print(json.dumps({"followup_message": msg}))
+                print(json.dumps({"hookSpecificOutput": {
+                    "hookEventName": "PreToolUse", "additionalContext": msg}}))
                 return 0
 
         # No high-blast-radius source targets found

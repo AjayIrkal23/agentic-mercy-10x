@@ -2,11 +2,9 @@
 name: command-development
 description: 'Create or update command definitions: frontmatter, arguments, and reusable command workflows.'
 when_to_use: Use when adding or editing .claude/commands/ or turning a command into a skill.
-disable-model-invocation: true
 paths:
-- '**/.claude/hooks/**'
-- '**/.claude/agents/**'
-- '**/.claude/skills/**'
+- '**/.claude/commands/**'
+- 'commands/**/*.md'
 metadata:
   schema: 1
   category: general
@@ -19,20 +17,11 @@ metadata:
   token-cost: 357
   triggers:
     keywords:
-    - arguments
-    - command
-    - create
-    - creating
-    - definition
-    - definitions
-    - development
-    - draft
-    - frontmatter
-    - refine
-    - reusable
-    - update
-    - updating
-    - workflows
+    - slash command
+    - command definition
+    - custom command
+    - command arguments
+    - command frontmatter
     paths: []
     intents:
     - general

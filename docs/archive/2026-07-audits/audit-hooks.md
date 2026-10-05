@@ -21,13 +21,13 @@ two missing tdd-guard reporters, a missing `plans/` directory, and stale docs.
 - All 8 `python3 ~/.claude/hooks/dispatch.py <event>` registrations: dispatch.py exists,
   compiles, and its config parses.
 - Every absolute path in every registered hook command exists and is executable:
-  `/home/mercy/.local/bin/lean-ctx`, `/home/mercy/.nvm/versions/node/v24.18.0/bin/node`,
+  `~/.local/bin/lean-ctx`, `~/.nvm/versions/node/v24.18.0/bin/node`,
   `~/.claude/skills/gstack/hosts/claude/hooks/question-log-hook` and
   `question-preference-hook`, all `gsd-*.js/.sh` hook files, `prompt_router/router.py`.
 - Bare `lean-ctx hook observe` (UserPromptSubmit): `lean-ctx` is on PATH at
   `~/.local/bin/lean-ctx`. OK.
 - **statusLine**: `${HOME}/.local/bin/node` is a VALID symlink →
-  `/home/mercy/.nvm/versions/node/v24.18.0/bin/node` (target exists). The suspected
+  `~/.nvm/versions/node/v24.18.0/bin/node` (target exists). The suspected
   broken symlink is NOT broken. `gsd-statusline.js` exists, passes `node --check`.
 - Permissions block, env, mcpServers parse fine (all mcpServers commands resolvable:
   uv, uvx, npx, jcodemunch-mcp, jdocmunch-mcp, semgrep, graphify_launcher.py, lean-ctx).
@@ -67,7 +67,7 @@ or test fixtures. Two dead constants (see ORPHANED).
 - `router.py` compiles; all data files present (trigger-floor.json, skills-index.json,
   prompt_router/router.config.json, modules/model_advice.py, budget/classify/select/
   manifest).
-- Live smoke test (fake debug-and-plan payload, cwd=/home/mercy/Desktop): **exit 0**,
+- Live smoke test (fake debug-and-plan payload, cwd=~/Desktop): **exit 0**,
   emits well-formed `additionalContext` with Critical directives, Tool precedence
   (jcodemunch-first), the **sequential-thinking directive** (mandate absorbed — see
   `classify.py:242` "Match legacy sequential-thinking-mandate EXACTLY"), and ranked
@@ -217,7 +217,7 @@ lost).
 
 ### M4. GO_UDP project absent from this machine
 `rules/tdd-doctrine.md` says "GO_UDP backend is active"; no UDP_PLATFORM directory
-found anywhere under /home/mercy. Not a hooks defect, but the tdd rules point at a
+found anywhere under ~. Not a hooks defect, but the tdd rules point at a
 project that is not restored yet.
 **Fix:** re-clone the GO_UDP repo, or note in rules that it lives elsewhere.
 

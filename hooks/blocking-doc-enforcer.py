@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 """PreToolUse(Bash) hook: Block git commit when documentation hasn't been updated.
 
-Reads state written by doc-update-enforcer.py and denies the commit if any
-touched code surface is missing its corresponding doc update.
+Scoped to the repo being committed (``git -C dir`` and ``cd dir &&`` honoured; the
+command is tokenised, so ``git commit-tree`` and an ``--amend`` inside a ``-m``
+message are not commits/amends — audit 2026-10-05 B1-10):
 
-Scoped to the repo being committed: the gate only acts when the Bash `cwd` is
-inside a `repo_markers` repo (the ones whose doc layout the config describes).
-Committing ~/.claude after touching GO_UDP is never blocked (A03-B12).
+  * any repo with ``server_docs/`` or ``frontend_docs/`` at its root: the files going
+    into the commit (staged, plus working-tree changes for ``-a`` or a same-line
+    ``git add``) decide. Backend code (``server/``, ``backend/``, ``api/``) needs a
+    ``server_docs/`` change, frontend code (``src/``, ``client/``, ...) a
+    ``frontend_docs/`` change, and ``PROJECT_LINKAGES.md`` when the repo has one
+    (``commit_docs_check.py``).
+  * ``repo_markers`` repos (GO_UDP layout): the session state doc-update-enforcer.py
+    writes, as before.
+
+Committing ~/.claude after touching another repo is never blocked (A03-B12).
 """
 from __future__ import annotations
 
@@ -16,13 +24,13 @@ import re
 import sys
 from pathlib import Path
 
+from commit_docs_check import git_commits, missing_docs, repo_root
 from tool_compat import is_shell_tool, tool_name
 
 SCRIPT_DIR = Path(__file__).resolve().parent
-STATE_DIR = SCRIPT_DIR / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or SCRIPT_DIR / ".state")
 
-GIT_COMMIT_RE = re.compile(r"\bgit\s+commit\b")
-_CD_RE = re.compile(r"(?:^|&&|;)\s*cd\s+([^\s;&|]+)")
+GIT_COMMIT_RE = re.compile(r"\bgit\b.*\bcommit\b", re.DOTALL)
 
 # Doc labels shown in the deny message — byte-identical GO_UDP defaults,
 # overridable via doc-enforcement.config.json (P4-T4). Never raises.
@@ -38,19 +46,13 @@ except Exception:  # noqa: BLE001
     pass
 
 
-def _commit_dir(payload: dict, command: str) -> str:
-    """Directory the commit runs in: the last `cd <path>` in the command, else the
-    payload cwd, else the process cwd. Normalised with a trailing slash."""
-    base = str(payload.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
-    cds = _CD_RE.findall(command)
-    if cds:
-        target = cds[-1].strip("'\"")
-        base = target if os.path.isabs(os.path.expanduser(target)) else os.path.join(base, target)
+def _norm_dir(directory: str) -> str:
+    """Resolved, "/"-separated, trailing slash (marker matching)."""
     try:
-        base = str(Path(os.path.expanduser(base)).resolve())
+        directory = str(Path(os.path.expanduser(directory)).resolve())
     except Exception:
         pass
-    return base.replace("\\", "/") + "/"
+    return directory.replace("\\", "/") + "/"
 
 
 def _in_marker_repo(directory: str) -> bool:
@@ -104,19 +106,31 @@ def main() -> int:
         return 0
 
     command = (payload.get("tool_input") or {}).get("command") or ""
-
-    # Only act on git commit commands
     if not GIT_COMMIT_RE.search(command):
+        _allow()  # cheap pre-filter; the tokenised parse below decides
+        return 0
+
+    base = str(payload.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
+    commits, add_seen = git_commits(command, base)
+    # amends were committed once already; `--amend` must be a real argument (B1-10)
+    commits = [(args, d) for args, d in commits if "--amend" not in args]
+    if not commits:
         _allow()
         return 0
 
-    # Allow amends through — they were already committed once
-    if "--amend" in command:
-        _allow()
-        return 0
+    for args, directory in commits:
+        root = repo_root(directory)
+        if root and not _in_marker_repo(root.replace("\\", "/") + "/"):
+            missing = missing_docs(root, args, add_seen)
+            if missing:
+                _deny("BLOCKED: Cannot commit without documentation updates.\n\n"
+                      f"Repo {root} keeps doc trees, and this commit changes code without them.\n"
+                      "Missing documentation:\n" + "\n".join(missing)
+                      + "\n\nUpdate and stage these before committing (rules/02-lifecycle.md Phase 7).")
+                return 0
 
-    # Only the repos whose doc layout this config describes are gated.
-    if not _in_marker_repo(_commit_dir(payload, command)):
+    # Marker repos (GO_UDP layout) keep the session-state check below.
+    if not any(_in_marker_repo(_norm_dir(d)) for _, d in commits):
         _allow()
         return 0
 

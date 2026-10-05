@@ -2,7 +2,8 @@
 """github-mcp-launcher.py — launch the GitHub MCP server with the `gh` token.
 
 POSIX registers (installer/manifest.json ``add``):
-    sh -c 'GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) exec npx -y @modelcontextprotocol/server-github'
+    sh -c 'GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) exec npx -y @modelcontextprotocol/server-github@2025.4.8'
+(pinned to the manifest; the package is deprecated, see the manifest ``deprecated`` note)
 Windows has no ``sh`` and Claude Code spawns MCP commands without a shell, so the
 manifest's ``windows_add`` runs this script instead: it reads ``gh auth token`` at
 launch (never stored) and starts the same server with the MCP stdio pipes inherited
@@ -21,4 +22,4 @@ env = dict(os.environ)
 if token:
     env["GITHUB_PERSONAL_ACCESS_TOKEN"] = token
 npx = ["cmd", "/c", "npx"] if os.name == "nt" else ["npx"]
-sys.exit(subprocess.call([*npx, "-y", "@modelcontextprotocol/server-github"], env=env))
+sys.exit(subprocess.call([*npx, "-y", "@modelcontextprotocol/server-github@2025.4.8"], env=env))

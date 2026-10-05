@@ -2,23 +2,25 @@
 """
 SessionStart aggregator — one advisory link that merges:
 
-  * prior-session gate-override warning (breadcrumb state),
-  * the pre-compact handoff snapshot (if one exists for this session),
   * index-lifecycle session-start probe + tdd-guard init (subprocesses, parallel),
-  * the always-active core skill digests (hooks/core-skill-set.json),
-  * the superpowers bootstrap pointer and the configured MCP roster.
+  * one-line notices (lib/session_notices.py): mercy mod off by the remote rollout
+    switch, the daily self-heal summary (said once),
+  * the always-active core skill digests (hooks/core-skill-set.json) at a FIXED
+    budget, so the same bodies arrive every session (audit B2-07),
+  * the superpowers bootstrap pointer and the configured MCP roster (dropped first
+    when the total would pass MAX_AGGREGATED_CHARS).
 
 ``payload.source`` shapes the output:
   startup | clear  -> everything above
-  compact          -> only the pre-compact handoff
-  resume           -> handoff + a one-line "resumed" note
+  resume | compact -> nothing (NEW-03): the resumed transcript holds it, and the
+                      pre-compact handoff is session-lifecycle.py's (B2-09). The
+                      breadcrumb and its gate warning are session-lifecycle.py's too.
 
 stdin:  SessionStart payload (cwd, source, session_id, ...).
 stdout: {"additionalContext": "..."} or {}. Always exit 0.
 """
 from __future__ import annotations
 
-import hashlib
 import json
 import os
 import subprocess
@@ -29,7 +31,7 @@ from pathlib import Path
 
 HOME = Path.home()
 HOOK_DIR = Path(__file__).resolve().parent  # this checkout, not $HOME (CI runs elsewhere)
-STATE_DIR = HOOK_DIR / ".state"
+STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or HOOK_DIR / ".state")
 STATE_MAX_AGE_SECONDS = 86400  # 24 hours
 UNKNOWN_MAX_AGE_SECONDS = 3600  # 1 hour — unknown.*.json (session id was missing)
 MCP_JSON = HOME / ".claude.json"
@@ -134,36 +136,6 @@ def _configured_mcp_context() -> str:
     )
 
 
-def _precompact_handoff_context(payload: dict) -> str:
-    """Inject {session}.precompact-handoff.json (written by session-lifecycle
-    pre-compact) when it is recent (≤2 h)."""
-    cid = payload.get("conversation_id") or payload.get("session_id") or ""
-    if not cid:
-        return ""
-    safe_cid = "".join(c if c.isalnum() or c in "-_" else "_" for c in str(cid))
-    handoff_path = STATE_DIR / f"{safe_cid}.precompact-handoff.json"
-    try:
-        if time.time() - handoff_path.stat().st_mtime > 7200:
-            return ""
-        handoff = json.loads(handoff_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return ""
-    if not isinstance(handoff, dict):
-        return ""
-    lines = [
-        "RESUMED FROM PRE-COMPACT SNAPSHOT:",
-        f"  write_count at compaction: {handoff.get('write_count', 0)}",
-        f"  skills reminded before compaction: {handoff.get('last_skill_reminders', [])}",
-        f"  frontend_start_sent: {handoff.get('frontend_start_sent', False)}",
-        f"  backend_start_sent: {handoff.get('backend_start_sent', False)}",
-        f"  gate_states: {handoff.get('gate_states', {})}",
-        f"  semgrep_ran: {handoff.get('semgrep_ran', False)}",
-    ]
-    if handoff.get("active_phase"):
-        lines.append(f"  active_phase: {str(handoff['active_phase'])[:200]}")
-    return "\n".join(lines)
-
-
 def _run_hook_subprocess(cmd: list[str], payload_txt: str, timeout: int) -> str:
     try:
         proc = subprocess.run(cmd, input=payload_txt, capture_output=True,
@@ -181,31 +153,6 @@ def _run_hook_subprocess(cmd: list[str], payload_txt: str, timeout: int) -> str:
     return ""
 
 
-def _prior_gate_override_context(workspace: Path) -> str:
-    """Read the prior session's breadcrumb and warn if gates were overridden."""
-    try:
-        bkey = hashlib.sha1(str(workspace).encode()).hexdigest()[:12]
-        bfile = STATE_DIR / f"{bkey}.breadcrumb.json"
-        if not bfile.exists():
-            return ""
-        gate = json.loads(bfile.read_text(encoding="utf-8")).get("gate_outcomes", {})
-        deny_count = gate.get("deny_count", 0)
-        still_failing = gate.get("override_still_failing", []) or []
-        if deny_count > 0 and still_failing:
-            return (
-                "## Prior Session Gate Overrides (WARNING)\n"
-                f"Last session ended with {deny_count} gate override(s).\n"
-                f"Gates that were FORCED past without resolution: {', '.join(still_failing)}.\n"
-                "Consider addressing these before adding new work."
-            )
-        if deny_count > 0:
-            return (f"## Prior Session Gate Note\nLast session had {deny_count} gate "
-                    "override(s); all resolved before completion.")
-    except Exception:  # noqa: BLE001
-        pass
-    return ""
-
-
 def _canonical(name: str) -> str:
     try:
         from lib import skill_aliases
@@ -214,10 +161,11 @@ def _canonical(name: str) -> str:
         return name
 
 
-def _core_skill_digests(budget: int = MAX_AGGREGATED_CHARS) -> str:
+def _core_skill_digests(budget: int = MAX_AGGREGATED_CHARS, bodies_ok: bool = True) -> str:
     """Always-active core skill set (hooks/core-skill-set.json), within ``budget`` chars.
     Every skill starts as a one-line pointer; `mode: full` entries are upgraded to
-    their body, in config order, only while the whole block still fits."""
+    their body, in config order, only while the whole block still fits
+    (``bodies_ok=False``: pointers only)."""
     try:
         cfg = json.loads((HOOK_DIR / "core-skill-set.json").read_text(encoding="utf-8"))
     except Exception:  # noqa: BLE001
@@ -244,7 +192,7 @@ def _core_skill_digests(budget: int = MAX_AGGREGATED_CHARS) -> str:
         hint = f" (Read {sk.as_posix()})" if (idx.get(name) or {}).get("paths") else ""
         lines.append(f"- {name}{hint} — {desc[:150]}")
         body = None
-        if ent.get("mode") == "full" and sk.is_file():
+        if bodies_ok and ent.get("mode") == "full" and sk.is_file():
             try:
                 raw = sk.read_text(encoding="utf-8", errors="replace")
                 if raw.startswith("---"):
@@ -273,13 +221,27 @@ def _core_skill_digests(budget: int = MAX_AGGREGATED_CHARS) -> str:
     return block[:budget]
 
 
-def _full_context(payload: dict, payload_txt: str) -> str:
-    aggregated = ""
-    cwd = payload.get("cwd")
-    if isinstance(cwd, str) and cwd:
-        aggregated = _merge_additional_context(aggregated, _prior_gate_override_context(Path(cwd)))
-    aggregated = _merge_additional_context(aggregated, _precompact_handoff_context(payload))
+def _session_notices() -> str:
+    """One-liners: the mercy mod is off (remote rollout switch), the daily self-heal's summary
+    (lib/session_notices.py; each fails open)."""
+    try:
+        from lib import session_notices
+        return "\n".join(t for t in (session_notices.mod_off_notice(), session_notices.selfheal_line()) if t)
+    except Exception:  # noqa: BLE001
+        return ""
 
+
+def _join(*chunks: str) -> str:
+    out = ""
+    for chunk in chunks:
+        out = _merge_additional_context(out, chunk)
+    return out
+
+
+def _full_context(payload: dict, payload_txt: str) -> str:
+    """Startup/clear context. ``payload`` is kept for callers; the subprocesses read
+    ``payload_txt``."""
+    aggregated = ""
     hook_jobs: list[tuple[list[str], int]] = []
     if not os.environ.get("CLAUDE_HOOK_DOCTOR"):  # doctor/test dry-fire: both write to disk
         if INDEX_LIFECYCLE.is_file():
@@ -292,12 +254,27 @@ def _full_context(payload: dict, payload_txt: str) -> str:
             for fut in futures:  # submission order -> deterministic merge
                 aggregated = _merge_additional_context(aggregated, fut.result())
 
-    tail = [_superpowers_session_context(), _configured_mcp_context()]
+    aggregated = _merge_additional_context(aggregated, _session_notices())
+
+    # The core block's budget is fixed (MAX minus the static tail), never the room
+    # the hook output above left: the same bodies arrive every session (B2-07).
+    # Overflow drops the tail blocks (they repeat what the superpowers plugin and the
+    # harness already inject), then degrades the core block to pointers.
+    sp, mcp = _superpowers_session_context(), _configured_mcp_context()
     sep = len("\n\n---\n\n")
-    room = MAX_AGGREGATED_CHARS - len(aggregated) - sum(len(t) + sep for t in tail if t.strip()) - sep
-    for chunk in (_core_skill_digests(max(room, 0)), *tail):
-        aggregated = _merge_additional_context(aggregated, chunk)
-    return aggregated
+    core_budget = MAX_AGGREGATED_CHARS - sum(len(t) + sep for t in (sp, mcp) if t.strip()) - sep
+    core = _core_skill_digests(max(core_budget, 0))
+    for drop in ("", "sp", "mcp", "core"):
+        if drop == "sp":
+            sp = ""
+        elif drop == "mcp":
+            mcp = ""
+        elif drop == "core":
+            core = _core_skill_digests(max(MAX_AGGREGATED_CHARS - len(aggregated) - sep, 0), bodies_ok=False)
+        out = _join(aggregated, core, sp, mcp)
+        if len(out) <= MAX_AGGREGATED_CHARS:
+            break
+    return out
 
 
 def main() -> int:
@@ -310,15 +287,10 @@ def main() -> int:
     except json.JSONDecodeError:
         payload = {}
 
+    # resume: the transcript already holds all of this; compact: session-lifecycle
+    # re-injects the handoff (its single injector). Both stay slim (NEW-03, B2-09).
     source = str(payload.get("source") or "startup")
-    if source == "compact":
-        aggregated = _precompact_handoff_context(payload)
-    elif source == "resume":
-        aggregated = _merge_additional_context(
-            "Session resumed — prior context restored by the harness.",
-            _precompact_handoff_context(payload))
-    else:
-        aggregated = _full_context(payload, payload_txt)
+    aggregated = "" if source in ("resume", "compact") else _full_context(payload, payload_txt)
 
     if len(aggregated) > MAX_AGGREGATED_CHARS:
         aggregated = aggregated[:MAX_AGGREGATED_CHARS - 30] + "\n…(aggregator trimmed)"

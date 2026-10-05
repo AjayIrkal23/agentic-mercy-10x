@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "_about": "Single source of truth for subagent/workflow/invoke model selection (2026-09-29, Sonnet 5.5 remap). Sonnet 5.5 EXECUTES (default; env CLAUDE_CODE_SUBAGENT_MODEL=sonnet sets only the DEFAULT); Opus 5.5 JUDGES — review, UI/UX, plan, spec, debug (agent_pins + invoke_categories); escalation lifts execution agents to Opus on a failed previous attempt or large unplanned work; Fable is explicit opt-in only. Guard precedence: session flag > per-project mode (state/model-modes) > explicit model param > agent pin > escalation > [label] > default. model_ids are the Agent-tool ALIASES (the valid-model set), not API ids. Evidence: ~/reports/Sonnet 5 5 release feedback.md.",
+  "_about": "Single source of truth for subagent/workflow/invoke model selection (2026-09-29, Sonnet 5.5 remap). Sonnet 5.5 EXECUTES (default; env CLAUDE_CODE_SUBAGENT_MODEL=sonnet sets only the DEFAULT); Opus 5.5 JUDGES — review, UI/UX, plan, spec, debug (agent_pins + invoke_categories); escalation lifts execution agents to Opus on a failed previous attempt or large unplanned work; Fable is explicit opt-in only. Guard precedence: session flag > per-project mode (state/model-modes) > explicit model param or [label] > agent pin > escalation > default, where a request for a pinned agent, an escalation executor, or fable counts only when the user's own last prompt carries an override_phrases entry for that model (opus-guard, audit 2026-10-05 E-04); otherwise it is ignored and the reason is logged. model_ids are the Agent-tool ALIASES (the valid-model set), not API ids. Evidence: ~/reports/Sonnet 5 5 release feedback.md.",
   "model_ids": {
     "sonnet": "sonnet",
     "opus": "opus",
@@ -14,8 +14,7 @@
       "santa-reviewer",
       "planning-director",
       "spec-architect",
-      "debug-detective",
-      "team-lead"
+      "debug-detective"
     ],
     "sonnet": [
       "explore",
@@ -24,7 +23,7 @@
     "fable": []
   },
   "task_matrix": {
-    "_comment": "TaskProfile intent -> model (consumed by /invoke categories and the router's model_advice; the Agent-tool opus-guard has no TaskProfile so it skips this step). Anything unlisted -> default (sonnet). Fable never appears here.",
+    "_comment": "TaskProfile intent -> model, read only by the router's main-session model_advice (/invoke per-act models come from invoke_categories; opus-guard has no TaskProfile and skips this). Anything unlisted -> default (sonnet). Fable never appears here.",
     "DESIGN": "opus",
     "HEAVY_ARCHITECTURE": "opus",
     "DEEP_DEBUG": "opus",
@@ -71,11 +70,11 @@
     "_comment": "Documentation of the effort tiers (agent `effort:` frontmatter is the source; test_model_policy_consistency checks it). Frontmatter is the ONLY lever: Claude Code (checked through 2.1.285) reads no subagent-effort env var — CLAUDE_CODE_SUBAGENT_EFFORT is not in the binary — so built-ins (general-purpose, Explore, Plan) run at Claude Code's own default. Executors stay at high because Sonnet 5.5 at xhigh is very verbose (~2.5x the cost of high for ~10% more score). `max` burns tokens and times out, so it is banned.",
     "executors": "high",
     "judges": "high (santa-reviewer, frontend-uiux-designer, debug-detective: xhigh)",
-    "closers": "medium",
+    "closers": "medium (deadcode-reaper, docs-sync-agent, qa-verifier); santa-reviewer xhigh and security-sentinel high",
     "banned": ["max"]
   },
   "override_phrases": {
-    "_comment": "Explicit user phrases in the prompt that force a model for that turn.",
+    "_comment": "Explicit user phrases that force a model for that turn. opus-guard reads them from the user's last real prompt (lib/model_mode.user_phrase): only then may an explicit model / [label] move a pinned agent, an escalation executor, or select fable. model_advice reads them to stay silent.",
     "opus": [
       "use opus",
       "on opus",
@@ -106,6 +105,13 @@
   },
   "main_session_advice": {
     "enabled": true,
-    "_comment": "Inverted from the old opus-bias: advise /model opus ONLY when the TaskProfile hits an opus row of task_matrix AND heavy_qualifiers pass. Otherwise silent (no per-prompt /model nag). Consumed by prompt_router/modules/model_advice.py (P2-T4, filled once P1 lands the router core)."
+    "_comment": "Heavy-task line, addressed to the main model (the user never types a model switch): when the TaskProfile hits an opus row of task_matrix AND heavy_qualifiers pass, the line says to dispatch the Opus judge agent in `agents` (opus-guard pins it) for the heavy part. Otherwise silent. Consumed by prompt_router/modules/model_advice.py.",
+    "agents": {
+      "DESIGN": "frontend-uiux-designer",
+      "HEAVY_ARCHITECTURE": "planning-director",
+      "HEAVY_ARCHITECTURE_SPEC": "spec-architect",
+      "DEEP_DEBUG": "debug-detective",
+      "IMPLEMENT_SUITE": "planning-director"
+    }
   }
 }

@@ -67,6 +67,10 @@ LEGACY_INDEX_PREFIX = "<!-- dox:index"  # old single-line marker (pre-sync)
 
 REFS_DIR = Path.home() / ".claude" / "skills" / "dox-doc-tree" / "references"
 
+# A dir with at most this many code files is a LEAF: its CLAUDE.md names every code
+# file. Bigger dirs are layer roots, folded by design (audit F-12).
+LEAF_MAX_FILES = 30
+
 # Sidecar written by sweep() and probed by index-lifecycle's `dox` surface.
 DATA_REL = Path(".claude") / "dox" / "data"
 SIDECAR_NAME = ".doxinit.json"
@@ -311,8 +315,31 @@ _FALLBACK_POINTER = (
 )
 
 
-def child_doc_text(rel_posix: str, cfg: dict) -> str:
+def _leaf_code_files(d: Path, cfg: dict) -> "list[str]":
+    """Code file basenames of a leaf dir, [] for a layer root or an unreadable dir."""
+    try:
+        names = sorted(f.name for f in d.iterdir()
+                       if f.is_file() and f.suffix.lower() in _exts(cfg))
+    except OSError:
+        return []
+    return names if len(names) <= LEAF_MAX_FILES else []
+
+
+def unnamed_code_files(root: Path, rel_posix: str, cfg: dict) -> "list[str]":
+    """Leaf code files its CLAUDE.md never names (reported by `plan`, audit F-12)."""
+    d = root / rel_posix
+    try:
+        doc = (d / ROOT_DOC).read_text(encoding="utf-8")
+    except OSError:
+        return []
+    return [n for n in _leaf_code_files(d, cfg) if n not in doc]
+
+
+def child_doc_text(rel_posix: str, cfg: dict, files: "list[str] | None" = None) -> str:
     body = _read_template("child-template.md", _FALLBACK_CHILD).replace("<dir-path>", rel_posix)
+    if files:  # prefill the Key files table with the real basenames
+        rows = "\n".join(f"| `{n}` | <what it does> |" for n in files)
+        body = body.replace("| `<file>` | <what it does> |", rows, 1).replace("| TODO | TODO |", rows, 1)
     if CHILD_MARKER in body[:120]:
         return body
     return f"{CHILD_MARKER}\n{body}"
@@ -472,7 +499,7 @@ def ensure_child(root: Path, rel_posix: str, cfg: dict) -> "list[str]":
             return made
     except OSError:
         return made
-    if _write_if_absent(d / ROOT_DOC, child_doc_text(rel_posix, cfg)):
+    if _write_if_absent(d / ROOT_DOC, child_doc_text(rel_posix, cfg, _leaf_code_files(d, cfg))):
         made.append(ROOT_DOC)
     if _write_if_absent(d / POINTER_DOC, pointer_text(cfg)):
         made.append(POINTER_DOC)
@@ -634,6 +661,12 @@ def _cli(argv: "list[str]") -> int:
               f"(missing docs: {len(collected['missing'])}, truncated: {collected['truncated']})")
         for d in collected["missing"]:
             print(f"  + {d}/CLAUDE.md  (+ AGENTS.md)")
+        gaps = {d: unnamed_code_files(root, d, cfg) for d in collected["dirs"]
+                if d not in collected["missing"]}
+        gaps = {d: g for d, g in gaps.items() if g}
+        print(f"leaf docs not naming their code files: {len(gaps)}")
+        for d, g in sorted(gaps.items()):
+            print(f"  ~ {d}/CLAUDE.md: {', '.join(g[:8])}{' …' if len(g) > 8 else ''}")
         return 0
 
     if cmd == "sweep":

@@ -120,6 +120,7 @@ class TaskProfile:
 # Word-boundary keyword matching
 # --------------------------------------------------------------------------- #
 _WORD = re.compile(r"\w+")
+_URL = re.compile(r"\b(?:https?|ftp)://\S+", re.IGNORECASE)
 
 
 def keyword_ok(kw: str) -> bool:
@@ -151,6 +152,13 @@ def _contains(seq: tuple[str, ...], sub: tuple[str, ...]) -> bool:
     return any(seq[i:i + n] == sub for i in range(len(seq) - n + 1))
 
 
+def _singular(phrase: str) -> str:
+    """Strip one plural suffix from the last word ("crashes" -> "crash")."""
+    if phrase.endswith("es") and phrase[:-2].endswith(("sh", "ch", "ss", "x")):
+        return phrase[:-2]
+    return phrase[:-1] if phrase.endswith("s") and not phrase.endswith("ss") else phrase
+
+
 class KeywordMatcher:
     """One compiled alternation per group; ``hits(text)`` -> {group: [keywords]}.
 
@@ -168,8 +176,11 @@ class KeywordMatcher:
             if not clean:
                 continue
             self._kws[g] = [(k, words(k)) for k in clean]
+            # intents only: optional s/es ("bugs", "crashes", "unit tests", audit C-04);
+            # UI/arch lists carry their own plurals and `components/` is a path segment
+            plural = r"(?:e?s)?" if g.startswith("act:") else ""
             self._pat[g] = re.compile(
-                r"(?<!\w)(?:" + "|".join(re.escape(k) for k in clean) + r")(?!\w)",
+                r"(?<!\w)(?:" + "|".join(re.escape(k) for k in clean) + r")" + plural + r"(?!\w)",
                 re.IGNORECASE)
 
     def groups(self) -> list[str]:
@@ -181,6 +192,7 @@ class KeywordMatcher:
             phrases = {m.group(0).lower() for m in pat.finditer(text)}
             if not phrases:
                 continue
+            phrases |= {_singular(p) for p in phrases}
             pw = [words(p) for p in phrases]
             hit = [k for k, kw in self._kws[g]
                    if k in phrases or any(_contains(w, kw) for w in pw)]
@@ -290,7 +302,9 @@ def collect_text(payload: dict) -> tuple[str, list[str]]:
             if isinstance(v, str) and v.strip():
                 paths.append(_norm_path(v))
         _flatten(ti, parts)
-    text = " \n ".join(parts).lower()
+    # URLs are not task words: `https`, `docs`, `migration` inside one misrouted
+    # intents and skills (audit C-04)
+    text = _URL.sub(" ", " \n ".join(parts)).lower()
     try:
         from prompt_router.modules import surface as _surface  # noqa: PLC0415
         for tok in _surface.prompt_paths(text):
@@ -313,9 +327,10 @@ def _flatten(obj, out: list[str]) -> None:
             _flatten(v, out)
 
 
-# Harness-generated "prompts" (background-agent results, local command output) are
-# not user tasks: routing skills onto an agent's report is pure noise.
-_MACHINE_PREFIXES = ("<task-notification>", "<local-command-stdout>", "<local-command-stderr>")
+# Harness-generated "prompts" (background-agent results, local command output, a peer
+# session's message) are not user tasks: routing skills onto them is pure noise.
+_MACHINE_PREFIXES = ("<task-notification>", "<local-command-stdout>", "<local-command-stderr>",
+                     "<cross-session-message")
 
 
 def is_trivial_ack(prompt: str) -> bool:
@@ -333,8 +348,15 @@ def classify(payload: dict) -> TaskProfile:
                            trivial_ack=is_trivial_ack(str(prompt or "")))
 
 
+_SCAN_HEAD, _SCAN_TAIL = 6000, 2000
+
+
 def _classify_impl(payload: dict) -> TaskProfile:
     prompt = str(payload.get("prompt") or "")
+    if len(prompt) > _SCAN_HEAD + _SCAN_TAIL:
+        # a pasted log or separator must not cost seconds of regex time (Santa A3);
+        # the task words sit at the start and the end of a long prompt
+        payload = {**payload, "prompt": prompt[:_SCAN_HEAD] + "\n" + prompt[-_SCAN_TAIL:]}
     text, paths = collect_text(payload)
     idx = _floor_index()
 
@@ -343,6 +365,11 @@ def _classify_impl(payload: dict) -> TaskProfile:
         return prof
 
     hits = _matcher().hits(text)
+    try:
+        from prompt_router import cues as _cues  # noqa: PLC0415
+        hits = _cues.refine(hits, text)
+    except Exception:  # noqa: BLE001
+        pass
 
     # --- act keyword hits per category (each keyword credited once) ---
     for g, kws in hits.items():

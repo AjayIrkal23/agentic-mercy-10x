@@ -38,13 +38,14 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 from collections import defaultdict
 from datetime import datetime, timezone
 
 HOOKS_DIR = Path(__file__).resolve().parent
-TELEMETRY_DIR = HOOKS_DIR / ".telemetry"
+TELEMETRY_DIR = Path(os.environ.get("CLAUDE_HOOK_TELEMETRY_DIR") or HOOKS_DIR / ".telemetry")
 EFFECTIVENESS_FILE = TELEMETRY_DIR / "skill-effectiveness.jsonl"
 WEIGHTS_OUTPUT = HOOKS_DIR / "skill_router_weights.json"
 
@@ -197,6 +198,15 @@ def main() -> int:
         print(json.dumps(output, indent=2))
         return 0
 
+    # The output file is TRACKED: never rewrite it just to move `generated_at`
+    # (audit B2-08 / J-04: weekly git churn with frozen input).
+    try:
+        previous = json.loads(WEIGHTS_OUTPUT.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        previous = {}
+    if isinstance(previous, dict) and previous.get("detail") == json.loads(json.dumps(weights)):
+        print(f"\nUnchanged: {WEIGHTS_OUTPUT} (not rewritten)", file=sys.stderr)
+        return 0
     WEIGHTS_OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     WEIGHTS_OUTPUT.write_text(json.dumps(output, indent=2), encoding="utf-8")
     print(f"\nWritten: {WEIGHTS_OUTPUT}", file=sys.stderr)

@@ -158,8 +158,8 @@ def _resolve_graph(argv: list[str]) -> str | None:
                         f"[graphify] refusing foreign graph {g}: belongs to "
                         f"{graph_root or cur}, but the open repo is {open_root}"
                         + (f" ({ident})" if ident else "")
-                        + f" — serving an empty graph; build one with "
-                        f"`graphify update {open_root}`.\n"
+                        + " — serving an empty graph; a background build for the "
+                        "open repo was started.\n"
                     )
                     return None
             return str(g)
@@ -179,7 +179,8 @@ def _placeholder_graph() -> str | None:
     failure. When index-lifecycle later builds the real graph, the next MCP
     start picks it up (serve does not hot-reload — same as before)."""
     try:
-        base = (_plat.hooks_dir() if _plat is not None else _HOOKS) / ".state" / "graphify"
+        base = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR")
+                    or (_plat.hooks_dir() if _plat is not None else _HOOKS) / ".state") / "graphify"
         base.mkdir(parents=True, exist_ok=True)
         gp = base / "empty-graph.json"
         if not gp.is_file():
@@ -189,10 +190,29 @@ def _placeholder_graph() -> str | None:
         return None
 
 
+def _kick_graph_build() -> None:
+    """No usable graph for the open repo: have index-lifecycle build it in the background
+    (`reprobe` claims the lock and spawns the detached builder; NEVER_INDEX roots and
+    non-git dirs are refused there). Log only, never raises, never waits."""
+    try:
+        cwd = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+        root = _git_root(cwd) if _git_root is not None else None
+        if root is None or _plat is None:
+            return
+        _plat.spawn_detached([_plat.python_exe(), str(_HOOKS / "index-lifecycle.py"),
+                              "reprobe", "--root", str(root)], cwd=str(root))
+        sys.stderr.write(f"[graphify] no graph for {root}; build started in the background.\n")
+    except Exception:  # noqa: BLE001 - launch prep must never crash the MCP
+        pass
+
+
 def main() -> int:
     try:
         incoming = sys.argv[1:]
-        graph = _resolve_graph(incoming) or _placeholder_graph()
+        graph = _resolve_graph(incoming)
+        if graph is None:
+            _kick_graph_build()
+            graph = _placeholder_graph()
         argv, env = _serve_command(graph)
     except Exception:  # total fail-open: launch prep must never crash the MCP
         try:

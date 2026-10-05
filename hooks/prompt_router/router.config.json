@@ -3,12 +3,15 @@
   "consumes_floor": "trigger-floor.json",
   "consumes_entire_floor": true,
   "auto_dispatch_threshold": 3,
-  "max_skill_pushes": 5,
+  "max_skill_pushes": 4,
   "min_skill_score": 3.0,
   "deep_inject_chars": 3000,
   "deep_inject_ratio": 1.5,
   "max_route_lines": 3,
   "max_mcp_routes": 4,
+  "max_routing_lines": 5,
+  "_caps_comment": "max_route_lines caps the /invoke dispatch lines, max_mcp_routes the MCP lines; max_routing_lines is the one total cap on the [Suggested routing] section (model-mode echo first, then UI, MCP, dispatch). enforce_hard: a rank-1 push is recorded enforce:'hard' for invoke-suite-gate only at score >= min_score, >= margin x rank 2, with an index intent/strong-surface match; else 'soft' (prompt_router/policy.py).",
+  "enforce_hard": {"min_score": 6.0, "margin": 1.5},
   "code_intel": {"max_symbols": 5, "budget_ms": 150},
   "weak_surface_factor": 0.5,
   "priority_tiers": {
@@ -29,7 +32,7 @@
     "intents": {
       "IMPLEMENT": ["create", "create a new", "add a new", "add a", "add an", "write a", "make a", "new endpoint", "new component", "new service", "new route", "new page", "new migration", "new column", "new table", "new feature", "set up", "generate a"],
       "DOCS": ["readme", "update the readme", "server_docs", "frontend_docs", "document the", "documentation", "docs"],
-      "DEBUG": ["returns 500", "returns a 500", "http 500", "status 500", "returns 404", "figure out why", "find out why"],
+      "DEBUG": ["returns 500", "returns a 500", "http 500", "status 500", "returns 404", "figure out why", "find out why", "crashed", "crashing", "didn't work", "did not work", "didnt work"],
       "REVIEW": ["review my changes", "review the diff", "review this pr", "code review"],
       "VERIFY": ["verify", "verify that", "check it works", "check that it works", "make sure it works", "confirm it works", "prove", "prove it", "prove that", "prove it works", "does it actually work"]
     },
@@ -46,6 +49,7 @@
       "tailwind": {"tailwind-design-system": 1.0},
       "shadcn": {"shadcn": 1.0, "ui-styling": 0.5},
       "docs": {"update-docs": 3.0},
+      "mobile": {"expo-react-native": 3.0},
       "ui": {"design-taste-frontend": 3.5, "frontend-design:frontend-design": 1.5, "tailwind-design-system": 1.2, "shadcn": 1.2, "higgsfield-generate": 1.5, "nateherk-design:scroll-craft": 1.0}
     },
     "demote": {
@@ -61,6 +65,7 @@
       "architect-system-design": 0.8
     },
     "skill_rules": [
+      {"skill": "source-driven-development", "regex": "\\b(official (docs|documentation)|check the (docs|documentation) (first|before)|per the (docs|documentation)|cite (the )?(docs|sources?)|outdated (api|pattern)s?)\\b", "boost": 6.0},
       {"skill": "nateherk-design:scroll-craft", "regex": "scroll[- ]?(animation|driven|telling|linked|scrubb\\w*)|scrollytelling|parallax|pinned section|apple[- ]style|landing page|hero section|make it an experience", "boost": 2.5},
       {"skill": "modern-web-guidance", "regex": "\\b(css|html|dialog|modal|popover|tooltip|anchor position\\w*|container quer\\w*|view transitions?|scroll[- ](driven|timeline)|backdrop[- ]filter|glassmorphism|content[- ]visibility|fetch ?priority|core web vitals|cwv|lcp|inp|baseline|browser support|polyfill)\\b", "boost": 2.0},
       {"skill": "postgres-patterns", "regex": "\\b(postgres(ql)?|migrations?|row[- ]level security|\\brls\\b|index on)\\b", "boost": 1.5},

@@ -14,7 +14,7 @@
 | Map repo + contracts | `codebase-intel-first`, `project-reference-linkage` |
 | MCP / tool-heavy verification | `mcp-usage-standards` |
 | Decomposition + gates | `workflow-orchestrator`, `architect-system-design` |
-| Plan / design visualization | `claude-mermaid:mermaid-diagrams` (plugin path `~/.claude/plugins/marketplaces/claude-mermaid/skills/mermaid-diagrams/SKILL.md`) — flowchart, sequence, state, ER, class diagrams via `mermaid_preview`/`mermaid_save`. Pair with `writing-plans` / `architect-system-design` / `workflow-orchestrator`. |
+| Plan / design visualization | Fenced `mermaid` blocks (flowchart, sequence, state, ER, class) in the plan or design doc; preview with the drawio MCP `open_drawio_mermaid` when connected. Pair with `writing-plans` / `architect-system-design` / `workflow-orchestrator`. |
 | Clear-scope coding | `code-execution-standard` + mandatory FE/BE list from hooks |
 | Unknown failure | `debug-investigation` (and Superpowers `systematic-debugging` when appropriate) |
 
@@ -22,7 +22,7 @@
 
 ## Ported ECC Claude bundle — when to load
 
-Canonical orchestrator stays **`workflow-orchestrator`**; **`agent-skills-orchestrator`** from the source bundle was **not** copied (merge conflict).
+Canonical orchestrator stays **`workflow-orchestrator`**; the source bundle's own orchestrator skill was not copied (merge conflict).
 
 | Intent | Skill under `~/.claude/skills/` |
 |--------|----------------------------------|
@@ -57,7 +57,7 @@ Canonical orchestrator stays **`workflow-orchestrator`**; **`agent-skills-orches
 ## Hooks and rules
 
 - **Canonical E2E doc:** `~/.claude/skills/skill-linkage-story/references/hooks-rules-e2e.md` (pipeline order, configs, overlap notes).
-- **Prompt-time routing:** `~/.claude/hooks/prompt_router/router.py` (≤5 skills per prompt)
+- **Prompt-time routing:** `~/.claude/hooks/prompt_router/router.py` (≤4 skills per prompt, `max_skill_pushes` in `router.config.json`)
 - **Write hint:** `~/.claude/hooks/fullstack-skills-reminder.py` (canonical `FRONTEND_SKILLS` / `BACKEND_SKILLS` baselines; native `paths:` frontmatter surfaces the rest)
 - **Plan vs execution layering:** [`plan-exec-unified-stack.md`](plan-exec-unified-stack.md) (this folder)
 - **Session soft gate (ECC `plan-mode-gate` port):** plan-shaped prompts → the prompt router (`hooks/prompt_router/`) surfaces `plan-mode-gate`

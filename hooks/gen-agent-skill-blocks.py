@@ -33,31 +33,32 @@ MAX_SKILLS = 13
 
 # agent -> preloaded skills (canonical names; plugin skills as plugin:skill).
 AGENT_SKILLS: dict[str, list[str]] = {
+    # Preload = what every spawn needs up front (audit 2026-10-05 E-07: FE was ~50k tokens,
+    # BE ~32k). Stack- or task-specific skills (Go, Postgres, scaffold, OWASP, shadcn,
+    # motion, design taste, Higgsfield) load on demand via Skill() or by file path; the
+    # agent bodies name them. test_agents_wp5 caps the weight per spawn.
     "backend-implementor-specialist": [
         "backend-standards-always-follow", "backend-api-standards", "api-contract-standards",
-        "service-layer-standards", "backend-error-handling", "scaffold-standards",
-        "golang-patterns", "golang-testing", "postgres-patterns", "owasp-security",
-        "test-driven-development", "dead-code-and-change-audit", "codebase-intel-first",
+        "service-layer-standards", "backend-error-handling", "test-driven-development",
+        "dead-code-and-change-audit", "codebase-intel-first",
     ],
     "frontend-implementor-specialist": [
         "frontend-standards-always-follow", "frontend-structure-standards",
         "frontend-response-handling", "frontend-server-data-patterns", "react-hooks-patterns",
-        "tailwind-design-system", "shadcn", "motion-dev", "design-taste-frontend",
-        "higgsfield-generate", "webapp-testing", "dead-code-and-change-audit",
+        "tailwind-design-system", "test-driven-development", "dead-code-and-change-audit",
         "codebase-intel-first",
     ],
     "integrator-specialist": [
         "api-contract-standards", "webapp-testing", "verification-loop", "codebase-intel-first",
     ],
     "implementation-engineer": [
+        # doubt-driven-development is never a persona preload (its own Loading Constraints)
         "codebase-intel-first", "architect-system-design", "test-driven-development",
-        "source-driven-development", "doubt-driven-development", "dead-code-and-change-audit",
+        "source-driven-development", "dead-code-and-change-audit",
         "verification-loop", "code-execution-standard",
     ],
     "frontend-uiux-designer": [
-        "design-taste-frontend", "frontend-design:frontend-design", "frontend-ui-engineering",
-        "motion-dev", "animejs-motion", "tailwind-design-system", "shadcn",
-        "higgsfield-generate", "webapp-testing",
+        "design-taste-frontend", "frontend-design:frontend-design", "tailwind-design-system",
     ],
     "santa-reviewer": ["santa-review", "code-review-and-quality"],
     "security-sentinel": ["owasp-security", "verification-loop"],
@@ -69,17 +70,16 @@ AGENT_SKILLS: dict[str, list[str]] = {
     ],
     "spec-architect": ["spec-driven-development", "api-contract-standards", "architect-system-design"],
     "debug-detective": [
-        "debug-investigation", "doubt-driven-development", "superpowers:systematic-debugging",
-        "codebase-intel-first",
+        "debug-investigation", "superpowers:systematic-debugging", "codebase-intel-first",
     ],
     "deadcode-reaper": ["dead-code-and-change-audit", "codebase-intel-first", "fix-lint-format"],
     "docs-sync-agent": ["update-docs", "dox-doc-tree"],
     "refactor-specialist": [
         "code-simplification", "codebase-design", "test-driven-development", "codebase-intel-first",
     ],
-    "test-author": ["test-driven-development", "golang-testing", "webapp-testing"],
+    "test-author": ["test-driven-development", "webapp-testing"],
     "memory-codex": [],
-    "team-lead": ["invoke", "api-contract-standards"],
+    # team-lead.md is the main session's team playbook (no frontmatter), not an agent (E-01)
 }
 
 FM_RE = re.compile(r"\A---\n(.*?)\n---\n", re.S)
@@ -128,6 +128,7 @@ def _sources(canon) -> set[str]:
         cfg = json.loads((HOOKS / "autonomous-skill-router.config.json").read_text(encoding="utf-8"))
         for cat in cfg.get("categories", {}).values():
             names += cat.get("local_skills") or []
+            names += [f"superpowers:{s}" for s in cat.get("superpowers_skills") or []]
     except (OSError, json.JSONDecodeError):
         pass
     return set(_collapse(names, canon))

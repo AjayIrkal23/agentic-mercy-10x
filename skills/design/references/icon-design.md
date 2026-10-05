@@ -117,6 +117,6 @@ python3 ~/.claude/skills/design/scripts/icon/generate.py --list-categories
 ## Setup
 
 ```bash
-# No API key needed — image generation goes through the Higgsfield MCP connector.
-pip install google-genai
+# No API key and no install needed — SVG icons are written directly as text;
+# scripts/icon/generate.py is legacy and must not be run.
 ```

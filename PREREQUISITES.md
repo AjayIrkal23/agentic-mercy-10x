@@ -1,5 +1,10 @@
 # Prerequisites — install these BEFORE running the installer
 
+> **Ubuntu 24.04+ (2026-10-05): only `git`, `curl` and `python3` are needed.** Node, the
+> Claude Code CLI, uv, gh, ollama and every package below are installed by the installer into
+> `~/.local`, without sudo (`install.sh`, or `install.sh --headless` in a console). The
+> table below is still the manual route, and what macOS / Windows need today.
+
 The installer (one automatic, visual, self-healing command — driven by
 `installer/manifest.json`) auto-installs and auto-registers everything it can —
 `uv`, `pipx`, `semgrep`, `lean-ctx`, `tdd-guard`, `jcodemunch-mcp`,
@@ -36,7 +41,7 @@ Python/Node/Git` machine-wide) — the base-tool step, not the workbench install
 | Tool | Why | Ubuntu / macOS | Windows |
 |---|---|---|---|
 | **Python ≥ 3.10** | The installer is Python; hooks run on it | `sudo apt install python3 python3-pip` · `brew install python@3.12` | `winget install Python.Python.3.12` (ships the `py -3` launcher) |
-| **Node.js LTS (+ npm)** | `lean-ctx`, `tdd-guard`, and 7 npx-launched MCP servers | nvm: `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash && nvm install --lts` · or `apt`/`brew` | `winget install OpenJS.NodeJS.LTS` · or nvm-windows |
+| **Node.js LTS (+ npm)** | `lean-ctx`, `tdd-guard`, and 9 npx-launched MCP servers (exact versions pinned in the manifest) | nvm: `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash && nvm install --lts` · or `apt`/`brew` | `winget install OpenJS.NodeJS.LTS` · or nvm-windows |
 | **Git** | Repo clone + line-ending self-repair + hook git calls | `sudo apt install git` · `brew install git` | `winget install Git.Git` |
 | **Claude Code CLI** | Registers MCP servers + installs plugins | `npm install -g @anthropic-ai/claude-code` | `npm install -g @anthropic-ai/claude-code` |
 
@@ -81,13 +86,25 @@ everything green.
 
 **What one click reproduces:** CLI deps (uv tools semgrep / `jcodemunch-mcp[openai]` /
 `jdocmunch-mcp[openai]` / graphifyy + the graphify serve venv; npm lean-ctx-bin,
-tdd-guard, pyright (symlinked into `~/.local/bin`), mmx-cli) → 15 user-scope MCP
-servers from `installer/manifest.json` (pinned versions, telemetry-off env) → 5
-marketplaces (autoUpdate on) + 12 plugins → `~/.config/lean-ctx/config.toml` merge
-(no hooks / rules / skill injection, no updates or telemetry, `shadow_mode=false`)
-→ rendered `settings.json` (never contains the string `lean-ctx`) → re-vendored
-skills, generated `/invoke` skills + agent skill blocks, indexes, validator → doctor
-0 FAIL. Headless / CI: `python3 install.py --ci` (network steps are only planned).
+tdd-guard, pyright (symlinked into `~/.local/bin`), mmx-cli). The
+`~/.config/lean-ctx/config.toml` merge (no hooks / rules / skill injection, no updates
+or telemetry, `shadow_mode=false`) runs FIRST, before lean-ctx is installed or
+registered → 16 user-scope MCP servers from `installer/manifest.json` (every `npx`
+package pinned to an exact version, telemetry-off env) → 5 marketplaces (autoUpdate on)
++ 12 plugins → rendered `settings.json` (never contains the string `lean-ctx`; a
+re-render keeps the newest 3 dated `settings.json.bak-*`) → re-vendored skills,
+generated `/invoke` skills + agent skill blocks, indexes, skill + mod validators →
+doctor 0 FAIL.
+
+Headless / CI: `python3 install.py --ci` plans the network and everything outside the
+checkout (WOULD-*), but the local repo steps run for real (render, generators,
+validator), so it is not read-only. The read-only plan is `python3 installer/deps.py`.
+
+**Mods:** `mods/<id>/` (manifest `mods.enabled`) load through
+`env.CLAUDE_CODE_PLUGIN_DIRS`. `mods.claude_version` is the minimum verified Claude
+Code release: the doctor passes later patches of that minor and warns below it or on a
+newer minor. Re-verify with `python3 scripts/validate_mods.py` (plugin validate + mod
+tests) and bump the pin.
 
 ## The only things the installer can't do for you
 
@@ -96,7 +113,10 @@ skills, generated `/invoke` skills + agent skill blocks, indexes, validator → 
 - **GitHub** — `gh auth login` once (the github MCP reads `gh auth token` at launch).
 - **Context7 key (optional)** — `export CONTEXT7_API_KEY=...` before installing.
 - **Semantic search (optional)** — install [ollama](https://ollama.com) and
-  `ollama pull all-minilm` (the doctor WARNs until present; search falls back to lexical).
+  `ollama pull all-minilm qwen2.5-coder:3b` (embeddings + jcodemunch AI summaries; the
+  doctor WARNs until both are present; search falls back to lexical).
+- **Private files** — keep `.env*`, `CLAUDE.machines.local.md`, `.credentials.json` and
+  `settings.user.json` at mode 600; the doctor's `secret-perms` row prints the `chmod`.
 - **Escape hatch** — if a hook ever misbehaves: `claude --safe-mode`.
 
 > **Everything else is automatic**, including MCP-server + plugin registration

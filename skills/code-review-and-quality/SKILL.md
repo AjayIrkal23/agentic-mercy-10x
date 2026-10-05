@@ -15,65 +15,18 @@ metadata:
   token-cost: 3484
   triggers:
     keywords:
-    - adapt
-    - agent
-    - another
-    - applying
-    - asks
-    - assess
-    - backend/service/api/database/migrations
-    - branch
-    - change
-    - changes
-    - checklist
-    - code
-    - commands
-    - conducts
-    - correctness
-    - dimensions
-    - e.g
-    - enters
-    - etc
-    - file
-    - files
-    - focused
-    - focuses
-    - frontend
-    - human
-    - impact
-    - lint
-    - local/staged
-    - main
+    - code review
+    - review my changes
+    - review the changes
+    - review this pr
+    - review the diff
+    - review the pr
+    - pr review
+    - before i merge
+    - before merging
+    - quality gate
     - maintainability
-    - merging
-    - multi-axis
-    - multiple
-    - need
-    - npm
-    - pending-change
-    - preflight
-    - quality
-    - references
-    - remote
-    - repo
-    - requests
-    - review
-    - reviewing
-    - reviews
-    - rules
-    - scripts
-    - security
-    - server
-    - server-side
-    - support
-    - test
-    - tests
-    - trigger
-    - tsx
-    - user
-    - while
-    - written
-    - yourself
+    - multi-axis review
     paths: []
     intents:
     - review

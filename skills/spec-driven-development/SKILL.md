@@ -1,6 +1,7 @@
 ---
 name: spec-driven-development
-description: Creates specs before coding. Use when starting a new project, feature, or significant change and no specification exists yet. Use when requirements are unclear, ambiguous, or only exist as a vague idea.
+description: 'Writes a spec before coding: goals, requirements, acceptance criteria and open questions for a new project, feature or significant change.'
+when_to_use: Use when starting a new project, feature or significant change with no specification yet, or when requirements are unclear, ambiguous or only a vague idea.
 metadata:
   schema: 1
   category: planning
@@ -13,26 +14,16 @@ metadata:
   token-cost: 1916
   triggers:
     keywords:
-    - ambiguous
-    - change
-    - coding
-    - creates
-    - development
-    - driven
-    - exist
-    - exists
-    - feature
-    - idea
-    - project
-    - requirements
-    - significant
     - spec
+    - write a spec
     - specification
     - specs
-    - starting
-    - unclear
-    - vague
-    - yet
+    - requirements
+    - acceptance criteria
+    - unclear requirements
+    - ambiguous requirements
+    - vague idea
+    - before coding
     paths: []
     intents:
     - planning
@@ -171,7 +162,7 @@ With the validated spec, generate a technical implementation plan:
 3. Note risks and mitigation strategies
 4. Identify what can be built in parallel vs. what must be sequential
 5. Define verification checkpoints between phases
-6. Diagram the spec's flows (user, data, state) and the implementation phase graph with `claude-mermaid:mermaid-diagrams` (plugin path `~/.claude/plugins/marketplaces/claude-mermaid/skills/mermaid-diagrams/SKILL.md`) before the plan is locked. Use `mermaid_preview` to iterate; `mermaid_save` to embed the diagram in the plan/spec file.
+6. Diagram the spec's flows (user, data, state) and the implementation phase graph as fenced `mermaid` blocks in the plan/spec file before the plan is locked (preview with the drawio MCP `open_drawio_mermaid` when it is connected).
 
 The plan should be reviewable: the human should be able to read it and say "yes, that's the right approach" or "no, change X."
 
