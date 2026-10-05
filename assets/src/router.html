@@ -1,0 +1,60 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+  .grid { margin-top: 44px; display: grid; grid-template-columns: 380px 64px 1fr; align-items: stretch; }
+  .prompt { padding: 28px; display: flex; flex-direction: column; gap: 18px; }
+  .prompt q { quotes: none; font-size: 25px; line-height: 1.45; color: var(--text); }
+  .prompt .who { display: flex; align-items: center; gap: 10px; }
+  .steps { margin-top: 6px; display: grid; gap: 10px; }
+  .step { display: grid; grid-template-columns: 30px 1fr; gap: 12px; align-items: baseline; font-size: 19px; color: var(--muted); }
+  .step b { font-family: 'Geist Mono', monospace; font-weight: 500; font-size: 15px; color: var(--dim); }
+  .step span strong { color: var(--text); font-weight: 500; }
+  .link { display: flex; align-items: center; justify-content: center; }
+  .link svg { width: 64px; height: 24px; }
+  .out pre { font-size: 18.5px; line-height: 1.62; }
+  .foot { margin-top: 30px; display: flex; gap: 12px; flex-wrap: wrap; }
+</style></head>
+<body>
+<div class="plate">
+  <h1 class="title">Every prompt is <em>routed</em> before Claude reads it</h1>
+  <p class="sub">One Python hook classifies intent and stack, then injects the 4 skills, MCP calls and specialist agent that fit. Nothing to type.</p>
+
+  <div class="grid">
+    <div class="card prompt">
+      <div class="who"><span class="label">your prompt</span></div>
+      <q>improve the images in the README, I want proper professional visuals for each feature</q>
+      <div class="steps">
+        <div class="step"><b>S1</b><span><strong>Classify</strong> intent and surface</span></div>
+        <div class="step"><b>S2</b><span><strong>Rank</strong> skills above a score floor</span></div>
+        <div class="step"><b>S3</b><span><strong>Substrate</strong> code, docs or graph index</span></div>
+        <div class="step"><b>S4</b><span><strong>Route</strong> MCP, agent, model</span></div>
+        <div class="step"><b>S5</b><span><strong>Dedup</strong> and emit</span></div>
+      </div>
+    </div>
+
+    <div class="link"><svg viewBox="0 0 64 24" fill="none"><path d="M4 12h52" stroke="#d97757" stroke-width="1.5"/><path d="M50 6l7 6-7 6" stroke="#d97757" stroke-width="1.5"/></svg></div>
+
+    <div class="term out">
+      <div class="bar"><i></i><i></i><i></i><span>UserPromptSubmit · hooks/prompt_router/router.py · additionalContext</span></div>
+<pre><span class="c-dim">&lt;!-- prompt-router v3 --&gt;</span>
+<span class="c-muted">[Skills for this task]</span>
+- <span class="c-acc">design-taste-frontend</span> (MUST-READ)
+  ACTION: Skill("design-taste-frontend")
+- frontend-standards-always-follow (SHOULD-READ)
+- modern-web-guidance (SHOULD-READ)
+- higgsfield-generate (SHOULD-READ)
+<span class="c-muted">[Suggested routing]</span>
+UI signal → design-taste-frontend is the visual authority
+Assets → generate_image, never placeholders or stock URLs
+Intent DESIGN: dispatch <span class="c-acc">frontend-uiux-designer</span> (act design)</pre>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="chip">word-boundary matching</span>
+    <span class="chip">React / Vite / Next · Go / Express / Prisma fingerprint</span>
+    <span class="chip">≈800 tokens median</span>
+    <span class="chip">fail-open: a prompt always flows</span>
+  </div>
+</div>
+</body></html>

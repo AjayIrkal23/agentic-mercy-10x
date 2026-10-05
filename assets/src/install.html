@@ -1,0 +1,57 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+  .wrap { margin-top: 40px; display: grid; grid-template-columns: 1fr 1.08fr; gap: 26px; align-items: start; }
+  .left { display: grid; gap: 22px; }
+  .term pre { font-size: 16.5px; line-height: 1.6; }
+  .flow { padding: 22px 26px; display: grid; gap: 0; }
+  .fs { display: grid; grid-template-columns: 30px 1fr; gap: 14px; padding: 11px 0; border-top: 1px solid var(--line); align-items: baseline; }
+  .fs:first-child { border-top: 0; }
+  .fs i { font-style: normal; font-family: 'Geist Mono', monospace; color: var(--accent-ink); font-size: 18px; }
+  .fs div { font-size: 19px; color: var(--muted); line-height: 1.35; }
+  .fs div b { color: var(--text); font-weight: 500; }
+  .doc pre { font-size: 15.5px; line-height: 1.55; }
+</style></head>
+<body>
+<div class="plate">
+  <h1 class="title">One command on a fresh machine. <em>Doctor says 0 FAIL.</em></h1>
+  <p class="sub">The installer copies the workbench into ~/.claude, installs every tool it needs in your home directory, and repairs and re-checks until every row is green.</p>
+
+  <div class="wrap">
+    <div class="left">
+      <div class="term">
+        <div class="bar"><i></i><i></i><i></i><span>bash · Ubuntu 24.04+, no sudo</span></div>
+<pre><span class="c-dim">$</span> git clone https://github.com/AjayIrkal23/agentic-mercy-10x \
+    ~/agentic-mercy
+<span class="c-dim">$</span> <span class="c-acc">~/agentic-mercy/install.sh</span>
+<span class="c-dim">  visual installer opens in a browser tab
+  --headless for servers, containers, ssh</span></pre>
+      </div>
+      <div class="card flow">
+        <div class="fs"><i>01</i><div><b>Base tools</b>: Node 22, Claude Code, uv, gh, checksum verified</div></div>
+        <div class="fs"><i>02</i><div><b>Packages</b>: semgrep, jcodemunch, jdocmunch, graphify, pinned</div></div>
+        <div class="fs"><i>03</i><div><b>Local AI</b>: ollama with embedding and summary models</div></div>
+        <div class="fs"><i>04</i><div><b>Claude Code</b>: 16 MCP servers, 11 plugins, the mercy mod</div></div>
+        <div class="fs"><i>05</i><div><b>Self-heal loop</b> until the doctor reports 0 FAIL</div></div>
+      </div>
+    </div>
+    <div class="term doc">
+      <div class="bar"><i></i><i></i><i></i><span>python3 installer/doctor.py</span></div>
+<pre><span class="c-ok">  OK</span>  link-doctor          PASS  43/43 links ok
+<span class="c-ok">  OK</span>  render-equivalence   PASS  template equals live settings
+<span class="c-ok">  OK</span>  settings-safety      PASS  permissions.deny []
+<span class="c-ok">  OK</span>  plugins-installed    PASS  11 plugins installed + enabled
+<span class="c-ok">  OK</span>  generated-in-sync    PASS  invoke skills + agent blocks
+<span class="c-ok">  OK</span>  palette-skills       PASS  129 SKILL.md
+<span class="c-ok">  OK</span>  ollama-embeddings    PASS  all-minilm, qwen2.5-coder:3b
+<span class="c-ok">  OK</span>  model-routing        PASS  judges on opus, escalation
+<span class="c-ok">  OK</span>  hook-fixtures        PASS  18 fixtures
+<span class="c-ok">  OK</span>  secret-perms         PASS  none group/world readable
+<span class="c-ok">  OK</span>  mods                 PASS  mercy on claude 2.1.290
+<span class="c-ok">  OK</span>  mods-runtime         PASS  plugin test, tsc ok
+<span class="c-dim">  ... 9 more rows</span>
+<span class="c-ok">=== 20 PASS, 1 WARN, 0 SKIP, 0 FAIL ===</span></pre>
+    </div>
+  </div>
+</div>
+</body></html>

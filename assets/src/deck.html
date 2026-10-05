@@ -1,0 +1,62 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+  .tui { margin-top: 38px; }
+  .tui .body { padding: 22px 26px 18px; font-size: 19px; line-height: 1.6; }
+  .band { border: 1px solid var(--accent-line); background: var(--accent-soft); border-radius: var(--r-chip); padding: 12px 16px; display: flex; justify-content: space-between; align-items: center; }
+  .band .msg { color: #f3c7b3; }
+  .band .btns { display: flex; gap: 8px; }
+  .band .btns span { font-size: 15px; padding: 4px 10px; border: 1px solid var(--line-2); border-radius: 6px; color: var(--text); background: rgba(0,0,0,.25); }
+  .band .btns span.k { border-color: var(--accent-line); color: var(--accent-ink); }
+  .input { margin-top: 14px; border: 1px solid var(--line-2); border-radius: var(--r-chip); padding: 12px 16px; color: var(--muted); }
+  .input b { color: var(--text); font-weight: 400; }
+  .lines { margin-top: 12px; display: grid; gap: 2px; }
+  .x117 { color: #87d7ff; } .x245 { color: #8a8a8a; } .x78 { color: #5fd787; } .x141 { color: #af87ff; } .x203 { color: #ff5f5f; }
+  .cols { margin-top: 26px; display: grid; grid-template-columns: 1.15fr 1fr 1fr; gap: 22px; }
+  .col { padding: 22px 24px; }
+  .col h3 { font-size: 22px; font-weight: 600; margin-bottom: 14px; }
+  .tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .tabs .chip { font-size: 15px; padding: 5px 10px; }
+  .list { display: grid; gap: 10px; font-size: 18px; color: var(--muted); }
+  .list b { color: var(--text); font-weight: 500; }
+</style></head>
+<body>
+<div class="plate">
+  <h1 class="title">Know where the session stands, <em>at a glance</em></h1>
+  <p class="sub">A status line, an action band above the prompt and a /pulse pane. Only what you can act on, and none of it costs model context.</p>
+
+  <div class="term tui">
+    <div class="bar"><i></i><i></i><i></i><span>claude · ~/projects/reports-app</span></div>
+    <div class="body">
+      <div class="band"><span class="msg">⚠ 2 changed code files not verified since the last passing check</span>
+        <span class="btns"><span class="k">Run checks</span><span>Pulse</span><span>Hide</span></span></div>
+      <div class="input">&gt; <b>add CSV export to the reports page</b></div>
+      <div class="lines">
+        <div><span class="c-muted">mercy · ✎ 3 (2 unverified) · ✓ verified 6m ago · ☑ 3/5 · CI ✓</span></div>
+        <div><span class="x117">◆ Opus 5.5 (xhigh)</span><span class="x245"> │ </span><span class="x78">▰▰▰▱▱▱▱▱▱▱ 38%</span><span class="x245"> │ $2.41 │ </span><span class="x78">5h 31% ↻18:40</span><span class="x245"> │ </span><span class="x141">⎇ main</span><span class="x245"> │ ⏱ 28m │ </span><span class="x78">+214</span> <span class="x203">−57</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols">
+    <div class="card col"><h3>/pulse pane, 13 views</h3>
+      <div class="tabs">
+        <span class="chip accent">overview</span><span class="chip">usage</span><span class="chip">git</span><span class="chip">ci</span><span class="chip">todo</span><span class="chip">today</span><span class="chip">ports</span><span class="chip">deps</span><span class="chip">files</span><span class="chip">commands</span><span class="chip">agents</span><span class="chip">hooks</span><span class="chip">brain</span>
+      </div></div>
+    <div class="card col"><h3>Runs by itself</h3>
+      <div class="list">
+        <div><b>Ports</b> scanned every minute</div>
+        <div><b>Standup</b> at the first session of the day</div>
+        <div><b>Compact</b> between turns at 85% context</div>
+        <div><b>CI</b> watched after every push</div>
+      </div></div>
+    <div class="card col"><h3>Alerts</h3>
+      <div class="list">
+        <div><b>Sound + notify-send</b> when a long turn ends</div>
+        <div><b>Toast</b> when CI, git or a dev port changes</div>
+        <div><b>Band</b> at 85% of the 5-hour window</div>
+        <div><b>Fix CI</b> button on a failing run</div>
+      </div></div>
+  </div>
+</div>
+</body></html>

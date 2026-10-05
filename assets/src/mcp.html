@@ -1,0 +1,63 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+  .groups { margin-top: 40px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .g { padding: 22px 24px; }
+  .g.wide { grid-column: span 2; }
+  .g .label { display: block; margin-bottom: 14px; }
+  .srv { display: grid; grid-template-columns: 210px 1fr; gap: 14px; padding: 9px 0; align-items: baseline; border-top: 1px solid var(--line); }
+  .srv:first-of-type { border-top: 0; }
+  .srv b { font-family: 'Geist Mono', monospace; font-weight: 500; font-size: 18px; color: var(--text); }
+  .srv b.k { color: var(--accent-ink); }
+  .srv span { font-size: 18px; color: var(--muted); line-height: 1.35; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 0 32px; }
+  .foot { margin-top: 26px; display: flex; gap: 12px; flex-wrap: wrap; }
+</style></head>
+<body>
+<div class="plate">
+  <h1 class="title">16 MCP servers, <em>each with a job</em></h1>
+  <p class="sub">Tool precedence is a rule, not a hint: code questions go to the symbol index before any grep, library APIs to live docs, security-sensitive files to semgrep.</p>
+
+  <div class="groups">
+    <div class="card g wide"><span class="label">code and docs intelligence</span>
+      <div class="two">
+        <div>
+          <div class="srv"><b class="k">jcodemunch</b><span>symbol index: find, read and blast-radius code</span></div>
+          <div class="srv"><b class="k">graphify</b><span>knowledge graph for "how is X wired"</span></div>
+          <div class="srv"><b>jdocmunch</b><span>section search over doc trees</span></div>
+        </div>
+        <div>
+          <div class="srv"><b>context7</b><span>current library and framework docs</span></div>
+          <div class="srv"><b>lean-ctx</b><span>cached file and shell context</span></div>
+          <div class="srv"><b>markdownify</b><span>PDF, DOCX, pages to Markdown</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="card g"><span class="label">reasoning and memory</span>
+      <div class="srv"><b class="k">sequential-thinking</b><span>before any plan or debug</span></div>
+      <div class="srv"><b>memory</b><span>decisions that outlive a session</span></div>
+    </div>
+    <div class="card g"><span class="label">verify and secure</span>
+      <div class="srv"><b class="k">semgrep</b><span>scan auth, input and API changes</span></div>
+      <div class="srv"><b>reticle</b><span>prove a UI change in the running app</span></div>
+      <div class="srv"><b>playwright</b><span>drive a real browser</span></div>
+      <div class="srv"><b>browser-tools</b><span>console, network, audits</span></div>
+    </div>
+    <div class="card g"><span class="label">assets and diagrams</span>
+      <div class="srv"><b>higgsfield</b><span>image, video, 3D, audio</span></div>
+      <div class="srv"><b>openart</b><span>image and video models</span></div>
+      <div class="srv"><b>drawio</b><span>editable diagrams</span></div>
+    </div>
+    <div class="card g"><span class="label">repo</span>
+      <div class="srv"><b>github</b><span>issues, PRs, reviews</span></div>
+      <div class="srv"><b>+ db MCP</b><span>read-only Supabase or MongoDB, per project</span></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span class="chip">pinned versions, installed by the installer</span>
+    <span class="chip">indexes refresh on events, no daemons</span>
+    <span class="chip">hooks suggest only servers that are connected</span>
+  </div>
+</div>
+</body></html>
