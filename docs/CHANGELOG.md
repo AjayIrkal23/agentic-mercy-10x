@@ -1,5 +1,34 @@
 # Changelog
 
+## v4.0.1 — 2026-10-05 Windows end-to-end run 2 fixes
+
+Merges branch `win-e2e-fixes-2026-09-30` (commit `50e7372`, written 2026-09-30 on the
+Windows replica, never merged until now). Why: the second end-to-end run on the Windows
+replica found gates that were silent on Windows or could be satisfied without doing the
+work.
+
+- tdd-guard never ran on Windows: `tdd-guard-gate.py` spawned the bare name `tdd-guard`,
+  an npm `.cmd` shim that CreateProcess cannot start, and the fail-open swallowed the
+  FileNotFoundError. It now spawns the `shutil.which` path and talks UTF-8 both ways
+  (a cp1252 locale would have dropped any advisory containing "”").
+- dangerous-bash-gate missed `git -C <dir> reset --hard`, `git --work-tree <x> reset
+  --hard` and `git -c k=v push --force`: the patterns needed the subcommand right after
+  `git`. Git global options are skipped now, with a token pattern that cannot backtrack
+  exponentially. Merge resolution: the push pattern keeps v4's `--force(?![-\w])`, so
+  `--force-with-lease` / `--force-if-includes` still pass (the branch's `--force\b` would
+  have denied them).
+- Gate 3 credited any semgrep MCP call, so `get_supported_languages` alone passed it. Only
+  `semgrep_scan*` counts now. Merge resolution: its test reads the state file, because v4
+  replaced the tracker's `_load_state` with `locked_update`. The mod's bridge still runs
+  the link on any `mcp__semgrep__` call; the link decides the credit.
+- codex-capture never fired on Windows, and the skip lists of gateguard,
+  security-scan-gate and doc-update-enforcer (`node_modules/`, `dist/`, `docs/`,
+  `.claude/`, …) never matched there: all compared forward-slash patterns against the
+  backslash paths Claude Code sends. All four normalise separators now.
+- bash-write-gate, tool-failure-hint and doc-update-enforcer named rule files that no longer
+  exist (`rules/no-permission-bypass.md`, `rules/file-work-and-gate-routing.md`,
+  "mandatory-skill-protocol"). A test now fails when a hook names a missing `rules/` file.
+
 ## v4.0.0 — 2026-10-05 release
 
 Everything since the v3.0.0 tag, released as one major: the sections from here down to

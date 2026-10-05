@@ -2,7 +2,7 @@
 """tool-failure-hint.py — PostToolUseFailure advisory.
 
 Turns the two most-misdiagnosed tool failures into a one-line hint
-(rules/file-work-and-gate-routing.md §3):
+(rules/claude-infra.md, "Misdiagnosis order"):
   Edit/Write whose error mentions "has not been read" or "Read deny"
       -> Read the exact file, then retry immediately.
   Bash whose error contains "path escapes project root"

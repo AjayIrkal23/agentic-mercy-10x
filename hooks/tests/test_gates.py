@@ -520,3 +520,94 @@ def test_tdd_guard_timeouts_nest_above_validator_latency():
     link = next(ln for ln in json.loads((_HOOKS / "dispatch.config.json").read_text(encoding="utf-8"))
                 ["chains"]["pre-tool-use"] if ln["id"] == "tdd-guard-launcher-pre")["timeout_ms"] / 1000
     assert 12 <= gate < launcher < link < 30
+
+
+def test_tdd_guard_gate_spawns_the_resolved_binary(monkeypatch, tmp_path):
+    """On Windows `tdd-guard` is an npm `.cmd` shim. CreateProcess cannot start it by
+    bare name (FileNotFoundError, swallowed by the fail-open), so tdd-guard never ran
+    there (e2e run 2). The gate must spawn the path `shutil.which` resolves."""
+    import shutil
+    gate = _load("tdd_gate_which", "tdd-guard-gate.py")
+    shim = str(tmp_path / "tdd-guard.CMD")
+    monkeypatch.setattr(shutil, "which", lambda name, *a, **k: shim if name == "tdd-guard" else None)
+    seen = []
+    monkeypatch.setattr(subprocess, "run",
+                        lambda cmd, **kw: seen.append((cmd, kw)) or subprocess.CompletedProcess(cmd, 0, "", ""))
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
+    payload = {"tool_name": "Edit", "tool_input": {"file_path": str(tmp_path / "a.py")}}
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
+    gate.main()
+    cmd, kw = seen[0]
+    assert cmd[0] == shim
+    assert kw.get("encoding") == "utf-8"  # a cp1252 decode of "”" lost the advisory
+
+
+def test_dangerous_bash_gate_sees_through_git_global_options():
+    """`git -C <dir> reset --hard` ran unchallenged (e2e run 2): the patterns needed the
+    subcommand right after `git`."""
+    dbg = _load("dbg_opts", "dangerous-bash-gate.py")
+
+    def hits(cmd):
+        return [n for p, n, _ in dbg.DANGEROUS_PATTERNS if p.search(dbg._strip_quoted(cmd))]
+    assert hits("git -C ../other reset --hard")
+    assert hits('git -C "../a b" -c core.pager=cat reset --hard')
+    assert hits("git --no-pager -C repo push --force origin main")
+    assert hits("git --git-dir=../x/.git push -f origin main")
+    assert hits("git --work-tree ../wt reset --hard")
+    assert hits("git --git-dir ../bare reset --hard")
+    assert hits("git --namespace x push --force")
+    assert not hits("git -C ../other status")
+    assert not hits("git -C ../other reset --soft HEAD~1")
+    assert not hits("git log --grep reset --hard")
+    import time
+    start = time.monotonic()  # `--?[\w.-]+` backtracked exponentially per `--opt`
+    hits("git " + "--o " * 40 + "status; git reset --hard")
+    assert time.monotonic() - start < 1.0
+
+
+def test_skip_patterns_match_windows_separators_in_write_hooks():
+    """security-scan-gate and doc-update-enforcer matched `docs/`, `dist/`, `.claude/`
+    against backslash paths, so on Windows docs and build output counted as code."""
+    sg = _load("security_scan_gate_ut", "security-scan-gate.py")
+    de = _load("doc_update_enforcer_ut", "doc-update-enforcer.py")
+    for mod in (sg, de):
+        assert mod._should_skip("web\\dist\\auth.js")
+        assert mod._should_skip("web\\node_modules\\jwt\\token.js")
+        assert not mod._should_skip("web\\src\\auth.ts")
+    assert sg._should_skip("app\\docs\\auth.md")
+
+
+def test_codex_capture_matches_native_windows_paths():
+    """Claude Code on Windows sends `web\\src\\api\\x.ts`; the forward-slash patterns never
+    matched, so the CODEX advisory never fired there (e2e run 2)."""
+    cc = _load("codex_capture_ut", "codex-capture.py")
+    assert cc.is_high_signal_path("web/src/api/products.ts")
+    assert cc.is_high_signal_path("web\\src\\api\\products.ts")
+    assert not cc.is_high_signal_path("web\\node_modules\\src\\api\\x.ts")
+
+
+def test_semgrep_tracker_credits_only_scans(monkeypatch, tmp_path):
+    """Any semgrep MCP call satisfied Gate 3, even `get_supported_languages`, which scans
+    nothing (e2e run 2). Only a `semgrep_scan*` call is evidence."""
+    tr = _load("semgrep_tracker_ut", "security-semgrep-tracker.py")
+    monkeypatch.setattr(tr, "STATE_DIR", tmp_path)
+    state_file = tmp_path / "s1.security-scan.json"  # v4: written through locked_update
+
+    def state() -> dict:
+        return json.loads(state_file.read_text(encoding="utf-8")) if state_file.exists() else {}
+
+    tr.post_tool_use({"tool_name": "mcp__semgrep__get_supported_languages", "session_id": "s1"})
+    assert not state().get("semgrep_ran")
+    tr.post_tool_use({"tool_name": "mcp__semgrep__semgrep_scan_with_custom_rule", "session_id": "s1",
+                      "tool_response": {"results": [{}]}})
+    assert state()["semgrep_ran"] and state()["semgrep_findings"] == 1
+
+
+def test_hooks_name_only_existing_rule_files():
+    """bash-write-gate's deny text sent agents to rules/no-permission-bypass.md, a file
+    that no longer exists (e2e run 2). Every rules/<file> a hook names must exist."""
+    import re
+    rules = _HOOKS.parent / "rules"
+    refs = {(p.name, m) for p in _HOOKS.rglob("*.py") if "tests" not in p.parts
+            for m in re.findall(r"rules/([\w.-]+\.mdc?)", p.read_text(encoding="utf-8"))}
+    assert sorted(r for r in refs if not (rules / r[1]).is_file()) == []

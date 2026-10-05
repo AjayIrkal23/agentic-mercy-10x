@@ -77,7 +77,8 @@ def _is_security_sensitive(fp: str) -> bool:
 
 
 def _should_skip(fp: str) -> bool:
-    return any(skip in fp for skip in SKIP_PATTERNS)
+    norm = fp.replace("\\", "/")  # Windows sends `a\b`
+    return any(skip in norm for skip in SKIP_PATTERNS)
 
 
 def _state_path(cid: str) -> Path:

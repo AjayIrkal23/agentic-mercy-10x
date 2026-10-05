@@ -79,8 +79,8 @@ def is_high_signal_path(file_path: str) -> bool:
     """Return True if the file_path matches a high-signal pattern."""
     if not file_path:
         return False
-    # Normalise: strip leading slashes for relative matching
-    norm = file_path.lstrip("/")
+    # Normalise: forward slashes (Windows sends `a\b`), no leading slash
+    norm = file_path.replace("\\", "/").lstrip("/")
     # Check skip patterns first
     for skip in SKIP_PATTERNS:
         if skip in norm:

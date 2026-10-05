@@ -89,6 +89,12 @@ def _git_push_force_is_safe(cmd: str) -> bool:
     return False
 
 
+# `git` plus any global options before the subcommand (`-C <dir>`, `-c k=v`,
+# `--git-dir <x>`, `--no-pager`, `--work-tree=<x>`), so `git -C repo reset --hard` is
+# still caught. `\w` first keeps each token unambiguous (no exponential backtracking).
+_GIT = (r"\bgit\s+(?:(?:-[Cc]\s+\S+|--(?:git-dir|work-tree|namespace|config-env)\s+\S+"
+        r"|--?\w[\w.-]*(?:=\S+)?)\s+)*")
+
 DANGEROUS_PATTERNS: list[tuple[re.Pattern, str, object]] = [
     (
         _RMRF_RE,
@@ -99,16 +105,14 @@ DANGEROUS_PATTERNS: list[tuple[re.Pattern, str, object]] = [
         re.compile(
             # `--force(?![-\w])`: --force-with-lease / --force-if-includes refuse to
             # overwrite work the pusher has not seen; only a bare --force does (WP3)
-            r"\bgit\s+push\s+(?:\S+\s+)*--force(?![-\w])"
-            r"|\bgit\s+push\s+(?:\S+\s+)*-f\b"
-            r"|\bgit\s+push\s+-f\s+",
+            _GIT + r"push\s+(?:\S+\s+)*(?:--force(?![-\w])|-f\b)",
             re.IGNORECASE,
         ),
         "git push --force (overwrites remote history)",
         _git_push_force_is_safe,
     ),
     (
-        re.compile(r"\bgit\s+reset\s+--hard\b", re.IGNORECASE),
+        re.compile(_GIT + r"reset\s+--hard\b", re.IGNORECASE),
         "git reset --hard (discards uncommitted changes)",
         None,
     ),

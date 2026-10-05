@@ -134,7 +134,8 @@ def _is_doc_file(fp: str) -> bool:
 
 
 def _should_skip(fp: str) -> bool:
-    return any(skip in fp for skip in SKIP_PATTERNS)
+    norm = fp.replace("\\", "/")  # Windows sends `a\b`
+    return any(skip in norm for skip in SKIP_PATTERNS)
 
 
 def _dir_of(fp: str) -> str:
@@ -292,7 +293,7 @@ def main() -> int:
         f"[DOC-UPDATE ENFORCER — MANDATORY] {n} code file(s) modified. "
         f"Before completing, update: {'; '.join(pending)}. "
         f"The Stop gate BLOCKS completion until docs — including the dox CLAUDE.md for "
-        f"changed dir(s) — are updated. Phase 7 in mandatory-skill-protocol is non-negotiable."
+        f"changed dir(s) — are updated. Phase 7 in rules/02-lifecycle.md is non-negotiable."
     )
 
     print(json.dumps({"hookSpecificOutput": {

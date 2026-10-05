@@ -43,7 +43,7 @@ STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or SCRIPT_DIR / ".st
 def _should_skip(file_path: str) -> bool:
     if not file_path:
         return True
-    fp_lower = file_path.lower()
+    fp_lower = file_path.lower().replace("\\", "/")  # Windows sends `a\b`
     for pat in SKIP_PATTERNS:
         if pat in fp_lower:
             return True

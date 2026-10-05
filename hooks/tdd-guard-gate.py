@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -105,10 +106,13 @@ def main() -> int:
         if fpath and not _within(fpath, root):
             return 0  # exit 0, no output = allow
 
-    # 2. Run tdd-guard.
+    # 2. Run tdd-guard. Resolve the path first: on Windows it is an npm `.cmd` shim
+    # that CreateProcess cannot start by bare name. UTF-8 both ways: a cp1252 locale
+    # cannot encode "→" in the payload or decode "”" in the reason.
     try:
         proc = subprocess.run(
-            ["tdd-guard"], input=raw, capture_output=True, text=True, timeout=TDD_TIMEOUT_S
+            [shutil.which("tdd-guard") or "tdd-guard"], input=raw, capture_output=True,
+            encoding="utf-8", errors="replace", timeout=TDD_TIMEOUT_S,
         )
         out, rc = proc.stdout, proc.returncode
     except Exception:

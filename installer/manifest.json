@@ -1,6 +1,6 @@
 {
  "_about": "Declarative install contract for the ~/.claude workbench, read by installer/{deps,verify,doctor,selfheal}.py. Idempotent + fail-visible. Tokens: {PYTHON} {NODE} {CLAUDE_DIR} (from detect.py). `network:true` / `ci_stub:true` steps only PLAN (WOULD-*) under `install.py --ci` / `--dry-run`. `env_from` adds `-e NAME=$NAME` to an MCP registration only when NAME is set in the installer's environment (secrets never live in this file). MCP servers are registered user-scope into ~/.claude.json (the single live MCP store; settings.template.json has no mcpServers). Counts (skills, agents) are always computed from disk, never pinned here.",
- "version": "4.0.0",
+ "version": "4.0.1",
  "min_python": "3.10",
  "prereqs": [
   {
