@@ -45,7 +45,8 @@ function world(on: On, opts: WorldOpts = {}) {
   on('tool.register', () => ({ value: undefined }) as never)
   on('command.register', () => ({ value: undefined }) as never)
   on('fs.read', () => ({ value: '{"chains":{}}' }))
-  on('fs.exists', (_$, e) => ({ value: e.path === '/r/package.json' }))
+  // the root's package.json only; on Windows the engine resolves the cwd `/r` to a drive path
+  on('fs.exists', (_$, e) => ({ value: /^(?:[A-Za-z]:)?[\\/]r[\\/]package\.json$/.test(e.path) }))
   on('ui.status', (_$, e) => {
     if (e.text) statuses.push(e.text)
     return { value: undefined }

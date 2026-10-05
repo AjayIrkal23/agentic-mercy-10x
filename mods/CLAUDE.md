@@ -162,7 +162,8 @@ One plugin; each feature has a `userConfig` toggle in `mercy/.claude-plugin/plug
   (session) or `$.store` (across sessions, 4 MiB per plugin).
 - Windows: engine paths may use `\`. `lib/paths.ts` and the matchers accept both
   separators; `dispatch.py` is spawned by argv with the interpreter read from the
-  rendered settings (`python3` or `py -3`).
+  rendered settings (`python3` or `py -3`). In engine tests on Windows a POSIX fixture
+  cwd (`/r`) reaches hooks as `C:\r`, so `fs.*` fixtures must match both spellings.
 - The secret guard's `git check-ignore` runs with `-c safe.directory=*`: on the Windows
   replica the SSH account does not own the repos, and git's exit 128 for "dubious
   ownership" would otherwise read as "not in a repo" and switch the guard off.
