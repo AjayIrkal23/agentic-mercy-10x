@@ -73,7 +73,7 @@ function viewRows(view: PulseView, s: Snapshot, width: number): Row[] {
   if (view === 'git') return gitRows(s.deck?.git, s.now, width)
   if (view === 'ci') return ciRows(s.deck?.ci, s.now, width)
   if (view === 'todo') return todoRows(s.deck?.todos ?? [], width)
-  if (view === 'ports') return portsRows(s.deck?.ports, width)
+  if (view === 'ports') return portsRows(s.deck?.ports, width, s.deck?.portsError)
   if (view === 'deps') return depsRows(s.deck?.deps, s.now, width)
   if (view === 'today') return []
   const last = view === 'overview' ? lastSessionLine(s.deck?.lastSession, s.now) : undefined

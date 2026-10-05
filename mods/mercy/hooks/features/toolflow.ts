@@ -10,10 +10,10 @@ import { dirname, targetPath, WRITE_TOOLS } from '../lib/paths'
 import { noteError, rt, takePending, ui } from '../lib/runtime'
 import { findSecret, isSecretHome, writtenText } from '../lib/secrets'
 import { snapshot } from '../lib/snap'
+import { isShellTool, shellOf } from '../lib/tools'
 import { statusText } from '../lib/views'
 
 const LEDGER = { plugin: 'mercy', key: 'ledger' } as const
-const SHELL_TOOLS = new Set(['Bash', 'mcp__lean-ctx__ctx_shell', 'mcp__lean-ctx__shell'])
 const PATCH_TOOLS = new Set(['mcp__lean-ctx__ctx_patch'])
 const SKILL_MD = /[\\/]skills[\\/]([^\\/]+)[\\/]SKILL\.md$/
 
@@ -38,7 +38,7 @@ async function committable($: EngineInterface, path: string): Promise<boolean> {
 }
 
 async function guardPre($: EngineInterface, tool: string, input: Record<string, unknown>, agentId: string | undefined): Promise<string | undefined> {
-  if (SHELL_TOOLS.has(tool)) {
+  if (isShellTool(tool)) {
     const command = typeof input['command'] === 'string' ? input['command'] : ''
     return bashDeny(command, analyze(command, input['run_in_background'] === true), agentId)
   }
@@ -102,8 +102,8 @@ export function registerToolflow(on: On): void {
           const nudge = thrashNudge(path, rt.ledger.turnEdits[path] ?? 0)
           if (nudge) context.push(nudge)
         }
-        if (SHELL_TOOLS.has(e.tool) && typeof input['command'] === 'string') {
-          const info = analyze(input['command'], input['run_in_background'] === true)
+        if (isShellTool(e.tool) && typeof input['command'] === 'string') {
+          const info = analyze(input['command'], input['run_in_background'] === true, 0, shellOf(e.tool))
           const fail = recordCommand(rt.ledger, {
             key: commandKey(input['command']), command: input['command'].slice(0, 200), kinds: info.kinds, verify: info.verify,
             ok: !failed, at: now, ms: now - started, turn: rt.ledger.turn, agent, error: failed ? errorSignature(r.text ?? '') : undefined,

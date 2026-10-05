@@ -14,7 +14,9 @@ function interpreterFrom(command: string): string[] | undefined {
   const tokens = command.match(/"[^"]*"|'[^']*'|\S+/g) ?? []
   const at = tokens.findIndex(t => /dispatch\.py["']?$/.test(t))
   if (at <= 0) return undefined
-  return tokens.slice(0, at).map(t => t.replace(/^["']|["']$/g, ''))
+  // an unquoted profile path with a space splits into tokens: the interpreter ends where a path starts
+  const path = tokens.findIndex((t, i) => i > 0 && /^(?:[A-Za-z]:[\\/]|\/|~)/.test(t))
+  return tokens.slice(0, path < 0 ? at : Math.min(at, path)).map(t => t.replace(/^["']|["']$/g, ''))
 }
 
 type HookGroups = Record<string, Array<{ hooks?: Array<{ command?: string }> }>>

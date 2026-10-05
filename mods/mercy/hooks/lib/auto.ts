@@ -7,7 +7,7 @@ import type { Row } from './deckviews'
 import { ago, clip, usd } from './format'
 import { unverified } from './ledger'
 
-const DEV_PROCS = /^(?:node|bun|deno|python[\d.]*|uvicorn|gunicorn|next-server|vite|esbuild|php|ruby|java|go|air|cargo|dotnet)$/
+const DEV_PROCS = /^(?:node|bun|deno|python[\d.]*|uvicorn|gunicorn|next-server|vite|esbuild|php|ruby|java|go|air|cargo|dotnet)$/i // Windows image names are case-insensitive
 const DEV_LABELS = new Set(['dev', 'vite', 'vite preview', 'expo', 'node inspect'])
 
 /** A dev server the user runs: a known dev port, or a dev runtime on a non-system port. */
@@ -61,15 +61,17 @@ export function shouldCompact(f: { threshold: number; contextPct: number; now: n
   return f.interactive && f.threshold > 0 && f.contextPct >= f.threshold && f.now - f.lastAt > 600_000
 }
 
-export function portsRows(ports: readonly PortRow[] | undefined, width: number): Row[] {
+/** `error`: the last scan failed; the rows are then the last good scan, if any. A failure is never "nothing is listening". */
+export function portsRows(ports: readonly PortRow[] | undefined, width: number, error?: string): Row[] {
   const fit = (t: string): string => clip(t, Math.max(30, width))
-  if (!ports) return [{ text: 'Not scanned yet (every minute, `ss -ltnpH`).', dim: true }]
-  if (!ports.length) return [{ text: 'Nothing is listening on TCP.', dim: true }]
-  return ports.map(p => ({
+  const failed: Row[] = error ? [{ text: fit(`port scan failed: ${error}`), color: 'red' }] : []
+  if (!ports) return failed.length ? failed : [{ text: 'Not scanned yet (every minute).', dim: true }]
+  if (!ports.length) return failed.length ? failed : [{ text: 'Nothing is listening on TCP.', dim: true }]
+  return [...failed, ...ports.map(p => ({
     text: fit(`${String(p.port).padStart(5)}  ${p.address.padEnd(15)} ${(p.process ?? '-').padEnd(14)} ${p.label ?? ''}`),
     color: isDevPort(p) ? 'green' : undefined,
     dim: !isDevPort(p),
-  }))
+  }))]
 }
 
 export function depsRows(deps: DepsState | undefined, now: number, width: number): Row[] {
@@ -82,6 +84,11 @@ export function depsRows(deps: DepsState | undefined, now: number, width: number
     for (const r of d.rows.slice(0, 15)) rows.push({ text: fit(`  ${r.name.padEnd(28)} ${r.current} → ${r.latest}${r.bump === 'major' ? '  major' : ''}`), color: r.bump === 'major' ? 'yellow' : undefined, dim: r.bump !== 'major' })
     if (d.rows.length > 15) rows.push({ text: `  … ${d.rows.length - 15} more`, dim: true })
   }
-  rows.push({ text: `checked ${ago(now, deps.at)}`, dim: true })
+  rows.push({ text: `checked ${ago(now, deps.at)}${deps.partial ? ' · a folder could not be checked, asked again within the hour' : ''}`, dim: true })
   return rows
+}
+
+/** npm outdated is due: never checked, a day old, or (a folder could not be checked) an hour old. */
+export function depsDue(deps: DepsState | undefined, now: number): boolean {
+  return !deps || now - deps.at > (deps.partial ? 3_600_000 : 86_400_000)
 }

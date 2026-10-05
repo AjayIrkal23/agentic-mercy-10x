@@ -104,6 +104,7 @@ export type Runtime = {
   pluginRoot: string
   hooksDir: string
   python: string[]
+  windows: boolean; systemRoot: string | undefined // lib/os.ts: `OS` and `SystemRoot` of the engine env, set once at session start
   dispatch: DispatchConfig | undefined
   ledger: Ledger
   brain: RepoFacts | null
@@ -158,6 +159,7 @@ export function freshRuntime(options: Options): Runtime {
     pluginRoot: '',
     hooksDir: '',
     python: ['python3'],
+    windows: false, systemRoot: undefined,
     dispatch: undefined,
     ledger: emptyLedger('', 0),
     brain: null,

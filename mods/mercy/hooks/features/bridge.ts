@@ -107,6 +107,11 @@ async function pump($: EngineInterface, lane: Lane): Promise<void> {
   await $.state.set(BRIDGE, rt.bridge)
 }
 
+/** Runs a lane in the background: its last step is a state write the engine can refuse once it is shutting down; that is noted, never an unhandled rejection (A2v2-09). */
+function startPump($: EngineInterface, lane: Lane): void {
+  void pump($, lane).catch(err => noteError('bridge lane', err))
+}
+
 /** Waits for the fast lane (and the slow one before a write: its tdd-guard advisory rides this call, B1-22), at most 4 s. */
 async function drain($: EngineInterface, signal: AbortSignal, write: boolean): Promise<void> {
   const lanes: Lane[] = write ? ['fast', 'slow'] : ['fast']
@@ -181,7 +186,7 @@ export function registerBridge(on: On): void {
       if (!ids.length || !later) continue
       const agentId = rt.subagentCalls.has(e.tool_use_id) ? 'subagent' : undefined
       enqueue({ lane, event: 'pre-tool-use', ids, payload: later.payload, key: lane === 'slow' ? later.key : e.tool_use_id, queuedAt: t0, agentId })
-      void pump($, lane)
+      startPump($, lane)
     }
     const context = [...(r.additionalContext ?? []), ...extra]
     if (ask !== undefined && r.deny === undefined) {
@@ -209,7 +214,7 @@ export function registerBridge(on: On): void {
         const queue = plan.async.filter(id => rt.bridge.owned.includes(id))
         if (queue.length) {
           enqueue({ lane: 'fast', event: 'post-tool-use', ids: queue, payload, key: e.tool_use_id, queuedAt: t0, agentId: e.agent_id })
-          void pump($, 'fast')
+          startPump($, 'fast')
         }
       }
     } catch (err) {

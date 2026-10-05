@@ -5,6 +5,8 @@
 import type { CheckState, CiCheck, CiState, GitFile, GitState, Todo, UiMode, UiPrefs } from '../../types'
 import { duration } from './format'
 import { clockLabel } from './resume'
+import type { AlertKind, Cmd } from './winalerts'
+import { windowsPlayers } from './winalerts'
 
 export type Flags = { status: boolean; band: boolean; paneAuto: boolean; toasts: 'all' | 'failures' | 'none'; sound: boolean; notify: boolean; restyle: boolean }
 
@@ -31,7 +33,7 @@ export function inQuietHours(spec: string, minuteOfDay: number): boolean {
   return from <= to ? minuteOfDay >= from && minuteOfDay < to : minuteOfDay >= from || minuteOfDay < to
 }
 
-export type SoundKind = 'done' | 'error' | 'input'
+export type SoundKind = AlertKind
 const SOUNDS: Record<SoundKind, { id: string; file: string }> = {
   done: { id: 'complete', file: 'complete.oga' },
   error: { id: 'dialog-error', file: 'dialog-error.oga' },
@@ -43,11 +45,12 @@ export function shouldSound(kind: SoundKind, f: Flags, s: { now: number; lastAt:
   return kind !== 'done' || (s.turnMs ?? 0) >= s.afterMs
 }
 
-/** Players to try in order: the desktop sound theme (respects GNOME volume), file players, macOS. */
-export function playerArgvs(kind: SoundKind): string[][] {
+/** Players to try in order. Windows: PowerShell with a Media wav, then the user's SystemSounds. Elsewhere: the desktop sound theme (respects GNOME volume), file players, macOS. */
+export function playerCmds(kind: SoundKind, windows: boolean, root?: string): Cmd[] {
+  if (windows) return windowsPlayers(kind, root)
   const { id, file } = SOUNDS[kind]
   const path = `/usr/share/sounds/freedesktop/stereo/${file}`
-  return [['canberra-gtk-play', '-i', id, '-d', 'claude-code'], ['pw-play', path], ['paplay', path], ['afplay', '/System/Library/Sounds/Glass.aiff']]
+  return [['canberra-gtk-play', '-i', id, '-d', 'claude-code'], ['pw-play', path], ['paplay', path], ['afplay', '/System/Library/Sounds/Glass.aiff']].map(argv => ({ argv }))
 }
 
 // ---- git -----------------------------------------------------------------------------
@@ -189,6 +192,13 @@ export function sparkCells(values: readonly number[], columns: number): string {
 }
 
 type TodoInput = { todos?: Array<{ content?: string; status?: string; [k: string]: unknown }>; subject?: string; taskId?: string; status?: string; [k: string]: unknown }
+
+// `git`, `git.exe`, a quoted exe path, and the options before the subcommand (`-C <dir>`, `-c k=v`, A1v2-13)
+const GIT = String.raw`\bgit(?:\.exe)?["']?\s+(?:-[cC]\s+(?:"[^"]*"|'[^']*'|\S+)\s+)*`
+/** A shell command that changes what the git row shows: refresh it now instead of at the next poll. */
+export const GIT_CHANGE = new RegExp(GIT + String.raw`(?:commit|checkout|switch|merge|rebase|pull|reset|stash|add|restore|push|cherry-pick|revert|fetch)\b`, 'i')
+/** A push: the CI watch polls soon after. */
+export const GIT_PUSH = new RegExp(GIT + String.raw`push\b`, 'i')
 
 /** The model's own task list, from TodoWrite (whole list) or TaskCreate / TaskUpdate (one item). */
 export function applyTodo(list: readonly Todo[], tool: string, input: TodoInput, result: unknown): Todo[] {

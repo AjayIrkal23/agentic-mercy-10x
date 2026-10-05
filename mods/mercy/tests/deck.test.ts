@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'claude-code/testing'
 
 import {
-  applyTodo, crossed, flags, gitState, inQuietHours, overall, parsePr, parseRuns, playerArgvs, resetLabel, shouldSound, sparkCells,
+  applyTodo, crossed, flags, GIT_CHANGE, GIT_PUSH, gitState, inQuietHours, overall, parsePr, parseRuns, playerCmds, resetLabel, shouldSound, sparkCells,
 } from '../hooks/lib/deck'
 import { gitRows } from '../hooks/lib/deckviews'
-import { parseOutdated, parsePorts } from '../hooks/lib/probes'
+import { npmFailed, parseOutdated, parsePorts } from '../hooks/lib/probes'
 
 const OPTS = { sound: true, notify: true, paneAuto: true }
 
@@ -42,10 +42,38 @@ describe('sound', () => {
     expect(shouldSound('error', flags('quiet', {}, OPTS), base)).toBe(false)
   })
   test('players: the desktop sound theme first, then file players, then macOS', () => {
-    const argvs = playerArgvs('done')
+    const cmds = playerCmds('done', false)
+    const argvs = cmds.map(c => c.argv)
     expect(argvs[0]).toEqual(['canberra-gtk-play', '-i', 'complete', '-d', 'claude-code'])
     expect(argvs[1]).toEqual(['pw-play', '/usr/share/sounds/freedesktop/stereo/complete.oga'])
     expect(argvs.at(-1)?.[0]).toBe('afplay')
+    expect(cmds.every(c => c.env === undefined)).toBe(true)
+  })
+  test('Windows: powershell.exe plays a Media wav named only through env', () => {
+    for (const [kind, wav, sys] of [['done', 'Windows Ding.wav', 'Asterisk'], ['error', 'Windows Error.wav', 'Hand'], ['input', 'Windows Notify System Generic.wav', 'Exclamation']] as const) {
+      const [first, fallback, ...rest] = playerCmds(kind, true)
+      expect(rest).toEqual([])
+      expect(first?.argv.slice(0, 4)).toEqual(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command'])
+      expect(first?.env).toEqual({ MERCY_WAV: wav })
+      expect(fallback?.argv.slice(0, 4)).toEqual(['powershell.exe', '-NoProfile', '-NonInteractive', '-Command'])
+      expect(fallback?.env).toEqual({ MERCY_SYS: sys })
+      for (const script of [first?.argv[4] ?? '', fallback?.argv[4] ?? '']) {
+        expect(script).not.toContain('"')
+        expect(/[A-Za-z]:\\/.test(script)).toBe(false)
+        expect(script).not.toContain('.wav')
+      }
+    }
+    const script = playerCmds('done', true)[0]?.argv[4] ?? ''
+    expect(script).toContain('$env:MERCY_WAV')
+    expect(script).toContain('$env:SystemRoot')
+    expect(script).toContain('GetFileName')
+  })
+  test('Windows with a SystemRoot: the absolute Windows PowerShell path, same arguments (SEC1-04)', () => {
+    const ps = 'X:\\Win\\System32\\WindowsPowerShell\\v1.0\\powershell.exe'
+    for (const c of playerCmds('done', true, 'X:\\Win')) expect(c.argv.slice(0, 4)).toEqual([ps, '-NoProfile', '-NonInteractive', '-Command'])
+    expect(playerCmds('done', true, 'X:\\Win')).toHaveLength(2)
+    expect(playerCmds('done', true, '').every(c => c.argv[0] === 'powershell.exe')).toBe(true)
+    expect(playerCmds('done', false, 'X:\\Win')[0]?.argv[0]).toBe('canberra-gtk-play')
   })
 })
 
@@ -129,6 +157,13 @@ describe('ports and deps', () => {
     expect(rows.map(r => [r.name, r.bump])).toEqual([['react', 'major'], ['zod', 'minor'], ['vite', 'other']])
     expect(parseOutdated('')).toEqual([])
   })
+  test('an npm error object (offline, bad registry) is no package called "error"', () => {
+    expect(parseOutdated('{"error":{"code":"ECONNREFUSED","summary":"FetchError: connect ECONNREFUSED"}}')).toEqual([])
+    expect(npmFailed('{ "error": { "code": "ECONNREFUSED", "summary": "x" } }')).toBe(true)
+    expect(npmFailed('{"react":{"current":"18.2.0","latest":"19.1.0"}}')).toBe(false)
+    expect(npmFailed('')).toBe(false)
+    expect(npmFailed('not json')).toBe(false)
+  })
 })
 
 describe('usage', () => {
@@ -147,6 +182,20 @@ describe('usage', () => {
     const cells = sparkCells([1, 5, 10], 3)
     expect(cells.length).toBe(Math.ceil((3 * 12) / 3) * 4)
     expect(sparkCells([], 4).length).toBe(Math.ceil((4 * 12) / 3) * 4)
+  })
+})
+
+describe('git commands that refresh the deck (A1v2-13)', () => {
+  test('git, git.exe, a quoted path and -C / -c options all count', () => {
+    for (const c of ['git commit -m x', 'git.exe commit -m x', 'git -C D:\\p commit -m x', 'git -C "D:\\my proj" commit -m x', '& "D:\\Program Files\\Git\\cmd\\git.exe" push',
+      'GIT.EXE checkout main', 'git -c core.x=1 -C ..\\r pull', 'cd x && git -C . add -A']) {
+      expect(GIT_CHANGE.test(c), c).toBe(true)
+    }
+    for (const c of ['git status', 'git.exe log -3', 'npm test', 'digit commit', 'echo git-commit', 'git -C D:\\p diff']) expect(GIT_CHANGE.test(c), c).toBe(false)
+  })
+  test('push, with the same spellings', () => {
+    for (const c of ['git push', 'git.exe push origin x', 'git -C D:\\p push', '"D:\\Git\\git.exe" push --tags']) expect(GIT_PUSH.test(c), c).toBe(true)
+    for (const c of ['git pull', 'git.exe commit', 'echo push']) expect(GIT_PUSH.test(c), c).toBe(false)
   })
 })
 

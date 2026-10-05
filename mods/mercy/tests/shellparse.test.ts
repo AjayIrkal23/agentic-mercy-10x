@@ -2,7 +2,7 @@ import { describe, expect, test } from 'claude-code/testing'
 
 import { analyze } from '../hooks/lib/commands'
 import { bashDeny } from '../hooks/lib/guard'
-import { splitSegments } from '../hooks/lib/shell'
+import { realCommand, splitSegments } from '../hooks/lib/shell'
 
 const texts = (cmd: string) => splitSegments(cmd).map(s => s.text)
 const verify = (cmd: string) => analyze(cmd).verify
@@ -87,5 +87,45 @@ describe('one-shot vitest and pnpm -w (santa P2, P3)', () => {
     expect(analyze('pnpm -w dev').isServer).toBe(true)
     expect(analyze('npm -w api run dev').isServer).toBe(true)
     expect(analyze('npm --workspace api test').kinds).toEqual(['test'])
+  })
+})
+
+describe('Windows wrapper edge cases (A1-06)', () => {
+  test('argument lists, implicit -Command, cmd switches, case and nested wrappers', () => {
+    for (const cmd of ['Start-Process npm -ArgumentList "run", "dev"', 'START-PROCESS npm -ArgumentList run,dev', 'powershell "npm run dev"',
+      'cmd /d /s /c "npm run dev"', 'wsl bash -c "npm run dev"', 'cmd /c powershell -NoProfile -c "Start-Process npm -ArgumentList run,dev"']) {
+      expect(analyze(cmd).isServer, cmd).toBe(true)
+    }
+    for (const cmd of ['pwsh -File build.ps1', 'powershell -EncodedCommand abc', 'cmd /c', 'Start-Process', 'start']) {
+      expect(analyze(cmd).isServer, cmd).toBe(false)
+    }
+  })
+  test('escaped quotes in bash keep the rest of the command visible', () => {
+    expect(splitSegments('echo "a \\"b\\" c"; npm run dev')).toHaveLength(2)
+    expect(analyze('echo "say \\" hi" && npm run dev').isServer).toBe(true)
+  })
+  test('two early closes that cancel out never hide a server the bash split sees (santa P2)', () => {
+    const cmd = 'echo "a \\" b"; npm run dev; echo \\" x'
+    expect(analyze(cmd).isServer).toBe(true)
+    expect(analyze('Set-Location "D:\\p\\"; npm run dev').isServer).toBe(true)
+  })
+})
+
+describe('wsl options before the command (SANTA1-05)', () => {
+  test('-e, -d <distro>, -d <distro> --, -u and --cd are read past', () => {
+    for (const cmd of ['wsl npm run dev', 'wsl -e npm run dev', 'wsl -d Ubuntu npm run dev', 'wsl -d Ubuntu -- npm run dev',
+      'wsl --distribution Ubuntu --exec npm run dev', 'wsl -u root --cd /srv -- npm run dev', 'wsl.exe -d Ubuntu-22.04 -e npx vite']) {
+      expect(analyze(cmd).isServer, cmd).toBe(true)
+    }
+  })
+  test('a quiet command behind the same options is no server; the command word is not eaten', () => {
+    for (const cmd of ['wsl -d Ubuntu ls', 'wsl -e npm run build', 'wsl -d Ubuntu -- npm test']) {
+      expect(analyze(cmd).isServer, cmd).toBe(false)
+    }
+    expect(analyze('wsl -d Ubuntu -- npm test').verify).toEqual(['test'])
+  })
+  test('realCommand keeps the command word', () => {
+    expect(realCommand(['wsl', '-e', 'npm', 'run', 'dev'])).toEqual(['npm', 'run', 'dev'])
+    expect(realCommand(['wsl', '-d', 'Ubuntu', '--', 'npm', 'run', 'dev'])).toEqual(['npm', 'run', 'dev'])
   })
 })
