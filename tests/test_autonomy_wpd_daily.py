@@ -3,7 +3,6 @@ contract for the aggregator, log hygiene, --dry-run. Fake claude on PATH, tmp st
 from __future__ import annotations
 
 import datetime as dt
-import fcntl
 import importlib.util
 import io
 import json
@@ -126,8 +125,10 @@ def test_runs_at_most_once_a_day(sd, box, monkeypatch):
 
 def test_a_held_lock_skips_the_run(sd, box, monkeypatch):
     calls = _counting(sd, monkeypatch)
-    with open(box.state / "selfheal-daily.lock", "a+") as fh:
-        fcntl.flock(fh.fileno(), fcntl.LOCK_EX)
+    # held through the module's own lock (fcntl on POSIX, msvcrt on Windows): a
+    # module-level `import fcntl` stopped the whole suite from collecting on Windows
+    with sd._try_lock(box.state / "selfheal-daily.lock") as held:
+        assert held
         assert sd.main([]) == 0
     assert calls == [] and not (box.state / "selfheal-daily.json").exists()
 
