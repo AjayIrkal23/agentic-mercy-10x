@@ -144,6 +144,22 @@ def test_render_appends_overlay_hooks_after_the_workbench_hooks_without_duplicat
     assert json.loads(r.render(user_path=overlay))["hooks"]["Stop"] == base["hooks"]["Stop"]
 
 
+def test_install_render_runs_the_status_line_with_the_detected_interpreter(r, tmp_path, monkeypatch):
+    """`render.py` adds PYTHON_EXE to the machine tokens; the install pass rendered from
+    `env.tokens` alone, so statusLine fell back to `python3` and render-equivalence FAILed
+    on every fresh Windows install (W8 sandbox run)."""
+    import types
+    import settings_install
+    target = tmp_path / "t"
+    target.mkdir()
+    monkeypatch.setattr(r, "_USER", target / "settings.user.json")
+    env = types.SimpleNamespace(tokens={"PYTHON": "py -3", "CLAUDE_DIR": "E:/u/.claude", "NODE": "node"},
+                                python_exe="E:/Py/python.exe")
+    settings_install.ensure(target, env, lambda *a: None, force=True, stale=lambda st: False)
+    live = json.loads((target / "settings.json").read_text(encoding="utf-8"))
+    assert live["statusLine"]["command"].startswith("E:/Py/python.exe ")
+
+
 def _selfheal():
     spec = importlib.util.spec_from_file_location("selfheal", _ROOT / "installer" / "selfheal.py")
     mod = importlib.util.module_from_spec(spec)
@@ -240,3 +256,10 @@ def test_an_existing_user_overlay_is_never_overwritten(r, tmp_path, monkeypatch)
     selfheal._ensure_settings(target, None, lambda *a: None)
     assert (target / "settings.user.json").read_text(encoding="utf-8") == '{"theme": "mine"}'
     assert (target / "settings.json.pre-install").is_file()
+
+
+def test_the_settings_copy_name_is_built_from_the_one_pre_install_suffix():
+    """REAP-1 A6: `settings.json.pre-install` is `settings.json` + relocation's `.pre-install`, not a second constant."""
+    import relocation
+    import settings_install
+    assert settings_install.PRE_INSTALL == "settings.json" + relocation.PRE_INSTALL == "settings.json.pre-install"

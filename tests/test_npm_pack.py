@@ -40,6 +40,7 @@ def _fake(calls, pack_rc=0, install_rc=0):
 
 def test_install_packs_then_installs_a_tarball_whose_path_hides_the_name(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Path.home() on Windows
     calls: list = []
     cp = npm_pack.install(["npm", "install", "-g", "lean-ctx-bin@3.10.5"], run=_fake(calls))
     assert cp.returncode == 0
@@ -49,7 +50,7 @@ def test_install_packs_then_installs_a_tarball_whose_path_hides_the_name(tmp_pat
     assert "lean-ctx" not in " ".join(inst)
 
 
-def test_dangling_bin_links_from_a_killed_install_are_removed_first(tmp_path, monkeypatch):
+def test_dangling_bin_links_from_a_killed_install_are_removed_first(tmp_path, monkeypatch, symlink_ok):
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Path.home() on Windows
     bin_dir = tmp_path / ".local" / "bin"
@@ -62,7 +63,7 @@ def test_dangling_bin_links_from_a_killed_install_are_removed_first(tmp_path, mo
     assert not (bin_dir / "lean-ctx").is_symlink() and (bin_dir / "keep").is_symlink()
 
 
-def test_only_dangling_links_into_the_lean_ctx_install_are_removed(tmp_path, monkeypatch):
+def test_only_dangling_links_into_the_lean_ctx_install_are_removed(tmp_path, monkeypatch, symlink_ok):
     """Santa: every dangling link in ~/.local/bin was deleted, e.g. a tool on an unmounted drive."""
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Path.home() on Windows
@@ -79,6 +80,7 @@ def test_only_dangling_links_into_the_lean_ctx_install_are_removed(tmp_path, mon
 
 def test_a_failed_pack_or_install_returns_its_failure(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Path.home() on Windows
     spec = ["npm", "install", "-g", "lean-ctx-bin@3.10.5"]
     assert npm_pack.install(spec, run=_fake([], pack_rc=1)).returncode == 1
     assert npm_pack.install(spec, run=_fake([], install_rc=7)).returncode == 7

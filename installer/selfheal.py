@@ -38,6 +38,7 @@ for _p in (str(_ROOT / "installer"), str(_ROOT / "hooks"), str(_ROOT / "scripts"
         sys.path.insert(0, _p)
 
 from lib import platform as plat  # noqa: E402
+from settings_stale import interpreter_gone  # noqa: E402
 from r10_repair import (  # noqa: E402,F401 (git_restore_worktree / worktree_is_clean: bootstrap API)
     git_restore_worktree, heal_line_endings as _heal_line_endings, worktree_is_clean)
 
@@ -68,9 +69,10 @@ def _render_sources() -> list[Path]:
 
 def _stale(st: Path) -> bool:
     """settings.json is older than any file it is rendered from (audit I-16: an
-    existing file used to be kept forever, so a pulled template never landed)."""
+    existing file used to be kept forever, so a pulled template never landed), or names an
+    interpreter that no longer exists."""
     mtime = st.stat().st_mtime
-    return any(p.is_file() and p.stat().st_mtime > mtime for p in _render_sources())
+    return any(p.is_file() and p.stat().st_mtime > mtime for p in _render_sources()) or interpreter_gone(st)
 
 
 def _ensure_settings(target: Path, env, emit, *, force: bool = False, preserved: bool = False) -> None:
@@ -106,6 +108,12 @@ def _repair(target: Path, failed: set, env, emit) -> None:
     if "jcodemunch" in names:
         import jcodemunch_config as _jc  # type: ignore
         emit("repair", *_jc.configure())
+    if "base-tools" in names:  # claude / node / git / uv missing: the OS's no-admin installer again
+        import basetools  # type: ignore
+        import deps as _deps  # type: ignore
+        if not basetools.skipped():
+            for name, s in basetools.ensure_base_tools(env, _deps._load_manifest()):
+                emit("repair", name, s)
     if "mcp-roster" in names:  # pin drift on a pinned server (doctor_mcp FAILs it when repairable)
         import deps as _deps  # type: ignore
         for name, s in _deps.reconcile_mcp_pins():
@@ -114,9 +122,12 @@ def _repair(target: Path, failed: set, env, emit) -> None:
         _heal_line_endings(target, emit)
         _run_script(target, "hooks/build-skills-index.py", emit)
         _run_script(target, "hooks/build-trigger-floor.py", emit)
-    # render drift, a bare interpreter, or a mods FAIL (mods.enabled feeds
-    # env.CLAUDE_CODE_PLUGIN_DIRS): re-render; _ensure_settings backs up first
-    if "render" in names or "interpreter" in names or "mods" in names:
+    # render drift, a bare interpreter, a dead rendered interpreter (`hook-command` / `statusline`: the
+    # re-render re-detects it), or a mods FAIL (mods.enabled feeds env.CLAUDE_CODE_PLUGIN_DIRS):
+    # re-render; _ensure_settings backs up first. The row NAME is compared whole: `mods-runtime`
+    # (a load flake or a test failure) re-renders nothing.
+    if ("render" in names or "interpreter" in names or "hook-command" in names or "statusline" in names
+            or "mods" in {f.lower() for f in failed}):
         _ensure_settings(target, env, emit, force=True)
 
 

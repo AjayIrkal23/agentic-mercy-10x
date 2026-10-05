@@ -24,8 +24,9 @@ for _p in (str(_HERE), str(_HERE.parent / "hooks")):
 import backups  # noqa: E402
 import settings_seed  # noqa: E402
 from lib import platform as plat  # noqa: E402
+from relocation import PRE_INSTALL as _SUFFIX  # noqa: E402  (the one `.pre-install` suffix)
 
-PRE_INSTALL = "settings.json.pre-install"
+PRE_INSTALL = "settings.json" + _SUFFIX
 
 
 def _users_file(st: Path) -> dict | None:
@@ -53,6 +54,15 @@ def _preserve(st: Path, user: dict, overlay: Path, render, subs, emit: Callable)
         emit("settings", overlay.name, f"OK(seeded: {', '.join(sorted(seed))})")
 
 
+def _subs(env) -> dict | None:
+    """The render tokens of this machine: `env.tokens` plus the status line's real interpreter
+    (`render.machine_subs` adds the same; without it statusLine fell back to `python3`)."""
+    tokens = getattr(env, "tokens", None)
+    if tokens is None:
+        return None
+    return {**tokens, "PYTHON_EXE": getattr(env, "python_exe", None) or "python3"}
+
+
 def preserve_existing(target, env, emit: Callable) -> None:
     """FIRST thing the install pass does: keep the user's own settings.json (copy + overlay seed)
     before any step can touch it (lean-ctx's postinstall injects into it during the deps step)."""
@@ -62,7 +72,7 @@ def preserve_existing(target, env, emit: Callable) -> None:
         return
     try:
         import render  # type: ignore
-        _preserve(st, users, Path(target) / "settings.user.json", render, getattr(env, "tokens", None), emit)
+        _preserve(st, users, Path(target) / "settings.user.json", render, _subs(env), emit)
     except Exception as exc:  # noqa: BLE001
         emit("settings", PRE_INSTALL, f"WARN({exc})")
 
@@ -83,7 +93,7 @@ def ensure(target, env, emit: Callable, *, force: bool, stale: Callable[[Path], 
         return
     try:
         import render  # type: ignore
-        subs, overlay = getattr(env, "tokens", None), Path(target) / "settings.user.json"
+        subs, overlay = _subs(env), Path(target) / "settings.user.json"
         if users is not None:
             _preserve(st, users, overlay, render, subs, emit)
         text = render.render(user_path=overlay, subs=subs)

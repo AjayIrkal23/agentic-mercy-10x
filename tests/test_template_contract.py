@@ -52,6 +52,13 @@ def test_template_registers_every_dispatch_event():
                 assert h["command"].startswith("{{PYTHON}} {{CLAUDE_DIR}}/hooks/")
 
 
+def test_shell_matchers_name_the_powershell_tool_and_the_statusline_its_own_interpreter_token():
+    for event in ("PreToolUse", "PostToolUse", "PostToolUseFailure"):
+        matcher = TMPL["hooks"][event][0]["matcher"]
+        assert re.fullmatch(matcher, "Bash") and re.fullmatch(matcher, "PowerShell"), event
+    assert TMPL["statusLine"]["command"].startswith("{{PYTHON_EXE}} {{CLAUDE_DIR}}/scripts/statusline.py")
+
+
 def test_env_and_marketplaces():
     env = TMPL["env"]
     assert env["CLAUDE_CODE_SUBAGENT_MODEL"] == "sonnet"

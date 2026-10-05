@@ -157,8 +157,16 @@ def test_ensure_userspace_skips_present_tools(home, monkeypatch):
     assert set(rows.values()) == {"PRESENT"}
 
 
-def test_ensure_userspace_is_a_noop_on_windows(home):
+def test_userspace_declines_windows_and_basetools_routes_it_to_wintools(home, monkeypatch):
+    """userspace is POSIX-only; node / git / claude / uv / gh on Windows come from wintools."""
     assert userspace.ensure_userspace(SimpleNamespace(os_name="windows"), MANIFEST, ci=False, dry_run=False) == []
+    import basetools
+    import wintools
+    seen: list = []
+    monkeypatch.setattr(basetools.plat, "IS_WINDOWS", True)
+    monkeypatch.setattr(wintools, "ensure_wintools", lambda *a, **k: seen.append("wintools") or [])
+    basetools.ensure_base_tools(SimpleNamespace(os_name="windows"), MANIFEST, ci=False, dry_run=False)
+    assert seen == ["wintools"]
 
 
 def test_downloads_refuse_non_http_schemes(tmp_path):

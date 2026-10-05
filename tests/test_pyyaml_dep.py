@@ -34,8 +34,10 @@ def test_exec_tokens_carry_the_user_site():
 
 
 def test_posix_never_runs_the_pep668_pip_installs():
-    pipx = next(d for d in M["deps"] if d["id"] == "pipx")
-    assert "install" not in pipx and pipx.get("install_windows")  # POSIX uses uv
+    for d in M["deps"]:  # a generic `pip install` is the Windows fallback; POSIX has its own (uv) command
+        if "pip" in (d.get("install") or []):
+            assert d.get("install_posix"), d["id"]
+    assert "pipx" not in {d["id"] for d in M["deps"]}  # Windows uses `uv tool install` too (v4.1)
 
 
 def test_install_deps_runs_the_uv_target_install_when_yaml_is_missing(monkeypatch):

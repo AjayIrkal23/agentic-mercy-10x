@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import copy
 import os
+import re
 
 # Ordered so the longest/most-specific literal is tokenized first.
 # (live literal, token) — tokenize replaces literal->token; render replaces token->value.
@@ -21,7 +22,34 @@ def tokenize(text: str) -> str:
     """Live settings.json text -> tokenized template text."""
     for literal, token in _TOKEN_MAP:
         text = text.replace(literal, token)
-    return text
+    # the status line alone runs the direct interpreter (`python3 ` cannot tell it from a hook)
+    return text.replace("{{PYTHON}} {{CLAUDE_DIR}}/scripts/statusline.py",
+                        "{{PYTHON_EXE}} {{CLAUDE_DIR}}/scripts/statusline.py")
+
+
+_COMMAND_TOKENS = ("{{CLAUDE_DIR}}", "{{PYTHON}}", "{{PYTHON_EXE}}", "{{NODE}}", "{{LEANCTX}}")
+_PLAIN_PATH = re.compile(r"[A-Za-z0-9_./:\\-]*")
+_HOME_FORM = re.compile(r"\$\{HOME\}[A-Za-z0-9_./:@+-]*")  # the POSIX literal: the shell expands it on purpose
+
+
+def fill_token(text: str, token: str, value: str) -> str:
+    """``text`` with ``token`` replaced by ``value``. Tokens that become part of a shell command: a path
+    with any character outside ``[A-Za-z0-9_./:\\-]`` (whitespace, ``& ' ( ) ; % ^`` or non-ASCII:
+    `C:/Program Files/…`, `C:/Users/A&B/.claude`) is quoted inside the JSON string so the shell sees ONE
+    word: CLAUDE_DIR with the script path it starts, PYTHON / PYTHON_EXE / NODE / LEANCTX whole. A
+    launcher with arguments (`py -3`) has no separator and stays bare. A value holding ``"``, ``$`` or a
+    backtick is REFUSED: inside the double quotes a shell would still run `$(…)` or `` `…` `` on every
+    hook (the POSIX ``${HOME}/…`` literal is exempt). MOD_DIRS is an env value, never quoted."""
+    if token in _COMMAND_TOKENS and not _HOME_FORM.fullmatch(value):
+        if re.search(r'["$`]', value):
+            raise ValueError(f"cannot render {token}: {value!r} holds a double quote, $ or backtick, which "
+                             "the shell would interpret inside every hook command; use a plain path")
+        if ("/" in value or "\\" in value) and not _PLAIN_PATH.fullmatch(value):
+            if token == "{{CLAUDE_DIR}}":
+                return re.sub(re.escape(token) + r'[^\s"\\]*',
+                              lambda m: '\\"' + value + m.group(0)[len(token):] + '\\"', text)
+            value = '\\"' + value + '\\"'
+    return text.replace(token, value)
 
 
 def deep_merge(base: dict, overlay: dict) -> dict:

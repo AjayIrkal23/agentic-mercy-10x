@@ -35,6 +35,7 @@ def box(tmp_path, monkeypatch):
     for k, v in (("HOME", home), ("USERPROFILE", home), ("CLAUDE_CONFIG_DIR", target)):
         monkeypatch.setenv(k, str(v))
     monkeypatch.delenv("AGENTIC_MERCY_SKIP_BASE_TOOLS", raising=False)
+    monkeypatch.setattr(plat, "IS_WINDOWS", False)  # the POSIX order; Windows is tests/test_wintools_wiring.py
     monkeypatch.setattr(plat, "run", lambda argv, **_k: subprocess.CompletedProcess(argv, 0, "", ""))
     monkeypatch.setattr(selfheal, "_doctor_rows", lambda ci=False: OK)
     order: list[str] = []

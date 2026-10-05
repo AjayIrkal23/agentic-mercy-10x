@@ -12,7 +12,7 @@ a blocked download or no zstd is a WARN, never a failure. Pure stdlib.
 from __future__ import annotations
 
 import json
-import shutil
+import os
 import subprocess
 import sys
 import tarfile
@@ -26,6 +26,7 @@ for _p in (str(_HERE), str(_HERE.parent / "hooks")):
         sys.path.insert(0, _p)
 import userspace  # noqa: E402
 from lib import platform as plat  # noqa: E402
+from winutil import which as _which  # noqa: E402  (never a binary from the working directory)
 
 TAGS_URL = "http://127.0.0.1:11434/api/tags"
 _UNIT = """[Unit]
@@ -63,7 +64,7 @@ def _stdlib_zstd() -> bool:
         return False
 
 
-def pick_extractor(which: Callable = shutil.which, stdlib_zstd: bool | None = None) -> str | None:
+def pick_extractor(which: Callable = _which, stdlib_zstd: bool | None = None) -> str | None:
     if _stdlib_zstd() if stdlib_zstd is None else stdlib_zstd:
         return "stdlib"
     if which("zstd"):
@@ -71,7 +72,7 @@ def pick_extractor(which: Callable = shutil.which, stdlib_zstd: bool | None = No
     return "uv" if which("uv") else None
 
 
-def extract_zst(archive, dest, which: Callable = shutil.which) -> None:
+def extract_zst(archive, dest, which: Callable = _which) -> None:
     """Unpack an ollama .tar.zst (no wrapper dir) into the ``dest`` prefix."""
     how = pick_extractor(which)
     if how is None:
@@ -98,7 +99,7 @@ def _local_bin() -> Path:
     return Path.home() / ".local" / "bin"
 
 
-def installed(which: Callable = shutil.which) -> bool:
+def installed(which: Callable = _which) -> bool:
     """An ollama binary that works. One the installer put in ~/.local/bin counts only when its
     libs are there too (bin/ollama is the archive's FIRST member: a failed or interrupted extraction
     leaves a binary without them); an ollama anywhere else is the user's and is trusted."""
@@ -110,15 +111,30 @@ def installed(which: Callable = shutil.which) -> bool:
     return (Path.home() / ".local" / "lib" / "ollama" / COMPLETE).is_file()
 
 
-def install_ollama(cfg: dict, *, ci: bool, dry_run: bool, which: Callable = shutil.which,
+def _system(environ=None) -> tuple[str, str]:
+    """('windows'|'linux'|'darwin'|'', arch): Windows is what the platform switch says."""
+    if plat.IS_WINDOWS:
+        from winutil import win_arch
+        return "windows", win_arch(os.environ if environ is None else environ)
+    return userspace.os_arch()
+
+
+def install_ollama(cfg: dict, *, ci: bool, dry_run: bool, which: Callable = _which,
                    download: Callable = userspace.download, extract: Callable = extract_zst,
-                   system: tuple[str, str] | None = None) -> str:
+                   system: tuple[str, str] | None = None, win_cfg: dict | None = None, **win) -> str:
+    """``win_cfg`` (``manifest.user_space.windows.ollama``) and ``win`` (registry / disk_free /
+    environ / probe seams) matter on Windows only, where the zip install lives in ``winollama``."""
+    os_tag, arch = system or _system()
+    if os_tag == "windows" and win_cfg:
+        import winollama
+        win.setdefault("probe", probe)
+        return winollama.install(win_cfg, ci=ci, dry_run=dry_run, which=which, download=download, **win)
     if installed(which):
         return "PRESENT"
-    os_tag, arch = system or userspace.os_arch()
     url = asset_url(cfg, os_tag, arch)
     if not url:
-        return "SKIP(install the ollama app or `brew install ollama`)"
+        return ("SKIP(no Windows ollama pin in installer/manifest.json)" if os_tag == "windows"
+                else "SKIP(install the ollama app or `brew install ollama`)")
     if ci or dry_run:
         return f"WOULD-INSTALL(user-space, no sudo): {url}"
     prefix = Path.home() / ".local"
@@ -165,7 +181,7 @@ def _user_unit(exe: str, run: Callable) -> bool:
 
 
 def ensure_server(*, probe: Callable = probe, spawn: Callable = plat.spawn_detached, run: Callable = plat.run,
-                  which: Callable = shutil.which, sleep: Callable = time.sleep, wait_s: int = 60) -> bool:
+                  which: Callable = _which, sleep: Callable = time.sleep, wait_s: int = 60) -> bool:
     """A server answering on 11434 (any kind, a system service included) is left alone. Otherwise a
     ``systemctl --user`` unit is created ONLY when none exists and ollama is the binary the installer
     put in ~/.local/bin; a unit the user owns is never rewritten, and our own one the user disabled is
@@ -186,16 +202,20 @@ def ensure_server(*, probe: Callable = probe, spawn: Callable = plat.spawn_detac
     return False
 
 
+def _has(model: str, have: set) -> bool:
+    """A server's tag set (``all-minilm:latest``) holds ``model`` (a bare name matches any tag)."""
+    return (model in have) if ":" in model else (model in {n.split(":")[0] for n in have})
+
+
 def pull_models(models: list[str], *, run: Callable = plat.run, probe: Callable = probe,
                 ensure_server: Callable = ensure_server) -> list[tuple[str, str]]:
     if not ensure_server():
         return [(f"ollama:{m}", "WARN(no ollama server — run `ollama serve`, then `ollama pull " + m + "`)")
                 for m in models]
     have = probe() or set()
-    base = {n.split(":")[0] for n in have}
     rows = []
     for m in models:
-        if (m in have) if ":" in m else (m in base):
+        if _has(m, have):
             rows.append((f"ollama:{m}", "PRESENT"))
             continue
         cp = run(["ollama", "pull", m], timeout=3600, stdin_devnull=True)
@@ -203,14 +223,16 @@ def pull_models(models: list[str], *, run: Callable = plat.run, probe: Callable 
     return rows
 
 
-def setup_ollama(manifest: dict, *, ci: bool, dry_run: bool) -> list[tuple[str, str]]:
+def setup_ollama(manifest: dict, *, ci: bool, dry_run: bool, probe: Callable = probe) -> list[tuple[str, str]]:
     cfg = (manifest.get("user_space") or {}).get("ollama")
     if not cfg:
         return []
-    status = install_ollama(cfg, ci=ci, dry_run=dry_run)
+    status = install_ollama(cfg, ci=ci, dry_run=dry_run,
+                            win_cfg=(manifest["user_space"].get("windows") or {}).get("ollama"))
     rows = [("ollama", status)]
-    if ci or dry_run:
-        return rows + [(f"ollama:{m}", "WOULD-PULL") for m in cfg.get("models", [])]
+    if ci or dry_run:  # a read-only look at the local server: models it already has are PRESENT, not planned
+        have = probe() or set()
+        return rows + [(f"ollama:{m}", "PRESENT" if _has(m, have) else "WOULD-PULL") for m in cfg.get("models", [])]
     if status.startswith(("WARN", "SKIP")):
         return rows
     return rows + pull_models(cfg.get("models", []))

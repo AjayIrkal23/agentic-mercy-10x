@@ -9,6 +9,8 @@ in the gitignored user overlay + the gitignored rendered output).
 
 Tokens:
     {{PYTHON}}      python invocation      (e.g. "python3", "py -3", or a Windows python.exe path)
+    {{PYTHON_EXE}}  status line interpreter: Windows = real python.exe (forward slashes, no ``py``
+                    launcher), POSIX = ``python3``. Hooks keep {{PYTHON}}. Spaced paths get quoted.
     {{NODE}}        node interpreter       (e.g. "/usr/bin/node", "node")
     {{CLAUDE_DIR}}  the ~/.claude dir path (kept as the literal ``${HOME}/.claude``
                     on POSIX so Claude Code expands it; a concrete path on Windows)
@@ -45,9 +47,12 @@ from tempfile import mkstemp
 _ROOT = Path(__file__).resolve().parents[1]
 if str(_ROOT / "installer") not in sys.path:
     sys.path.insert(0, str(_ROOT / "installer"))
+if str(_ROOT / "hooks") not in sys.path:
+    sys.path.insert(0, str(_ROOT / "hooks"))
 import backups  # noqa: E402
 import settings_diff  # noqa: E402
 import settings_seed  # noqa: E402
+from lib import platform as plat  # noqa: E402
 from settings_diff import deep_merge, tokenize  # noqa: E402,F401 (public API of render)
 _LIVE = _ROOT / "settings.json"
 _TEMPLATE = _ROOT / "settings.template.json"
@@ -60,6 +65,7 @@ _MOD_ID = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 # Default substitution values == the live POSIX literals (equivalence gate).
 _DEFAULT_SUBS = {
     "{{PYTHON}}": "python3",
+    "{{PYTHON_EXE}}": "python3",
     "{{NODE}}": "${HOME}/.local/bin/node",
     "{{CLAUDE_DIR}}": "${HOME}/.claude",
     "{{LEANCTX}}": "${HOME}/.local/bin/lean-ctx",
@@ -88,7 +94,7 @@ def substitute(text: str, subs: dict[str, str] | None = None) -> str:
     subs = {**_DEFAULT_SUBS, **{(k if k.startswith("{{") else "{{" + k + "}}"): v
                                 for k, v in (subs or {}).items()}}
     for token, value in subs.items():
-        text = text.replace(token, value)
+        text = settings_diff.fill_token(text, token, value)
     return text
 
 
@@ -121,6 +127,8 @@ def render(
     mods = PATHSEP.join(mod_dirs(Path(template_path).resolve().parent))
     rendered = substitute(tmpl_text, {"MOD_DIRS": mods, **(subs or {})})
     data = json.loads(rendered)  # fail loud on a broken template
+    if plat.IS_WINDOWS and isinstance(data.get("env"), dict):  # semgrep-core has no posix backend there
+        data["env"].pop("EIO_BACKEND", None)
     if user_path and Path(user_path).exists():
         overlay = json.loads(Path(user_path).read_text(encoding="utf-8"))
         own_hooks = overlay.pop("hooks", None)  # the user's hooks go AFTER the workbench's, never twice
@@ -171,7 +179,8 @@ def machine_subs() -> dict[str, str] | None:
     rendered — not a HOME/CLAUDE_CONFIG_DIR-derived dir (a sandboxed HOME must not move it)."""
     try:
         import detect as _d  # type: ignore
-        tokens = dict(_d.detect().tokens)
+        env = _d.detect()
+        tokens = {**env.tokens, "PYTHON_EXE": getattr(env, "python_exe", None) or "python3"}
     except Exception:  # noqa: BLE001
         return None
     if not tokens.get("CLAUDE_DIR", "").startswith("${HOME}"):

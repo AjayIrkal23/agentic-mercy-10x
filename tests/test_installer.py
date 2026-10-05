@@ -10,10 +10,13 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
 import sys
 from pathlib import Path
 
 import pytest
+
+import live_interpreter
 
 _ROOT = Path(__file__).resolve().parents[1]
 for _p in (str(_ROOT / "installer"), str(_ROOT / "hooks")):
@@ -95,8 +98,13 @@ def test_ci_flag_is_headless_never_the_web_ui(monkeypatch):
 
 
 def test_doctor_deterministic_checks_pass(monkeypatch, tmp_path):
+    live_interpreter.pin(monkeypatch)  # A7v2-03: not coupled to the Python that rendered the live settings.json
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Path.home() on Windows (A7-13)
     monkeypatch.setenv("CLAUDE_HOOK_DOCTOR", "1")
+    # never depend on the installed claude CLI / tsc (same as test_doctor.py, I-17)
+    real_which = shutil.which
+    monkeypatch.setattr(shutil, "which", lambda n, *a, **k: None if n in ("claude", "tsc") else real_which(n, *a, **k))
     doctor = _load("doctor", "installer/doctor.py")
     rows = doctor.run_doctor(ci=True)
     by_name = {n: (s, d) for n, s, d in rows}
