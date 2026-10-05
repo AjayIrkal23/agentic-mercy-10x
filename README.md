@@ -6,7 +6,7 @@
 
 <img src="assets/hero.webp" alt="agentic-mercy-10x — an orchestrated AI development pipeline" width="100%">
 
-![Version](https://img.shields.io/badge/version-4.0.2-2E7D32?style=flat-square)
+![Version](https://img.shields.io/badge/version-4.1.0-2E7D32?style=flat-square)
 ![Built for Claude Code](https://img.shields.io/badge/built_for-Claude_Code-D97757?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Ubuntu%20%C2%B7%20macOS%20%C2%B7%20Windows-E95420?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-000000?style=flat-square)
@@ -193,6 +193,26 @@ permission mode and own hooks carried into `settings.user.json`. The first insta
 `AGENTIC_MERCY_SKIP_BASE_TOOLS=1`.
 `--ci` only plans the network steps (used by CI). Installer internals:
 [`installer/CLAUDE.md`](installer/CLAUDE.md).
+
+### Windows (one click)
+
+A fresh Windows 10/11 needs nothing preinstalled and no admin rights. Clone or unzip the repo, then
+double-click `install.cmd`, or run it in a console:
+
+```bat
+install.cmd            :: visual installer
+install.cmd -Headless  :: same install in the console
+install.cmd -Ci        :: plan only, installs nothing
+```
+
+`install.ps1` unblocks the checkout, finds a usable Python ≥ 3.10 (never the Microsoft Store stub) or
+installs the pinned python.org build per user (SHA-256 + Authenticode checked), then hands off to
+`install.py`. `installer/wintools.py` installs what is missing per user, each download pinned and
+SHA-256 checked: PortableGit (Git Bash for Claude Code), Node 22, Claude Code, uv, gh and ollama, into
+`%LOCALAPPDATA%\Programs\agentic-mercy` (override with `AGENTIC_MERCY_TOOLS_DIR`). Tools already on
+PATH are reused; the user PATH is updated in `HKCU\Environment` (kept `REG_EXPAND_SZ`, no `setx`). The
+end-of-run checklist lists what stays manual: `claude` login, `/mcp` OAuth for higgsfield and openart,
+`gh auth login`, and opening a new terminal.
 
 Human-only checklist (the installer prints it once at the end; none of it can be automated):
 

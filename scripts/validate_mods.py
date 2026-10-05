@@ -89,7 +89,8 @@ def _git_tracked(path: Path, root: Path) -> list[str]:
     if not git or not path.exists():
         return []
     try:
-        out = subprocess.run([git, "-C", str(root), "ls-files", "--", str(path)], capture_output=True, text=True, timeout=20)
+        out = subprocess.run([git, "-C", str(root), "ls-files", "--", str(path)], capture_output=True,
+                             encoding="utf-8", errors="replace", timeout=20)
     except (OSError, subprocess.SubprocessError):
         return []
     return [line for line in out.stdout.splitlines() if line.strip()]
@@ -104,7 +105,7 @@ def cli_problems(mod_id: str, strict: bool, run_tests: bool, root: Path = ROOT,
     problems: list[str] = []
     cmd = [claude, "plugin", "validate", "--json"] + (["--strict"] if strict else []) + [folder]
     try:
-        out = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+        out = subprocess.run(cmd, capture_output=True, encoding="utf-8", errors="replace", timeout=120)
         report = json.loads(out.stdout or "{}")
         if not report.get("success"):
             kinds = ("errors", "warnings") if strict else ("errors",)
@@ -115,7 +116,8 @@ def cli_problems(mod_id: str, strict: bool, run_tests: bool, root: Path = ROOT,
         problems.append(f"validate could not run: {type(exc).__name__}")
     if run_tests:
         try:
-            test = subprocess.run([claude, "plugin", "test", folder], capture_output=True, text=True, timeout=300)
+            test = subprocess.run([claude, "plugin", "test", folder], capture_output=True,
+                                  encoding="utf-8", errors="replace", timeout=300)
             output = test.stdout + test.stderr
             if ROLLOUT_OFF in output:
                 # mods are off on this machine (whatever the exit code): nothing loaded, nothing

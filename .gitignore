@@ -53,6 +53,8 @@ hooks/.agents/
 daemon.lock
 daemon.status.json
 telemetry/*.jsonl
+# platform.append_line's lock sidecar (Windows appends take a lock)
+telemetry/*.jsonl.lock
 # Claude Code's own failed-event retry files (seen on the Windows replica)
 telemetry/1p_failed_events.*.json
 # 100x overhaul (P0-T5): gitignored-class litter relocated into attic
