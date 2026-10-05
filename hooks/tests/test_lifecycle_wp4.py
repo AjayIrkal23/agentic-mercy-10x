@@ -48,7 +48,7 @@ def test_teammate_found_in_an_older_run_when_the_newest_does_not_expect_it(tmp_p
     _run_folder(tmp_path, "a", {"impl-be": "IMPL-BE.md"}, age_s=600)
     _run_folder(tmp_path, "b", {"impl-fe": "IMPL-FE.md"})          # newest, other teammate
     hit = tig.missing_artifact({"teammate_name": "impl-be", "cwd": str(tmp_path)})
-    assert hit and hit[1] == "IMPL-BE.md" and "/a/" in hit[2]
+    assert hit and hit[1] == "IMPL-BE.md" and "/a/" in hit[2].replace("\\", "/")  # native path
 
 
 def test_newest_run_that_expects_the_teammate_wins(tmp_path):

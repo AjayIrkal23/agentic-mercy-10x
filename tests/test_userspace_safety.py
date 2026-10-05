@@ -16,6 +16,7 @@ for _p in (str(_ROOT / "installer"), str(_ROOT / "hooks")):
         sys.path.insert(0, _p)
 
 import userspace  # noqa: E402
+from lib import platform as plat  # noqa: E402
 
 M = json.loads((_ROOT / "installer" / "manifest.json").read_text(encoding="utf-8"))
 
@@ -70,6 +71,8 @@ def test_a_hardlink_to_a_file_outside_is_refused(box):
     assert not (dest / "h").exists() and not (dest / "g").exists()
 
 
+@pytest.mark.skipif(plat.IS_WINDOWS, reason="POSIX tarball symlinks: extract_prefix serves the "
+                    "Linux/macOS user-space installs only; Windows tools ship as zips")
 def test_symlinks_that_stay_inside_still_work_and_can_be_traversed(box):
     dest, _ = box
     n = userspace.extract_prefix(_tar([
@@ -91,6 +94,16 @@ def test_absolute_and_dotdot_member_names_are_still_skipped(box):
     dest, outside = box
     userspace.extract_prefix(_tar([("t/../../outside/evil", "file", b"x"), ("/abs/evil", "file", b"x")]), dest)
     assert not (outside / "evil").exists() and not list(dest.rglob("evil"))
+
+
+def test_windows_style_absolute_and_climbing_names_are_skipped_on_every_os(box):
+    """Tar names are POSIX, but a crafted archive can carry a drive, a backslash root or a
+    backslash `..`; on Windows the native Path took `/abs/evil` as relative (no drive)."""
+    dest, outside = box
+    names = ["C:/top/evil", "D:top/sub/evil", "x/sub\\..\\..\\evil", "\\top\\sub/evil"]
+    # skip_top_files=False: otherwise strip=1 drops single-component names before the check
+    userspace.extract_prefix(_tar([(n, "file", b"x") for n in names]), dest, skip_top_files=False)
+    assert not (outside / "evil").exists() and not [p for p in dest.rglob("*") if "evil" in p.name]
 
 
 # --- 4. downloads are verified, then renamed --------------------------------------------- #
@@ -153,6 +166,7 @@ def test_manifest_pins_gh_and_ollama_with_sha256():
 
 def test_gh_installs_the_pinned_release_after_a_checked_download(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Path.home() on Windows
     monkeypatch.setattr(userspace, "os_arch", lambda: ("linux", "x64"))
     buf = io.BytesIO()
     with tarfile.open(fileobj=buf, mode="w:gz") as tf:
@@ -177,6 +191,7 @@ def test_gh_installs_the_pinned_release_after_a_checked_download(tmp_path, monke
 
 def test_gh_is_a_warn_when_the_hash_does_not_match(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Path.home() on Windows
     monkeypatch.setattr(userspace, "os_arch", lambda: ("linux", "x64"))
 
     def download(url, dest, timeout=0, sha256=None, **_k):

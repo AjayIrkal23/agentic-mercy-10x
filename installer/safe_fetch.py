@@ -16,7 +16,7 @@ import shutil
 import stat
 import tarfile
 import urllib.request
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 from typing import Callable
 
 _UA = {"User-Agent": "agentic-mercy-installer"}
@@ -64,6 +64,17 @@ def _inside(path: Path, root: Path) -> bool:
         return False
 
 
+def _absolute(name: str) -> bool:
+    """Tar names are POSIX: on Windows `Path("/abs/x").is_absolute()` is False (no drive),
+    so judge them as POSIX, plus any drive (`C:x`) or backslash root."""
+    return PurePosixPath(name.replace("\\", "/")).is_absolute() or bool(PureWindowsPath(name).drive)
+
+
+def _escapes(name: str) -> bool:
+    """A member or hardlink name that is absolute or climbs (`..`, either separator)."""
+    return _absolute(name) or ".." in PurePosixPath(name.replace("\\", "/")).parts
+
+
 def _vet(m: tarfile.TarInfo, rel: Path, strip: int, dest: Path) -> bool:
     """The stdlib ``data`` filter's verdict on the member as it would be written (3.12+, and the
     3.10.12 / 3.11.4 backports); always True where the filter does not exist."""
@@ -89,8 +100,8 @@ def extract_prefix(tar: tarfile.TarFile, dest, *, strip: int = 1, skip_top_files
     root = dest.resolve()
     n = 0
     for m in tar:
-        parts = Path(m.name).parts[strip:]
-        if not parts or ".." in parts or Path(m.name).is_absolute():
+        parts = PurePosixPath(m.name).parts[strip:]
+        if not parts or _escapes(m.name):
             continue
         rel = Path(*parts)
         if skip_top_files and len(parts) == 1 and not m.isdir():
@@ -104,11 +115,11 @@ def extract_prefix(tar: tarfile.TarFile, dest, *, strip: int = 1, skip_top_files
             out.mkdir(parents=True, exist_ok=True)
             continue
         if m.issym():
-            if os.path.isabs(m.linkname) or not _inside(out.parent / m.linkname, root):
+            if _absolute(m.linkname) or not _inside(out.parent / m.linkname, root):
                 continue
         elif m.islnk():
-            lparts = Path(m.linkname).parts[strip:]
-            if not lparts or ".." in lparts or Path(m.linkname).is_absolute():
+            lparts = PurePosixPath(m.linkname).parts[strip:]
+            if not lparts or _escapes(m.linkname):
                 continue
             target = dest / Path(*lparts)
             if not _inside(target, root) or not target.is_file():

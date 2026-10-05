@@ -22,6 +22,7 @@ CFG = M["user_space"]["ollama"]
 @pytest.fixture
 def home(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Path.home() on Windows
     monkeypatch.setenv("PATH", "/usr/bin:/bin")
     return tmp_path
 
@@ -41,7 +42,8 @@ def test_extractor_prefers_stdlib_then_zstd_binary_then_uv():
 
 
 def test_install_is_planned_in_ci_and_skipped_when_present(home):
-    assert ollama_setup.install_ollama(CFG, ci=True, dry_run=True, which=lambda n: None).startswith("WOULD-")
+    assert ollama_setup.install_ollama(CFG, ci=True, dry_run=True, which=lambda n: None,
+                                       system=("linux", "x64")).startswith("WOULD-")
     assert ollama_setup.install_ollama(CFG, ci=False, dry_run=False, which=lambda n: "/x/ollama") == "PRESENT"
 
 

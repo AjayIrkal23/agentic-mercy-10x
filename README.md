@@ -6,7 +6,7 @@
 
 <img src="assets/hero.webp" alt="agentic-mercy-10x — an orchestrated AI development pipeline" width="100%">
 
-![Version](https://img.shields.io/badge/version-4.0.1-2E7D32?style=flat-square)
+![Version](https://img.shields.io/badge/version-4.0.2-2E7D32?style=flat-square)
 ![Built for Claude Code](https://img.shields.io/badge/built_for-Claude_Code-D97757?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Ubuntu%20%C2%B7%20macOS%20%C2%B7%20Windows-E95420?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-000000?style=flat-square)

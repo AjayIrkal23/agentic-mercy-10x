@@ -51,6 +51,7 @@ def test_install_packs_then_installs_a_tarball_whose_path_hides_the_name(tmp_pat
 
 def test_dangling_bin_links_from_a_killed_install_are_removed_first(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Path.home() on Windows
     bin_dir = tmp_path / ".local" / "bin"
     bin_dir.mkdir(parents=True)
     (bin_dir / "lean-ctx").symlink_to(tmp_path / "gone" / "lean-ctx")
@@ -64,6 +65,7 @@ def test_dangling_bin_links_from_a_killed_install_are_removed_first(tmp_path, mo
 def test_only_dangling_links_into_the_lean_ctx_install_are_removed(tmp_path, monkeypatch):
     """Santa: every dangling link in ~/.local/bin was deleted, e.g. a tool on an unmounted drive."""
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Path.home() on Windows
     bin_dir = tmp_path / ".local" / "bin"
     bin_dir.mkdir(parents=True)
     pkg = tmp_path / ".local" / "lib" / "node_modules" / "lean-ctx-bin" / "bin" / "lean-ctx"

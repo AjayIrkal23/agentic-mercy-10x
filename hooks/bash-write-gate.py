@@ -204,13 +204,25 @@ def _looks_like_path(tok: str) -> bool:
     return bool(re.match(r"^[\w.-]+\.[A-Za-z0-9]{1,6}$", tok))
 
 
+def _in_temp_dir(p: str) -> bool:
+    """An absolute target under $TMPDIR, or %TEMP% / %TMP% (Windows' temp dirs), compared
+    with native separators and case (a Windows target uses backslashes, never
+    `<tmpdir>/x`). A relative target is a project write even when the cwd is in temp."""
+    p = os.path.expanduser(p)
+    if not os.path.isabs(p):
+        return False
+    target = os.path.normcase(os.path.abspath(p))
+    for var in ("TMPDIR", "TEMP", "TMP"):
+        root = os.path.normcase(os.path.abspath(os.environ[var])).rstrip("\\/") if os.environ.get(var) else ""
+        if len(root) > 2 and target.startswith(root + os.sep):  # never a bare root or drive
+            return True
+    return False
+
+
 def _is_allowed_path(p: str) -> bool:
-    """Scratch, logs, build output, and $TMPDIR: rules/01 allows shell writes there."""
+    """Scratch, logs, build output, and the temp dirs: rules/01 allows shell writes there."""
     p = p.strip().strip("'\"")
-    tmpdir = (os.environ.get("TMPDIR") or "").rstrip("/")
-    if tmpdir and len(tmpdir) > 1 and os.path.abspath(os.path.expanduser(p)).startswith(tmpdir + "/"):
-        return True
-    return bool(_ALLOW_PATH_RE.search(p))
+    return _in_temp_dir(p) or bool(_ALLOW_PATH_RE.search(p))
 
 
 def _candidate_paths(body: str) -> list[str]:

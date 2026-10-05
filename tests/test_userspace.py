@@ -88,7 +88,13 @@ def test_ensure_path_prepends_local_bin_once(home):
     assert parts[0] == str(home / ".local" / "bin") and parts.count(parts[0]) == 1
 
 
-def test_install_node_extracts_into_local_prefix_and_skips_top_docs(home):
+@pytest.fixture
+def linux(monkeypatch):
+    """The node install path is POSIX-only (Windows uses install.ps1); test its logic anywhere."""
+    monkeypatch.setattr(userspace, "os_arch", lambda: ("linux", "x64"))
+
+
+def test_install_node_extracts_into_local_prefix_and_skips_top_docs(home, linux):
     fetch, download = _fake_net(_node_tarball("v22.8.0"), "v22.8.0")
     status = userspace.install_node({"major": 22}, fetch=fetch, download=download)
     assert status.startswith("INSTALLED")
@@ -97,14 +103,14 @@ def test_install_node_extracts_into_local_prefix_and_skips_top_docs(home):
     assert not (home / ".local" / "README.md").exists()
 
 
-def test_install_node_refuses_a_checksum_mismatch(home):
+def test_install_node_refuses_a_checksum_mismatch(home, linux):
     fetch, download = _fake_net(_node_tarball("v22.8.0"), "v22.8.0", good_sum=False)
     status = userspace.install_node({"major": 22}, fetch=fetch, download=download)
     assert status.startswith("WARN") and "checksum" in status
     assert not (home / ".local" / "bin" / "node").exists()
 
 
-def test_install_node_network_failure_is_a_warn_not_a_raise(home):
+def test_install_node_network_failure_is_a_warn_not_a_raise(home, linux):
     def boom(*_a, **_k):
         raise OSError("blocked")
     assert userspace.install_node({"major": 22}, fetch=boom, download=boom).startswith("WARN")

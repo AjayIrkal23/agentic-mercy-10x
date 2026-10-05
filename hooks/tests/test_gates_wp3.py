@@ -49,7 +49,7 @@ def test_first_code_write_is_allowed_with_the_skill_paths(tmp_path, monkeypatch)
     hso = out["hookSpecificOutput"]
     assert hso.get("permissionDecision") in (None, "allow")
     ctx = hso["additionalContext"]
-    assert "backend-standards-always-follow/SKILL.md" in ctx
+    assert "backend-standards-always-follow/SKILL.md" in ctx.replace("\\", "/")  # native paths
     assert os.path.isabs(ctx.split("Read ", 1)[1].split()[0])
 
 
@@ -90,15 +90,18 @@ def _fake_tdd_guard(tmp_path) -> Path:
     bindir.mkdir()
     fake = bindir / "tdd-guard"
     marker = tmp_path / "called"
-    fake.write_text(f"#!/bin/sh\ncat >/dev/null\ntouch {marker}\n"
-                    "echo '{\"decision\":\"block\",\"reason\":\"write a test\"}'\n", encoding="utf-8")
+    fake.write_text(f"#!{sys.executable}\nimport sys, pathlib\nsys.stdin.read()\n"
+                    f"pathlib.Path({str(marker)!r}).touch()\n"
+                    "print('{\"decision\":\"block\",\"reason\":\"write a test\"}')\n", encoding="utf-8")
     fake.chmod(0o755)
+    # Windows runs no shebangs: an npm-style .cmd shim (the gate spawns the shutil.which path)
+    (bindir / "tdd-guard.cmd").write_text(f'@"{sys.executable}" "%~dp0tdd-guard" %*\r\n', encoding="utf-8")
     return bindir
 
 
 def _launch(tmp_path, repo: Path, file_path: str) -> str:
     bindir = tmp_path / "bin" if (tmp_path / "bin").exists() else _fake_tdd_guard(tmp_path)
-    env = {**os.environ, "CLAUDE_PROJECT_DIR": str(repo), "PATH": f"{bindir}:{os.environ['PATH']}"}
+    env = {**os.environ, "CLAUDE_PROJECT_DIR": str(repo), "PATH": f"{bindir}{os.pathsep}{os.environ['PATH']}"}
     payload = {"session_id": "t", "tool_name": "Edit",
                "tool_input": {"file_path": file_path, "old_string": "a", "new_string": "b"}}
     proc = subprocess.run([sys.executable, str(HOOKS / "tdd_guard_launcher.py")], input=json.dumps(payload),

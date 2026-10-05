@@ -23,6 +23,7 @@ CFG = M["user_space"]["ollama"]
 @pytest.fixture
 def home(tmp_path, monkeypatch):
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Path.home() on Windows
     monkeypatch.setenv("PATH", "/usr/bin:/bin")
     (tmp_path / ".local" / "bin").mkdir(parents=True)
     return tmp_path

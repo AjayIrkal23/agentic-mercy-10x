@@ -19,6 +19,8 @@ for _p in (str(_ROOT / "installer"), str(_ROOT / "hooks"), str(_ROOT / "scripts"
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+from lib import platform as plat  # noqa: E402
+
 SECRET = "sentinel-secret-value-9f3a"
 
 FAKE_CLAUDE = """#!{py}
@@ -50,6 +52,9 @@ class Box:
         exe = self.bin / "claude"
         exe.write_text(FAKE_CLAUDE.format(py=sys.executable), encoding="utf-8")
         exe.chmod(0o755)
+        if plat.IS_WINDOWS:  # no shebangs: a .cmd shim, like an npm-installed claude
+            (self.bin / "claude.cmd").write_text(f'@"{sys.executable}" "%~dp0claude" %*\r\n',
+                                                 encoding="utf-8")
 
     def write_live(self, servers: dict) -> None:
         (self.home / ".claude.json").write_text(json.dumps({"mcpServers": servers}), encoding="utf-8")

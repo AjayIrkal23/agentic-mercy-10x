@@ -67,6 +67,17 @@ def test_tmpdir_writes_get_no_advisory(bwg, monkeypatch, tmp_path):
     assert _main(bwg, _bash(f"echo hi > {scratch}/notes.py"), monkeypatch) == {}
 
 
+def test_windows_temp_vars_are_scratch_too(bwg, monkeypatch):
+    """%TEMP% / %TMP% are Windows' temp dirs (TMPDIR is unset there); a path that does not
+    look like tmp/scratch to the regex still passes when it is under one of them."""
+    monkeypatch.delenv("TMPDIR", raising=False)
+    monkeypatch.delenv("TMP", raising=False)
+    root = os.path.abspath(os.path.join(os.sep, "wintemp-root", "Local", "Temp"))
+    monkeypatch.setenv("TEMP", root)
+    assert _main(bwg, _bash(f"echo hi > {os.path.join(root, 'notes.py')}"), monkeypatch) == {}
+    assert _main(bwg, _bash("echo hi > /wintemp-elsewhere/notes.py"), monkeypatch) != {}
+
+
 def test_new_source_file_advisory_uses_hook_specific_output(bwg, monkeypatch, tmp_path):
     out = _main(bwg, _bash("echo 'x' >> src/lib/brandnewmodule.ts"), monkeypatch)
     assert "followup_message" not in out

@@ -114,7 +114,8 @@ re-check) happens automatically until the doctor reports 0 FAIL.
   pinned SHA-256 (`manifest.user_space.gh/ollama`: pinned version + hash per arch; node is checked
   against SHASUMS256) into `<dest>.part` and renames only after that; `extract_prefix` refuses names
   and symlink / hardlink targets that leave the prefix, also through links made earlier in the same
-  archive. ollama counts as installed only with `lib/ollama/.agentic-mercy-complete` (a binary without
+  archive. Tar names are judged as POSIX paths on every OS (`_absolute` / `_escapes`: a leading `/`,
+  any drive, `..` with either separator): Windows' native `Path` took `/abs/x` as relative. ollama counts as installed only with `lib/ollama/.agentic-mercy-complete` (a binary without
   its libs is repaired on the next run); its systemd user unit is created only when none exists and
   the binary is ours, never rewritten or re-enabled; `ostools` prints the exact `sudo -n env … apt-get`
   line before running it. `npm_pack` removes only dangling links into the lean-ctx install.

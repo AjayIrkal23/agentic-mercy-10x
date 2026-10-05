@@ -1,5 +1,28 @@
 # Changelog
 
+## v4.0.2 — 2026-10-05 the test suite passes on Windows
+
+Why: once the suite collected on Windows (`70c744d`), it showed 34 failures on the replica and
+in CI's windows leg. Now Windows 1131 passed / 3 skipped (each with its reason), Ubuntu 1134
+passed. Two were real bugs:
+
+- `safe_fetch.extract_prefix` judged tar member names with the native `Path`: on Windows
+  (Python 3.13+) `/abs/evil` is not absolute (no drive), so it was extracted inside the prefix
+  instead of skipped. Names are now judged as POSIX paths on every OS, plus any drive and `..`
+  written with backslashes (`_absolute`, `_escapes`).
+- bash-write-gate only exempted `$TMPDIR` and compared against `<tmpdir>/`, so no Windows temp
+  path ever matched. It now exempts ABSOLUTE targets under `$TMPDIR`, `%TEMP%` or `%TMP%`,
+  compared with native separators and case; a relative target stays a project write even when
+  the cwd is in temp.
+
+The rest were POSIX assumptions in tests: the fake `claude` and `tdd-guard` were shebang
+scripts (now with a `.cmd` shim, the real npm-shim path), tests set `HOME` but `Path.home()`
+reads `USERPROFILE` on Windows, the POSIX install logic needed `os_arch` forced to linux,
+paths were compared with `/`, and NTFS has no `0o600`. One test is skipped on Windows:
+symlink traversal inside an extracted tarball (Windows tools ship as zips). Also
+`db13721`: the `/deps` mod-test fixture (the engine resolves the test cwd `/r` to a drive
+path); `70c744d`: no module-level `import fcntl` in the selfheal-daily test.
+
 ## v4.0.1 — 2026-10-05 Windows end-to-end run 2 fixes
 
 Merges branch `win-e2e-fixes-2026-09-30` (commit `50e7372`, written 2026-09-30 on the

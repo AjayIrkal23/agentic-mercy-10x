@@ -52,8 +52,8 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 | `test_router_wp1_emit.py` | `prompt_router/policy.py` + router emission: hard/soft enforcement, doctor-run no-record, skill line format, UI line availability, routing cap, chat/question/trivial gating (subprocess: lunch → `{}`), symbol summary length, session-model opus skip (C-05, C-10, C-11, C-12, C-14, C-17, D-05) |
 | `test_router_wp1_mcp.py` | MCP availability: reticle only when instrumented (router route + mcp-post-hints), project-disabled servers, no dead plugin route targets (G-03, G-14) |
 | `test_dispatch_wp3.py` | dispatcher: deferred advisories, lean-ctx adapters, mod failure/release signal, gate precedence, `via` on `--only` rows, raw stdout only on exit 0, line-boundary cap, ownership parsing, `ms` on every row |
-| `test_gates_wp3.py` | first-write-skill-gate is a hint, tdd-guard skips non-code edits, destructive-connector ask gate, tdd-guard link deferred |
-| `test_write_gates_wp3.py` | bash-write-gate allow-list, blocking-doc-enforcer in any doc-tree repo, dox-write-gate once per repo, `--force-with-lease` passes |
+| `test_gates_wp3.py` | first-write-skill-gate is a hint, tdd-guard skips non-code edits (fake tdd-guard = Python script + `.cmd` shim, so it runs on Windows too), destructive-connector ask gate, tdd-guard link deferred |
+| `test_write_gates_wp3.py` | bash-write-gate allow-list (absolute targets under `$TMPDIR` / `%TEMP%` / `%TMP%` exempt), blocking-doc-enforcer in any doc-tree repo, dox-write-gate once per repo, `--force-with-lease` passes |
 | `test_gateguard_wp3.py` | TS/JS importer counting needs a quoted specifier; an ask is acknowledged only after the write ran |
 | `test_settings_wp3.py` | `settings.template.json` hook matchers agree with `dispatch.config.json`; no literal `lean-ctx` string |
 | `test_stop_gates_wp4.py` | suite gate scope (path/one-sided surface match, soft pushes advisory), infra never counts toward gate thresholds, turn key "?" |

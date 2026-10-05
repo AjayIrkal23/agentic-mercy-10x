@@ -16,6 +16,7 @@ sys.path.insert(0, str(_ROOT / "hooks"))
 
 import backups  # noqa: E402
 import render  # noqa: E402
+from lib import platform as plat  # noqa: E402
 
 
 def _age(p: Path, days: float) -> None:
@@ -36,7 +37,8 @@ def test_backup_keeps_the_newest_three_dated_and_leaves_named_ones(tmp_path):
     dated = backups.dated_backups(st)
     assert len(dated) == 3 and dated[0] == made[-1]
     assert (tmp_path / "settings.json.bak").exists() and (tmp_path / "settings.json.bak-wp11").exists()
-    assert oct(made[-1].stat().st_mode & 0o777) == "0o600"
+    if not plat.IS_WINDOWS:  # NTFS has no mode bits; chmod only toggles read-only
+        assert oct(made[-1].stat().st_mode & 0o777) == "0o600"
 
 
 def test_retention_orders_by_mtime_not_by_the_name(tmp_path):

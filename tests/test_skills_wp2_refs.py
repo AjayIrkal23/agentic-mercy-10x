@@ -52,8 +52,8 @@ def test_skills_name_no_uninstalled_plugins_or_missing_skills():
             continue
         if t.startswith("# ") and "Absorbed into" in t[:300]:  # absorbed file keeps its old title
             t = t.split("\n", 1)[1]
-        hits += [f"{f.relative_to(ROOT)}: {n}" for n in STALE_NAMES
-                 if n in t and (str(f.relative_to(ROOT)), n) not in _STALE_OK]
+        rel = f.relative_to(ROOT).as_posix()  # _STALE_OK uses `/` on every OS
+        hits += [f"{rel}: {n}" for n in STALE_NAMES if n in t and (rel, n) not in _STALE_OK]
     assert not hits, hits
 
 
