@@ -1,0 +1,97 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+  .legend { margin-top: 26px; display: flex; gap: 12px; align-items: center; }
+  .legend span.t { font-size: 18px; color: var(--muted); margin-right: 14px; }
+  .tl { position: relative; margin-top: 30px; display: grid; grid-template-columns: 1fr .82fr 1.95fr 1.25fr .95fr; gap: 18px; }
+  .tl::before { content: ""; position: absolute; left: 0; right: 0; top: 23px; height: 1px;
+    background: linear-gradient(90deg, rgba(217,119,87,.0), rgba(217,119,87,.6) 8%, rgba(217,119,87,.6) 92%, rgba(217,119,87,0)); }
+  .ev { position: relative; }
+  .ev .node { width: 13px; height: 13px; border-radius: 50%; background: var(--bg); border: 2px solid var(--accent); margin: 17px 0 18px 4px; position: relative; z-index: 1; }
+  .ev h3 { font-size: 24px; font-weight: 600; letter-spacing: -0.01em; }
+  .ev .when { font-size: 17px; color: var(--muted); margin-top: 4px; min-height: 48px; }
+  .links { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; }
+  .links .chip { font-size: 15px; padding: 6px 10px; }
+  .chip.gate { border-color: var(--accent-line); color: var(--accent-ink); background: var(--accent-soft); }
+  .chip.exec { color: var(--muted); border-color: var(--line); }
+  .chip.async { border-style: dashed; }
+  .more { margin-top: 34px; padding: 22px 26px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px 28px; }
+  .more div { font-size: 17px; color: var(--muted); }
+  .more b { display: block; font-size: 19px; color: var(--text); font-weight: 500; margin-bottom: 4px; }
+  .facts { margin-top: 24px; display: flex; gap: 12px; flex-wrap: wrap; }
+</style></head>
+<body>
+<div class="plate">
+  <h1 class="title">43 hook links that <em>enforce</em> the workflow</h1>
+  <p class="sub">One dispatcher per event runs a chain of small, isolated links. Gates block, advisories inform, and none of it relies on the model remembering a rule.</p>
+
+  <div class="legend">
+    <span class="chip gate">gate</span><span class="t">blocks or asks</span>
+    <span class="chip">advisory / mutator</span><span class="t">adds context, sets model</span>
+    <span class="chip exec">exec</span><span class="t">records evidence</span>
+    <span class="chip exec async">async</span><span class="t">off the hot path</span>
+  </div>
+
+  <div class="tl">
+    <div class="ev"><div class="node"></div><h3>SessionStart</h3><div class="when">self-heal, memory, orientation</div>
+      <div class="links">
+        <span class="chip exec">settings-permissions-selfheal</span>
+        <span class="chip">session-start-aggregator</span>
+        <span class="chip">memory-load-on-start</span>
+        <span class="chip">ponytail-session</span>
+        <span class="chip exec async">skills-index-guard</span>
+        <span class="chip exec async">selfheal-daily</span>
+        <span class="chip exec async">state-cleanup</span>
+      </div></div>
+    <div class="ev"><div class="node"></div><h3>Prompt</h3><div class="when">skills, MCP, agent, model</div>
+      <div class="links"><span class="chip">prompt router v3</span></div></div>
+    <div class="ev"><div class="node"></div><h3>PreToolUse</h3><div class="when">before a read, write, shell or agent call</div>
+      <div class="links">
+        <span class="chip gate">dangerous-bash-gate</span>
+        <span class="chip gate">first-write-skill-gate</span>
+        <span class="chip gate">gateguard-write-gate</span>
+        <span class="chip gate">dox-write-gate</span>
+        <span class="chip gate">jcm-gate-read</span>
+        <span class="chip gate">bash-write-gate</span>
+        <span class="chip gate">blocking-doc-enforcer</span>
+        <span class="chip gate">connector-ask-gate</span>
+        <span class="chip">tdd-guard</span>
+        <span class="chip">graphify-enforce</span>
+        <span class="chip">jdoc-doc-steer</span>
+        <span class="chip">opus-guard</span>
+        <span class="chip">workflow-model-guard</span>
+      </div></div>
+    <div class="ev"><div class="node"></div><h3>PostToolUse</h3><div class="when">after every write and tool result</div>
+      <div class="links">
+        <span class="chip">post-write-aggregator</span>
+        <span class="chip">mcp-post-hints</span>
+        <span class="chip">codex-capture</span>
+        <span class="chip">desloppify-cleanup</span>
+        <span class="chip exec">security-semgrep-tracker</span>
+        <span class="chip exec">santa-method-writer</span>
+        <span class="chip exec">skill-invocation-tracker</span>
+      </div></div>
+    <div class="ev"><div class="node"></div><h3>Stop</h3><div class="when">no turn ends with undone work</div>
+      <div class="links">
+        <span class="chip gate">hard-completion-gate</span>
+        <span class="chip gate">invoke-suite-gate</span>
+        <span class="chip exec async">index-flush</span>
+        <span class="chip exec async">session-lifecycle-stop</span>
+      </div></div>
+  </div>
+
+  <div class="card more">
+    <div><b>SubagentStart</b>write protocol and rules injected into every subagent</div>
+    <div><b>PreCompact</b>handoff snapshot survives compaction</div>
+    <div><b>ConfigChange</b>keeps permissions.deny empty</div>
+    <div><b>TeammateIdle</b>a teammate works until its artifact exists</div>
+  </div>
+
+  <div class="facts">
+    <span class="chip">13 events</span>
+    <span class="chip">13 gates · 14 advisories · 14 execs · 2 mutators</span>
+    <span class="chip">every link isolated and fail-open</span>
+    <span class="chip">at most 1 Stop block per human turn</span>
+  </div>
+</div>
+</body></html>

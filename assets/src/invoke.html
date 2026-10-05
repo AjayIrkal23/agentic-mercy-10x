@@ -1,0 +1,54 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+  .cmdline { margin-top: 36px; display: flex; align-items: center; gap: 18px; }
+  .cmdline .term { flex: 0 0 auto; }
+  .cmdline .term pre { padding: 14px 22px; font-size: 21px; }
+  .cmdline .arrow { font-size: 26px; }
+  .run { font-family: 'Geist Mono', monospace; font-size: 18px; color: var(--muted); }
+  .run b { color: var(--text); font-weight: 500; }
+  .acts { margin-top: 18px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .acts.closers { grid-template-columns: repeat(5, 1fr); }
+  .act { padding: 18px 20px 16px; display: flex; flex-direction: column; gap: 6px; min-height: 124px; }
+  .act .n { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; }
+  .act .who { font-family: 'Geist Mono', monospace; font-size: 17px; color: var(--muted); }
+  .act .art { margin-top: auto; font-family: 'Geist Mono', monospace; font-size: 15px; color: var(--dim); }
+  .act .top { display: flex; justify-content: space-between; align-items: center; }
+  .act.on { border-color: var(--accent-line); }
+  .row-label { margin-top: 26px; display: flex; justify-content: space-between; align-items: baseline; }
+  .legend { display: flex; gap: 18px; align-items: center; font-size: 17px; color: var(--muted); }
+</style></head>
+<body>
+<div class="plate">
+  <h1 class="title">One command, <em>a specialist per act</em></h1>
+  <p class="sub">/invoke runs each act with its own agent in a fixed order and writes the artifact to disk. Judges run on Opus, executors on Sonnet.</p>
+
+  <div class="cmdline">
+    <div class="term"><pre><span class="c-acc">/invoke</span> plan impl <span class="c-dim">--</span> add CSV export to reports</pre></div>
+    <span class="arrow">→</span>
+    <span class="run"><b>.claude/runs/&lt;ts&gt;-csv-export/</b>&nbsp; run.json + one artifact per act</span>
+  </div>
+
+  <div class="row-label"><span class="label">acts, canonical order</span>
+    <span class="legend"><span class="badge opus">OPUS</span> judges <span class="badge">SONNET</span> executors, escalate to Opus on a failed attempt</span></div>
+  <div class="acts">
+    <div class="card act"><div class="top"><span class="n">audit</span><span class="badge">SONNET</span></div><span class="who">audit-specialist</span><span class="art">AUDIT-{date}.md</span></div>
+    <div class="card act"><div class="top"><span class="n">spec</span><span class="badge opus">OPUS</span></div><span class="who">spec-architect</span><span class="art">SPEC-{slug}.md</span></div>
+    <div class="card act on"><div class="top"><span class="n">plan</span><span class="badge opus">OPUS</span></div><span class="who">planning-director</span><span class="art">plan-{date}-{slug}.md</span></div>
+    <div class="card act"><div class="top"><span class="n">debug</span><span class="badge opus">OPUS</span></div><span class="who">debug-detective</span><span class="art">ROOTCAUSE.md</span></div>
+    <div class="card act"><div class="top"><span class="n">test</span><span class="badge">SONNET</span></div><span class="who">test-author</span><span class="art">TEST-REPORT.md</span></div>
+    <div class="card act on"><div class="top"><span class="n">impl</span><span class="badge">SONNET</span></div><span class="who">implementation-engineer</span><span class="art">IMPL-REPORT.md</span></div>
+    <div class="card act"><div class="top"><span class="n">refactor</span><span class="badge">SONNET</span></div><span class="who">refactor-specialist</span><span class="art">REFACTOR-REPORT.md</span></div>
+    <div class="card act"><div class="top"><span class="n">design</span><span class="badge opus">OPUS</span></div><span class="who">frontend-uiux-designer</span><span class="art">DESIGN-REPORT.md</span></div>
+  </div>
+
+  <div class="row-label"><span class="label">closers, added after code-mutating acts (security only when auth, input or API files changed)</span><span class="legend">outlined: what this command runs</span></div>
+  <div class="acts closers">
+    <div class="card act on"><div class="top"><span class="n">clean</span><span class="badge">SONNET</span></div><span class="who">deadcode-reaper</span><span class="art">REAP-REPORT.md</span></div>
+    <div class="card act on"><div class="top"><span class="n">security</span><span class="badge">SONNET</span></div><span class="who">security-sentinel</span><span class="art">SECURITY-REPORT.md</span></div>
+    <div class="card act on"><div class="top"><span class="n">review</span><span class="badge opus">OPUS</span></div><span class="who">santa-reviewer</span><span class="art">SANTA-REVIEW.md</span></div>
+    <div class="card act on"><div class="top"><span class="n">docs</span><span class="badge">SONNET</span></div><span class="who">docs-sync-agent</span><span class="art">DOCS-SYNC-REPORT.md</span></div>
+    <div class="card act on"><div class="top"><span class="n">verify</span><span class="badge">SONNET</span></div><span class="who">qa-verifier</span><span class="art">VERIFY-REPORT.md</span></div>
+  </div>
+</div>
+</body></html>

@@ -1,0 +1,38 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+  .hero {
+    position: relative; width: 1600px; height: 660px; overflow: hidden;
+    background: #07080a url('hero-bg.webp') right center / auto 100% no-repeat;
+  }
+  .hero::before {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(90deg, #07080a 0%, rgba(7,8,10,.92) 34%, rgba(7,8,10,.35) 58%, rgba(7,8,10,0) 75%);
+  }
+  .copy { position: absolute; left: 80px; top: 92px; width: 760px; }
+  .mark { font-size: 76px; font-weight: 600; letter-spacing: -0.04em; line-height: 1; }
+  .mark span { color: var(--accent-ink); }
+  .lede { margin-top: 26px; font-size: 29px; line-height: 1.38; color: #c9cdd3; max-width: 700px; }
+  .stats { margin-top: 42px; display: grid; grid-template-columns: repeat(4, auto); gap: 0 44px; justify-content: start; }
+  .stat b { display: block; font-size: 40px; font-weight: 600; letter-spacing: -0.02em; }
+  .stat small { display: block; margin-top: 4px; font-family: 'Geist Mono', monospace; font-size: 16px; color: var(--muted); letter-spacing: .04em; }
+  .cmd { margin-top: 44px; display: inline-flex; align-items: center; gap: 14px; padding: 15px 22px;
+    border: 1px solid var(--line-2); border-radius: 999px; background: rgba(17,19,24,.8);
+    font-family: 'Geist Mono', monospace; font-size: 20px; color: var(--text); }
+  .cmd .p { color: var(--accent-ink); }
+</style></head>
+<body>
+<div class="hero">
+  <div class="copy">
+    <div class="mark">agentic-mercy<span>-10x</span></div>
+    <p class="lede">A workbench for Claude Code. Every prompt, write and subagent gets the right skill, tool and model, and no turn ends unverified.</p>
+    <div class="stats">
+      <div class="stat"><b>129</b><small>skills</small></div>
+      <div class="stat"><b>17</b><small>specialist agents</small></div>
+      <div class="stat"><b>43</b><small>hook links</small></div>
+      <div class="stat"><b>16</b><small>MCP servers</small></div>
+    </div>
+    <div class="cmd"><span class="p">$</span> ./install.sh <span class="c-dim">&nbsp;one command, doctor 0 FAIL</span></div>
+  </div>
+</div>
+</body></html>

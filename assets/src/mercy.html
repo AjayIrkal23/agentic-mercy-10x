@@ -1,0 +1,60 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="base.css">
+<style>
+  .wrap { margin-top: 40px; display: grid; grid-template-columns: 1.25fr 1fr; gap: 28px; }
+  .proc { padding: 26px 28px; }
+  .proc .head { display: flex; justify-content: space-between; align-items: baseline; }
+  .proc h3 { font-size: 26px; font-weight: 600; }
+  .rows { margin-top: 18px; display: grid; gap: 0; }
+  .row { display: grid; grid-template-columns: 170px 1fr; gap: 18px; padding: 13px 0; border-top: 1px solid var(--line); align-items: baseline; }
+  .row:first-child { border-top: 0; }
+  .row .step { font-family: 'Geist Mono', monospace; font-size: 16px; color: var(--dim); }
+  .row .what { font-size: 19px; color: var(--muted); line-height: 1.4; }
+  .row .what b { color: var(--text); font-weight: 500; }
+  .side { display: grid; gap: 22px; align-content: start; }
+  .term pre { font-size: 16.5px; line-height: 1.55; white-space: pre-wrap; }
+  .num { padding: 24px 28px; display: grid; grid-template-columns: auto auto 1fr; gap: 18px; align-items: center; }
+  .num .big { font-size: 46px; font-weight: 600; letter-spacing: -0.03em; }
+  .num .big.acc { color: var(--accent-ink); }
+  .num p { font-size: 18px; color: var(--muted); line-height: 1.4; }
+  .bridge { padding: 22px 28px; }
+  .bridge p { font-size: 18px; color: var(--muted); line-height: 1.45; margin-top: 10px; }
+  .bridge p b { color: var(--text); font-weight: 500; }
+</style></head>
+<body>
+<div class="plate">
+  <h1 class="title"><em>mercy</em>: a mod that runs inside Claude Code</h1>
+  <p class="sub">TypeScript in the claude process, beside the Python hooks. It watches every step of the session and steps in only when something needs a human or a check.</p>
+
+  <div class="wrap">
+    <div class="card proc">
+      <div class="head"><h3>mods/mercy</h3><span class="label">one toggle per feature in /config</span></div>
+      <div class="rows">
+        <div class="row"><span class="step">session start</span><span class="what"><b>Repo brain</b>: verified commands, fixes and notes learned in this repo, across sessions</span></div>
+        <div class="row"><span class="step">prompt</span><span class="what"><b>Governor</b> drops router blocks already seen or skills already loaded</span></div>
+        <div class="row"><span class="step">tool call</span><span class="what"><b>Guard</b> denies dev servers, watchers, subagent commits and live secrets</span></div>
+        <div class="row"><span class="step">tool call</span><span class="what"><b>Ledger</b> nudges on the 3rd repeat of one failure and on edit thrash</span></div>
+        <div class="row"><span class="step">stop</span><span class="what"><b>Verify gate</b> blocks "done" when code changed after the last passing test</span></div>
+        <div class="row"><span class="step">usage limit</span><span class="what"><b>Auto-resume</b> at the reset time, then the task continues</span></div>
+        <div class="row"><span class="step">always</span><span class="what"><b>Pulse deck</b>: status, action band, toasts, sound when a long turn ends</span></div>
+      </div>
+    </div>
+
+    <div class="side">
+      <div class="term">
+        <div class="bar"><i></i><i></i><i></i><span>PreToolUse · Bash</span></div>
+<pre><span class="c-dim">$</span> npm run dev
+<span class="c-acc">mercy guard:</span> `npm run dev` starts a dev server or long-running service. The user runs apps themselves: verify with a build, the tests or a linter instead.</pre>
+      </div>
+      <div class="card num">
+        <span class="big">11,613 s</span><span class="big acc">→ 0 s</span>
+        <p>writes blocked by tdd-guard over 12 days, before and after the bridge moved it to a background lane</p>
+      </div>
+      <div class="card bridge">
+        <span class="label">the bridge</span>
+        <p>The mod runs owned hook links through <b>dispatch.py --only</b>, in a fast lane and a slow lane. If it unloads, <b>Python takes every link back within 120 s</b>. Python stays the truth for every gate.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</body></html>
