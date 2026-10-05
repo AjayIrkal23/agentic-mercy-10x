@@ -14,10 +14,13 @@ import json
 import os
 import sys
 import time
+import zlib
 
 SEP = " │ "
 GIT_TTL = 5.0
-GIT_TIMEOUT = 0.5
+GIT_STALE = 60.0  # a timed-out git may fall back on the last good summary for this long, no longer
+GIT_TIMEOUT = 1.5 if os.name == "nt" else 0.5  # Windows git on NTFS is 3-5x slower
+GIT_ARGV = ["git", "--no-optional-locks", "status", "--porcelain=v2", "--branch"]  # a module constant: a test seam
 GREEN, YELLOW, RED, CYAN, PURPLE, DIM = 78, 220, 203, 117, 141, 245
 
 
@@ -97,9 +100,17 @@ def _cache_dir() -> str:
     run = os.environ.get("XDG_RUNTIME_DIR")
     if run:
         return os.path.join(run, "claude-statusline")
-    import tempfile
     who = os.getuid() if hasattr(os, "getuid") else os.environ.get("USERNAME", "user")
-    return os.path.join(tempfile.gettempdir(), f"claude-statusline-{who}")
+    tmp = os.environ.get("TMPDIR") or os.environ.get("TEMP") or os.environ.get("TMP")
+    if not (tmp and os.path.isdir(tmp)):  # unset, or a dead drive: tempfile's writable fallback, imported only here
+        import tempfile
+        tmp = tempfile.gettempdir()
+    return os.path.join(tmp, f"claude-statusline-{who}")
+
+
+def _cache_path(cwd: str) -> str:
+    k = cwd.encode("utf-8", "replace")  # crc32+adler32: no hashlib (its OpenSSL DLL costs ~10 ms on Windows)
+    return os.path.join(_cache_dir(), f"{zlib.crc32(k):08x}{zlib.adler32(k):08x}.json")
 
 
 def _parse_git(out: str):
@@ -126,39 +137,84 @@ def _parse_git(out: str):
     return g if g["b"] else None
 
 
-def _git_status(cwd: str):
+def _kill_tree(p) -> None:
+    """End git AND whatever it spawned (a fsmonitor hook, the `cmd\\git.exe` launcher's real git): a
+    survivor holding the stdout pipe would make the next read wait for it (A3v2-01)."""
     import subprocess
     try:
-        p = subprocess.run(["git", "--no-optional-locks", "status", "--porcelain=v2", "--branch"],
-                           cwd=cwd, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                           timeout=GIT_TIMEOUT, stdin=subprocess.DEVNULL,
-                           env={**os.environ, "LC_ALL": "C"})
-        return _parse_git(p.stdout) if p.returncode == 0 else None
-    except Exception:  # noqa: BLE001 - timeout, no git, bad dir: the segment just hides
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(p.pid)], capture_output=True, timeout=5,
+                           creationflags=0x08000000)  # CREATE_NO_WINDOW
+        else:
+            import signal
+            os.killpg(p.pid, signal.SIGKILL)  # git runs in its own session
+    except Exception:  # noqa: BLE001 - already gone, no taskkill: p.kill() below still ends git itself
+        pass
+    try:
+        p.kill()
+    except OSError:
+        pass
+
+
+def _git_status(cwd: str):
+    """git's porcelain summary, or None; raises TimeoutExpired after GIT_TIMEOUT with the whole tree
+    killed. Not `subprocess.run(timeout=)`: on a timeout it kills only git, then waits for the pipe."""
+    import subprocess
+    try:
+        p = subprocess.Popen(GIT_ARGV, cwd=cwd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                             stderr=subprocess.DEVNULL, text=True, encoding="utf-8", errors="replace",
+                             env={**os.environ, "LC_ALL": "C"},
+                             **({} if os.name == "nt" else {"start_new_session": True}))
+    except Exception:  # noqa: BLE001 - no git, bad dir: the segment just hides
+        return None
+    try:
+        out, _ = p.communicate(timeout=GIT_TIMEOUT)
+        return _parse_git(out) if p.returncode == 0 else None
+    except subprocess.TimeoutExpired:
+        _kill_tree(p)
+        try:
+            p.communicate(timeout=1)  # the tree is dead, so the pipe is closed; never wait on a survivor
+        except Exception:  # noqa: BLE001
+            pass
+        raise
+    except Exception:  # noqa: BLE001 - unparsable output
         return None
 
 
+def _store(path: str, entry: dict) -> None:
+    tmp = f"{path}.{os.getpid()}"
+    try:
+        os.makedirs(os.path.dirname(path), mode=0o700, exist_ok=True)
+        with open(tmp, "w", encoding="utf-8", newline="\n") as f:
+            json.dump(entry, f)
+        os.replace(tmp, path)  # Windows: PermissionError while another process reads the file
+    except OSError:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+
+
 def git_info(cwd: str):
-    """Cached (5 s, per directory) git summary dict, or None when not a repo."""
-    import hashlib
-    cdir = _cache_dir()
-    path = os.path.join(cdir, hashlib.sha256(cwd.encode("utf-8", "replace")).hexdigest()[:16] + ".json")
+    """Cached (5 s, per directory) git summary dict, or None when not a repo. A git timeout keeps the
+    last good summary instead of caching a miss, but only for GIT_STALE seconds (past that a frozen
+    branch / dirty count would mislead), and re-stamps the entry so the 5 s TTL applies and the next
+    refreshes do not each wait out GIT_TIMEOUT. `ok` = when the summary was last really obtained."""
+    path, last, ok, now = _cache_path(cwd), None, 0.0, time.time()
     try:
         with open(path, encoding="utf-8") as f:
             hit = json.load(f)
-        if 0 <= time.time() - hit["t"] < GIT_TTL:
-            return hit["g"]
+        last, ok = hit["g"], float(hit.get("ok", hit["t"]))
+        if 0 <= now - hit["t"] < GIT_TTL:
+            return last if now - ok < GIT_STALE else None
     except (OSError, ValueError, KeyError, TypeError):
         pass
-    g = _git_status(cwd)
     try:
-        os.makedirs(cdir, mode=0o700, exist_ok=True)
-        tmp = f"{path}.{os.getpid()}"
-        with open(tmp, "w", encoding="utf-8", newline="\n") as f:
-            json.dump({"t": time.time(), "g": g}, f)
-        os.replace(tmp, path)
-    except OSError:
-        pass
+        g = _git_status(cwd)
+    except Exception:  # noqa: BLE001 - subprocess.TimeoutExpired
+        _store(path, {"t": time.time(), "ok": ok, "g": last})
+        return last if now - ok < GIT_STALE else None
+    _store(path, {"t": time.time(), "g": g})
     return g
 
 
@@ -233,9 +289,10 @@ def render(d: dict, color: bool, columns: int | None) -> str:
 
 def main() -> int:
     try:
-        getattr(sys.stdout, "reconfigure", lambda **_: None)(encoding="utf-8")  # Windows would pick cp1252 and choke on ▰
+        getattr(sys.stdout, "reconfigure", lambda **_: None)(  # Windows: cp1252 chokes on ▰, text mode writes \r\n
+            encoding="utf-8", errors="replace", newline="\n")  # a lone surrogate prints `?`, never a traceback
         try:
-            d = json.loads(sys.stdin.buffer.read().decode("utf-8", "replace"))
+            d = json.loads(sys.stdin.buffer.read().decode("utf-8-sig", "replace"))  # PowerShell pipes add a BOM
         except ValueError:
             d = {}
         cols = os.environ.get("COLUMNS", "")

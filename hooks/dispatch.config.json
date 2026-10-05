@@ -26,18 +26,18 @@
       {"id": "selfheal-daily", "type": "exec", "async": true, "cmd": ["{PY}", "{HOOKS}/tools/selfheal-daily.py"], "timeout_ms": 1800000, "enabled": true, "_note": "autonomy WP-D: once a day, locked, detached (never waited on; the timeout is only the script's own 30 min budget): MCP pin reconcile, missing CLIs, stale settings re-render, vendored DRIFT; writes state/selfheal-daily.json for the aggregator"}
     ],
     "pre-tool-use": [
-      {"id": "dangerous-bash-gate", "type": "gate", "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/dangerous-bash-gate.py"], "timeout_ms": 5000, "enabled": true, "_order": "DANGER FIRST"},
+      {"id": "dangerous-bash-gate", "type": "gate", "tools": "Bash|PowerShell", "cmd": ["{PY}", "{HOOKS}/dangerous-bash-gate.py"], "timeout_ms": 5000, "enabled": true, "_order": "DANGER FIRST"},
       {"id": "connector-ask-gate", "type": "gate", "tools": "mcp__claude_ai_.*|mcp__plugin_.*", "cmd": ["{PY}", "{HOOKS}/connector-ask-gate.py"], "timeout_ms": 3000, "enabled": true, "_note": "G-02: ask (never deny) for delete/trash/share/send/mutation verbs on claude.ai connector and plugin MCP tools"},
       {"id": "first-write-skill-gate", "type": "gate", "tools": "Write|Edit|MultiEdit|NotebookEdit", "cmd": ["{PY}", "{HOOKS}/first-write-skill-gate.py"], "timeout_ms": 5000, "enabled": true},
       {"id": "gateguard-write-gate", "type": "gate", "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/gateguard-write-gate.py"], "timeout_ms": 8000, "enabled": true},
       {"id": "dox-write-gate-write", "type": "gate", "tools": "Write|Edit|MultiEdit|NotebookEdit", "cmd": ["{PY}", "{HOOKS}/dox-write-gate.py"], "timeout_ms": 6000, "enabled": true},
-      {"id": "bash-write-gate", "type": "gate", "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/bash-write-gate.py"], "timeout_ms": 6000, "enabled": true},
-      {"id": "blocking-doc-enforcer", "type": "gate", "tools": "Bash", "cmd": ["{PY}", "{HOOKS}/blocking-doc-enforcer.py"], "timeout_ms": 5000, "enabled": true},
+      {"id": "bash-write-gate", "type": "gate", "tools": "Bash|PowerShell", "cmd": ["{PY}", "{HOOKS}/bash-write-gate.py"], "timeout_ms": 6000, "enabled": true},
+      {"id": "blocking-doc-enforcer", "type": "gate", "tools": "Bash|PowerShell", "cmd": ["{PY}", "{HOOKS}/blocking-doc-enforcer.py"], "timeout_ms": 5000, "enabled": true},
       {"id": "jcm-gate-read", "type": "gate", "tools": "Read|Grep|Glob", "cmd": ["{PY}", "{HOOKS}/jcodemunch-enforce.py", "pre-tool-use"], "timeout_ms": 5000, "enabled": true},
       {"id": "jcm-gate-leanctx", "type": "gate", "tools": "mcp__lean-ctx__ctx_read|mcp__lean-ctx__ctx_search", "cmd": ["{PY}", "{HOOKS}/jcodemunch-enforce.py", "pre-tool-use"], "timeout_ms": 3000, "enabled": true},
       {"id": "jdoc-doc-steer", "type": "advisory", "tools": "Read|mcp__lean-ctx__ctx_read", "cmd": ["{PY}", "{HOOKS}/jdocmunch-enforce.py", "pre-tool-use"], "timeout_ms": 4000, "priority": 1, "enabled": true},
       {"id": "tdd-guard-launcher-pre", "type": "advisory", "defer": true, "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/tdd_guard_launcher.py"], "timeout_ms": 17000, "priority": 2, "enabled": true, "_note": "warn-mode advisory, never a gate; defer: runs detached, its advisory arrives on the session's next tool event (B1-02: p90 4.6 s off the write path); 15 s validator cap"},
-      {"id": "graphify-enforce", "type": "advisory", "tools": "Task|Agent|Bash", "cmd": ["{PY}", "{HOOKS}/graphify-enforce.py", "pre-tool-use"], "timeout_ms": 5000, "priority": 1, "enabled": true},
+      {"id": "graphify-enforce", "type": "advisory", "tools": "Task|Agent|Bash|PowerShell", "cmd": ["{PY}", "{HOOKS}/graphify-enforce.py", "pre-tool-use"], "timeout_ms": 5000, "priority": 1, "enabled": true},
       {"id": "opus-guard", "type": "mutator", "tools": "Agent|Task", "cmd": ["{PY}", "{HOOKS}/opus-guard.py"], "timeout_ms": 5000, "enabled": true},
       {"id": "workflow-model-guard", "type": "mutator", "tools": "Workflow", "cmd": ["{PY}", "{HOOKS}/workflow-model-guard.py"], "timeout_ms": 5000, "enabled": true}
     ],
@@ -49,12 +49,12 @@
       {"id": "desloppify-cleanup", "type": "advisory", "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/desloppify-cleanup.py"], "timeout_ms": 10000, "priority": 1, "enabled": true},
       {"id": "gateguard-ack", "type": "exec", "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/gateguard-write-gate.py", "post-tool-use"], "timeout_ms": 3000, "enabled": true, "_note": "B1-08: acknowledge a gateguard ask only after the write ran (a declined ask asks again)"},
       {"id": "santa-method-writer", "type": "exec", "tools": "Task|Agent", "cmd": ["{PY}", "{HOOKS}/santa-method-writer.py"], "timeout_ms": 5000, "enabled": true},
-      {"id": "security-semgrep-tracker", "type": "exec", "tools": "Bash|mcp__semgrep__.*", "cmd": ["{PY}", "{HOOKS}/security-semgrep-tracker.py", "post-tool-use"], "timeout_ms": 5000, "enabled": true},
+      {"id": "security-semgrep-tracker", "type": "exec", "tools": "Bash|PowerShell|mcp__semgrep__.*", "cmd": ["{PY}", "{HOOKS}/security-semgrep-tracker.py", "post-tool-use"], "timeout_ms": 5000, "enabled": true},
       {"id": "jcm-mcp-used", "type": "exec", "tools": "mcp__jcodemunch__.*", "cmd": ["{PY}", "{HOOKS}/jcodemunch-enforce.py", "mcp-used"], "timeout_ms": 3000, "enabled": true},
       {"id": "mcp-post-hints", "type": "advisory", "tools": "Write|Edit|MultiEdit|NotebookEdit", "cmd": ["{PY}", "{HOOKS}/mcp-post-hints.py"], "timeout_ms": 3000, "priority": 1, "enabled": true, "_note": "call-X-now MCP hints after writes: semgrep (security files), context7 (new imports), reticle/playwright (FE edit + app running), postgres-patterns (migrations), jcodemunch blast radius (>3 files); deduped per session"}
     ],
     "post-tool-use-failure": [
-      {"id": "tool-failure-hint", "type": "advisory", "tools": "Edit|Write|Bash", "cmd": ["{PY}", "{HOOKS}/tool-failure-hint.py"], "timeout_ms": 3000, "priority": 0, "enabled": true}
+      {"id": "tool-failure-hint", "type": "advisory", "tools": "Edit|Write|Bash|PowerShell", "cmd": ["{PY}", "{HOOKS}/tool-failure-hint.py"], "timeout_ms": 3000, "priority": 0, "enabled": true}
     ],
     "stop": [
       {"id": "hard-completion-gate", "type": "gate", "cmd": ["{PY}", "{HOOKS}/hard-completion-gate.py"], "timeout_ms": 12000, "enabled": true},

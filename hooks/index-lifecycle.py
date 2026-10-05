@@ -32,7 +32,7 @@ Design invariants (Spec B §3, Charter §7):
     The config has NO path field, so there is nothing to iterate; a write
     outside the active repo is dropped (path-containment via rc.is_inside).
   * Zero daemons — builders are detached single-shot subprocesses
-    (start_new_session POSIX / DETACHED_PROCESS Windows), time-boxed, that run
+    (start_new_session POSIX / CREATE_NO_WINDOW Windows), time-boxed, that run
     one command and exit. No systemd, no persistent watchers, no timers.
   * Fail-open everywhere — any probe/build/lock error degrades to "assume
     fresh, continue"; a non-git cwd makes every surface a no-op at zero cost.
@@ -105,7 +105,7 @@ _DEFAULT_CONFIG = {
     "incremental_file_cap": 20,
     "surfaces_enabled": {"jcodemunch": True, "jdocmunch": True, "graphify": True, "dox": True},
     "relax_read_gate_while_building": True,
-    "summarizer_healthcheck": {"enabled": True, "url": "http://localhost:11434/api/tags",
+    "summarizer_healthcheck": {"enabled": True, "url": "http://127.0.0.1:11434/api/tags",
                                "timeout_ms": 800, "wait_s": 90},
 }
 
@@ -195,6 +195,9 @@ def _summarizer_alive(url: str, timeout_ms: int) -> bool:
     timeout = max(0.2, (timeout_ms or 800) / 1000.0)
     if not str(url).startswith(("http://", "https://")):
         return True  # no file:// or other schemes; a bad config never blocks indexing
+    if _LIBS_OK and plat.IS_WINDOWS:
+        # Windows tries ::1 first and ollama listens on 127.0.0.1 only: 0.8-2 s per probe
+        url = re.sub(r"^(https?://)localhost(?=[:/]|$)", r"\g<1>127.0.0.1", str(url), flags=re.I)
     try:
         urllib.request.urlopen(  # noqa: S310 - http(s) health URL from config
             urllib.request.Request(url, method="GET"), timeout=timeout)
@@ -270,7 +273,7 @@ def _spawn_detached(cmd, cwd=None):
                   "stderr": subprocess.DEVNULL, "close_fds": True,
                   "cwd": str(cwd) if cwd else None}
         if os.name == "nt":
-            kwargs["creationflags"] = 0x00000008 | 0x00000200
+            kwargs["creationflags"] = 0x08000000 | 0x00000200  # CREATE_NO_WINDOW | NEW_PROCESS_GROUP
         else:
             kwargs["start_new_session"] = True
         return subprocess.Popen(list(cmd), **kwargs).pid
@@ -362,32 +365,59 @@ def _state_path(key: str) -> Path:
     return STATE_DIR / f"{key}.json"
 
 
+def _normalise(data, ctx) -> dict:
+    data = dict(data) if isinstance(data, dict) else {}
+    data.setdefault("surfaces", {})
+    data.setdefault("journal", {"first_write_at": None, "entries": []})
+    data["repo_root"], data["repo_key"] = ctx.root, ctx.key
+    return data
+
+
 def _load_state(ctx) -> dict:
+    """The repo's state, normalised. A file that exists but cannot be read (Windows: a writer's
+    ``os.replace`` or a scanner holds it) is retried 3 x 20 ms, then returned blank and flagged
+    ``_unreadable`` so no caller persists that blank over the real state (A4v2-04)."""
     p = _state_path(ctx.key)
-    try:
-        if p.is_file():
-            data = json.loads(p.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                data.setdefault("surfaces", {})
-                data.setdefault("journal", {"first_write_at": None, "entries": []})
-                return data
-    except Exception:
-        pass
-    return {
-        "repo_root": ctx.root,
-        "repo_key": ctx.key,
-        "surfaces": {},
-        "journal": {"first_write_at": None, "entries": []},
-    }
+    for attempt in range(3):
+        try:
+            return _normalise(json.loads(p.read_text(encoding="utf-8")), ctx)
+        except PermissionError:
+            if attempt < 2:
+                _sleep(0.02)
+                continue
+            return {**_normalise({}, ctx), "_unreadable": True}
+        except Exception:  # missing, torn or not JSON: start blank
+            break
+    return _normalise({}, ctx)
+
+
+def _update_state(ctx, fn) -> None:
+    """Locked read-modify-write of the repo's state file (``platform.locked_update``): ``fn(state)``
+    mutates the dict read UNDER the lock (or returns a replacement), so concurrent hooks keep each
+    other's journal entries and surface records. Lock stuck 10 s: nothing is written (telemetry row)."""
+    if not _LIBS_OK:
+        return
+
+    def _apply(data):
+        state = _normalise(data, ctx)
+        out = fn(state)
+        return state if out is None else out
+    plat.locked_update(_state_path(ctx.key), _apply)
 
 
 def _save_state(ctx, state: dict) -> None:
-    state["repo_root"] = ctx.root
-    state["repo_key"] = ctx.key
-    try:
-        _atomic_write(_state_path(ctx.key), json.dumps(state, indent=2))
-    except Exception:
-        pass
+    """Replace the whole state (seeding in tests). Production writers use ``_update_state`` /
+    ``_save_surfaces`` so they never overwrite what a concurrent hook added."""
+    if not state.get("_unreadable"):
+        _update_state(ctx, lambda _current: _normalise(state, ctx))
+
+
+def _save_surfaces(ctx, state: dict, names) -> None:
+    """Persist only the surface records this caller computed: the journal and the other surfaces
+    belong to concurrent hooks (a probe holds its copy for seconds)."""
+    recs = {s: state["surfaces"][s] for s in names if s in state.get("surfaces", {})}
+    if recs and not state.get("_unreadable"):
+        _update_state(ctx, lambda current: current["surfaces"].update(recs))
 
 
 # --------------------------------------------------------------------------- #
@@ -692,7 +722,7 @@ def _probe_all(ctx, state: dict, cfg: dict, wall: float | None = None) -> dict:
 def _summarizer_cfg(cfg: dict) -> tuple:
     hc = cfg.get("summarizer_healthcheck") or {}
     return (bool(hc.get("enabled", True)),
-            hc.get("url", "http://localhost:11434/api/tags"),
+            hc.get("url", "http://127.0.0.1:11434/api/tags"),
             hc.get("timeout_ms", 800))
 
 
@@ -840,6 +870,8 @@ def _flush(ctx, state: dict, cfg: dict) -> None:
     overlap another build of the SAME surface (no duplicate ``graphify update``,
     no concurrent index of the same DB). A surface already busy with a full
     build is skipped here — that full build already covers the journaled files.
+    Mutates ``state`` only; call it from an ``_update_state`` callback so the cleared
+    journal is written under the lock.
     """
     journal = state.get("journal") or {}
     entries = journal.get("entries") or []
@@ -862,7 +894,6 @@ def _flush(ctx, state: dict, cfg: dict) -> None:
         # index; a delete flips dirty_sha, so the next session-start probe marks
         # the surface STALE and fully rebuilds. Truncate and move on.
         state["journal"] = {"first_write_at": None, "entries": []}
-        _save_state(ctx, state)
         return
     enabled = [s for s in SURFACES if cfg["surfaces_enabled"].get(s, True)]
     ttl = cfg["lock_ttl_minutes"]
@@ -885,7 +916,6 @@ def _flush(ctx, state: dict, cfg: dict) -> None:
     # be caught STALE + fully rebuilt at the next session-start probe). The
     # detached worker releases each claimed surface lock when it finishes.
     state["journal"] = {"first_write_at": None, "entries": []}
-    _save_state(ctx, state)
 
 
 # --------------------------------------------------------------------------- #
@@ -970,7 +1000,7 @@ def reprobe(root: str, cfg: dict | None = None) -> dict:
                                      for k, v in cfg["probe_timeouts_ms"].items()}
         probes = _probe_all(ctx, state, fast, wall=REPROBE_WALL_S)
         _lines, to_build = _apply_probes(ctx, state, probes, cfg)
-        _save_state(ctx, state)
+        _save_surfaces(ctx, state, probes)
         if to_build:
             _spawn_build(ctx, to_build, incremental=False, journal_file=None)
         recs = state.get("surfaces", {})
@@ -994,11 +1024,12 @@ def mode_session_start(payload: dict, cfg: dict) -> int:
 
     # Drain a journal left behind by a killed session before probing.
     if (state.get("journal") or {}).get("entries"):
-        _flush(ctx, state, cfg)
+        _update_state(ctx, lambda current: _flush(ctx, current, cfg))
         state = _load_state(ctx)
 
-    lines, to_build = _apply_probes(ctx, state, _probe_all(ctx, state, cfg), cfg)
-    _save_state(ctx, state)
+    probes = _probe_all(ctx, state, cfg)
+    lines, to_build = _apply_probes(ctx, state, probes, cfg)
+    _save_surfaces(ctx, state, probes)
 
     if to_build:
         _spawn_build(ctx, to_build, incremental=False, journal_file=None)
@@ -1059,19 +1090,19 @@ def mode_post_write(payload: dict, cfg: dict) -> int:
         _spawn_reprobe(ctx.root)
         print("{}")
         return 0
-    state = _load_state(ctx)
-    if not _journal_touch(payload, ctx, state):
+    if not _journal_touch(payload, ctx, {}):  # outside the repo / no path: nothing to record or lock
         print("{}")
         return 0
-    journal = state["journal"]
-    entries = journal.get("entries", [])
     n = cfg["debounce"]["writes_threshold"]
     t = cfg["debounce"]["seconds_threshold"]
-    first = journal.get("first_write_at") or time.time()
-    if len(entries) >= n or (time.time() - first) >= t:
-        _flush(ctx, state, cfg)  # flush saves state
-    else:
-        _save_state(ctx, state)
+
+    def _record(state: dict) -> None:  # runs under the state lock, on the freshly read journal
+        _journal_touch(payload, ctx, state)
+        journal = state["journal"]
+        first = journal.get("first_write_at") or time.time()
+        if len(journal.get("entries", [])) >= n or (time.time() - first) >= t:
+            _flush(ctx, state, cfg)
+    _update_state(ctx, _record)
     print("{}")
     return 0
 
@@ -1087,7 +1118,7 @@ def mode_tick(payload: dict, cfg: dict) -> int:
     t = cfg["debounce"]["seconds_threshold"]
     first = journal.get("first_write_at")
     if entries and first is not None and (time.time() - first) >= t:
-        _flush(ctx, state, cfg)
+        _update_state(ctx, lambda current: _flush(ctx, current, cfg))
     print("{}")
     return 0
 
@@ -1099,7 +1130,7 @@ def mode_flush(payload: dict, cfg: dict) -> int:
         return 0
     state = _load_state(ctx)
     if (state.get("journal") or {}).get("entries"):
-        _flush(ctx, state, cfg)
+        _update_state(ctx, lambda current: _flush(ctx, current, cfg))
     print("{}")
     return 0
 
@@ -1187,7 +1218,7 @@ def mode_build(args, cfg: dict) -> int:
                 "built_at": prior.get("built_at"), "failures": failures}
             _telem("build_fail", surface=surface, key=ctx.key, failures=failures,
                    err=_LAST_ERR[0][-400:])
-        _save_state(ctx, state)
+        _save_surfaces(ctx, state, [surface])
 
     if args.journal:
         try:

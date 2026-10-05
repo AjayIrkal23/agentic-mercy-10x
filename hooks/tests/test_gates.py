@@ -562,7 +562,9 @@ def test_dangerous_bash_gate_sees_through_git_global_options():
     import time
     start = time.monotonic()  # `--?[\w.-]+` backtracked exponentially per `--opt`
     hits("git " + "--o " * 40 + "status; git reset --hard")
-    assert time.monotonic() - start < 1.0
+    # exponential backtracking over 40 options never finishes (2^40), a linear scan takes
+    # milliseconds: 10 s separates them with a wide margin on a loaded box (A7-07)
+    assert time.monotonic() - start < 10.0
 
 
 def test_skip_patterns_match_windows_separators_in_write_hooks():

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 WRITE_TOOLS = frozenset({"Write", "Edit", "StrReplace", "MultiEdit", "TabWrite"})
-SHELL_TOOLS = frozenset({"Shell", "Bash"})
+SHELL_TOOLS = frozenset({"Shell", "Bash", "PowerShell"})
 AGENT_TOOLS = frozenset({"Task", "Agent"})
 READ_TOOLS = frozenset({"Read", "Grep", "Glob", "TabRead"})
 

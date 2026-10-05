@@ -92,13 +92,9 @@ def spawn_deferred(cmd: list, timeout_s: float, payload_text: str, sid: str, eve
     job = json.dumps({"cmd": cmd, "timeout_s": timeout_s, "payload": payload_text,
                       "sid": sid, "event": event, "link_id": link_id})
     try:
-        proc = subprocess.Popen(  # noqa: S603 - trusted internal command list
-            [sys.executable or "python3", str(Path(__file__).resolve()), "run-deferred"],
-            stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            start_new_session=True, text=True)
-        proc.stdin.write(job)
-        proc.stdin.close()
-        return True
+        from lib import platform as _plat
+        return _plat.spawn_worker([sys.executable or "python3", str(Path(__file__).resolve()), "run-deferred"],
+                                  stdin_text=job) is not None
     except Exception:  # noqa: BLE001
         return False
 
@@ -123,8 +119,10 @@ def run_deferred(job: dict) -> None:
     t0 = time.perf_counter()
     rc, ctx = 1, ""
     try:
+        from lib import platform as _plat
         proc = subprocess.run(job["cmd"], input=job.get("payload") or "{}", capture_output=True,  # noqa: S603
-                              text=True, timeout=float(job.get("timeout_s") or 15), check=False)
+                              text=True, timeout=float(job.get("timeout_s") or 15), check=False,
+                              **_plat.no_window_kwargs())
         rc = proc.returncode
         ctx = _context_of(proc.stdout or "") if rc == 0 else ""
     except subprocess.TimeoutExpired:
@@ -145,20 +143,17 @@ def run_deferred(job: dict) -> None:
 
 def enqueue(sid: str, link_id: str, ctx: str) -> bool:
     """Queue ``ctx`` for this session's next prompt (the model reads it; the user's screen
-    never shows it). One O_APPEND line, safe beside a concurrent drain. True when written."""
+    never shows it). One ``plat.append_line`` record (locked on Windows), safe beside a
+    concurrent drain. True when written."""
     if not sid or not ctx:
         return False
     try:
+        from lib import platform as _plat
         q = _queue_path(sid)
         q.parent.mkdir(parents=True, exist_ok=True)
         line = json.dumps({"ts": time.time(), "link": link_id, "ctx": ctx}) + "\n"
-        fd = os.open(str(q), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
-        try:
-            os.write(fd, line.encode("utf-8"))
-        finally:
-            os.close(fd)
-        return True
-    except OSError:
+        return _plat.append_line(q, line.encode("utf-8"))
+    except Exception:  # noqa: BLE001
         return False
 
 
@@ -169,8 +164,9 @@ def drain(sid: str) -> list:
     q = _queue_path(sid)
     tmp = q.with_name(f"{q.name}.{os.getpid()}.draining")
     try:
-        os.replace(q, tmp)  # atomic hand-off: a worker appending now starts a new file
-    except OSError:
+        from lib import platform as _plat
+        _plat.replace_file(q, tmp)  # atomic hand-off: a worker appending now starts a new file
+    except Exception:  # noqa: BLE001
         return []
     out = []
     try:

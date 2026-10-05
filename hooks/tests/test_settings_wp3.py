@@ -34,7 +34,8 @@ def _handled(event: str, tool: str, tool_input: dict | None = None) -> bool:
 
 
 PRE_SAMPLES = {
-    "Bash": None, "Write": None, "Edit": None, "Read": None, "Grep": None, "Agent": None, "Workflow": None,
+    "Bash": None, "PowerShell": None, "Write": None, "Edit": None, "Read": None, "Grep": None, "Agent": None,
+    "Workflow": None,
     "mcp__lean-ctx__ctx_read": None, "mcp__lean-ctx__ctx_search": None,
     "mcp__lean-ctx__ctx_shell": {"command": "ls"}, "mcp__lean-ctx__shell": {"command": "ls"},
     "mcp__lean-ctx__ctx_patch": {"path": "/r/a.py", "old_text": "a", "new_text": "b"},
@@ -62,6 +63,15 @@ def test_lean_ctx_writes_reach_post_tool_use():
                      ("mcp__lean-ctx__ctx_shell", {"command": "semgrep scan"})):
         assert re.fullmatch(m, tool), tool
         assert _handled("post-tool-use", tool, ti), tool
+
+
+def test_powershell_reaches_every_shell_event():
+    """The PowerShell tool is a shell tool (A1-02): the dispatcher is spawned for it on all three
+    tool events and some enabled link handles it (dangerous gate, semgrep tracker, failure hint)."""
+    for event, name in (("PreToolUse", "pre-tool-use"), ("PostToolUse", "post-tool-use"),
+                        ("PostToolUseFailure", "post-tool-use-failure")):
+        assert re.fullmatch(_matcher(event), "PowerShell"), event
+        assert _handled(name, "PowerShell", {"command": "ls"}), name
 
 
 def test_template_stays_lean_ctx_literal_free():

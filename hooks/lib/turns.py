@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional, Tuple
 
+from tool_compat import is_shell_tool
+
 TAIL_LINES = 4000
 
 
@@ -166,7 +168,7 @@ def turn_bash_commands(transcript_path) -> list:
             continue
         msg = entry.get("message")
         for b in (msg.get("content") if isinstance(msg, dict) else None) or []:
-            if isinstance(b, dict) and b.get("type") == "tool_use" and b.get("name") == "Bash":
+            if isinstance(b, dict) and b.get("type") == "tool_use" and is_shell_tool(b.get("name")):
                 cmd = (b.get("input") or {}).get("command") if isinstance(b.get("input"), dict) else None
                 if isinstance(cmd, str) and cmd:
                     cmds.append(cmd)

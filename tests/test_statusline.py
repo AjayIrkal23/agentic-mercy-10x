@@ -198,10 +198,8 @@ def test_git_result_is_cached_per_repo(run, repo, cache):
     assert "?2" in fresh and fresh != first
 
 
-def test_warm_cache_run_is_fast(run, repo):
-    pl = full_payload(repo)
-    run(pl)
-    t0 = time.perf_counter()
-    p = run(pl)
-    elapsed = time.perf_counter() - t0
-    assert p.returncode == 0 and elapsed < 0.150, f"{elapsed * 1000:.0f} ms"
+# The warm-path wall-clock test is gone (A3v2-06, A7v2-05: it failed 8 of 12 runs on a loaded box). What it
+# guarded is structural and pinned in test_statusline_win.py: `test_warm_path_skips_openssl` (the
+# import-time list has no hashlib / tempfile / subprocess, so no git process) and
+# `test_a_fresh_cache_entry_means_no_git_call` (call count).
+

@@ -299,6 +299,7 @@ def test_policy_load_fail_open_missing(monkeypatch, tmp_path):
     home = tmp_path / "home"
     (home / ".claude" / "state").mkdir(parents=True)
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))  # Path.home() on Windows
     # Missing policy -> literal fallback still pins the UI agent to opus and defaults sonnet.
     assert mod._resolve_required("frontend-uiux-designer", "", "x")[0] == "opus"
     assert mod._resolve_required("general-purpose", "", "x")[0] == "sonnet"
@@ -314,6 +315,7 @@ def test_policy_load_fail_open_corrupt(monkeypatch, tmp_path):
     home = tmp_path / "home"
     (home / ".claude" / "state").mkdir(parents=True)
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))  # Path.home() on Windows
     assert mod._resolve_required("explore", "", "x")[0] == "sonnet"
     assert mod._resolve_required("santa-reviewer", "", "x")[0] == "opus"
     assert mod._resolve_required("implementation-engineer", "", "x")[0] == "sonnet"

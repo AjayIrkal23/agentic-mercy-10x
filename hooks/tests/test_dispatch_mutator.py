@@ -66,13 +66,21 @@ def test_tools_regex_is_fullmatch():
 
 def test_async_exec_not_waited(tmp_path):
     mod = _load()
+    # The exec waits on a gate file (up to 30 s) that the test releases afterwards: dispatch must
+    # come back long before that, however slow this box is (A7-07). No tight clock bound.
+    release = tmp_path / "release"
     slow = tmp_path / "slow.py"
-    slow.write_text("import time; time.sleep(3)\n", encoding="utf-8")
+    slow.write_text("import os, time\n"
+                    f"for _ in range(300):\n    if os.path.exists({str(release)!r}): break\n    time.sleep(0.1)\n",
+                    encoding="utf-8")
     cfg = {"chains": {"stop": [
         {"id": "slow", "type": "exec", "async": True, "cmd": [sys.executable, str(slow)]}]}}
     t0 = time.perf_counter()
-    assert mod.dispatch("stop", {}, cfg) == {}
-    assert time.perf_counter() - t0 < 2
+    try:
+        assert mod.dispatch("stop", {}, cfg) == {}
+        assert time.perf_counter() - t0 < 15
+    finally:
+        release.write_text("go", encoding="utf-8")
 
 
 def test_subagent_start_injects_protocol():

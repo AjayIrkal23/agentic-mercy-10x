@@ -18,6 +18,8 @@ Best-effort, never raises, never blocks a session. Purges:
   test-named sessions (audit-*, ma-{heavy,light}-{live,shadow}-*, t<N>-*, t-iso-*,
   dryrun-*, isg-*, t-<32 hex>) in those four dirs                       > 1 d
   state/{go,vite,wt}-<8 hex>.stack.json  (fixture-repo stack caches)    > 1 d
+  *.json.lock / *.jsonl.lock whose data file is gone, in state/,
+  state/advisory-queue/, telemetry/, hooks/.telemetry                  > 1 d
 state/model-modes is never touched. Honors CLAUDE_HOOK_DOCTOR (no-op). Reads and
 ignores stdin; prints {}. Each run that removed anything appends one JSON line
 {ts, total, purged: {family: n}} to state/state-cleanup.log.
@@ -66,6 +68,23 @@ def _purge_files(directory: Path, patterns, max_age_s: float, now: float) -> int
                     removed += 1
             except OSError:
                 pass
+    return removed
+
+
+def _purge_orphan_locks(directory: Path, max_age_s: float, now: float) -> int:
+    """`<data>.json.lock` / `<data>.jsonl.lock` sidecars (platform.locked_update / append_line)
+    whose data file is gone. A lock beside a live file, or a fixed lock such as
+    `selfheal-daily.lock`, is never touched."""
+    removed = 0
+    if not directory.is_dir():
+        return 0
+    for f in [*directory.glob("*.json.lock"), *directory.glob("*.jsonl.lock")]:
+        try:
+            if not f.with_suffix("").exists() and now - f.stat().st_mtime > max_age_s:
+                f.unlink()
+                removed += 1
+        except OSError:
+            pass
     return removed
 
 
@@ -222,6 +241,8 @@ def run(base: Path, now: float | None = None, dotstate: Path | None = None) -> d
     add("index-dead", _purge_dead_index_states(dot / "index", _DAY, now))
     add("telemetry-session", _purge_files(hooks / ".telemetry", ["*.*.jsonl", "*.suite-gate.json"], 14 * _DAY, now))
     _rotate(hooks / ".telemetry" / "skill-effectiveness.jsonl")
+    for d in (base / "state", base / "state" / "advisory-queue", base / "telemetry", hooks / ".telemetry"):
+        add("orphan-lock", _purge_orphan_locks(d, _DAY, now))
     add("plugin-temp", _purge_dirs(base / "plugins" / "cache", "temp_git_*", _DAY, now))
     add("session-env", _purge_dirs(base / "session-env", "*", _DAY, now, empty_only=True))
     for d in (base / "state", base / "telemetry", dot, hooks / ".telemetry"):

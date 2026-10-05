@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""bash-write-gate.py — PreToolUse hook on Bash.
+"""bash-write-gate.py — PreToolUse hook on Bash and PowerShell (Set-Content, Add-Content,
+Out-File, [IO.File] writers and `>` count as shell writes too).
 
 DEFAULT BEHAVIOR (2026-07-19): this hook does NOT block shell writes.
 
@@ -71,6 +72,9 @@ BYPASS_DENY_ON = os.environ.get("BASH_WRITE_GATE_DENY_SHELL_WRITES", "").strip()
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or SCRIPT_DIR / ".state")
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+from tool_compat import is_shell_tool  # noqa: E402
 
 # Source file extensions to monitor (Layer 2 only). Layer 1 covers every extension.
 SOURCE_EXTENSIONS = frozenset({
@@ -161,6 +165,31 @@ _CP_RE = re.compile(
     _CMD_POS + r"""cp\s+(?:-\S+\s+)*[^\s;|&]+\s+(?P<path>[^\s;|&>-][^\s;|&>]*)""",
     re.MULTILINE,
 )
+# PowerShell file writes (the PowerShell tool, or `powershell -c` from Bash): the write cmdlets
+# with a positional or -Path/-LiteralPath/-FilePath target, .NET File writers with a literal
+# path, and `>` after an output cmdlet. A non-literal target ($p) is an accepted miss, like
+# a bare `echo x > outfile` above.
+_PS_WRITERS = r"(?:set-content|add-content|out-file|sc|ac)"
+_PS_PATHFLAG = r"-(?:path|literalpath|filepath)"
+_PS_CMDLET_RE = re.compile(
+    _CMD_POS + _PS_WRITERS + r"""\s+(?:""" + _PS_PATHFLAG + r"""\s+)?(?P<path>[^\s;|&>-][^\s;|&>]*)""",
+    re.IGNORECASE | re.MULTILINE,
+)
+_PS_FLAG_RE = re.compile(
+    _CMD_POS + _PS_WRITERS + r"""\b[^\n;|&]*?\s""" + _PS_PATHFLAG + r"""\s+(?P<path>[^\s;|&>][^\s;|&>]*)""",
+    re.IGNORECASE | re.MULTILINE,
+)
+_PS_DOTNET_RE = re.compile(
+    r"""\[(?:system\.)?io\.file\]::(?:write|append)\w*\(\s*['"](?P<path>[^'"\n]+)['"]""",
+    re.IGNORECASE,
+)
+_PS_REDIRECT_RE = re.compile(
+    _CMD_POS + r"""(?:write-output|write-host|get-content|gc|type)\s+.{0,200}?>>?\s*(?P<path>[^\s;|&>]+)""",
+    re.IGNORECASE | re.DOTALL | re.MULTILINE,
+)
+_PS_WRITE_RES = (_PS_CMDLET_RE, _PS_FLAG_RE, _PS_DOTNET_RE, _PS_REDIRECT_RE)
+# $env:TEMP\x, ${env:TMP}\x, %TEMP%\x and anything under AppData\Local\Temp (slashes normalised)
+_PS_TEMP_RE = re.compile(r"(?:\$\{?env:(?:temp|tmp|tmpdir)\}?|%(?:temp|tmp)%)/|/appdata/local/temp/", re.IGNORECASE)
 _GREP_TIMEOUT_S = 4  # importer count; stays under the 6 s dispatch link timeout
 
 # A write actually happening inside an interpreter body. Without one of these,
@@ -199,7 +228,7 @@ def _looks_like_path(tok: str) -> bool:
     tok = tok.strip()
     if not tok or tok.startswith(("http://", "https://", "-")):
         return False
-    if "/" in tok:
+    if "/" in tok or "\\" in tok:
         return True
     return bool(re.match(r"^[\w.-]+\.[A-Za-z0-9]{1,6}$", tok))
 
@@ -222,7 +251,8 @@ def _in_temp_dir(p: str) -> bool:
 def _is_allowed_path(p: str) -> bool:
     """Scratch, logs, build output, and the temp dirs: rules/01 allows shell writes there."""
     p = p.strip().strip("'\"")
-    return _in_temp_dir(p) or bool(_ALLOW_PATH_RE.search(p))
+    q = p.replace("\\", "/")  # a Windows target: node_modules\x, $env:TEMP\x
+    return _in_temp_dir(p) or bool(_ALLOW_PATH_RE.search(q)) or bool(_PS_TEMP_RE.search(q))
 
 
 def _candidate_paths(body: str) -> list[str]:
@@ -256,7 +286,8 @@ def _detect_bypass(cmd: str):
                       (_HEREDOC_REV_RE, "heredoc redirect (cat > file <<EOF)"),
                       (_TEE_RE, "tee write"),
                       (_ECHO_RE, "echo/printf redirect"),
-                      (_CAT_REDIRECT_RE, "cat redirect (cat a > file)")):
+                      (_CAT_REDIRECT_RE, "cat redirect (cat a > file)"),
+                      *((rx, "PowerShell write (Set-Content / Out-File / [IO.File] / >)") for rx in _PS_WRITE_RES)):
         for m in rx.finditer(cmd):
             p = m.group("path").strip("'\"")
             if not p or p in ("/dev/null", "/dev/stderr", "/dev/stdout"):
@@ -271,7 +302,7 @@ def _detect_bypass(cmd: str):
                 continue
             if _is_allowed_path(p):
                 continue
-            return (f"{label} → {os.path.basename(p)}",
+            return (f"{label} → {os.path.basename(p.replace(chr(92), '/'))}",
                     "ctx_patch (edit) / Write (new file)")
 
     return None
@@ -323,7 +354,7 @@ def _extract_target_paths(cmd: str) -> list[str]:
             if p:
                 paths.append(p)
 
-    for rx in (_TEE_RE, _ECHO_RE, _CAT_REDIRECT_RE, _CP_RE):
+    for rx in (_TEE_RE, _ECHO_RE, _CAT_REDIRECT_RE, _CP_RE, *_PS_WRITE_RES):
         for m in rx.finditer(cmd):
             p = m.group("path").strip("'\"")
             if p and p not in ("/dev/null", "/dev/stderr", "/dev/stdout"):
@@ -495,7 +526,7 @@ def main() -> int:
 
     try:
         tool = str(payload.get("tool_name") or payload.get("tool") or "")
-        if tool not in ("Bash", "Shell"):
+        if not is_shell_tool(tool):
             print("{}")
             return 0
 

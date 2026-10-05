@@ -1,11 +1,10 @@
-"""hook_telemetry.py — always-on, O_APPEND jsonl fire logger.
+"""hook_telemetry.py — always-on, append-only jsonl fire logger.
 
 Charter §3/§7: every hook link is telemetry-logged from day 1. This is the one
-appender. It uses ``os.open(..., O_APPEND)`` + a single ``os.write`` so
-concurrent links (parallel advisory ThreadPool, sibling sessions) never
-interleave a partial line — POSIX guarantees atomic appends up to PIPE_BUF and
-we keep records well under that. Never raises; telemetry must never break a
-hook.
+appender. It goes through ``platform.append_line`` (``O_APPEND`` + a single
+``os.write``; on Windows, where that is not atomic, under the ``<file>.lock`` lock)
+so concurrent links (parallel advisory ThreadPool, sibling sessions) never
+interleave or drop a line. Never raises; telemetry must never break a hook.
 
 Record shape (Spec B §2 link telemetry):
   {ts, session, event, link_id, ms, exit, chars_out, decision, budget_hit, error, ...}
@@ -18,7 +17,6 @@ stderr so a live session can watch fires.
 from __future__ import annotations
 
 import json
-import os
 import time
 from pathlib import Path
 from typing import Any
@@ -64,12 +62,7 @@ def record(event: str, link_id: str, **fields: Any) -> None:
                            "error": "unserializable-telemetry"}) + "\n"
     data = line.encode("utf-8", "replace")
     try:
-        path = _today_file()
-        fd = os.open(str(path), os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
-        try:
-            os.write(fd, data)
-        finally:
-            os.close(fd)
+        _plat.append_line(_today_file(), data)  # locked + binary on Windows (A4-05)
     except OSError:
         pass  # telemetry is best-effort — never break the hook
 
