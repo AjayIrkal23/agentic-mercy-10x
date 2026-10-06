@@ -28,11 +28,18 @@ rounds (Santa + security) and test-first fixes later (plans in `plans/windows-pa
 - **One-click Windows install**: `install.cmd` → `install.ps1` (Python bootstrap, pinned + Authenticode)
   → `install.py`; `installer/wintools.py` installs PortableGit, Node, Claude Code, uv, gh and ollama per
   user with pinned SHA-256, contained zip extraction, `HKCU` PATH (`REG_EXPAND_SZ`), reuse of tools
-  already present, `-Ci` plans only, `AGENTIC_MERCY_SANDBOX=1` blocks every registry write.
+  already present, `-Ci` plans only, `AGENTIC_MERCY_SANDBOX=1` blocks every registry write and drops
+  inherited `UV_TOOL_*` / `NPM_CONFIG_PREFIX` / `PIPX_*` (a rehearsal once installed into the real uv
+  and npm dirs); a git reused through `CLAUDE_CODE_GIT_BASH_PATH` but off PATH gets its `cmd` dir on
+  PATH; a dir already on the user PATH keeps the user's order; unknown `install.ps1` flags stop first.
+- **CI**: the Windows workbench legs (py 3.12 + 3.14) gate the build; `install.ps1 -Ci` is rehearsed
+  in a sandboxed profile; the mods job runs on Windows too (informational) and proves the pinned CLI.
 - **Tests**: Windows-only branches are exercised on Ubuntu by injecting the OS (`IS_WINDOWS`
   monkeypatch sites 1 → 60); `tests/conftest.py` restores `os.environ` after each test.
-- Proof: Windows pytest 1770 passed / 3 skipped; Ubuntu (WSL) suite run; mod tests 227 passed; doctor
-  0 FAIL on the replica; grep gates 5/5.
+- Proof: Windows pytest 2005 passed / 3 skipped; mod tests 261 passed; CI Ubuntu 3.10/3.12/3.14 and
+  Windows 3.12/3.14 green; live headless E2E 8 PASS (guards for Bash and PowerShell, subagent commit,
+  secret write, bridge, model tools, status line p95 189 ms, 0 console windows); fresh-profile
+  one-click install 0 FAIL, re-run 74 s; doctor 0 FAIL on the replica; grep gates 5/5.
 
 ## v4.0.2 — 2026-10-05 the test suite passes on Windows
 
