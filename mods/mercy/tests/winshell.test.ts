@@ -8,6 +8,10 @@ import { splitSegments } from '../hooks/lib/shell'
 import { isShellTool, SHELL_TOOLS } from '../hooks/lib/tools'
 import { isExitForwarder } from '../hooks/lib/winshell'
 
+// The engine lays its tool-name union per OS and only Windows has the PowerShell tool, so a bare
+// 'PowerShell' literal fails tsc on Linux. Cast once here; the engine test runs it the same everywhere.
+const POWERSHELL = 'PowerShell' as 'Bash'
+
 // Windows spellings (A1-01, A1-06..A1-08, A1-11): parsed on every OS, harmless on Linux.
 const servers = [
   'npm.cmd run dev', 'pnpm.cmd dev', 'npx.cmd vite', 'D:\\x\\npm.cmd run dev', 'cmd /c npm run dev', 'cmd.exe /c "npm run dev"',
@@ -139,7 +143,8 @@ function engine(on: On, ran: (tool: string) => void = () => {}) {
   on('session.model', () => ({ value: 'claude-sonnet-5-5' }))
   on('tool.call', (_$, e) => {
     ran(e.tool)
-    return (e.tool === 'Bash' || e.tool === 'PowerShell' ? { result: 'ok' } : { result: { filePath: '/r/src/a.ts' } }) as never
+    const tool: string = e.tool
+    return (tool === 'Bash' || tool === 'PowerShell' ? { result: 'ok' } : { result: { filePath: '/r/src/a.ts' } }) as never
   })
   return clock
 }
@@ -149,7 +154,7 @@ describe('the PowerShell tool through the engine (A1-01)', () => {
     const ran: string[] = []
     engine(on, t => ran.push(t))
     for (const command of ['npm run dev', 'npx vite']) {
-      const r = await $.tool.call({ tool: 'PowerShell', command })
+      const r = await $.tool.call({ tool: POWERSHELL, command })
       expect(r.deny, command).toContain('dev server')
     }
     expect(ran).toEqual([])
@@ -161,11 +166,11 @@ describe('the PowerShell tool through the engine (A1-01)', () => {
     await clock.advance(5000)
     await $.tool.call({ tool: 'Edit', file_path: '/r/src/a.ts', old_string: 'a', new_string: 'b' })
     await clock.advance(5000)
-    await $.tool.call({ tool: 'PowerShell', command: 'npm test' })
+    await $.tool.call({ tool: POWERSHELL, command: 'npm test' })
     expect((await $.classic.Stop({ stop_hook_active: false })).block).toBeUndefined()
   })
   // A1v2-05: the PowerShell tool reports the last native command's status, so the usual tail idiom is evidence there
-  async function editThenRun(tool: 'Bash' | 'PowerShell', command: string, $: Engine, on: On) {
+  async function editThenRun(tool: 'Bash', command: string, $: Engine, on: On) {
     const clock = engine(on)
     await $.classic.UserPromptSubmit({ prompt: 'fix the bug' })
     await $.tool.call({ tool: 'Bash', command: 'npm test' })
@@ -176,12 +181,12 @@ describe('the PowerShell tool through the engine (A1-01)', () => {
     return $.classic.Stop({ stop_hook_active: false })
   }
   test('`npm test 2>&1 | Select-Object -Last 20` through PowerShell satisfies the verify gate', async ($, on) => {
-    expect((await editThenRun('PowerShell', 'npm test 2>&1 | Select-Object -Last 20', $, on)).block).toBeUndefined()
+    expect((await editThenRun(POWERSHELL, 'npm test 2>&1 | Select-Object -Last 20', $, on)).block).toBeUndefined()
   })
   test('the same text through Bash does not (a pipe masks the status there)', async ($, on) => {
     expect((await editThenRun('Bash', 'npm test 2>&1 | Select-Object -Last 20', $, on)).block).toBeDefined()
   })
   test('a Start-Process run never satisfies the gate', async ($, on) => {
-    expect((await editThenRun('PowerShell', 'Start-Process npm -ArgumentList test -Wait -NoNewWindow', $, on)).block).toBeDefined()
+    expect((await editThenRun(POWERSHELL, 'Start-Process npm -ArgumentList test -Wait -NoNewWindow', $, on)).block).toBeDefined()
   })
 })

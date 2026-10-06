@@ -146,7 +146,7 @@ Counts change; recompute them rather than trusting this table.
 | Dispatch links | 43 enabled | `hooks/dispatch.config.json` → `chains` |
 | MCP servers (user scope) | 16 | `installer/manifest.json` → `mcp_servers` |
 | Plugins / marketplaces | 11 / 5 | `installer/manifest.json` → `plugins` |
-| Vendored third-party skills | 28 sources | `hooks/skills-sources.json` |
+| Vendored third-party skills | 27 sources | `hooks/skills-sources.json` |
 
 </details>
 

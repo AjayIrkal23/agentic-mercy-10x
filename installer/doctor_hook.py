@@ -58,7 +58,7 @@ def _shell(command: str, payload: str, env: dict) -> tuple[int, str]:
         return 127, ""
 
 
-def check_hook_command(root: Path, ci: bool, run: Callable = _shell) -> tuple[str, str]:
+def check_hook_command(root: Path, ci: bool, run: Callable | None = None) -> tuple[str, str]:
     settings = Path(root) / "settings.json"
     if not settings.is_file():
         return SKIP, "settings.json not rendered yet"
@@ -70,7 +70,7 @@ def check_hook_command(root: Path, ci: bool, run: Callable = _shell) -> tuple[st
         env = dict(os.environ, CLAUDE_HOOK_DOCTOR="1")
         for var in ("CLAUDE_HOOK_STATE_DIR", "CLAUDE_HOOK_TELEMETRY_DIR", "CLAUDE_HOOK_DOTSTATE_DIR"):
             env[var] = os.path.join(scratch, var.lower())
-        rc, out = run(command, json.dumps(PAYLOAD), env)
+        rc, out = (run or _shell)(command, json.dumps(PAYLOAD), env)
     if rc != 0:
         return FAIL, f"`{command.split()[0]} ...` exited {rc} (127 = interpreter not found on the hook shell's PATH)"
     try:
@@ -80,7 +80,7 @@ def check_hook_command(root: Path, ci: bool, run: Callable = _shell) -> tuple[st
     return PASS, f"rendered PreToolUse command runs (`{command.split()[0]} ...`: exit 0, JSON out)"
 
 
-def check_statusline(root: Path, ci: bool, run: Callable = _shell) -> tuple[str, str]:
+def check_statusline(root: Path, ci: bool, run: Callable | None = None) -> tuple[str, str]:
     """Run the rendered ``statusLine.command`` once, as Claude Code does, with a small sample payload.
     A pinned interpreter that moved or was uninstalled exits 127 with no output: the status line goes
     blank and no hook error says so (A3v2-02). The cache dir and cwd are throwaway."""
@@ -95,7 +95,7 @@ def check_statusline(root: Path, ci: bool, run: Callable = _shell) -> tuple[str,
     with tempfile.TemporaryDirectory(prefix="statusline-") as scratch:
         payload = {"session_id": "statusline-doctor", "cwd": scratch, "model": {"display_name": "doctor"},
                    "workspace": {"current_dir": scratch}}
-        rc, out = run(command, json.dumps(payload), dict(os.environ, CLAUDE_STATUSLINE_CACHE_DIR=os.path.join(scratch, "cache")))
+        rc, out = (run or _shell)(command, json.dumps(payload), dict(os.environ, CLAUDE_STATUSLINE_CACHE_DIR=os.path.join(scratch, "cache")))
     if rc != 0:
         why = "interpreter not found: the installer re-renders settings.json" if rc == 127 else "the installer re-renders settings.json"
         return FAIL, f"statusLine `{head} ...` exited {rc} ({why})"
