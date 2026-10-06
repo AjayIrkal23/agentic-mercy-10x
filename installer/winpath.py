@@ -49,6 +49,23 @@ def sandboxed(environ=None) -> bool:
     return (os.environ if environ is None else environ).get(SANDBOX_ENV) == "1"
 
 
+# where uv / npm / pipx put installed tools; a rehearsal that inherits them installs into the real dirs
+_TOOL_LOCATION_VARS = ("UV_TOOL_DIR", "UV_TOOL_BIN_DIR", "UV_PYTHON_INSTALL_DIR", "NPM_CONFIG_PREFIX",
+                       "PIPX_HOME", "PIPX_BIN_DIR")
+
+
+def scrub_sandbox_env(environ=None) -> list[str]:
+    """Under ``AGENTIC_MERCY_SANDBOX=1`` drop the inherited tool-location variables (any case), so every
+    install lands in the throwaway profile; caches (``UV_CACHE_DIR`` ...) stay shared. Returns the names."""
+    environ = os.environ if environ is None else environ
+    if not sandboxed(environ):
+        return []
+    gone = [k for k in list(environ) if k.upper() in _TOOL_LOCATION_VARS]
+    for k in gone:
+        del environ[k]
+    return gone
+
+
 class WinRegistry:
     """The real ``HKCU`` access behind the seam. Values are ``(str, "REG_SZ"|"REG_EXPAND_SZ")``."""
 

@@ -64,6 +64,17 @@ def test_a_valid_git_bash_variable_makes_git_present_even_beside_no_bash(w, tmp_
     assert not any("PortableGit" in u for u in w.urls) and _git_sets(w) == []
 
 
+def test_a_git_reused_through_the_variable_but_off_path_gets_its_cmd_dir_on_path(w, tmp_path):
+    """Install proof run 1: "Use Git from Git Bash only" leaves git off PATH while the bash variable is
+    valid; git counted PRESENT, then every marketplace clone and doctor row base-tools failed."""
+    root = tmp_path / "Dev" / "Git"
+    w.env[GIT_VAR] = str(_file(root / "bin" / "bash.exe"))
+    _file(root / "cmd" / "git.exe")
+    assert dict(w.ensure())["git"] == "PRESENT"
+    assert str(root / "cmd") in w.env["PATH"].split(os.pathsep)
+    assert w.which("git") and _git_sets(w) == [] and not (w.tools / "git").exists()
+
+
 @pytest.mark.parametrize("scope", ["user", "machine"])
 def test_the_variable_is_also_read_from_the_user_and_machine_registry_scopes(w, tmp_path, scope):
     w.found["git"] = str(_file(tmp_path / "msys" / "usr" / "bin" / "git.exe"))

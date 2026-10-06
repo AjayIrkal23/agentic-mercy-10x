@@ -128,6 +128,9 @@ class _Box(Probe):
             dirs += [t / "node", t / "npm-global"]
         if self.git_complete() and not user_git:  # a user's git keeps its PATH order
             dirs.append(t / "git" / "cmd")
+        elif not user_git:  # reused through CLAUDE_CODE_GIT_BASH_PATH but off PATH ("Git Bash only")
+            dirs += [c for v in self.bash_values() if v and Path(v).is_file()
+                     for c in [Path(v).parent.parent / "cmd"] if (c / "git.exe").is_file()][:1]
         if (t / "gh" / "bin" / "gh.exe").is_file():
             dirs.append(t / "gh" / "bin")
         if (self.local_bin / "claude.exe").is_file() or (t / "bin" / "uv.exe").is_file():

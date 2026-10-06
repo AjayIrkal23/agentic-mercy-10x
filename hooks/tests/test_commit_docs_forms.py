@@ -55,6 +55,17 @@ def test_commit_is_seen_in_every_spelling(cmd):
 
 
 @pytest.mark.parametrize("cmd", [
+    "git commit -m @'\nfix: don't break it\n'@",
+    'git commit -m @"\nfix: don\'t break $it\n"@',
+])
+def test_a_here_string_message_with_an_apostrophe_still_counts(cmd):
+    """SANTA2A-02: shlex choked on the lone `'` inside a PowerShell here-string, so no commit was
+    seen and the doc gate let it through unchecked."""
+    (args, _), _ = _one(cmd)
+    assert args[0] == "-m" and len(args) == 2
+
+
+@pytest.mark.parametrize("cmd", [
     f"Set-Location {REPO}; git commit -m x",
     f"set-location {REPO}\ngit commit -m x",
     f"Set-Location -Path {REPO}; git commit -m x",

@@ -48,7 +48,27 @@ _CODE_EXT = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".py", ".go", ".rs", 
 _GIT_TIMEOUT_S = 3
 
 
+def _here_strings(command: str) -> str:
+    """A PowerShell `@'…'@` / `@"…"@` body becomes one quoted word: a lone `'` inside one broke shlex,
+    so the commit was never seen (SANTA2A-02). str.find scan, linear on any input."""
+    out, i = [], 0
+    while (j := command.find("@", i)) != -1:
+        q = command[j + 1:j + 2]
+        if q not in ("'", '"') or command[j + 2:j + 3] not in ("\n", "\r"):
+            out.append(command[i:j + 1])
+            i = j + 1
+            continue
+        end = command.find("\n" + q + "@", j + 2)
+        if end == -1:
+            break
+        out.append(command[i:j] + '"H"')
+        i = end + 3
+    out.append(command[i:])
+    return "".join(out)
+
+
 def _segments(command: str) -> list:
+    command = _here_strings(command)
     command = (_CONTINUATION if plat.IS_WINDOWS else _CONTINUATION_POSIX).sub(" ", command)
     if plat.IS_WINDOWS:  # POSIX shlex eats the backslashes of D:\Projects\x (A4-07); `x\ ` = tab completion
         command = re.sub(r"(?<![\\\"'])\\(?=[\w.\s-]|$)", "/", command)

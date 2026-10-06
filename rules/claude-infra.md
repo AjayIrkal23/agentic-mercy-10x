@@ -29,16 +29,16 @@ and re-render. `hooks/model-policy.json` is the model truth →
 
 | Gate | Fires on | Message prefix | Behavior |
 |---|---|---|---|
-| `dangerous-bash-gate` | Bash | `DANGEROUS COMMAND BLOCKED:` | deny |
+| `dangerous-bash-gate` | Bash / PowerShell | `DANGEROUS COMMAND BLOCKED:` | deny |
 | `jcodemunch-enforce` (jcm-gate-read) | Read/Grep/Glob/`ctx_read` on source | `BLOCKED: Use mcp__jcodemunch__…` | budget 2, then fails open |
 | `first-write-skill-gate` | first Write/Edit of code | `SKILL GATE: First code write to …` | once per session; load the named skills |
 | `dox-write-gate` | Write/Edit in a repo with no root `CLAUDE.md` | `DOX GATE: no root CLAUDE.md …` | deny once; `DOX FIRST —` is advisory |
 | `gateguard-write-gate` | Write/Edit with high blast radius | `GATEGUARD — high-blast-radius write to …` | `ask`, not deny |
 | `tdd-guard-gate` | Write/Edit in a project with a test runner | `⚠️ TDD GUARD (advisory — not blocking):` | advisory, 15 s cap; never in `$HOME` / non-git |
-| `bash-write-gate` | Bash shell-write patterns | advisory unless `BASH_WRITE_GATE_DENY_SHELL_WRITES=1` | rule carried by `01-no-shell-writes.md` |
+| `bash-write-gate` | Bash / PowerShell shell-write patterns (`>`, `tee`, `Set-Content`, `Out-File`, …) | advisory unless `BASH_WRITE_GATE_DENY_SHELL_WRITES=1` | rule carried by `01-no-shell-writes.md` |
 | `hard-completion-gate` | Stop | `Gate 2 (docs)` … `Gate 5 (dead code)` | ≤1 block per turn |
 | `blocking-doc-enforcer` | `git commit` | `BLOCKED: Cannot commit without documentation updates.` | only when doc trees exist |
-| mercy mod guard | Bash dev server / watcher, subagent commit/push, live secret in a write | `mercy guard:` | deny; userConfig `guard` |
+| mercy mod guard | Bash / PowerShell dev server / watcher, subagent commit/push, live secret in a write | `mercy guard:` | deny; userConfig `guard` |
 | mercy mod verify gate | Stop after unverified code edits | `mercy verify gate:` | ≤1 block per turn; userConfig `verifyGate` |
 
 Mods (`mods/<name>`, loaded via rendered `env.CLAUDE_CODE_PLUGIN_DIRS`) run in-process

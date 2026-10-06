@@ -37,6 +37,7 @@ for _p in (str(_SRC_ROOT / "installer"), str(_SRC_ROOT / "hooks")):
 from lib import platform as plat  # noqa: E402
 from relocation import _BUNDLE_ITEMS, fatal_failures, missing_items, relocate  # noqa: E402,F401  (_BUNDLE_ITEMS: tests)
 from winutil import which  # noqa: E402  (never a binary from the working directory)
+import winpath  # noqa: E402
 
 _GUARD = "AGENTIC_MERCY_RELOCATED"          # re-exec guard — never relocate twice
 # console only, never the web UI. --ci plans every network step (WOULD-*); --headless is the
@@ -112,6 +113,7 @@ def main(argv=None) -> int:
         )
         return 2
     headless = bool(argv)
+    winpath.scrub_sandbox_env()  # a rehearsal never installs into the real uv / npm / pipx dirs
 
     target = canonical_target()
 

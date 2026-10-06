@@ -22,6 +22,19 @@ def _env(path: str = "") -> dict:
     return {"PATH": path, "USERPROFILE": "/profile"}
 
 
+def test_the_sandbox_drops_inherited_tool_locations_and_keeps_caches():
+    """Install proof run 1: the box's UV_TOOL_DIR / NPM_CONFIG_PREFIX sent the sandbox's `uv tool install`
+    and `npm -g` into the REAL tool dirs (two live uv envs lost their Lib)."""
+    leak = {"UV_TOOL_DIR": "D:/Dev/uv/tools", "UV_TOOL_BIN_DIR": "D:/Dev/uv/bin", "UV_PYTHON_INSTALL_DIR": "x",
+            "NPM_CONFIG_PREFIX": "D:/Dev/npm-global", "npm_config_prefix": "y", "PIPX_HOME": "z", "PIPX_BIN_DIR": "w"}
+    keep = {"UV_CACHE_DIR": "c", "NPM_CONFIG_CACHE": "n", "PATH": "/p"}
+    env = {**leak, **keep, winpath.SANDBOX_ENV: "1"}
+    assert sorted(winpath.scrub_sandbox_env(env)) == sorted(leak)
+    assert env == {**keep, winpath.SANDBOX_ENV: "1"}
+    real = {**leak, **keep}
+    assert winpath.scrub_sandbox_env(real) == [] and real == {**leak, **keep}  # no sandbox: untouched
+
+
 def test_add_user_path_prepends_keeps_expand_sz_and_broadcasts_after_the_write():
     reg = FakeRegistry({PATHKEY: ("%USERPROFILE%\\bin;/old", "REG_EXPAND_SZ")})
     env = _env(os.pathsep.join(["/sys", "/old"]))

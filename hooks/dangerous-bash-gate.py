@@ -432,8 +432,10 @@ _PS_ONLY_PATTERNS: list[tuple[object, str, object]] = [
 # client. Quote-stripping hid them; the head is matched on the stripped text so a
 # commit message that merely mentions psql never qualifies.
 _PAYLOAD_HEAD_RE = re.compile(  # standalone words only: not `eval-harness`, `db/mongo`
-    r"(?<![\w./-])(?:(?:ba|z|da|k)?sh\s+(?:-[a-zA-Z]+\s+)*-c|(?:powershell|pwsh)(?:\.exe)?\s+(?:-\S+\s+)*-c(?:ommand)?"
-    r"|cmd(?:\.exe)?\s+(?:/\S+\s+)*//?[ck]|iex|invoke-expression|eval|psql|mysql|mariadb|sqlite3|sqlcmd"
+    # option walks capped at 16 tokens: unbounded, a flood of `-x=pwsh` restarted the walk at every
+    # head word and went quadratic (SANTA2A-01); real launch lines carry a handful of options
+    r"(?<![\w./-])(?:(?:ba|z|da|k)?sh\s+(?:-[a-zA-Z]+\s+){0,16}-c|(?:powershell|pwsh)(?:\.exe)?\s+(?:-\S+\s+){0,16}-c(?:ommand)?"
+    r"|cmd(?:\.exe)?\s+(?:/\S+\s+){0,16}//?[ck]|iex|invoke-expression|eval|psql|mysql|mariadb|sqlite3|sqlcmd"
     r"|clickhouse-client|mongosh|mongo)(?![\w./-])", re.IGNORECASE)
 
 

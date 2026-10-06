@@ -85,6 +85,9 @@ CASES = {
     "dotnet-delete-flood": (_rep("delete("), None),
     "cmd-slash-flood": (_rep("cmd //x "), None),
     "cmd-slash-padded": (_rep("cmd /x ") + "\ncmd //c rd //s D:\\x", "deny"),
+    # SANTA2A-01: the payload-head option walks restarted at every repeated head word
+    "pwsh-option-flood": ("pwsh " + _rep("-x=pwsh ") + "; rm -rf /", "deny"),
+    "cmd-option-flood": ("cmd " + _rep("/x=cmd ") + "; rm -rf /", "deny"),
 }
 
 
