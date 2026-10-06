@@ -17,6 +17,9 @@ function Say($m)  { Write-Host "==> $m" -ForegroundColor Cyan }
 function Warn($m) { Write-Host "  !! $m" -ForegroundColor Yellow }
 function Stop-Install($m) { Write-Host "  xx $m" -ForegroundColor Red; exit 1 }
 
+# before anything runs or installs: with no Python, `/ci` reached the python.org installer (SANTA2B-02)
+$Unknown = @(@($Rest) | Where-Object { $_ -and $_ -notin @('--ci', '--headless') })
+if ($Unknown.Count) { Stop-Install "unknown argument(s): $($Unknown -join ' ') - use -Headless or -Ci (nothing was changed)" }
 if ($Repo.Length -gt 120) { Warn "this folder path is $($Repo.Length) characters long; if the install hits path errors, move the clone closer to the drive root" }
 if (-not (Test-Path -LiteralPath (Join-Path $Repo 'installer\manifest.json'))) { Stop-Install 'installer\manifest.json is not next to install.ps1: run install.cmd from the repository root (nothing was changed)' }
 # a zip downloaded in a browser carries Mark-of-the-Web on every file (only once this is known to be the workbench folder)

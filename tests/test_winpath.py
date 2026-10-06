@@ -56,10 +56,20 @@ def test_an_existing_reg_sz_path_keeps_its_kind_and_a_missing_one_is_expand_sz()
 
 
 def test_dedupe_is_case_insensitive_and_expands_percent_variables():
+    """Already there (any case, `%VAR%` expanded) = left where the user has it: nothing written (SANTA2B-01)."""
     reg = FakeRegistry({PATHKEY: ("X:\\Tools\\BIN\\;%USERPROFILE%\\.local\\bin;/keep", "REG_EXPAND_SZ")})
     env = {"PATH": "", "USERPROFILE": "/profile"}
     winpath.add_user_path(["x:\\tools\\bin", "/profile\\.local\\bin"], reg, env)
-    assert reg.sets()[0][3].split(";") == ["x:\\tools\\bin", "/profile\\.local\\bin", "/keep"]
+    assert reg.sets() == []
+    winpath.add_user_path(["x:\\tools\\bin", "/new"], reg, env)
+    assert reg.sets()[0][3].split(";") == ["/new", "X:\\Tools\\BIN\\", "%USERPROFILE%\\.local\\bin", "/keep"]
+
+
+def test_a_dir_the_user_moved_above_ours_stays_there_on_every_rerun():
+    """SANTA2B-01: each daily self-heal moved our dirs back to the front, over the user's own order."""
+    reg = FakeRegistry({PATHKEY: ("/mine;/t/bin;/old", "REG_EXPAND_SZ")})
+    winpath.add_user_path(["/t/bin"], reg, _env())
+    assert reg.sets() == [] and not any(c[0] == "broadcast" for c in reg.calls)
 
 
 def test_a_3000_char_path_is_not_truncated():

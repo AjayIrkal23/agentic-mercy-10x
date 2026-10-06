@@ -81,6 +81,14 @@ def test_ci_without_python_stops_with_the_ci_message_not_the_sandbox_one(tmp_pat
 
 
 @needs_ps51
+@pytest.mark.parametrize("flag", ["/ci", "--dry-run"])
+def test_an_unknown_flag_stops_before_any_python_lookup_or_install(tmp_path, flag):
+    """SANTA2B-02: with no Python, `/ci` reached the python.org installer before install.py could refuse it."""
+    rc, out = _run_ps1(tmp_path, [flag])
+    assert rc == 1 and "unknown argument" in out and "python.org installer is not run" not in out, out
+
+
+@needs_ps51
 def test_without_ci_the_sandbox_still_refuses_the_python_installer(tmp_path):
     rc, out = _run_ps1(tmp_path, [])
     assert rc == 1 and "python.org installer is not run" in out, out

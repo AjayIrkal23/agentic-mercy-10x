@@ -111,7 +111,8 @@ def _norm(entry: str, environ=None) -> str:
 
 
 def add_user_path(dirs, registry, environ=None) -> list[str]:
-    """Put ``dirs`` first on the user PATH: the registry value keeps its kind (REG_EXPAND_SZ when
+    """Put the ``dirs`` the user PATH lacks first (one already there keeps the user's order, SANTA2B-01;
+    this process's PATH still gets all of them first): the registry value keeps its kind (REG_EXPAND_SZ when
     absent), duplicates (case-insensitive, %VAR% expanded) are dropped, nothing is truncated, the
     broadcast follows the write, and this process's PATH gets the same dirs. A PATH that already
     reads right is not rewritten. Returns the dirs. (ponytail: a literal ``%`` in a dir name would
@@ -124,9 +125,10 @@ def add_user_path(dirs, registry, environ=None) -> list[str]:
     drop = {_norm(d, environ) for d in new}
     if not sandboxed(environ):
         raw, kind = registry.get("Path") or ("", "REG_EXPAND_SZ")
-        value = ";".join(new + [e for e in raw.split(";") if e.strip() and _norm(e, environ) not in drop])
-        if value != raw:
-            registry.set("Path", value, kind)
+        have = {_norm(e, environ) for e in raw.split(";") if e.strip()}
+        missing = [d for d in new if _norm(d, environ) not in have]  # present ones keep the user's order
+        if missing:
+            registry.set("Path", ";".join(missing + [e for e in raw.split(";") if e.strip()]), kind)
             registry.broadcast()
     rest = [e for e in environ.get("PATH", "").split(os.pathsep) if e and _norm(e, environ) not in drop]
     environ["PATH"] = os.pathsep.join(new + rest)
