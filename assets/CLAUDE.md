@@ -32,7 +32,7 @@ real output from this repo (router output, `scripts/statusline.py`, `installer/d
 | File | Role |
 |------|------|
 | `film.webp` | first thing in the README: a silent ~10 s loop cut from the launch film (release `launch-film-2026-10-06`), linked to the public GCS copy because GitHub plays no hot-linked `<video>`. Shots from the master at 2.0, 29.4, 42.4, 114.4, 130.4, 153.4 s (1.4 s each) and 209.6 s (2.2 s), 960x540, 12 fps, ffmpeg `libwebp_anim` q 62, orange "WATCH THE FILM · 3:34" pill top right (Geist Mono Bold). Keep it under ~1 MB |
-| `hero.webp` | banner under the film: name, one-line pitch, real counts, install command |
+| `hero.webp` | former top banner (name, pitch, real counts, install command); the film preview replaced it in the README on 2026-10-06, kept for reuse |
 | `install.webp` | install flow + a real doctor run |
 | `router.webp` | prompt router stages + real router output |
 | `invoke.webp` | `/invoke` acts, agents, model pins, artifacts |
