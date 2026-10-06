@@ -68,9 +68,9 @@ def _unpack(cfg, url, arch, odir, download, registry, environ, probe) -> str:
         download(url, zpath, timeout=3600, sha256=cfg["sha256"][arch], require_hash=True)
     with zipfile.ZipFile(zpath) as zf:
         extract_zip_prefix(zf, odir, strip=0)
-    drop(zpath)  # only after the extraction worked; a scanner still holding it is not a failure
-    if not (odir / "ollama.exe").is_file():
+    if not (odir / "ollama.exe").is_file():  # the verified zip stays for the retry
         return "WARN(ollama.exe missing after extraction)"
+    drop(zpath)  # only after the extraction worked; a scanner still holding it is not a failure
     (odir / COMPLETE).write_text(cfg["version"], encoding="utf-8")
     registry = winpath.WinRegistry() if registry is None else registry
     winpath.add_user_path([odir], registry, environ)

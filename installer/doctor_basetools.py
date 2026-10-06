@@ -25,7 +25,12 @@ REQUIRED = ("claude", "node", "npm", "git", "uv")
 OPTIONAL = ("gh", "ollama")
 
 
-def check_base_tools(ci: bool, which: Callable = winutil.which, environ=None) -> tuple[str, str]:
+def check_base_tools(ci: bool, which: Callable = winutil.which, environ=None, registry=None) -> tuple[str, str]:
+    """``registry`` is the ``winpath`` read seam for ``CLAUDE_CODE_GIT_BASH_PATH`` (HKCU / HKLM, as the
+    installer reads it: A5v2-10). A real call (``environ`` not injected) on Windows reads the real registry."""
+    if registry is None and environ is None and plat.IS_WINDOWS:
+        import winpath  # noqa: PLC0415  (winreg is imported only when a value is read)
+        registry = winpath.WinRegistry()
     environ = os.environ if environ is None else environ
     if ci:
         return "SKIP", "--ci"
@@ -41,7 +46,7 @@ def check_base_tools(ci: bool, which: Callable = winutil.which, environ=None) ->
         return "FAIL", f"missing: {', '.join(missing)} (the installer installs them per user; re-run it)"
     soft = [f"{n} missing (optional)" for n in OPTIONAL if not found(n)]
     git = found("git")
-    if plat.IS_WINDOWS and git and not winutil.git_bash(git, [environ.get("CLAUDE_CODE_GIT_BASH_PATH", "")]):
+    if plat.IS_WINDOWS and git and not winutil.git_bash(git, winutil.bash_values(environ, registry)):
         soft.append("git has no bash.exe beside it (Claude Code's Bash tool needs Git Bash)")
     if soft:
         return "WARN", "; ".join(soft)

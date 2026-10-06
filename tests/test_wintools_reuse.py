@@ -215,3 +215,17 @@ def test_a_failing_sfx_run_leaves_no_installer_in_the_cache(w):
     w.run.effect = boom
     assert dict(w.ensure())["git"].startswith("WARN(")
     assert not list((w.tools / "cache").glob("PortableGit*"))
+
+
+# --- A5v2-10: the doctor and the installer read CLAUDE_CODE_GIT_BASH_PATH from the same places ------ #
+def test_the_doctor_row_counts_a_bash_variable_that_only_the_registry_holds(tmp_path, monkeypatch):
+    import doctor_basetools as db
+    monkeypatch.setattr(plat, "IS_WINDOWS", True)
+    bash = tmp_path / "elsewhere" / "bin" / "bash.exe"
+    _file(bash)
+    _file(tmp_path / "tools" / "git.exe")  # a git with no bash.exe within three levels of it
+    have = {n: str(tmp_path / "tools" / (n + ".exe")) for n in ("claude", "node", "npm", "git", "uv", "gh", "ollama")}
+    which = lambda n, *a, **k: have.get(n)  # noqa: E731
+    assert db.check_base_tools(False, which=which, environ={})[0] == "WARN"  # nothing names a bash
+    reg = FakeRegistry({(ENV, GIT_VAR): (str(bash), "REG_SZ")})
+    assert db.check_base_tools(False, which=which, environ={}, registry=reg)[0] == "PASS"

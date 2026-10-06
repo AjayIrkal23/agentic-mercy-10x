@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
+import shutil  # noqa: F401  (tests patch deps.shutil.which; winutil.which delegates to the same module)
 import site
 import sys
 from pathlib import Path
@@ -106,7 +106,7 @@ def _link_bins(names: list, env, dry_run: bool) -> str:
     local_bin = Path.home() / ".local" / "bin"
     done = []
     for n in names:
-        src = shutil.which(n)
+        src = winutil.which(n)
         dst = local_bin / n
         if not src or dst.exists() or dst.is_symlink() or Path(src).parent == local_bin:
             continue
@@ -147,7 +147,7 @@ def install_deps(env, *, ci: bool = False, dry_run: bool = False,
         which = dep.get("which")
         imp = dep.get("import")
         exists = dep.get(f"exists_{env.os_name}") or dep.get("exists")
-        if ((which and shutil.which(which)) or (imp and _importable(imp, env))
+        if ((which and winutil.which(which)) or (imp and _importable(imp, env))
                 or (exists and Path(exists).expanduser().exists())):
             results.append((did, "PRESENT" + _link_bins(dep.get("link_bins", []), env, dry_run)))
             continue
@@ -196,7 +196,7 @@ def _win_shell_wrap(cmd: list[str]) -> list[str]:
     if "--" not in cmd or cmd.index("--") + 1 >= len(cmd):
         return cmd
     i = cmd.index("--") + 1
-    if not (shutil.which(cmd[i]) or "").lower().endswith(".exe"):
+    if not (winutil.which(cmd[i]) or "").lower().endswith(".exe"):
         return cmd[:i] + ["cmd", "/c"] + cmd[i:]
     return cmd
 
@@ -355,7 +355,7 @@ def reconcile_mcp_env(*, dry_run: bool = False) -> list[tuple[str, str]]:
         missing = {k: v for k, v in want.items() if cur.get(k) != v}
         if not missing:
             continue
-        if dry_run or not shutil.which("claude"):
+        if dry_run or not winutil.which("claude"):
             out.append((name, f"WOULD-SET-ENV: {sorted(missing)}"))
             continue
         out.append((name, mcp_restore.replace_entry(
@@ -387,7 +387,7 @@ def reconcile_mcp_pins(*, dry_run: bool = False, run=None) -> list[tuple[str, st
             out.append((name, f"SKIP(spec-not-in-args): {spec}"))
         elif dry_run:
             out.append((name, f"WOULD-PIN: {spec}"))
-        elif not shutil.which("claude"):
+        elif not winutil.which("claude"):
             out.append((name, "SKIP(no-claude-cli)"))
         else:
             status = mcp_restore.replace_entry(name, {**entry, "args": new_args}, entry, f"PINNED {spec}")
@@ -441,7 +441,7 @@ def check_prereqs(env) -> list[tuple[str, str]]:
             # the cwd-safe which, the tools-dir python and the interpreter running us (install.ps1's own)
             found = winutil.pick_python(winutil.which, plat.run, tools=winpath.tools_dir(), current=sys.executable)
         else:
-            found = shutil.which(p.get("which", pid))
+            found = winutil.which(p.get("which", pid))
             found = None if windows and found and winutil.store_stub(found) else found
         if found:
             results.append((pid, "PRESENT"))

@@ -5,7 +5,8 @@ name: ci
 # grep-gates, and the full test suite — so a trigger loss, an edited upstream-
 # locked skill, or a non-portable literal becomes a build failure forever.
 # Ubuntu runs the lowest supported, the current and the newest Python (audit
-# 2026-10-05 I-14); actions are pinned to commit SHAs (tag in the comment).
+# 2026-10-05 I-14); Windows runs the current and the newest (audit 2026-10-06 A6-05).
+# Actions are pinned to commit SHAs (tag in the comment).
 
 on:
   push:
@@ -27,10 +28,9 @@ jobs:
           - {os: ubuntu-latest, python: "3.12"}
           - {os: ubuntu-latest, python: "3.14"}
           - {os: windows-latest, python: "3.12"}
+          - {os: windows-latest, python: "3.14"}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 25
-    # windows leg is informational until proven green
-    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
@@ -94,7 +94,6 @@ jobs:
       # steps are planned. The checkout itself must come out untouched.
       - name: Sandboxed install.py --ci rehearsal
         if: runner.os == 'Linux'
-        continue-on-error: true  # new 2026-10-05; promote to blocking once green
         shell: bash
         run: |
           export HOME="$RUNNER_TEMP/home" CLAUDE_CONFIG_DIR="$RUNNER_TEMP/home/.claude"
@@ -102,15 +101,42 @@ jobs:
           python install.py --ci
           git diff --exit-code
 
+      # Same rehearsal through the one-click entry (install.ps1 -Ci runs install.py --ci).
+      # Path.home() reads USERPROFILE on Windows, so HOME alone would not sandbox it;
+      # AGENTIC_MERCY_SANDBOX keeps every tool dir inside the throwaway profile. pwsh reports
+      # only the LAST native exit code, hence a check after each command (audit A6-06).
+      - name: Sandboxed install.ps1 -Ci rehearsal (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $h = Join-Path $env:RUNNER_TEMP 'home'
+          New-Item -ItemType Directory -Force (Join-Path $h '.claude'), (Join-Path $h 'AppData\Local'), (Join-Path $h 'AppData\Roaming') | Out-Null
+          $env:HOME = $h
+          $env:USERPROFILE = $h
+          $env:LOCALAPPDATA = Join-Path $h 'AppData\Local'
+          $env:APPDATA = Join-Path $h 'AppData\Roaming'
+          $env:CLAUDE_CONFIG_DIR = Join-Path $h '.claude'
+          $env:AGENTIC_MERCY_SANDBOX = '1'
+          pwsh -NoProfile -ExecutionPolicy Bypass -File .\install.ps1 -Ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          git diff --exit-code
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
   # The mods (in-process TypeScript plugins) run nowhere else automatically (audit I-04):
-  # the claude CLI pinned to manifest mods.claude_version validates the plugin, runs its
-  # *.test.ts through `claude plugin test`, then tsc type-checks once the engine has laid
-  # .claude-plugin/types (skipped otherwise). Informational until proven green.
+  # the claude CLI pinned to manifest mods.claude_version validates the plugin and runs its
+  # *.test.ts through `claude plugin test`. The tsc step below only runs once the engine has
+  # laid .claude-plugin/types, which neither `plugin validate` nor `plugin test` does (audit
+  # A6-04), so a skip is announced as a warning instead of passing silently. The Windows leg
+  # is informational for its first 5 green runs (audit A6-07).
   mods:
-    name: mods (claude plugin test + tsc)
-    runs-on: ubuntu-latest
+    name: mods (${{ matrix.os }}, claude plugin test + tsc)
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 15
-    continue-on-error: true
+    continue-on-error: ${{ matrix.os == 'windows-latest' }}
     steps:
       - name: Checkout
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
@@ -125,11 +151,13 @@ jobs:
         with:
           node-version: "24"
 
+      # validate_mods.py returns no problems when `claude` is not on PATH, so prove the CLI first.
       - name: Install the pinned Claude Code CLI + TypeScript
         shell: bash
         run: |
           ver=$(python -c "import json; print(json.load(open('installer/manifest.json'))['mods']['claude_version'])")
           npm install -g "@anthropic-ai/claude-code@$ver" typescript
+          claude --version | grep -F "$ver" || { echo "::error::claude-code@$ver is not the claude on PATH after npm install"; exit 1; }
 
       - name: Mod contract + plugin validate + mod tests
         run: python scripts/validate_mods.py
@@ -138,5 +166,5 @@ jobs:
         shell: bash
         run: |
           for id in $(python -c "import json; print(' '.join(json.load(open('installer/manifest.json'))['mods']['enabled']))"); do
-            if [ -d "mods/$id/.claude-plugin/types" ]; then tsc -p "mods/$id" --noEmit; else echo "skip $id: engine types not laid"; fi
+            if [ -d "mods/$id/.claude-plugin/types" ]; then tsc -p "mods/$id" --noEmit; else echo "::warning title=tsc skipped::mods/$id has no engine-laid .claude-plugin/types"; fi
           done

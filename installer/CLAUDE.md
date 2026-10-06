@@ -140,7 +140,10 @@ re-check) happens automatically until the doctor reports 0 FAIL.
   idempotent step (`npm config get prefix`, set again when wrong; row `npm-prefix` on failure). An MCP
   command that is not a resolved `.exe` registers through `cmd /c` (`deps._win_shell_wrap`), never as
   a bare shim name. `winutil.bash_values(environ, registry)` is the one reader of
-  `CLAUDE_CODE_GIT_BASH_PATH` (process, HKCU, HKLM). `install.ps1` takes every path with
+  `CLAUDE_CODE_GIT_BASH_PATH` (process, HKCU, HKLM) for the installer AND doctor row `base-tools`
+  (`check_base_tools(..., registry=)`; a real call on Windows reads the registry, read-only). `deps.py`
+  never calls `shutil.which` itself (AST test): every lookup is the cwd-safe `winutil.which`.
+  `install.ps1` takes every path with
   `-LiteralPath` (a clone under `claude [work]`), checks `installer\manifest.json` before it
   unblocks anything, and drops `PSExecutionPolicyPreference` before it starts Python; `install.cmd`
   pauses only for Explorer's argument-less `/c ""path" "`. `install.py --ci` ends `install (plan only): OK`.
@@ -229,7 +232,7 @@ re-check) happens automatically until the doctor reports 0 FAIL.
 | `deps.py` | idempotent deps/MCP/plugins/post-steps from `manifest.json` (post-step script = first `.py` arg — NOT `cmd[1]`; `{PYTHON}`→`py -3` shifts the index on Windows) |
 | `doctor.py` | health verifier, 24 rows (link-doctor, render, hook-command, statusline, settings-safety, lean-ctx-config, jcodemunch-config, plugins-contract, plugins-installed, generated-in-sync, R9/R10, base-tools, mcp-roster, ollama, secret-perms, mods, mods-runtime …); `--ci` skips machine rows; its 0-FAIL is the loop's success gate. Doctor/installer sandboxes hide `claude` and `tsc` from `shutil.which` (I-17) |
 | `doctor_host.py` | host rows: `plugins-installed`, `secret-perms` (POSIX modes; Windows SDDL), lean-ctx floor + unmanaged-keys note |
-| `doctor_basetools.py` | row `base-tools`: git (with `bash.exe`), node, claude, uv, gh present on Windows (same `winutil.git_bash` / `winutil.which` as the installer); SKIP under `--ci` and `AGENTIC_MERCY_SKIP_BASE_TOOLS`; git without bash = WARN |
+| `doctor_basetools.py` | row `base-tools`: git (with `bash.exe`), node, claude, uv, gh present on Windows (same `winutil.git_bash` / `winutil.bash_values` / `winutil.which` as the installer); SKIP under `--ci` and `AGENTIC_MERCY_SKIP_BASE_TOOLS`; git without bash = WARN |
 | `doctor_hook.py`, `npx_cache.py` | rows `hook-command` (runs the rendered PreToolUse command once with a synthetic payload: Git Bash via `CLAUDE_CODE_GIT_BASH_PATH`, else the bash beside git, else cmd.exe; `sh -c` on POSIX; SKIP only without a rendered `settings.json`) and `statusline` (same shell, `statusLine.command`, throwaway cwd + cache dir); `prune_npx_cache` / `warm_npx` / `maintenance` (re-exported by `deps`) |
 | `doctor_mcp.py` | `mcp-roster`: extras, pin drift against the manifest, deprecated packages, needs-auth servers |
 | `doctor_mods.py` | `mods` (version policy: the manifest pin is a same-minor minimum) and `mods-runtime` (plugin test, `tsc`) |

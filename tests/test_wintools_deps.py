@@ -201,3 +201,23 @@ def test_plan_rows_show_real_paths_not_the_raw_tokens(home, monkeypatch):
     text = " ".join(s for _, s in rows)
     assert "{HOME}" not in text and "{PYTHON}" not in text, rows
     assert str(home) in text and "py -3" in text
+
+
+# --- A5v2-06: no raw `shutil.which` hit decides anything in deps (a planted cwd binary) ------------- #
+def test_a_git_planted_in_the_working_directory_is_not_a_present_prerequisite(monkeypatch, tmp_path):
+    import os
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("PATH", str(tmp_path / "elsewhere"))
+    monkeypatch.setenv("AGENTIC_MERCY_TOOLS_DIR", str(tmp_path / "tools"))
+    planted = lambda n, *a, **k: os.path.join(os.getcwd(), n + ".EXE")  # noqa: E731  (what 3.10/3.11 answer)
+    monkeypatch.setattr(deps.shutil, "which", planted)
+    assert not any(s == "PRESENT" for pid, s in deps.check_prereqs(WIN) if pid in ("git", "node", "claude"))
+
+
+def test_deps_never_calls_shutil_which_directly():
+    """The one cwd-safe lookup is `winutil.which`; a second spelling here is how SEC1B-01 came back."""
+    import ast
+    tree = ast.parse((_ROOT / "installer" / "deps.py").read_text(encoding="utf-8"))
+    raw = [n.lineno for n in ast.walk(tree) if isinstance(n, ast.Attribute) and n.attr == "which"
+           and isinstance(n.value, ast.Name) and n.value.id == "shutil"]
+    assert raw == [], f"deps.py calls shutil.which at lines {raw}: use winutil.which"

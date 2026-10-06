@@ -121,7 +121,8 @@ def test_doctor_deterministic_checks_pass(monkeypatch, tmp_path):
 
 # Claude Code spawns MCP stdio commands WITHOUT a shell. On Windows an npm .cmd/.bat
 # shim (npx, lean-ctx) is not spawnable that way; it must be registered as `cmd /c ...`.
-_WHICH = {"npx": "npx.CMD", "lean-ctx": "lean-ctx.cmd", "jcodemunch-mcp": "jcodemunch-mcp.EXE", "py": "py.exe"}
+# (full paths, like the real `which`: a bare name is a hit in the working directory, which `winutil.which` drops)
+_WHICH = {"npx": "/n/npx.CMD", "lean-ctx": "/n/lean-ctx.cmd", "jcodemunch-mcp": "/n/jcodemunch-mcp.EXE", "py": "/w/py.exe"}
 
 
 def _env(os_name: str, python: str):

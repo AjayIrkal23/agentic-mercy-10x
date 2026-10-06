@@ -154,3 +154,18 @@ def test_the_system_is_windows_when_the_platform_switch_says_so(monkeypatch):
     assert ollama_setup._system({"PROCESSOR_ARCHITECTURE": "ARM64"}) == ("windows", "arm64")
     monkeypatch.setattr(plat, "IS_WINDOWS", False)
     assert ollama_setup._system()[0] != "windows"
+
+
+def test_an_archive_without_ollama_exe_is_kept_for_the_retry(w):
+    """A5v2-02: the verified zip is deleted only once the install worked, here as in `wintools.unzip`."""
+    import io
+    import zipfile
+    from winfakes import sha
+    url = w._url(w.manifest["user_space"]["windows"]["ollama"], "x64")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("lib/ollama/a.dll", b"d")
+    w.blobs[url] = buf.getvalue()
+    w.manifest["user_space"]["windows"]["ollama"]["sha256"]["x64"] = sha(buf.getvalue())
+    assert inst(w) == "WARN(ollama.exe missing after extraction)"
+    assert list((w.tools / "cache").glob("*.zip"))

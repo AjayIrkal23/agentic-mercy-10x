@@ -28,3 +28,20 @@ def test_mods_job_runs_validate_tests_and_tsc():
 
 def test_sandboxed_install_ci_rehearsal():
     assert "install.py --ci" in CI and "CLAUDE_CONFIG_DIR" in CI and "git diff --exit-code" in CI
+
+
+def test_windows_legs_are_blocking_and_cover_the_newest_python():
+    """v4.1.0 W10: the Windows workbench legs gate the build (they were green-but-masked before)."""
+    workbench = CI.split("\n  mods:")[0]
+    assert "continue-on-error" not in workbench
+    assert '{os: windows-latest, python: "3.12"}' in CI and '{os: windows-latest, python: "3.14"}' in CI
+
+
+def test_windows_one_click_entry_is_rehearsed_in_a_sandboxed_profile():
+    step = CI.split("Sandboxed install.ps1 -Ci rehearsal (Windows)")[1].split("\n  mods:")[0]
+    for need in ("install.ps1 -Ci", "USERPROFILE", "LOCALAPPDATA", "AGENTIC_MERCY_SANDBOX", "git diff --exit-code"):
+        assert need in step
+
+
+def test_mods_job_proves_the_pinned_cli_and_runs_on_windows_too():
+    assert 'claude --version | grep -F "$ver"' in CI and "os: [ubuntu-latest, windows-latest]" in CI
