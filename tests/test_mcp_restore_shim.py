@@ -36,9 +36,11 @@ def claude(monkeypatch):
         return subprocess.CompletedProcess(args, 0, "", "")
 
     def setup(exe: bool = False):
-        paths = {"claude": r"D:\npm\claude.cmd"}
+        # forward slashes: on POSIX `D:\npm\claude.cmd` has dirname '' (= the cwd), and winutil.which
+        # drops a cwd hit, so the Ubuntu legs saw no claude at all
+        paths = {"claude": "D:/npm/claude.cmd"}
         if exe:
-            paths = {"claude": r"D:\bin\claude.exe", "claude.exe": r"D:\bin\claude.exe"}
+            paths = {"claude": "D:/bin/claude.exe", "claude.exe": "D:/bin/claude.exe"}
 
         def run_exe(args, **kw):
             calls.append(args)

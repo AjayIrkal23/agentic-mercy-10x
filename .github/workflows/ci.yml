@@ -109,6 +109,10 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
+          # install.ps1 picks `py -3` (the runner's NEWEST Python, not this leg's); -Ci plans the PyYAML
+          # install, so give that interpreter the validator dependency the earlier pip step gave this one
+          py -3 -m pip install --quiet pyyaml
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $h = Join-Path $env:RUNNER_TEMP 'home'
           New-Item -ItemType Directory -Force (Join-Path $h '.claude'), (Join-Path $h 'AppData\Local'), (Join-Path $h 'AppData\Roaming') | Out-Null
           $env:HOME = $h
