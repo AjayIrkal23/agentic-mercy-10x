@@ -66,13 +66,24 @@ def install_os_tools(manifest: dict, *, ci: bool, dry_run: bool, run: Callable =
     return [("os-tools", f"NEEDS-SUDO (apt rc={cp.returncode}, optional): " + ", ".join(pkgs))], cmd
 
 
+def path_hint(environ=None) -> str:
+    """The end-of-run PATH line: Windows put the tools on the registry PATH (a NEW terminal sees it,
+    plus the Git Bash variable when we set it), POSIX can also export it."""
+    if plat.IS_WINDOWS:
+        bash = (os.environ if environ is None else environ).get("CLAUDE_CODE_GIT_BASH_PATH")
+        return ("Open a new terminal so the updated PATH applies (claude, node, git, uv, gh)."
+                + (f" Git Bash for Claude Code: CLAUDE_CODE_GIT_BASH_PATH={bash}" if bash else ""))
+    return 'Open a new terminal (or `export PATH="$HOME/.local/bin:$PATH"`) so `claude` is on PATH.'
+
+
 def checklist(manifest: dict, sudo_cmd: str | None, extra: list[str] | None = None) -> list[str]:
     """The ONE batched message printed after the install: the sudo line (if any), then the
-    steps only a human can do."""
+    steps only a human can do (on Windows, first: open a new terminal)."""
     lines: list[str] = []
     if sudo_cmd:
         lines += ["Optional OS tools need sudo (the UI deck degrades without them). One command:",
                   f"    {sudo_cmd}"]
-    steps = [*(manifest.get("user_space") or {}).get("human_only", []), *(extra or [])]
+    steps = [*([path_hint()] if plat.IS_WINDOWS else []),
+             *(manifest.get("user_space") or {}).get("human_only", []), *(extra or [])]
     lines += ["Human-only steps (cannot be automated):", *[f"  [ ] {s}" for s in steps]]
     return lines

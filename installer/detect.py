@@ -42,6 +42,15 @@ def _python_invocation() -> str:
     return "python3"
 
 
+def _python_exe() -> str:
+    """The status line's interpreter (it runs every 10 s, so the ``py`` launcher's ~30 ms
+    matters). Windows: the real python.exe, forward slashes (Git Bash eats backslashes);
+    POSIX: ``python3`` (rendered settings stay byte-identical)."""
+    if plat.IS_WINDOWS:
+        return str(getattr(sys, "_base_executable", None) or sys.executable or "python").replace("\\", "/")
+    return "python3"
+
+
 def _claude_dir_token() -> str:
     """CLAUDE_DIR token value.
 
@@ -65,8 +74,8 @@ class Env:
     tokens: dict = field(default_factory=dict)  # RENDER tokens (CLAUDE_DIR may be ${HOME}/.claude)
     real_dir: str = ""                            # concrete ~/.claude path for subprocess commands
     npm: str | None = None                        # npm path (or None) — lean-ctx/tdd-guard/npx MCPs
-    uv: str | None = None                         # uv path (or None) — semgrep/jcode/jdoc + uvx fetch (POSIX)
-    pipx: str | None = None                       # pipx path (or None) — Windows installer for the above
+    uv: str | None = None                         # uv path (or None) — semgrep/jcode/jdoc installs (`uv tool install`)
+    python_exe: str = "python3"                   # {{PYTHON_EXE}} (statusLine only); not in ``tokens``
 
 
 def detect() -> Env:
@@ -91,7 +100,7 @@ def detect() -> Env:
         real_dir=str(plat.claude_dir()),
         npm=shutil.which("npm"),
         uv=shutil.which("uv"),
-        pipx=shutil.which("pipx"),
+        python_exe=_python_exe(),
     )
 
 
@@ -99,7 +108,7 @@ def _fmt(env: Env) -> str:
     return (
         f"os={env.os_name} python={env.python!r} node={env.node!r} "
         f"git={'yes' if env.git else 'MISSING'} claude={'yes' if env.claude_cli else 'MISSING'} "
-        f"uv={'yes' if env.uv else 'no'} npm={'yes' if env.npm else 'no'} pipx={'yes' if env.pipx else 'no'}"
+        f"uv={'yes' if env.uv else 'no'} npm={'yes' if env.npm else 'no'}"
     )
 
 

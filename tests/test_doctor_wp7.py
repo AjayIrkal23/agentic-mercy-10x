@@ -44,7 +44,7 @@ def _mod_root(tmp_path, types=True):
 def _runner(results: dict):
     calls = []
 
-    def run(argv):
+    def run(argv, cwd=None):
         calls.append(argv)
         key = "tsc" if "tsc" in Path(argv[0]).name else "test"
         return results[key]
@@ -153,15 +153,20 @@ def test_plugins_installed_pass_warn_fail():
 
 
 # --- J-06: secret-adjacent files must not be group/world readable ---------------- #
+# POSIX modes need a real chmod, so this one runs where chmod means something; the Windows
+# branch (SDDL from icacls) is covered on every OS in tests/test_doctor_win.py.
 @pytest.mark.skipif(os.name == "nt", reason="POSIX modes")
 def test_secret_perms_warns_with_the_fix_command(tmp_path):
+    home = tmp_path / "home"  # ~/.claude.json is checked too: never the live one
+    home.mkdir()
     for name in (".env", ".env.devpc", "CLAUDE.machines.local.md", "settings.user.json", "notes.md"):
         (tmp_path / name).write_text("x", encoding="utf-8")
         (tmp_path / name).chmod(0o600)
-    assert doctor_host.check_secret_perms(tmp_path)[0] == "PASS"
+    check = lambda: doctor_host.check_secret_perms(tmp_path, is_windows=False, home=home)  # noqa: E731
+    assert check()[0] == "PASS"
     (tmp_path / "CLAUDE.machines.local.md").chmod(0o664)
     (tmp_path / "notes.md").chmod(0o664)
-    st, det = doctor_host.check_secret_perms(tmp_path)
+    st, det = check()
     assert st == "WARN" and "chmod 600" in det and "CLAUDE.machines.local.md" in det and "notes.md" not in det
 
 

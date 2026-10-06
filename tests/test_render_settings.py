@@ -16,6 +16,8 @@ import json
 import sys
 from pathlib import Path
 
+import live_interpreter
+
 _ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -34,10 +36,11 @@ def test_template_exists_and_valid_json():
     json.loads(_load_render().substitute(tmpl.read_text(encoding="utf-8")))
 
 
-def test_render_semantically_equals_live():
+def test_render_semantically_equals_live(monkeypatch):
     if not (_ROOT / "settings.json").exists():
         import pytest
         pytest.skip("settings.json not rendered (fresh checkout / CI)")
+    live_interpreter.pin(monkeypatch)  # A7v2-03: the live file names the interpreter that rendered it
     r = _load_render()
     ok, msg = r.check_equivalence()
     assert ok, msg

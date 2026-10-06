@@ -180,13 +180,16 @@ export function standupMarkdown(commits: ReadonlyArray<{ sha: string; subject: s
   ].join('\n')
 }
 
-export function portsMarkdown(ports: readonly Port[]): string {
-  if (!ports.length) return 'Nothing is listening on TCP.'
+/** `error`: the last scan failed; the table is then the last good scan, if any. */
+export function portsMarkdown(ports: readonly Port[], error?: string): string {
+  const failed = error ? `Port scan failed: ${error}${ports.length ? ' (the table is the last good scan)' : ''}` : ''
+  if (!ports.length) return failed || 'Nothing is listening on TCP.'
   return [
+    ...(failed ? [failed, ''] : []),
     '### Listening ports',
     '| Port | Address | Process | PID | What |', '|---:|---|---|---:|---|',
     ...ports.map(p => {
-      const local = p.address === '127.0.0.1' || p.address === '0.0.0.0' || p.address === '::' || p.address === '*'
+      const local = p.address === '127.0.0.1' || p.address === '::1' || p.address === '0.0.0.0' || p.address === '::' || p.address === '*'
       const port = local && p.label && /dev|vite|expo/.test(p.label) ? `[${p.port}](http://localhost:${p.port})` : String(p.port)
       return `| ${port} | ${p.address} | ${p.process ?? '-'} | ${p.pid ?? '-'} | ${p.label ?? ''} |`
     }),

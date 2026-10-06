@@ -7,11 +7,12 @@
 import type { EngineInterface, On } from 'claude-code'
 import { update } from 'claude-code'
 
-import type { Card, DepRow, DepsState, LastSession, Standup } from '../../types'
-import { dayKey, sessionSummary, shouldCompact, standupDays, withCard, portChanges } from '../lib/auto'
+import type { Card, DepRow, DepsState, LastSession, PortRow, Standup } from '../../types'
+import { dayKey, depsDue, sessionSummary, shouldCompact, standupDays, withCard, portChanges } from '../lib/auto'
 import { depsMarkdown, portsMarkdown, standupMarkdown } from '../lib/deckviews'
+import { clip } from '../lib/format'
 import { join } from '../lib/paths'
-import { parseOutdated, parsePorts } from '../lib/probes'
+import { netstatRows, npmFailed, parseNetstat, parseOutdated, parsePorts, parseTasklist, portCmds } from '../lib/probes'
 import { hostOffsetMinutes, noteError, rt, ui } from '../lib/runtime'
 import { snapshot } from '../lib/snap'
 import { PANE_ID } from '../lib/specs'
@@ -19,7 +20,6 @@ import { PANE_ID } from '../lib/specs'
 const DECK = { plugin: 'mercy', key: 'deck' } as const
 const VIEW = { plugin: 'mercy', key: 'view' } as const
 const CARDS = { plugin: 'mercy', key: 'cards' } as const
-const DAY = 86_400_000
 const KEEP = 'Keep: the current plan and its next step, open tasks, files changed and which are not verified yet, commands that failed and why, and every decision the user made.'
 
 let compactedAt = 0
@@ -38,14 +38,48 @@ function later($: EngineInterface, ms: number, what: string, job: () => Promise<
   $.clock.after(ms, () => void job().catch(err => noteError(what, err)))
 }
 
+const SCAN_MS = 10_000 // tasklist alone takes up to a second on a loaded box
+const NAMES_MS = 120_000 // a pid name older than this is asked again (Windows reuses pids fast)
+let names = new Map<number, string>() // pid → image name from the last tasklist
+let namesAt = 0
+let seen = new Set<string>() // `pid:port` of the listeners at the last tasklist
+
+async function stdout($: EngineInterface, argv: string[]): Promise<string> {
+  const r = await $.process.run(argv, { timeoutMs: SCAN_MS })
+  if (r.exitCode !== 0) throw new Error(`${argv[0]} exited ${r.exitCode}${r.stderr.trim() ? `: ${clip(r.stderr.trim(), 100)}` : ''}`)
+  return r.stdout
+}
+
+/** The listening TCP ports now; rejects with the reason when a scanner cannot run or fails. */
+async function scanPorts($: EngineInterface): Promise<PortRow[]> {
+  const [first = [], tcp6 = [], tasks = []] = portCmds(rt.windows, rt.systemRoot)
+  if (!rt.windows) return parsePorts(await stdout($, first))
+  const [v4, v6] = await Promise.all([stdout($, first), stdout($, tcp6)])
+  const now = await $.clock.now()
+  // tasklist is the slow one: asked again for a pid it has not named, for a listener (pid, port) that is new (a
+  // reused pid keeps its old name otherwise, A2v2-01), and after NAMES_MS
+  const listeners = [...netstatRows(v4), ...netstatRows(v6)].filter(r => r.pid > 0)
+  if (now - namesAt > NAMES_MS || listeners.some(r => !names.has(r.pid) || !seen.has(`${r.pid}:${r.port}`))) {
+    names = parseTasklist(await stdout($, tasks))
+    namesAt = now
+    seen = new Set(listeners.map(r => `${r.pid}:${r.port}`))
+  }
+  return parseNetstat(v4, v6, names)
+}
+
+/** A failed scan keeps the last good rows and sets `portsError` (pane, card and summary say so); the next good scan clears it. */
 async function refreshPorts($: EngineInterface, announce: boolean): Promise<void> {
-  const r = await $.process.run(['ss', '-ltnpH'], { timeoutMs: 5000 }).catch(() => undefined)
-  if (!r || r.exitCode !== 0) return
-  const ports = parsePorts(r.stdout)
-  const changes = announce ? portChanges(rt.deck.ports, ports) : []
-  rt.deck.ports = ports
-  await publish($)
-  for (const line of changes) toast($, `mercy: ${line}`, false)
+  const ports = await scanPorts($).catch((err: unknown) => {
+    rt.deck.portsError = clip(err instanceof Error ? err.message : String(err), 160)
+    return undefined
+  })
+  if (ports) {
+    const changes = announce ? portChanges(rt.deck.ports, ports) : []
+    rt.deck.ports = ports
+    delete rt.deck.portsError
+    await publish($)
+    for (const line of changes) toast($, `mercy: ${line}`, false)
+  } else await publish($)
 }
 
 /** The repo root and its first-level folders that hold a package.json (at most 6). */
@@ -57,9 +91,16 @@ async function packageDirs($: EngineInterface, root: string): Promise<string[]> 
   return out
 }
 
-async function outdated($: EngineInterface, dir: string): Promise<DepRow[]> {
-  const r = await $.process.run(['npm', 'outdated', '--json'], { cwd: dir, timeoutMs: 120_000 }).catch(() => undefined)
-  return r ? parseOutdated(r.stdout) : []
+/** The folder's outdated packages, or why npm could not say (a string): exit 1 only means "some are outdated". */
+async function outdated($: EngineInterface, dir: string): Promise<DepRow[] | string> {
+  try {
+    const r = await $.process.run(['npm', 'outdated', '--json'], { cwd: dir, timeoutMs: 120_000 })
+    if (r.exitCode >= 2) return `npm exited ${r.exitCode}`
+    if (npmFailed(r.stdout)) return 'npm reported an error (offline or registry unreachable)'
+    return parseOutdated(r.stdout)
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err) // the canary: an engine that cannot start npm shows up in /mercy status
+  }
 }
 
 async function refreshDeps($: EngineInterface): Promise<DepsState | undefined> {
@@ -68,8 +109,16 @@ async function refreshDeps($: EngineInterface): Promise<DepsState | undefined> {
   const dirs = await packageDirs($, root)
   if (!dirs.length) return undefined
   const checked: DepsState['dirs'] = []
-  for (const dir of dirs) checked.push({ dir, rows: await outdated($, dir) })
-  const deps: DepsState = { at: await $.clock.now(), dirs: checked }
+  const failures: string[] = []
+  for (const dir of dirs) {
+    const rows = await outdated($, dir)
+    if (typeof rows === 'string') failures.push(rows)
+    else checked.push({ dir, rows })
+  }
+  // a folder npm could not check is not stored as current: the next session asks again
+  if (!checked.length) throw new Error(`npm outdated could not check any folder (${clip(failures[0] ?? '', 120)})`)
+  if (failures.length) noteError('deps', new Error(`npm outdated could not check ${failures.length} of ${dirs.length} folders (${clip(failures[0] ?? '', 120)})`))
+  const deps: DepsState = { at: await $.clock.now(), dirs: checked, ...(failures.length ? { partial: true } : {}) }
   rt.deck.deps = deps
   await $.store.set(`deps:${root}`, deps)
   await publish($)
@@ -118,7 +167,7 @@ export function registerAuto(on: On): void {
         if (last?.at && last.at < rt.ledger.startedAt) rt.deck.lastSession = last // not this session's own, after a reload
         await publish($)
         if (standup?.day !== dayKey(now, hostOffsetMinutes())) later($, 4000, 'standup', async () => (await makeStandup($)) && toast($, "mercy: today's standup is ready (pane, s)", false))
-        if (!deps || now - deps.at > DAY) later($, 60_000, 'deps', () => refreshDeps($))
+        if (depsDue(deps, now)) later($, 60_000, 'deps', () => refreshDeps($))
       }
       later($, 2000, 'ports', () => refreshPorts($, false))
       $.clock.every(60_000, () => void refreshPorts($, true).catch(err => noteError('ports', err)))
@@ -174,7 +223,9 @@ export function registerAuto(on: On): void {
       if (e.command === 'ports') {
         await refreshPorts($, false)
         const ports = rt.deck.ports ?? []
-        return { text: await card($, 'ports', 'Listening ports', portsMarkdown(ports), `${ports.length} listening (${ports.slice(0, 4).map(p => `${p.port} ${p.process ?? p.label ?? '?'}`).join(', ')}${ports.length > 4 ? ', …' : ''})`) }
+        const failed = rt.deck.portsError
+        const listed = `${ports.length} listening (${ports.slice(0, 4).map(p => `${p.port} ${p.process ?? p.label ?? '?'}`).join(', ')}${ports.length > 4 ? ', …' : ''})`
+        return { text: await card($, 'ports', 'Listening ports', portsMarkdown(ports, failed), failed ? `port scan failed: ${failed}` : listed) }
       }
       if (e.command === 'deps') {
         const deps = await refreshDeps($)

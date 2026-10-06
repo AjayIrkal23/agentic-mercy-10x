@@ -1,4 +1,5 @@
 import type { On } from 'claude-code'
+import type { MockClock, TestBody } from 'claude-code/testing'
 import { describe, expect, mock, test } from 'claude-code/testing'
 
 // Engine-level bridge tests (audit H-04): a session starts in a repo without a root
@@ -18,9 +19,28 @@ const CONFIG = JSON.stringify({
 type Answer = { exitCode?: number; out?: Record<string, unknown>; delayMs?: number }
 type Py = { pre: () => Record<string, unknown>; stop: () => Record<string, unknown>; dispatch: (ids: string) => Answer }
 
-function world(on: On, py: Partial<Py> = {}) {
+/** The clock of the newest `world`: every test ends by letting the work it queued finish (A2v2-09). */
+const held: { clock?: MockClock } = {}
+
+/** A test that waits for the background runs it started: an engine torn down under them refuses their state writes. */
+function bridgeTest(name: string, fn: TestBody): void {
+  test(name, async ($, on) => {
+    held.clock = undefined
+    await fn($, on)
+    await (held as { clock?: MockClock }).clock?.settle() // `fn` set it (through `world`): control flow cannot see that
+  })
+}
+
+function world(on: On, py: Partial<Py> = {}, state: { refuse: boolean; refused: number } = { refuse: false, refused: 0 }) {
   const clock = mock.clock(on, { now: 1_000_000 })
+  held.clock = clock
   mock.store(on)
+  // a state write the engine refuses (what a run that outlives its test sees)
+  on('state.set', (_$, e, next) => {
+    if (!state.refuse) return next(e)
+    state.refused++
+    throw new Error('state.set refused: no hooks module of that name is loaded')
+  })
   const env = new Map<string, string>()
   const log: string[] = []
   const toasts: string[] = []
@@ -90,14 +110,14 @@ const post = { tool_name: 'Write', tool_input: { file_path: '/r/src/a.ts', conte
 const deny = (reason: string) => ({ hookSpecificOutput: { permissionDecision: 'deny', permissionDecisionReason: reason } })
 
 describe('bridge: owned links through dispatch.py --only', () => {
-  test('session start claims the links in the env dispatch.py reads', async ($, on) => {
+  bridgeTest('session start claims the links in the env dispatch.py reads', async ($, on) => {
     const w = world(on)
     await $.session.start(start)
     expect((w.env.get('MERCY_MOD_OWNED') ?? '').split(',').sort()).toEqual(
       ['dox-write-gate-write', 'graphify-enforce', 'post-write-aggregator', 'tdd-guard-launcher-pre'])
     expect(w.env.get('MERCY_MOD_BEAT')).toBe('1000000')
   })
-  test("an owned gate's deny is the call's deny; the tool never runs", async ($, on) => {
+  bridgeTest("an owned gate's deny is the call's deny; the tool never runs", async ($, on) => {
     const w = world(on, { dispatch: ids => (ids === 'dox-write-gate-write' ? { out: deny('dox: add a root CLAUDE.md') } : {}) })
     await $.session.start(start)
     const r = await $.tool.call(write)
@@ -105,7 +125,7 @@ describe('bridge: owned links through dispatch.py --only', () => {
     expect(r.text).toContain('dox: add a root CLAUDE.md')
     expect(w.ran).toEqual([])
   })
-  test('a call the Python chain denies queues no background validation (H-07)', async ($, on) => {
+  bridgeTest('a call the Python chain denies queues no background validation (H-07)', async ($, on) => {
     const w = world(on, { pre: () => ({ deny: 'first-write-skill-gate: read a skill first' }) })
     await $.session.start(start)
     const r = await $.tool.call(write)
@@ -113,7 +133,7 @@ describe('bridge: owned links through dispatch.py --only', () => {
     expect(r.isError).toBe(true)
     expect(w.log.filter(l => l === 'dispatch tdd-guard-launcher-pre')).toEqual([])
   })
-  test('a sync gate that fails to run is named in MERCY_MOD_FAILED for this very call; ownership stays (B1-06)', async ($, on) => {
+  bridgeTest('a sync gate that fails to run is named in MERCY_MOD_FAILED for this very call; ownership stays (B1-06)', async ($, on) => {
     let fail = true
     const w = world(on, { dispatch: ids => (ids === 'dox-write-gate-write' && fail ? { exitCode: 1 } : {}) })
     await $.session.start(start)
@@ -128,7 +148,7 @@ describe('bridge: owned links through dispatch.py --only', () => {
     expect(w.env.get('MERCY_MOD_OWNED')).toContain('dox-write-gate-write')
   })
   // the test engine answers an ask with an approval, so the asked call runs
-  test("an owned gate's ask lets the Python chain run; a Python deny there wins", async ($, on) => {
+  bridgeTest("an owned gate's ask lets the Python chain run; a Python deny there wins", async ($, on) => {
     let pyDeny = false
     const ask = { hookSpecificOutput: { permissionDecision: 'ask', permissionDecisionReason: 'dox: confirm' } }
     const w = world(on, { dispatch: ids => (ids === 'dox-write-gate-write' ? { out: ask } : {}), pre: () => (pyDeny ? { deny: 'py says no' } : {}) })
@@ -142,7 +162,7 @@ describe('bridge: owned links through dispatch.py --only', () => {
     expect(denied.isError).toBe(true)
     expect(denied.text).toContain('py says no')
   })
-  test('graphify runs before the Python chain for an Agent call (B1-22)', async ($, on) => {
+  bridgeTest('graphify runs before the Python chain for an Agent call (B1-22)', async ($, on) => {
     const w = world(on)
     await $.session.start(start)
     await $.tool.call({ tool: 'Agent', prompt: 'explore', description: 'x', subagent_type: 'Explore' })
@@ -151,7 +171,7 @@ describe('bridge: owned links through dispatch.py --only', () => {
 })
 
 describe('bridge: lanes are drained before readers', () => {
-  test('Stop, PreCompact and session.end wait for queued post-write runs (H-11)', async ($, on) => {
+  bridgeTest('Stop, PreCompact and session.end wait for queued post-write runs (H-11)', async ($, on) => {
     const w = world(on, { dispatch: ids => (ids === 'post-write-aggregator' ? { delayMs: 1000 } : {}) })
     await $.session.start(start)
     for (const run of [() => $.classic.Stop({ stop_hook_active: false }), () => $.classic.PreCompact({ trigger: 'auto', custom_instructions: null } as never),
@@ -164,7 +184,7 @@ describe('bridge: lanes are drained before readers', () => {
       expect(w.log[0]).toBe('dispatch post-write-aggregator')
     }
   })
-  test('a write waits (bounded) for a running tdd-guard check and carries its advisory (B1-22)', async ($, on) => {
+  bridgeTest('a write waits (bounded) for a running tdd-guard check and carries its advisory (B1-22)', async ($, on) => {
     const advice = { hookSpecificOutput: { additionalContext: 'tdd-guard: add a failing test for a.ts first' } }
     const w = world(on, { dispatch: ids => (ids === 'tdd-guard-launcher-pre' ? { delayMs: 1500, out: advice } : {}) })
     await $.session.start(start)
@@ -174,7 +194,7 @@ describe('bridge: lanes are drained before readers', () => {
     const r = await p
     expect((r.context ?? []).join('\n')).toContain('add a failing test')
   })
-  test('release keeps queued runs: they still run for the calls Python skipped (H-11)', async ($, on) => {
+  bridgeTest('release keeps queued runs: they still run for the calls Python skipped (H-11)', async ($, on) => {
     // a 5 s graphify run outlasts the 4 s drain, so the post-write run queues behind it
     const w = world(on, { dispatch: ids => (ids === 'graphify-enforce' ? { delayMs: 5000 } : {}) })
     await $.session.start(start)
@@ -187,7 +207,7 @@ describe('bridge: lanes are drained before readers', () => {
     expect((await released).text).toContain('Released')
     expect(w.log).toContain('dispatch post-write-aggregator')
   })
-  test("a subagent's background advisory never reaches the main loop; the main loop's own does (NEW-08)", async ($, on) => {
+  bridgeTest("a subagent's background advisory never reaches the main loop; the main loop's own does (NEW-08)", async ($, on) => {
     const advice = { hookSpecificOutput: { additionalContext: 'docs touched: read update-docs' } }
     const w = world(on, { dispatch: ids => (ids === 'post-write-aggregator' ? { out: advice } : {}) })
     await $.session.start(start)
@@ -200,7 +220,7 @@ describe('bridge: lanes are drained before readers', () => {
     const fromMain = await $.tool.call({ tool: 'Read', file_path: '/r/README.md' })
     expect((fromMain.context ?? []).join('\n')).toContain('read update-docs')
   })
-  test("a subagent's write: its tdd-guard advisory never rides the main loop's next write (NEW-09)", async ($, on) => {
+  bridgeTest("a subagent's write: its tdd-guard advisory never rides the main loop's next write (NEW-09)", async ($, on) => {
     const advice = { hookSpecificOutput: { additionalContext: 'tdd-guard: add a failing test for a.ts first' } }
     const w = world(on, { dispatch: ids => (ids === 'tdd-guard-launcher-pre' ? { delayMs: 1500, out: advice } : {}) })
     await $.session.start(start)
@@ -209,7 +229,7 @@ describe('bridge: lanes are drained before readers', () => {
     await w.clock.advance(1500)
     expect(((await p).context ?? []).join('\n')).not.toContain('add a failing test')
   })
-  test("a subagent's tool result does not take the main loop's queued advisory (NEW-09)", async ($, on) => {
+  bridgeTest("a subagent's tool result does not take the main loop's queued advisory (NEW-09)", async ($, on) => {
     const advice = { hookSpecificOutput: { additionalContext: 'docs touched: read update-docs' } }
     const w = world(on, { dispatch: ids => (ids === 'post-write-aggregator' ? { out: advice } : {}) })
     await $.session.start(start)
@@ -220,7 +240,7 @@ describe('bridge: lanes are drained before readers', () => {
     const main = await $.tool.call({ tool: 'Read', file_path: '/r/README.md' })
     expect((main.context ?? []).join('\n')).toContain('read update-docs')
   })
-  test('the next tool call waits for the fast lane before its Python chain', async ($, on) => {
+  bridgeTest('the next tool call waits for the fast lane before its Python chain', async ($, on) => {
     const w = world(on, { dispatch: ids => (ids === 'post-write-aggregator' ? { delayMs: 1000 } : {}) })
     await $.session.start(start)
     await $.classic.PostToolUse(post as never)
@@ -232,7 +252,7 @@ describe('bridge: lanes are drained before readers', () => {
 })
 
 describe('bridge: release and re-claim', () => {
-  test('three failed background runs hand every link back, with a toast', async ($, on) => {
+  bridgeTest('three failed background runs hand every link back, with a toast', async ($, on) => {
     const w = world(on, { dispatch: ids => (ids === 'post-write-aggregator' ? { exitCode: 1 } : {}) })
     await $.session.start(start)
     for (let i = 0; i < 3; i++) await $.classic.PostToolUse({ ...post, tool_use_id: `t${i}` } as never)
@@ -240,7 +260,7 @@ describe('bridge: release and re-claim', () => {
     expect(w.env.get('MERCY_MOD_OWNED')).toBeUndefined()
     expect(w.toasts.join('\n')).toContain('back on the Python chain')
   })
-  test('/mercy release uses the same release: env cleared, status shows nothing owned (H-12)', async ($, on) => {
+  bridgeTest('/mercy release uses the same release: env cleared, status shows nothing owned (H-12)', async ($, on) => {
     const w = world(on)
     await $.session.start(start)
     const presentation = { isFullscreen: false, columns: 120 }
@@ -250,11 +270,28 @@ describe('bridge: release and re-claim', () => {
     const s = await $.command.run({ command: 'mercy', args: 'status', origin: { kind: 'composer' }, presentation })
     expect(s.text).toContain('bridge: 0 links owned')
   })
-  test('/clear re-claims the links under the new session id', async ($, on) => {
+  bridgeTest('/clear re-claims the links under the new session id', async ($, on) => {
     const w = world(on)
     await $.session.start(start)
     await $.classic.SessionStart({ source: 'clear', session_id: 's2', transcript_path: '' } as never)
     expect(w.env.get('MERCY_MOD_SESSION')).toBe('s2')
     expect(w.env.get('MERCY_MOD_OWNED')).toContain('dox-write-gate-write')
+  })
+})
+
+describe('bridge: a run that outlives its engine (A2v2-09)', () => {
+  // the engine refuses state writes once a test is torn down; a background run whose last step is such a write
+  // must note it, not leave a rejection nothing handled (it failed `claude plugin test` under load)
+  bridgeTest('a refused state write after a background run is noted, not thrown', async ($, on) => {
+    const state = { refuse: false, refused: 0 }
+    const w = world(on, {}, state)
+    await $.session.start(start)
+    state.refuse = true
+    await $.tool.call(write)
+    await w.clock.settle()
+    expect(state.refused).toBeGreaterThan(0)
+    state.refuse = false
+    const s = await $.command.run({ command: 'mercy', args: 'status', origin: { kind: 'composer' }, presentation: { isFullscreen: false, columns: 120 } })
+    expect(s.text).toContain('bridge')
   })
 })

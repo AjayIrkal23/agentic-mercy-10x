@@ -3,7 +3,9 @@ import { describe, expect, test } from 'claude-code/testing'
 import { blocks, dedupe, hash, prune } from '../hooks/lib/dedupe'
 import { linkById, parseConfig, toolMatches } from '../hooks/lib/dispatch'
 import { compact, duration, meter } from '../hooks/lib/format'
+import { pythonFrom } from '../hooks/lib/hostconfig'
 import { beginTurn, emptyLedger, lastEvidenceAt, loops, mcpServer, recordCommand, recordEdit, unverified, verifiedSince } from '../hooks/lib/ledger'
+import { defaultPython, isWindowsEnv } from '../hooks/lib/os'
 import { isCode, isTest, shortPath } from '../hooks/lib/paths'
 import { rt, takePending } from '../hooks/lib/runtime'
 import { findSecret, isSecretHome, writtenText } from '../hooks/lib/secrets'
@@ -27,6 +29,35 @@ describe('dedupe', () => {
   test('hash folds whitespace; prune forgets old blocks', () => {
     expect(hash('a  b\n c')).toBe(hash('a b c'))
     expect(Object.keys(prune({ x: 1, y: 50 }, 60))).toEqual(['y'])
+  })
+})
+
+describe('host OS (the mod has no `process`: the engine env says it)', () => {
+  test('only OS=Windows_NT is Windows; unset (Linux, macOS, WSL) is not', () => {
+    expect(isWindowsEnv('Windows_NT')).toBe(true)
+    expect(isWindowsEnv(undefined)).toBe(false)
+    expect(isWindowsEnv('Linux')).toBe(false)
+    expect(isWindowsEnv('')).toBe(false)
+  })
+  test('the fallback interpreter is the py launcher on Windows, python3 elsewhere', () => {
+    expect(defaultPython(true)).toEqual(['py', '-3'])
+    expect(defaultPython(false)).toEqual(['python3'])
+  })
+})
+
+describe('interpreter read from the rendered hook command (A1-09)', () => {
+  const py = (command: string) => pythonFrom({ hooks: { PreToolUse: [{ hooks: [{ command }] }] } })
+  test('an unquoted spaced profile path does not leak into the interpreter', () => {
+    expect(py('py -3 C:/Users/John Smith/.claude/hooks/dispatch.py pre-tool-use')).toEqual(['py', '-3'])
+    expect(py('python3 /home/john smith/.claude/hooks/dispatch.py pre-tool-use')).toEqual(['python3'])
+    expect(py('py -3 ~/my dir/.claude/hooks/dispatch.py x')).toEqual(['py', '-3'])
+  })
+  test('quoted and plain forms are unchanged', () => {
+    expect(py('py -3 E:/work/.claude/hooks/dispatch.py pre-tool-use')).toEqual(['py', '-3'])
+    expect(py('py -3 "C:/Users/John Smith/.claude/hooks/dispatch.py" pre-tool-use')).toEqual(['py', '-3'])
+    expect(py('"C:/Program Files/Python314/python.exe" "C:/Users/John Smith/.claude/hooks/dispatch.py" x')).toEqual(['C:/Program Files/Python314/python.exe'])
+    expect(py('py -3 D:\\Dev\\.claude\\hooks\\dispatch.py pre-tool-use')).toEqual(['py', '-3'])
+    expect(py('python3 /opt/cc/.claude/hooks/dispatch.py pre-tool-use')).toEqual(['python3'])
   })
 })
 

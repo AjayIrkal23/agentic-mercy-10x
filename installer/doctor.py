@@ -7,7 +7,9 @@ Rows (PASS / WARN / FAIL / SKIP; non-zero exit on any FAIL):
                        (run with CLAUDE_HOOK_DOCTOR=1 so mutating links no-op)
   interpreters         template fully tokenized; no /home/<user>/ or \\Users\\ literal
   render-equivalence   render(template ⊕ overlay) SEMANTICALLY == live settings.json
-  settings-safety      0 "lean-ctx" substrings in settings.json AND the template; deny == []
+  hook-command         the rendered PreToolUse hook command runs through a shell: exit 0 + JSON
+  statusline           the rendered statusLine.command runs through a shell: exit 0 + a non-empty line
+  settings-safety     0 "lean-ctx" substrings in settings.json AND the template; deny == []
   lean-ctx-config      config.toml carries the manifest keys + the zero-injection floor
                        (doctor_host.ZERO_INJECTION) and lean-ctx >= min_version
   jcodemunch-config    ~/.code-index/config.jsonc carries the manifest keys
@@ -17,15 +19,19 @@ Rows (PASS / WARN / FAIL / SKIP; non-zero exit on any FAIL):
   palette-skills       SKILL.md / agent counts from disk; FAIL when either is 0
   aliases · R9/R10-validator · locked-source-links · ollama-embeddings (WARN) ·
   model-routing · workflow-args · hook-fixtures
+  base-tools           claude, node + npm, git, uv resolve (FAIL; gh / ollama WARN; SKIP under
+                       --ci or AGENTIC_MERCY_SKIP_BASE_TOOLS; doctor_basetools.py)
   mcp-roster           registrations vs manifest: missing, extras, npx pin drift,
                        deprecated packages, /mcp auth (WARN only; doctor_mcp.py)
   secret-perms         .env*, CLAUDE.machines.local.md, .credentials.json,
-                       settings.user.json not group/world readable (WARN + chmod hint)
+                       settings.user.json, ~/.claude.json not group/world readable
+                       (WARN + chmod hint; Windows: SDDL from icacls, SIDs, WARN + icacls hint)
   mods / mods-runtime  doctor_mods.py: static contract + plugin validate + version
                        minimum; tsc + `claude plugin test`
 
 ``--ci``: machine-dependent rows (mcp-roster, lean-ctx, jcodemunch, ollama,
-plugins-installed, mods-runtime) → SKIP. Pure stdlib; importable and CLI.
+plugins-installed, mods-runtime) → SKIP; hook-command and statusline run under it when a rendered
+settings.json exists. Pure stdlib; importable and CLI.
 """
 
 from __future__ import annotations
@@ -43,7 +49,9 @@ for _p in (str(_ROOT / "installer"), str(_HOOKS), str(_HOOKS / "tools")):
         sys.path.insert(0, _p)
 
 from lib import platform as plat  # noqa: E402
+import doctor_basetools  # noqa: E402
 import doctor_checks  # noqa: E402
+import doctor_hook  # noqa: E402
 import doctor_host  # noqa: E402
 import doctor_mcp  # noqa: E402
 import doctor_mods  # noqa: E402
@@ -155,7 +163,8 @@ def _check_generated(rows):
 def _run_with_stdin(cmd, stdin_data: str):
     import subprocess
     try:
-        return subprocess.run(cmd, input=stdin_data, capture_output=True, text=True, timeout=15, check=False)
+        return subprocess.run(cmd, input=stdin_data, capture_output=True, encoding="utf-8", errors="replace",
+                              timeout=15, check=False)
     except Exception:  # noqa: BLE001
         return subprocess.CompletedProcess(cmd, 1, "", "")
 
@@ -193,6 +202,8 @@ def run_doctor(*, ci: bool = False) -> list[tuple[str, str, str]]:
     _check_link_doctor(rows)
     _row(rows, "interpreters", *doctor_checks.interpreters_status(_ROOT))
     _check_render_equivalence(rows)
+    _row(rows, "hook-command", *doctor_hook.check_hook_command(_ROOT, ci))
+    _row(rows, "statusline", *doctor_hook.check_statusline(_ROOT, ci))
     _row(rows, "settings-safety", *doctor_checks.settings_safety_status(_ROOT))
     _check_lean_ctx(rows, ci)
     _check_jcodemunch(rows, ci)
@@ -203,6 +214,7 @@ def run_doctor(*, ci: bool = False) -> list[tuple[str, str, str]]:
     _row(rows, "aliases", *doctor_checks.aliases_status(_ROOT))
     _check_validator(rows)
     _check_zero_symlinks(rows)
+    _row(rows, "base-tools", *doctor_basetools.check_base_tools(ci))
     _row(rows, "mcp-roster", *doctor_mcp.check_mcp_roster(
         ci, m, deps.user_config_file(), plat.claude_dir() / "mcp-needs-auth-cache.json"))
     _row(rows, "ollama-embeddings", *doctor_host.check_ollama(m, ci))
@@ -217,6 +229,10 @@ def run_doctor(*, ci: bool = False) -> list[tuple[str, str, str]]:
 
 
 def main(argv: list[str]) -> int:
+    try:  # a piped cp1252 stdout cannot carry a non-ANSI profile path
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+    except (AttributeError, ValueError, OSError):
+        pass
     ci = "--ci" in argv
     rows = run_doctor(ci=ci)
     print(f"=== doctor: {_ROOT} ===")

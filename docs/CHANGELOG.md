@@ -1,5 +1,46 @@
 # Changelog
 
+## v4.1.0 — 2026-10-06 Windows parity
+
+Why: v4.0 was built on Ubuntu. On the Windows replica the `PowerShell` tool bypassed every gate, the UI
+deck had no sound, toast or port scan, background index builds opened console windows, semgrep could
+not scan, and a fresh Windows machine could not be installed. Two audits (7 areas each), three review
+rounds (Santa + security) and test-first fixes later (plans in `plans/windows-parity-v4/`, gitignored):
+
+- **Gates**: `PowerShell` is a shell tool in every settings matcher, dispatch link and gate; new
+  PowerShell / cmd destructive patterns (`Remove-Item -Recurse`, `rd /s`, `del /s`, `Format-Volume`,
+  `git clean -f`, pipelines, `[IO.Directory]::Delete`, backtick and `\` continuations) and write
+  cmdlets; the gate matches in linear time (worst 50 KB input 59 s → 0.12 s); commit doc gate reads
+  Windows paths.
+- **Mod (mercy)**: OS flag from `$.env.get('OS')` (a mod has no `process`); the guard, ledger and verify
+  gate see PowerShell commands, `.exe/.cmd` suffixes and `cmd /c`, `powershell -c`, `Start-Process`,
+  `iex`, `wsl` wrappers; Windows sound (`SoundPlayer`), WinRT toasts (text only through env,
+  XML-escaped), ports via `netstat` + `tasklist` (locale-proof), absolute System32 paths; `/deps` no
+  longer reads an npm error as "all current".
+- **Hooks**: background spawns use `CREATE_NO_WINDOW` (visible console windows during a reindex
+  6 → 0); retrying `atomic_write`, locked appends (queue and telemetry lost 4-10 % of lines before),
+  bounded `locked_update`, `pid_alive` via ctypes, `localhost` → `127.0.0.1` for ollama probes,
+  cmd.exe argument quoting/refusal for `.cmd` shims, UTF-8 subprocess output.
+- **Render**: `EIO_BACKEND` dropped on Windows (semgrep scans work), spaced profile paths quoted,
+  status line runs the direct interpreter (`{{PYTHON_EXE}}`): Windows p95 133 → ~120 ms.
+- **Doctor**: Windows `secret-perms` (SID-based SDDL from `icacls /save`; never changes ACLs),
+  `base-tools`, `hook-command` and `statusline` rows, load-aware `mods-runtime`, UTF-8 helpers.
+- **One-click Windows install**: `install.cmd` → `install.ps1` (Python bootstrap, pinned + Authenticode)
+  → `install.py`; `installer/wintools.py` installs PortableGit, Node, Claude Code, uv, gh and ollama per
+  user with pinned SHA-256, contained zip extraction, `HKCU` PATH (`REG_EXPAND_SZ`), reuse of tools
+  already present, `-Ci` plans only, `AGENTIC_MERCY_SANDBOX=1` blocks every registry write and drops
+  inherited `UV_TOOL_*` / `NPM_CONFIG_PREFIX` / `PIPX_*` (a rehearsal once installed into the real uv
+  and npm dirs); a git reused through `CLAUDE_CODE_GIT_BASH_PATH` but off PATH gets its `cmd` dir on
+  PATH; a dir already on the user PATH keeps the user's order; unknown `install.ps1` flags stop first.
+- **CI**: the Windows workbench legs (py 3.12 + 3.14) gate the build; `install.ps1 -Ci` is rehearsed
+  in a sandboxed profile; the mods job runs on Windows too (informational) and proves the pinned CLI.
+- **Tests**: Windows-only branches are exercised on Ubuntu by injecting the OS (`IS_WINDOWS`
+  monkeypatch sites 1 → 60); `tests/conftest.py` restores `os.environ` after each test.
+- Proof: Windows pytest 2005 passed / 3 skipped; mod tests 261 passed; CI Ubuntu 3.10/3.12/3.14 and
+  Windows 3.12/3.14 green; live headless E2E 8 PASS (guards for Bash and PowerShell, subagent commit,
+  secret write, bridge, model tools, status line p95 189 ms, 0 console windows); fresh-profile
+  one-click install 0 FAIL, re-run 74 s; doctor 0 FAIL on the replica; grep gates 5/5.
+
 ## v4.0.2 — 2026-10-05 the test suite passes on Windows
 
 Why: once the suite collected on Windows (`70c744d`), it showed 34 failures on the replica and

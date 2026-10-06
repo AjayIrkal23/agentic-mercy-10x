@@ -10,10 +10,13 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import shutil
 import sys
 from pathlib import Path
 
 import pytest
+
+import live_interpreter
 
 _ROOT = Path(__file__).resolve().parents[1]
 for _p in (str(_ROOT / "installer"), str(_ROOT / "hooks")):
@@ -95,8 +98,13 @@ def test_ci_flag_is_headless_never_the_web_ui(monkeypatch):
 
 
 def test_doctor_deterministic_checks_pass(monkeypatch, tmp_path):
+    live_interpreter.pin(monkeypatch)  # A7v2-03: not coupled to the Python that rendered the live settings.json
     monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Path.home() on Windows (A7-13)
     monkeypatch.setenv("CLAUDE_HOOK_DOCTOR", "1")
+    # never depend on the installed claude CLI / tsc (same as test_doctor.py, I-17)
+    real_which = shutil.which
+    monkeypatch.setattr(shutil, "which", lambda n, *a, **k: None if n in ("claude", "tsc") else real_which(n, *a, **k))
     doctor = _load("doctor", "installer/doctor.py")
     rows = doctor.run_doctor(ci=True)
     by_name = {n: (s, d) for n, s, d in rows}
@@ -113,7 +121,8 @@ def test_doctor_deterministic_checks_pass(monkeypatch, tmp_path):
 
 # Claude Code spawns MCP stdio commands WITHOUT a shell. On Windows an npm .cmd/.bat
 # shim (npx, lean-ctx) is not spawnable that way; it must be registered as `cmd /c ...`.
-_WHICH = {"npx": "npx.CMD", "lean-ctx": "lean-ctx.cmd", "jcodemunch-mcp": "jcodemunch-mcp.EXE", "py": "py.exe"}
+# (full paths, like the real `which`: a bare name is a hit in the working directory, which `winutil.which` drops)
+_WHICH = {"npx": "/n/npx.CMD", "lean-ctx": "/n/lean-ctx.cmd", "jcodemunch-mcp": "/n/jcodemunch-mcp.EXE", "py": "/w/py.exe"}
 
 
 def _env(os_name: str, python: str):

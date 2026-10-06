@@ -13,7 +13,7 @@ from __future__ import annotations
 import json
 import os
 import re
-import shutil
+import shutil  # noqa: F401  (tests patch deps.shutil.which; winutil.which delegates to the same module)
 import site
 import sys
 from pathlib import Path
@@ -27,6 +27,10 @@ if str(_ROOT / "installer") not in sys.path:  # doctor_mcp (pin_drift) lives bes
 from lib import platform as plat  # noqa: E402
 import mcp_restore  # noqa: E402
 import npm_pack  # noqa: E402
+import npx_cache  # noqa: E402
+import winpath  # noqa: E402
+import winutil  # noqa: E402
+from npx_cache import prune_npx_cache, warm_npx  # noqa: E402,F401 (the npx-cache helpers, importable here)
 
 MANIFEST = _ROOT / "installer" / "manifest.json"
 
@@ -51,13 +55,24 @@ def _exec_tokens(env) -> dict:
     real = env.real_dir or str(plat.claude_dir())
     claude_dir = str(_ROOT) if str(_ROOT) != real else real
     return {"PYTHON": env.python, "NODE": env.node, "CLAUDE_DIR": claude_dir,
-            "USER_SITE": str(Path(site.getusersitepackages()))}
+            "USER_SITE": str(Path(site.getusersitepackages())), "HOME": str(Path.home())}
+
+
+_LAUNCHER = re.compile(r"(.+?)((?:\s+-\S+)*)")
+
+
+def _words(value) -> list[str]:
+    """A launcher value as argv: ``py -3`` -> ['py', '-3'], but ``C:/Users/John Smith/x/python.exe`` stays
+    ONE element (CreateProcess would try ``<drive>:\\Users\\John.exe`` first): the program is everything
+    up to the trailing ``-flag`` words."""
+    m = _LAUNCHER.fullmatch(str(value).strip())
+    return [m.group(1), *m.group(2).split()] if m else []
 
 
 def _sub(cmd: list, tokens: dict) -> list:
     """Materialize a command template into argv, splitting a whole-element
-    interpreter token (``{PYTHON}`` -> 'py -3' -> ['py','-3']) but doing a plain
-    in-place replace for embedded path tokens (``{CLAUDE_DIR}/x.py``)."""
+    interpreter token (``{PYTHON}`` -> 'py -3' -> ['py','-3']; a path with spaces stays whole) but
+    doing a plain in-place replace for embedded path tokens (``{CLAUDE_DIR}/x.py``)."""
     out: list[str] = []
     for part in cmd:
         s = str(part)
@@ -68,7 +83,7 @@ def _sub(cmd: list, tokens: dict) -> list:
                 whole_token_hit = v
                 break
         if whole_token_hit is not None:
-            out.extend(str(whole_token_hit).split())
+            out.extend(_words(whole_token_hit))
             continue
         for k, v in tokens.items():
             s = s.replace("{" + k + "}", str(v))
@@ -91,7 +106,7 @@ def _link_bins(names: list, env, dry_run: bool) -> str:
     local_bin = Path.home() / ".local" / "bin"
     done = []
     for n in names:
-        src = shutil.which(n)
+        src = winutil.which(n)
         dst = local_bin / n
         if not src or dst.exists() or dst.is_symlink() or Path(src).parent == local_bin:
             continue
@@ -107,31 +122,48 @@ def _link_bins(names: list, env, dry_run: bool) -> str:
     return f" ({', '.join(done)})" if done else ""
 
 
-def install_deps(env, *, ci: bool = False, dry_run: bool = False) -> list[tuple[str, str]]:
+def _run_install(argv: list):
+    """Run an install argv; an ``&&`` element splits it into steps, run in order until one fails."""
+    steps: list[list] = [[]]
+    for a in argv:
+        steps.append([]) if a == "&&" else steps[-1].append(a)
+    for step in steps:
+        cp = npm_pack.install(step) if npm_pack.needs_pack(step) else plat.run(step, timeout=600)
+        if cp.returncode != 0:
+            break
+    return cp
+
+
+def install_deps(env, *, ci: bool = False, dry_run: bool = False,
+                 skip_optional: bool = False) -> list[tuple[str, str]]:
+    """Install what is missing; ``skip_optional`` leaves the manifest's optional deps alone (the
+    daily self-heal: an absent optional dep is the user's choice)."""
     manifest = _load_manifest()
     results: list[tuple[str, str]] = []
     for dep in manifest.get("deps", []):
+        if skip_optional and dep.get("optional"):
+            continue
         did = dep["id"]
         which = dep.get("which")
         imp = dep.get("import")
-        exists = dep.get("exists")
-        if ((which and shutil.which(which)) or (imp and _importable(imp, env))
+        exists = dep.get(f"exists_{env.os_name}") or dep.get("exists")
+        if ((which and winutil.which(which)) or (imp and _importable(imp, env))
                 or (exists and Path(exists).expanduser().exists())):
             results.append((did, "PRESENT" + _link_bins(dep.get("link_bins", []), env, dry_run)))
             continue
         install_cmd = dep.get(f"install_{env.os_name}") or dep.get("install")
+        argv = _sub(install_cmd, _exec_tokens(env)) if install_cmd else []  # real paths, not {HOME} / {PYTHON}
         if ci and dep.get("ci_stub"):
             results.append((did, "SKIP(ci-stub)" if not dry_run or not install_cmd
-                            else f"WOULD-INSTALL: {' '.join(install_cmd)}"))
+                            else f"WOULD-INSTALL: {' '.join(argv)}"))
             continue
         if not install_cmd:
             results.append((did, "MISSING(no-installer)" if not dep.get("optional") else "SKIP(optional-absent)"))
             continue
         if dry_run:
-            results.append((did, f"WOULD-INSTALL: {' '.join(install_cmd)}"))
+            results.append((did, f"WOULD-INSTALL: {' '.join(argv)}"))
             continue
-        argv = _sub(install_cmd, _exec_tokens(env))
-        cp = npm_pack.install(argv) if npm_pack.needs_pack(argv) else plat.run(argv, timeout=600)
+        cp = _run_install(argv)
         ok = cp.returncode == 0
         results.append((did, ("INSTALLED" + _link_bins(dep.get("link_bins", []), env, False))
                         if ok else f"WARN(rc={cp.returncode})"))
@@ -158,12 +190,13 @@ def registered_user_mcps() -> set[str]:
 def _win_shell_wrap(cmd: list[str]) -> list[str]:
     """Windows: Claude Code spawns MCP stdio servers WITHOUT a shell, so an npm
     ``.cmd``/``.bat`` shim (``npx``, ``lean-ctx``) never starts. Register it as
-    ``cmd /c <shim> …``; real ``.exe`` servers and the ``py`` launcher stay direct."""
+    ``cmd /c <shim> …``; only a name that resolves to a real ``.exe`` (a uv tool, the ``py`` launcher)
+    stays direct. A name that does not resolve yet (the npm-global dir is not on this process's PATH
+    until a new terminal) is wrapped too, never registered bare (A5v2-03): ``cmd`` finds it later."""
     if "--" not in cmd or cmd.index("--") + 1 >= len(cmd):
         return cmd
     i = cmd.index("--") + 1
-    found = (shutil.which(cmd[i]) or "").lower()
-    if cmd[i].lower() == "npx" or found.endswith((".cmd", ".bat")):
+    if not (winutil.which(cmd[i]) or "").lower().endswith(".exe"):
         return cmd[:i] + ["cmd", "/c"] + cmd[i:]
     return cmd
 
@@ -322,7 +355,7 @@ def reconcile_mcp_env(*, dry_run: bool = False) -> list[tuple[str, str]]:
         missing = {k: v for k, v in want.items() if cur.get(k) != v}
         if not missing:
             continue
-        if dry_run or not shutil.which("claude"):
+        if dry_run or not winutil.which("claude"):
             out.append((name, f"WOULD-SET-ENV: {sorted(missing)}"))
             continue
         out.append((name, mcp_restore.replace_entry(
@@ -330,17 +363,21 @@ def reconcile_mcp_env(*, dry_run: bool = False) -> list[tuple[str, str]]:
     return out
 
 
-def reconcile_mcp_pins(*, dry_run: bool = False) -> list[tuple[str, str]]:
+def reconcile_mcp_pins(*, dry_run: bool = False, run=None) -> list[tuple[str, str]]:
     """Re-register user-scope npx/uvx MCP servers whose live package spec differs from the
     manifest's exact pin: remove + ``add-json`` of the SAME entry with only the spec in
     ``args`` swapped (env copied verbatim, restore on failure). OAuth/http servers and
-    servers the manifest does not pin are skipped. Idempotent; takes effect next session."""
+    servers the manifest does not pin are skipped. Idempotent; takes effect next session.
+    Not a dry run: ``npx_cache.maintenance`` prunes half-written npx cache entries, then warms
+    each re-pinned npx package once, sequentially (``run(argv, timeout) -> (rc, out)`` is
+    injectable; with no ``run``, ``AGENTIC_MERCY_SKIP_BASE_TOOLS`` (offline) skips both)."""
     import doctor_mcp  # type: ignore
     try:
         live = json.loads(user_config_file().read_text(encoding="utf-8")).get("mcpServers") or {}
     except (OSError, ValueError):
         return []
     out: list[tuple[str, str]] = []
+    changed: list[tuple[str, str]] = []
     for name, have, want in doctor_mcp.pin_drift(_load_manifest(), live):
         entry = live[name]
         args = [str(a) for a in entry.get("args") or []]
@@ -350,10 +387,15 @@ def reconcile_mcp_pins(*, dry_run: bool = False) -> list[tuple[str, str]]:
             out.append((name, f"SKIP(spec-not-in-args): {spec}"))
         elif dry_run:
             out.append((name, f"WOULD-PIN: {spec}"))
-        elif not shutil.which("claude"):
+        elif not winutil.which("claude"):
             out.append((name, "SKIP(no-claude-cli)"))
         else:
-            out.append((name, mcp_restore.replace_entry(name, {**entry, "args": new_args}, entry, f"PINNED {spec}")))
+            status = mcp_restore.replace_entry(name, {**entry, "args": new_args}, entry, f"PINNED {spec}")
+            out.append((name, status))
+            if status.startswith("PINNED") and re.search(r"\bnpx\b", " ".join([str(entry.get("command"))] + args)):
+                changed.append((name, want))
+    if not dry_run and (run or not os.environ.get("AGENTIC_MERCY_SKIP_BASE_TOOLS")):
+        out += npx_cache.maintenance(changed, run)
     return out
 
 
@@ -392,9 +434,16 @@ def check_prereqs(env) -> list[tuple[str, str]]:
     the user must install it (per-OS command included) and re-run. Never mutates."""
     manifest = _load_manifest()
     results: list[tuple[str, str]] = []
+    windows = env.os_name == "windows"
     for p in manifest.get("prereqs", []):
         pid = p["id"]
-        if shutil.which(p.get("which", pid)):
+        if windows and p.get("probe") == "python":  # `py -3` / python.exe that runs >= 3.10, never the Store stub
+            # the cwd-safe which, the tools-dir python and the interpreter running us (install.ps1's own)
+            found = winutil.pick_python(winutil.which, plat.run, tools=winpath.tools_dir(), current=sys.executable)
+        else:
+            found = winutil.which(p.get("which", pid))
+            found = None if windows and found and winutil.store_stub(found) else found
+        if found:
             results.append((pid, "PRESENT"))
             continue
         hint = p.get(f"install_{env.os_name}") or p.get("install_posix") or "see README prereqs"

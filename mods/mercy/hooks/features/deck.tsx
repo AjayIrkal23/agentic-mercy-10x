@@ -7,20 +7,19 @@ import type { EngineInterface, On, Timer } from 'claude-code'
 
 import type { CiState, UiMode, UiPrefs } from '../../types'
 import { analyze } from '../lib/commands'
-import { applyTodo, gitState, parsePr, parseRuns } from '../lib/deck'
+import { applyTodo, GIT_CHANGE, GIT_PUSH, gitState, parsePr, parseRuns } from '../lib/deck'
 import { ciLine, usageToasts } from '../lib/deckviews'
 import { clip } from '../lib/format'
 import { join } from '../lib/paths'
 import { noteError, rt, ui } from '../lib/runtime'
 import { PANE_ID, PREFS_KEY } from '../lib/specs'
+import { isShellTool, shellOf } from '../lib/tools'
 
 const DECK = { plugin: 'mercy', key: 'deck' } as const
 const VIEW = { plugin: 'mercy', key: 'view' } as const
 const CONTEXT = { plugin: 'mercy', key: 'contextPct' } as const
 const COST = { plugin: 'mercy', key: 'costUsd' } as const
-const SHELLS = ['Bash', 'mcp__lean-ctx__ctx_shell', 'mcp__lean-ctx__shell']
 const TODO_TOOLS = ['TodoWrite', 'TaskCreate', 'TaskUpdate']
-const GIT_CHANGE = /\bgit\s+(?:-c\s+\S+\s+)*(?:commit|checkout|switch|merge|rebase|pull|reset|stash|add|restore|push|cherry-pick|revert|fetch)\b/
 const MODES: readonly UiMode[] = ['full', 'focus', 'quiet', 'off']
 
 let ciOn = false
@@ -152,7 +151,7 @@ export function registerDeck(on: On): void {
     return r
   })
 
-  on('tool.call', { tool: /^(?:Bash|mcp__lean-ctx__(?:ctx_)?shell|TodoWrite|TaskCreate|TaskUpdate|Write|Edit|MultiEdit|NotebookEdit)$/ }, async ($, e, next) => {
+  on('tool.call', { tool: /^(?:Bash|PowerShell|mcp__lean-ctx__(?:ctx_)?shell|TodoWrite|TaskCreate|TaskUpdate|Write|Edit|MultiEdit|NotebookEdit)$/ }, async ($, e, next) => {
     const r = await next(e)
     try {
       if (r.deny !== undefined) return r
@@ -162,12 +161,12 @@ export function registerDeck(on: On): void {
           rt.deck.todos = applyTodo(rt.deck.todos, e.tool, input, r.result)
           await publish($)
         }
-      } else if (SHELLS.includes(e.tool)) {
+      } else if (isShellTool(e.tool)) {
         const command = typeof input['command'] === 'string' ? input['command'] : ''
         if (GIT_CHANGE.test(command)) gitSoon($)
-        if (/\bgit\s+push\b/.test(command) && r.isError !== true) ciSoon($, 20_000)
+        if (GIT_PUSH.test(command) && r.isError !== true) ciSoon($, 20_000)
         if (input['run_in_background'] !== true) {
-          for (const kind of analyze(command).verify) {
+          for (const kind of analyze(command, false, 0, shellOf(e.tool)).verify) {
             const ok = r.isError !== true
             const before = verifyLast.get(kind)
             verifyLast.set(kind, ok)

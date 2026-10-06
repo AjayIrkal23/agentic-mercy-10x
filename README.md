@@ -4,7 +4,7 @@
 
 ### One install, and every Claude Code prompt gets the right skill, tool, model and check.
 
-![Version](https://img.shields.io/badge/version-4.0.2-2E7D32?style=flat-square)
+![Version](https://img.shields.io/badge/version-4.1.0-2E7D32?style=flat-square)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-2.1.288%2B_%C2%B7_tested_2.1.290-D97757?style=flat-square)
 ![Models](https://img.shields.io/badge/models-Opus_5.5_%C2%B7_Sonnet_5.5-D97757?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Ubuntu%20%C2%B7%20macOS%20%C2%B7%20Windows-E95420?style=flat-square)
@@ -27,8 +27,11 @@ git clone https://github.com/AjayIrkal23/agentic-mercy-10x ~/agentic-mercy
 ~/agentic-mercy/install.sh --headless   # same install in the console (servers, ssh)
 ```
 
-Windows, from the clone: `powershell -ExecutionPolicy Bypass -File .\install.ps1`
-(needs Python 3.10+, Node LTS and Git).
+Windows 10/11, nothing preinstalled, no admin: double-click `install.cmd` in the clone (or
+`install.cmd -Headless` in a console; `install.cmd -Ci` only plans). It finds or installs a
+pinned Python, then installs PortableGit (Git Bash), Node 22, Claude Code, uv, gh and ollama
+per user into `%LOCALAPPDATA%\Programs\agentic-mercy` (override: `AGENTIC_MERCY_TOOLS_DIR`),
+each download SHA-256 checked; tools already on PATH are reused.
 
 <img src="assets/install.webp" alt="Install flow: git clone and install.sh, then base tools, packages, local AI, 16 MCP servers and 11 plugins, and a self-heal loop until the doctor reports 20 PASS, 1 WARN, 0 FAIL" width="100%">
 

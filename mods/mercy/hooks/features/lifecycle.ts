@@ -11,6 +11,7 @@ import { duration } from '../lib/format'
 import { hiddenFrom, hooksDirFrom, pythonFrom } from '../lib/hostconfig'
 import { addUsage, beginTurn, emptyLedger, recordAgentEnd } from '../lib/ledger'
 import { join } from '../lib/paths'
+import { defaultPython, isWindowsEnv } from '../lib/os'
 import { busy, idle } from '../lib/queue'
 import { clockLabel, RESUME_PROMPT, resumeAt } from '../lib/resume'
 import { dropResume, featureHealth, hostOffsetMinutes, noteError, resumeKey, rt, ui, withErrors } from '../lib/runtime'
@@ -105,7 +106,9 @@ async function init($: EngineInterface, interactive: boolean): Promise<void> {
   rt.repoRoot = (await $.session.repo())?.root
   rt.pluginRoot = $.plugin.root
   rt.hooksDir = hooksDirFrom(rt.pluginRoot)
-  rt.python = pythonFrom(await $.settings.read()) ?? rt.python
+  rt.windows = isWindowsEnv(await $.env.get('OS'))
+  rt.systemRoot = rt.windows ? (await $.env.get('SystemRoot')) || undefined : undefined // system tools by absolute path (SEC1-04)
+  rt.python = pythonFrom(await $.settings.read()) ?? defaultPython(rt.windows)
   try {
     rt.dispatch = parseConfig(await $.fs.read(join(rt.hooksDir, 'dispatch.config.json')))
     rt.hiddenSkills = hiddenFrom(await $.fs.read(join(rt.hooksDir, 'skills-index.json')))

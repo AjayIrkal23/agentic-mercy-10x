@@ -72,6 +72,24 @@ def test_real_session_uuid_containing_e2e_survives(tmp_path):
     assert not any(p.exists() for p in residue)
 
 
+def test_orphan_lock_sidecars_go_live_and_daily_locks_stay(tmp_path):
+    """`append_line` / `locked_update` leave `<file>.lock` beside data files; once the data
+    file is purged the sidecar is litter. A lock whose data file still exists, a fresh
+    orphan and the daily self-heal's own lock are kept."""
+    live = _put(tmp_path / "telemetry/hook-fires-20261006.jsonl", 1)
+    orphans = [_put(tmp_path / "telemetry/hook-fires-20260901.jsonl.lock", 2, ""),
+               _put(tmp_path / "state/advisory-queue/s1.jsonl.lock", 2, ""),
+               _put(tmp_path / "state/s1.desloppify.json.lock", 2, ""),
+               _put(tmp_path / "hooks/.telemetry/s1.x.jsonl.lock", 2, "")]
+    keep = [_put(tmp_path / "telemetry/hook-fires-20261006.jsonl.lock", 2, ""),
+            _put(tmp_path / "state/advisory-queue/s2.jsonl.lock", 0.1, ""),
+            _put(tmp_path / "state/selfheal-daily.lock", 30, ""),
+            live]
+    sc.run(tmp_path)
+    assert [p.name for p in orphans if p.exists()] == []
+    assert [p.name for p in keep if not p.exists()] == []
+
+
 def test_unreadable_index_state_is_left_alone(tmp_path):
     bad = _put(tmp_path / "hooks/.state/index/bad-1.json", 40, "{not json")
     sc.run(tmp_path)

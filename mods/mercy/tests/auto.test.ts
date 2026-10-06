@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { dayKey, depsRows, isDevPort, lastSessionLine, portChanges, portsRows, sessionSummary, shouldCompact, standupDays, withCard } from '../hooks/lib/auto'
+import { dayKey, depsDue, depsRows, isDevPort, lastSessionLine, portChanges, portsRows, sessionSummary, shouldCompact, standupDays, withCard } from '../hooks/lib/auto'
 import { emptyLedger, recordCommand, recordEdit } from '../hooks/lib/ledger'
 
 describe('autonomous jobs: pure rules', () => {
@@ -10,6 +10,14 @@ describe('autonomous jobs: pure rules', () => {
     expect(isDevPort({ port: 43783, address: '127.0.0.1', process: 'claude' })).toBe(false)
     expect(isDevPort({ port: 27017, address: '127.0.0.1', label: 'mongodb' })).toBe(false)
     expect(isDevPort({ port: 631, address: '127.0.0.1', process: 'python3' })).toBe(false)
+  })
+  test('Windows image names are case-insensitive', () => {
+    expect(isDevPort({ port: 4000, address: '::1', process: 'Node' })).toBe(true)
+    expect(isDevPort({ port: 4000, address: '::1', process: 'Python' })).toBe(true)
+    expect(isDevPort({ port: 3025, address: '127.0.0.1', process: 'node', pid: 1 })).toBe(true)
+    expect(isDevPort({ port: 445, address: '0.0.0.0', process: 'System' })).toBe(false)
+    expect(isDevPort({ port: 58572, address: '127.0.0.1', process: 'Claude' })).toBe(false)
+    expect(portChanges([], [{ port: 3025, address: '127.0.0.1', process: 'Node' }])).toEqual(['▲ :3025 (Node) is up'])
   })
   test('port changes: up and down for dev servers only; the first scan is silent', () => {
     const vite = { port: 5173, address: '0.0.0.0', process: 'node', label: 'vite' }
@@ -56,5 +64,26 @@ describe('autonomous jobs: pure rules', () => {
     expect(rows.map(r => r.color)).toEqual(['green', undefined])
     const deps = depsRows({ at: 1000, dirs: [{ dir: '/r', rows: [{ name: 'react', current: '18.2.0', wanted: '18.3.1', latest: '19.1.0', bump: 'major' }] }, { dir: '/r/server', rows: [] }] }, 3_601_000, 80)
     expect(deps.map(r => r.text)).toEqual(['/r: 1 outdated, 1 major', `  ${'react'.padEnd(28)} 18.2.0 → 19.1.0  major`, '/r/server: all current', 'checked 1h00m ago'])
+  })
+  test('npm outdated is due after a day, or after an hour when a folder could not be checked (A2v2-03)', () => {
+    const full = { at: 1000, dirs: [{ dir: '/r', rows: [] }] }
+    expect(depsDue(undefined, 5)).toBe(true)
+    expect(depsDue(full, 1000 + 86_400_000)).toBe(false)
+    expect(depsDue(full, 1001 + 86_400_000)).toBe(true)
+    expect(depsDue({ ...full, partial: true }, 1000 + 3_600_000)).toBe(false)
+    expect(depsDue({ ...full, partial: true }, 1001 + 3_600_000)).toBe(true)
+    const rows = depsRows({ ...full, partial: true }, 3_601_000, 80).map(r => r.text)
+    expect(rows.at(-1)).toBe('checked 1h00m ago · a folder could not be checked, asked again within the hour')
+  })
+  test('a failed port scan reads as a failure, never as "nothing is listening" or a Linux command', () => {
+    const failed = portsRows(undefined, 80, 'netstat exited 1: Access is denied')
+    expect(failed[0]).toMatchObject({ text: 'port scan failed: netstat exited 1: Access is denied', color: 'red' })
+    expect(portsRows([], 80, 'x').some(r => r.text.includes('Nothing is listening'))).toBe(false)
+    const kept = portsRows([{ port: 5173, address: '::1', process: 'node', label: 'vite' }], 80, 'tasklist timed out')
+    expect(kept).toHaveLength(2)
+    expect(kept[0]?.text).toBe('port scan failed: tasklist timed out')
+    expect(kept[1]?.text).toContain('5173')
+    expect(portsRows(undefined, 80)[0]?.text).not.toContain('ss -ltnpH')
+    expect(portsRows([], 80)[0]?.text).toBe('Nothing is listening on TCP.')
   })
 })

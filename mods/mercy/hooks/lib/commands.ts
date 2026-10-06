@@ -4,8 +4,11 @@
 
 import type { CommandKind, VerifyKind } from '../../types'
 import { exitOwners } from './evidence'
-import { innerScript, realCommand, splitSegments, timeoutSeconds, words } from './shell'
+import type { RawSegment } from './shell'
+import { innerScript, realCommand, splitAlternatives, timeoutSeconds, words } from './shell'
+import type { Shell } from './tools'
 import { frameworkCli, toolchain } from './toolkinds'
+import { isLauncher } from './winshell'
 
 export type Segment = {
   head: string
@@ -13,6 +16,8 @@ export type Segment = {
   background: boolean
   /** Under `timeout N` with N ≤ 60 s: a server or watcher here ends on its own (H-10). */
   bounded: boolean
+  /** `Start-Process` / `start`: runs detached, so what it runs is never verify evidence (A1v2-01). */
+  detached: boolean
   /** What a wrapper (`bash -c`, `eval`, `( … )`) runs, analysed in turn. */
   inner?: CommandInfo
 }
@@ -103,10 +108,13 @@ function withWatch(kind: CommandKind, args: readonly string[]): CommandKind {
 }
 
 /** vitest watches by default outside CI, even without a TTY (audit H-03); `run` may follow options (santa P2). */
-function vitestOnce(argv: readonly string[], rest: readonly string[]): boolean {
+function vitestOnce(argv: readonly string[], rest: readonly string[], ci: boolean): boolean {
   return rest.some((x, i) => x === 'run' || x === '--run' || x === '--no-watch' || /^--watch=(false|0|no|off)$/i.test(x) ||
-    (x === '--watch' && OFF.test(rest[i + 1] ?? ''))) || argv.some(w => /^CI=/.test(w))
+    (x === '--watch' && OFF.test(rest[i + 1] ?? ''))) || argv.some(w => /^CI=/.test(w)) || ci
 }
+
+/** `vitest --version` and `--help` print and exit: neither a watcher nor a test run. */
+const vitestProbe = (rest: readonly string[]): boolean => rest.length === 1 && /^(--version|-v|--help|-h)$/.test(rest[0] as string)
 
 function gitKind(a: readonly string[]): CommandKind {
   let i = 1
@@ -115,8 +123,8 @@ function gitKind(a: readonly string[]): CommandKind {
   return sub === 'commit' ? 'git-commit' : sub === 'push' ? 'git-push' : 'git'
 }
 
-/** Classifies one segment's argv (as typed; wrappers and runners are dropped here). */
-export function classifyArgv(argv: readonly string[]): CommandKind {
+/** Classifies one segment's argv (as typed; wrappers and runners are dropped here). `ci`: an earlier `$env:CI=` segment. */
+export function classifyArgv(argv: readonly string[], ci = false): CommandKind {
   const a = realCommand(argv)
   const t0 = a[0] ?? ''
   const t1 = a[1] ?? ''
@@ -126,7 +134,7 @@ export function classifyArgv(argv: readonly string[]): CommandKind {
   if (PMS.has(t0)) return packageManager(a)
   if (t0 === 'nodemon') return 'server'
   if (hasWatchFlag(t0, rest) || WATCH_TOOLS.has(t0)) return 'watch'
-  if (t0 === 'vitest') return vitestOnce(argv, rest) ? 'test' : 'watch'
+  if (t0 === 'vitest') return vitestProbe(rest) ? 'other' : vitestOnce(argv, rest, ci) ? 'test' : 'watch'
   if (TEST_TOOLS.has(t0)) return 'test'
   if (t0 === 'node') return rest.some(x => x === '--watch' || x.startsWith('--watch-path')) ? 'watch' : rest.includes('--test') ? 'test' : 'other'
   if (t0 === 'tsx' && t1 === 'watch') return 'watch'
@@ -148,18 +156,44 @@ export function classifyArgv(argv: readonly string[]): CommandKind {
   return 'other'
 }
 
-/** Full analysis of a Bash tool command; wrappers are unwrapped up to MAX_DEPTH levels. */
-export function analyze(command: string, runInBackground = false, depth = 0): CommandInfo {
-  const raw = splitSegments(command)
+/**
+ * Full analysis of a shell tool command; wrappers are unwrapped up to MAX_DEPTH levels. When the PowerShell and the
+ * bash quote rules split the text differently, a server, watcher or commit either split sees counts (santa P2);
+ * verify evidence needs both splits to agree. `shell`: whose exit-status rules decide the evidence (the PowerShell
+ * tool reports the last native command's status, A1v2-05); what a wrapper runs is read with bash's, the safer ones.
+ */
+export function analyze(command: string, runInBackground = false, depth = 0, shell: Shell = 'bash'): CommandInfo {
+  const [first = [], strict] = splitAlternatives(command)
+  const a = analyzeSegments(first, runInBackground, depth, shell)
+  if (!strict) return a
+  const b = analyzeSegments(strict, runInBackground, depth, shell)
+  const kinds = [...a.kinds, ...b.kinds.filter(k => !a.kinds.includes(k))]
+  return {
+    ...a,
+    kinds,
+    verify: a.verify.filter(k => b.verify.includes(k)),
+    isServer: a.isServer || b.isServer,
+    isWatch: a.isWatch || b.isWatch,
+    isCommit: kinds.includes('git-commit'),
+    isPush: kinds.includes('git-push'),
+  }
+}
+
+function analyzeSegments(raw: readonly RawSegment[], runInBackground: boolean, depth: number, shell: Shell): CommandInfo {
+  let ci = false // a `$env:CI='1'` segment earlier in the chain: vitest runs once, like `CI=1 vitest`
   const segments: Segment[] = raw.map(seg => {
     const argv = words(seg.text)
     const script = depth < MAX_DEPTH ? innerScript(seg.text, argv) : undefined
     const limit = timeoutSeconds(argv)
+    const kind = classifyArgv(argv, ci)
+    if (/^\$env:CI\s*=\s*\S/i.test(seg.text)) ci = true
+    const real = realCommand(argv)
     return {
-      head: realCommand(argv).slice(0, 3).join(' '),
-      kind: classifyArgv(argv),
+      head: real.slice(0, 3).join(' '),
+      kind,
       background: seg.background || runInBackground,
       bounded: limit !== undefined && limit > 0 && limit <= BOUNDED_S, // GNU `timeout 0` = no limit
+      detached: isLauncher(real),
       inner: script === undefined ? undefined : analyze(script, false, depth + 1),
     }
   })
@@ -172,11 +206,12 @@ export function analyze(command: string, runInBackground = false, depth = 0): Co
     else add(s.kind)
   }
   // a segment's exit status must be the command's: `npm test | tail`, `build; echo done`,
-  // `test || true` report someone else's status (audit H-02, santa P1)
-  const owns = exitOwners(raw)
+  // `test || true` report someone else's status (audit H-02, santa P1); a detached `Start-Process` reports none,
+  // and a `{ }` body may be conditional or a job: neither is evidence
+  const owns = exitOwners(raw, shell === 'powershell')
   const evidence: VerifyKind[] = []
   segments.forEach((s, i) => {
-    if (!owns[i]) return
+    if (!owns[i] || s.detached || raw[i]?.block) return
     for (const k of s.inner ? s.inner.verify : VERIFY.has(s.kind) ? [s.kind as VerifyKind] : []) if (!evidence.includes(k)) evidence.push(k)
   })
   const live = segments.filter(s => !s.bounded)

@@ -1,16 +1,17 @@
 {
  "_about": "Declarative install contract for the ~/.claude workbench, read by installer/{deps,verify,doctor,selfheal}.py. Idempotent + fail-visible. Tokens: {PYTHON} {NODE} {CLAUDE_DIR} (from detect.py). `network:true` / `ci_stub:true` steps only PLAN (WOULD-*) under `install.py --ci` / `--dry-run`. `env_from` adds `-e NAME=$NAME` to an MCP registration only when NAME is set in the installer's environment (secrets never live in this file). MCP servers are registered user-scope into ~/.claude.json (the single live MCP store; settings.template.json has no mcpServers). Counts (skills, agents) are always computed from disk, never pinned here.",
- "version": "4.0.2",
+ "version": "4.1.0",
  "min_python": "3.10",
  "prereqs": [
   {
    "id": "python3",
    "which": "python3",
+   "probe": "python",
    "min": "3.10",
    "required": true,
-   "note": "The installer itself is Python. 3.10+.",
+   "note": "The installer itself is Python. 3.10+. Windows: `py -3` or a python.exe that runs >= 3.10 and is not the Microsoft Store stub (installer/wintools.pick_python).",
    "install_posix": "sudo apt install python3 python3-pip   # or: brew install python@3.12",
-   "install_windows": "winget install Python.Python.3.12   # ships the 'py -3' launcher"
+   "install_windows": "run install.cmd: it installs the pinned Python per user, no admin (or https://www.python.org/downloads/windows/)"
   },
   {
    "id": "node",
@@ -19,7 +20,7 @@
    "required": true,
    "note": "npm installs lean-ctx, tdd-guard, pyright, mmx and runs the npx-launched MCP servers. nvm recommended (user-writable -g prefix).",
    "install_posix": "nvm: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash && nvm install --lts   # or apt/brew",
-   "install_windows": "winget install OpenJS.NodeJS.LTS   # or nvm-windows"
+   "install_windows": "the installer unpacks the pinned Node.js per user (installer/wintools.py); or https://nodejs.org"
   },
   {
    "id": "git",
@@ -27,7 +28,7 @@
    "required": true,
    "note": "Repo clone, vendored-skill pinning, hook git calls.",
    "install_posix": "sudo apt install git   # or: brew install git",
-   "install_windows": "winget install Git.Git"
+   "install_windows": "the installer unpacks the pinned PortableGit (with bash.exe) per user (installer/wintools.py)"
   },
   {
    "id": "claude",
@@ -35,7 +36,7 @@
    "required": true,
    "note": "Claude Code CLI — registers MCP servers and installs plugins.",
    "install_posix": "npm install -g @anthropic-ai/claude-code",
-   "install_windows": "npm install -g @anthropic-ai/claude-code"
+   "install_windows": "the installer runs the pinned claude.exe install per user (installer/wintools.py)"
   },
   {
    "id": "gh",
@@ -43,7 +44,7 @@
    "required": false,
    "note": "GitHub CLI — the github MCP reads its token via `gh auth token`. Run `gh auth login` once.",
    "install_posix": "sudo apt install gh   # or: brew install gh",
-   "install_windows": "winget install GitHub.cli"
+   "install_windows": "the installer unpacks the pinned GitHub CLI zip per user (installer/wintools.py)"
   }
  ],
  "deps": [
@@ -51,30 +52,21 @@
    "id": "uv",
    "which": "uv",
    "install_posix": ["sh", "-c", "curl -LsSf https://astral.sh/uv/install.sh | sh"],
-   "install_windows": ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "irm https://astral.sh/uv/install.ps1 | iex"],
-   "note": "Astral uv — installs semgrep / jcodemunch-mcp / jdocmunch-mcp / graphifyy as uv tools. Re-open the shell if `uv` isn't on PATH afterwards.",
-   "ci_stub": true
-  },
-  {
-   "id": "pipx",
-   "which": "pipx",
-   "install_windows": ["{PYTHON}", "-m", "pip", "install", "--user", "pipx"],
-   "note": "Windows installer for the Python MCP engines (POSIX uses uv). Run `pipx ensurepath` once.",
-   "optional": true,
+   "note": "Astral uv — installs semgrep / jcodemunch-mcp / jdocmunch-mcp / graphifyy as uv tools. Windows: no installer here, installer/wintools.py unpacks the pinned release zip (SHA-256) before this step. Re-open the shell if `uv` isn't on PATH afterwards.",
    "ci_stub": true
   },
   {
    "id": "pyyaml",
    "import": "yaml",
    "install_posix": ["uv", "pip", "install", "--quiet", "--python", "{PYTHON}", "--target", "{USER_SITE}", "pyyaml==6.0.3"],
-   "install": ["{PYTHON}", "-m", "pip", "install", "--quiet", "pyyaml"],
+   "install": ["{PYTHON}", "-m", "pip", "install", "--quiet", "pyyaml==6.0.3"],
    "note": "REQUIRED by validate_skills.py (without it a naive parser raises false R12 HARD failures) and gen-agent-skill-blocks.py. POSIX: uv into the user site (a fresh Ubuntu has no pip and PEP 668 refuses `pip install`); hooks stay pure stdlib."
   },
   {
    "id": "semgrep",
    "which": "semgrep",
    "install_posix": ["uv", "tool", "install", "semgrep==1.178.0"],
-   "install_windows": ["pipx", "install", "semgrep==1.178.0"],
+   "install_windows": ["uv", "tool", "install", "semgrep==1.178.0"],
    "note": "Also the `semgrep mcp` server.",
    "ci_stub": true
   },
@@ -111,7 +103,7 @@
    "id": "jcodemunch-mcp",
    "which": "jcodemunch-mcp",
    "install_posix": ["uv", "tool", "install", "--upgrade", "jcodemunch-mcp[openai]==1.108.319"],
-   "install_windows": ["pipx", "install", "jcodemunch-mcp[openai]==1.108.319"],
+   "install_windows": ["uv", "tool", "install", "--upgrade", "jcodemunch-mcp[openai]==1.108.319"],
    "note": "Code-intelligence MCP (PyPI). [openai] extra = embeddings via a local ollama OpenAI-compatible endpoint (all-minilm).",
    "ci_stub": true
   },
@@ -119,7 +111,7 @@
    "id": "jdocmunch-mcp",
    "which": "jdocmunch-mcp",
    "install_posix": ["uv", "tool", "install", "--force", "jdocmunch-mcp[openai]==1.145.0"],
-   "install_windows": ["pipx", "install", "jdocmunch-mcp[openai]==1.145.0"],
+   "install_windows": ["uv", "tool", "install", "--force", "jdocmunch-mcp[openai]==1.145.0"],
    "note": "Docs-index MCP (PyPI), jcodemunch's docs twin. [openai] extra = semantic search via local ollama all-minilm (falls back to lexical without it).",
    "ci_stub": true
   },
@@ -135,8 +127,10 @@
   {
    "id": "graphify-serve-venv",
    "exists": "~/.local/share/claude-graphify-venv",
+   "exists_windows": "~/.local/share/claude-graphify-venv/Scripts/python.exe",
    "install_posix": ["sh", "-c", "uv venv --clear \"$HOME/.local/share/claude-graphify-venv\" && uv pip install --python \"$HOME/.local/share/claude-graphify-venv/bin/python\" graphifyy==0.9.18 mcp==1.28.1"],
-   "note": "The venv hooks/graphify_launcher.py serves the graphify MCP from (graphifyy + mcp).",
+   "install_windows": ["uv", "venv", "--clear", "{HOME}\\.local\\share\\claude-graphify-venv", "&&", "uv", "pip", "install", "--python", "{HOME}\\.local\\share\\claude-graphify-venv\\Scripts\\python.exe", "graphifyy==0.9.18", "mcp==1.28.1"],
+   "note": "The venv hooks/graphify_launcher.py serves the graphify MCP from (graphifyy + mcp). Windows: an `&&` element splits the argv into steps run in order (stop at the first failure); present only with the venv's python.exe (an interrupted `uv venv` leaves a bare dir).",
    "ci_stub": true,
    "optional": true
   },
@@ -158,8 +152,8 @@
   }
  ],
  "mcp_servers": [
-  {"name": "jcodemunch", "add": ["claude", "mcp", "add", "--scope", "user", "jcodemunch", "-e", "OPENAI_API_BASE=http://localhost:11434/v1", "-e", "OPENAI_BASE_URL=http://localhost:11434/v1", "-e", "OPENAI_API_KEY=ollama", "-e", "OPENAI_EMBED_MODEL=all-minilm", "-e", "JCODEMUNCH_SHARE_SAVINGS=0", "--", "jcodemunch-mcp"], "ci_stub": true, "note": "OPENAI_* point at a local ollama (dummy key) for semantic search; share_savings telemetry off."},
-  {"name": "jdocmunch", "add": ["claude", "mcp", "add", "--scope", "user", "jdocmunch", "-e", "JDOCMUNCH_EMBEDDING_PROVIDER=openai-compatible", "-e", "JDOCMUNCH_OPENAI_COMPAT_URL=http://localhost:11434/v1", "-e", "JDOCMUNCH_OPENAI_COMPAT_MODEL=all-minilm", "-e", "JDOCMUNCH_SHARE_SAVINGS=0", "-e", "JDOCMUNCH_EMBED_WARMUP=0", "--", "jdocmunch-mcp"], "ci_stub": true, "note": "semantic doc search via the local ollama all-minilm embeddings; telemetry off."},
+  {"name": "jcodemunch", "add": ["claude", "mcp", "add", "--scope", "user", "jcodemunch", "-e", "OPENAI_API_BASE=http://127.0.0.1:11434/v1", "-e", "OPENAI_BASE_URL=http://127.0.0.1:11434/v1", "-e", "OPENAI_API_KEY=ollama", "-e", "OPENAI_EMBED_MODEL=all-minilm", "-e", "JCODEMUNCH_SHARE_SAVINGS=0", "--", "jcodemunch-mcp"], "ci_stub": true, "note": "OPENAI_* point at a local ollama (dummy key) for semantic search; share_savings telemetry off."},
+  {"name": "jdocmunch", "add": ["claude", "mcp", "add", "--scope", "user", "jdocmunch", "-e", "JDOCMUNCH_EMBEDDING_PROVIDER=openai-compatible", "-e", "JDOCMUNCH_OPENAI_COMPAT_URL=http://127.0.0.1:11434/v1", "-e", "JDOCMUNCH_OPENAI_COMPAT_MODEL=all-minilm", "-e", "JDOCMUNCH_SHARE_SAVINGS=0", "-e", "JDOCMUNCH_EMBED_WARMUP=0", "--", "jdocmunch-mcp"], "ci_stub": true, "note": "semantic doc search via the local ollama all-minilm embeddings; telemetry off."},
   {"name": "graphify", "add": ["claude", "mcp", "add", "--scope", "user", "graphify", "--", "{PYTHON}", "{CLAUDE_DIR}/hooks/graphify_launcher.py"], "ci_stub": true},
   {"name": "lean-ctx", "add": ["claude", "mcp", "add", "--scope", "user", "lean-ctx", "-e", "LEAN_CTX_NO_UPDATE_CHECK=1", "-e", "LEAN_CTX_VALUE_DISPLAY=off", "--", "lean-ctx"], "ci_stub": true, "note": "requires lean-ctx >= 3.10.4 (detached ctx_shell)."},
   {"name": "memory", "add": ["claude", "mcp", "add", "--scope", "user", "memory", "-e", "MEMORY_FILE_PATH={CLAUDE_DIR}/memory/memory.jsonl", "--", "npx", "-y", "@modelcontextprotocol/server-memory@2026.8.31"], "ci_stub": true},
@@ -258,6 +252,59 @@
    "models": ["all-minilm", "qwen2.5-coder:3b"],
    "note": "pinned release + SHA-256 (the release's sha256sum.txt) into ~/.local (no sudo); a `systemctl --user` unit ONLY when none exists and this is the binary the installer put in ~/.local/bin, else a detached `ollama serve` while the models are pulled."
   },
+  "windows": {
+   "_about": "Windows base tools, per user and without admin, into $AGENTIC_MERCY_TOOLS_DIR (default %LOCALAPPDATA%\\Programs\\agentic-mercy) by installer/wintools.py (+ winollama.py); install.ps1 reads `python` from here. Every download is a pinned version + SHA-256 per arch (x64 / arm64); `url` takes {version} {tag} {arch} (the tool's own `arch` names). Bump a version and its hashes together. claude.version must equal mods.claude_version. python is x64 only (arm64 Windows runs the x64 build).",
+   "python": {
+    "version": "3.14.8",
+    "url": "https://www.python.org/ftp/python/{version}/python-{version}-{arch}.exe",
+    "arch": {"x64": "amd64"},
+    "sha256": {"x64": "759be887b96e736a3ca886daf8d575f18fcae1a09efab6902f42d59e8999f8ef"},
+    "signer": "Python Software Foundation",
+    "note": "python.org publishes MD5 + sigstore only: this SHA-256 was computed from the signed installer; install.ps1 also requires a Valid Authenticode signature by `signer`."
+   },
+   "git": {
+    "version": "2.56.0",
+    "tag": "v2.56.0.windows.1",
+    "url": "https://github.com/git-for-windows/git/releases/download/{tag}/PortableGit-{version}-{arch}.7z.exe",
+    "arch": {"x64": "64-bit", "arm64": "arm64"},
+    "sha256": {"x64": "eceb5e061aa90df2f69ddd3e90f0030e1b8037a7829934bc40e4be1caa1accc1", "arm64": "edd9bd32aefa5d2bd4b938c38c18ceca306a7f6b29a6951cd6a4bb16d9d28d8f"},
+    "note": "PortableGit, not MinGit: MinGit has no bash.exe, which Claude Code's Bash tool needs."
+   },
+   "node": {
+    "version": "22.23.3",
+    "url": "https://nodejs.org/dist/v{version}/node-v{version}-win-{arch}.zip",
+    "arch": {"x64": "x64", "arm64": "arm64"},
+    "strip": 1,
+    "sha256": {"x64": "2b0ff57b049cda1bbcea2240eec20467018713c1efe1f7360c2681859b90ed71", "arm64": "33dad22e4cef5ee8f9fbb1b0d037fdacd0e56d12a4580f0d63f68b894deab535"}
+   },
+   "claude": {
+    "version": "2.1.288",
+    "url": "https://downloads.claude.ai/claude-code-releases/{version}/{arch}/claude.exe",
+    "arch": {"x64": "win32-x64", "arm64": "win32-arm64"},
+    "sha256": {"x64": "84304f7d4b0cd0ebcbe8318695a260151b48991a6659c3366fdd5da290c0ab91", "arm64": "5015d2b92866232b85384ac6e5eef4ff155418a92123503e52714c29186af8c6"},
+    "note": "the checksums are the per-version manifest.json of downloads.claude.ai; the exe then runs `claude.exe install {version}` (-> %USERPROFILE%\\.local\\bin)."
+   },
+   "uv": {
+    "version": "0.12.23",
+    "url": "https://github.com/astral-sh/uv/releases/download/{version}/uv-{arch}-pc-windows-msvc.zip",
+    "arch": {"x64": "x86_64", "arm64": "aarch64"},
+    "sha256": {"x64": "75d05de6762778c31ee183398de7dd15093fad0ed90b1f236d8205ea5ec00c90", "arm64": "13294e232ececbe709c06b74e6ced06f2a225ea5591476685362f22be56a50d5"}
+   },
+   "gh": {
+    "version": "2.102.0",
+    "url": "https://github.com/cli/cli/releases/download/v{version}/gh_{version}_windows_{arch}.zip",
+    "arch": {"x64": "amd64", "arm64": "arm64"},
+    "sha256": {"x64": "ae64e556ecc240b200f7eba60d550e4bb60d78e860e69dd88c449405b86067f4", "arm64": "5dcf12aa8525eabd0c46ec414f323ab6cf65229fc2cd46543cc705001bbaf223"}
+   },
+   "ollama": {
+    "version": "v0.35.1",
+    "url": "https://github.com/ollama/ollama/releases/download/{version}/ollama-windows-{arch}.zip",
+    "arch": {"x64": "amd64", "arm64": "arm64"},
+    "sha256": {"x64": "dc50b9ca7f9023c86525012632cd1615b093d0407987444a7f62ecab617e8e93", "arm64": "1aced40f0654eae8ef1ba07fa101be4b48225308288b0f54c5681ccf1e4199db"},
+    "min_free_gb": 4,
+    "note": "the plain zip (no tray app); models come from user_space.ollama.models. Keep the version in step with user_space.ollama."
+   }
+  },
   "os_tools": [
    {"bin": "canberra-gtk-play", "apt": ["gnome-session-canberra", "libcanberra-gtk3-module"], "why": "UI deck sounds"},
    {"bin": "notify-send", "apt": ["libnotify-bin"], "why": "UI deck desktop notifications"},
@@ -283,7 +330,7 @@
  ],
  "doctor_probes": {
   "link_doctor": true,
-  "ollama": {"url": "http://localhost:11434/api/tags", "models": ["all-minilm", "qwen2.5-coder:3b"], "note": "all-minilm = jcodemunch/jdocmunch semantic-search embeddings; qwen2.5-coder:3b = jcodemunch AI summaries (WARN-only). Install: https://ollama.com then `ollama pull all-minilm qwen2.5-coder:3b`."},
+  "ollama": {"url": "http://127.0.0.1:11434/api/tags", "models": ["all-minilm", "qwen2.5-coder:3b"], "note": "all-minilm = jcodemunch/jdocmunch semantic-search embeddings; qwen2.5-coder:3b = jcodemunch AI summaries (WARN-only). Install: https://ollama.com then `ollama pull all-minilm qwen2.5-coder:3b`."},
   "interpreter_check": true,
   "mcp_roster": ["jcodemunch", "jdocmunch", "graphify", "lean-ctx", "memory", "sequential-thinking", "context7", "github", "playwright", "browser-tools-mcp", "markdownify", "semgrep", "reticle", "drawio", "higgsfield", "openart"],
   "generated_checks": [

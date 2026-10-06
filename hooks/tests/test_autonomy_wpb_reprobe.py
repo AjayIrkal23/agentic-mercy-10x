@@ -137,18 +137,25 @@ def test_reprobe_wall_time_survives_a_hung_probe(env, monkeypatch):
         time.sleep(30)
         return (il.STALE, {}, "")
     monkeypatch.setitem(il._PROBE, "graphify", hang)
-    t0 = time.time()
+    t0 = time.monotonic()
     out = il.reprobe(str(env["repo"]))
-    assert time.time() - t0 < 3.0
+    # the bound is the module's own wall budget plus slack for a loaded box (A7-07); the probe
+    # hangs for 30 s, so only an honoured wall can come in under it
+    assert time.monotonic() - t0 < il.REPROBE_WALL_S + 8.0
     assert out["surfaces"]["graphify"] == "FRESH"  # fail-open on timeout
 
 
 def test_reprobe_subprocess_non_git_exits_fast_with_json(tmp_path):
-    t0 = time.time()
+    # baseline: a bare interpreter start on this box, right now (A7-07: python start-up alone
+    # is 80-150 ms on Windows, so a fixed 3 s budget flaked on a loaded runner)
+    b0 = time.monotonic()
+    subprocess.run([sys.executable, "-c", "pass"], check=True)
+    base = time.monotonic() - b0
+    t0 = time.monotonic()
     cp = subprocess.run([sys.executable, str(_HOOKS / "index-lifecycle.py"), "reprobe",
                          "--root", str(tmp_path)],
-                        capture_output=True, text=True, timeout=10)
-    assert cp.returncode == 0 and time.time() - t0 < 3.0
+                        capture_output=True, text=True, timeout=30)
+    assert cp.returncode == 0 and time.monotonic() - t0 < 3.0 + 10 * base
     assert json.loads(cp.stdout) == {"surfaces": {}, "spawned": []}
 
 

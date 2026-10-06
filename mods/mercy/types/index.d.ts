@@ -117,7 +117,7 @@ export type Limit = { kind: string; percent: number; resetsAt?: string }
 export type PortRow = { port: number; address: string; process?: string; pid?: number; label?: string }
 export type DepRow = { name: string; current: string; wanted: string; latest: string; bump: 'major' | 'minor' | 'patch' | 'other' }
 /** npm outdated per package folder (the repo root and its first-level packages), checked once a day. */
-export type DepsState = { at: number; dirs: Array<{ dir: string; rows: DepRow[] }> }
+export type DepsState = { at: number; dirs: Array<{ dir: string; rows: DepRow[] }>; /** a folder npm could not check is missing: ask again within the hour, not tomorrow */ partial?: boolean }
 /** Today's standup, made by itself at the first session of the day in a repo. */
 export type Standup = { day: string; markdown: string; at: number }
 /** The previous session's recap in this repo, saved after every turn. */
@@ -129,6 +129,8 @@ export type Deck = {
   git?: GitState
   ci?: CiState
   ports?: PortRow[]
+  /** Why the last port scan failed; `ports` is then the last good scan (or unset). */
+  portsError?: string
   deps?: DepsState
   standup?: Standup
   lastSession?: LastSession

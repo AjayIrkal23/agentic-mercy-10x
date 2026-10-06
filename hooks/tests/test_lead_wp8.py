@@ -155,10 +155,20 @@ def test_long_punctuation_prompt_classifies_fast_and_keeps_its_words():
     """Santa A3: prompt_paths was quadratic on '.'/'-' runs (40k chars: 23 s > the 15 s hook timeout)."""
     import time
     from prompt_router import classify as C
-    t0 = time.perf_counter()
-    prof = C.classify({"prompt": "fix the failing test in server/src/a.ts " + "." * 40000 + " then update the docs",
-                       "cwd": "/tmp"})
-    assert time.perf_counter() - t0 < 1.5
+
+    def run(n):
+        t0 = time.perf_counter()
+        prof = C.classify({"prompt": "fix the failing test in server/src/a.ts " + "." * n + " then update the docs",
+                           "cwd": "/tmp"})
+        return time.perf_counter() - t0, prof
+
+    # Scaling, not a wall-clock budget (A7-07): 4x the input must cost about 4x (linear), never 16x
+    # (quadratic: 40k chars took 23 s). Both sizes run on the same box in the same moment, so a
+    # loaded runner slows both; the slack absorbs scheduler noise on the tiny linear timings.
+    run(2000)  # warm-up: first-call imports must not land in the small timing
+    small, _ = run(10000)
+    big, prof = run(40000)
+    assert big < 8 * small + 0.5, f"classify scales badly: 10k={small:.3f}s 40k={big:.3f}s"
     assert "TEST" in prof.intents or "DEBUG" in prof.intents, prof.intents
     assert "DOCS" in prof.intents, prof.intents
 

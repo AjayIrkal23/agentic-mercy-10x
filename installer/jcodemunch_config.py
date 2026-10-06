@@ -17,6 +17,7 @@ import sqlite3
 from pathlib import Path
 
 import deps  # noqa: E402  (puts hooks/ on sys.path)
+import winutil  # noqa: E402
 from lib import platform as plat  # noqa: E402
 
 NAME = "jcodemunch-config"
@@ -97,7 +98,7 @@ def gaps(path: Path | None = None) -> list[str] | None:
 
 
 def configure(*, dry_run: bool = False) -> tuple[str, str]:
-    exe = shutil.which("jcodemunch-mcp")
+    exe = winutil.which("jcodemunch-mcp")  # never a binary from the working directory (A5v2-06)
     if not exe:
         return NAME, "SKIP(jcodemunch-mcp not installed)"
     p = config_path()

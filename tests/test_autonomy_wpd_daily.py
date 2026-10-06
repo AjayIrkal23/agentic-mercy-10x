@@ -191,7 +191,7 @@ def test_a_real_session_payload_still_runs(sd, box, monkeypatch):
 def test_deps_step_installs_missing_tools_and_reports_failures(sd, box, monkeypatch):
     seen: dict = {}
 
-    def fake(env, *, ci=False, dry_run=False):
+    def fake(env, *, ci=False, dry_run=False, skip_optional=False):
         seen.update(ci=ci, dry_run=dry_run)
         return [("x", "INSTALLED"), ("y", "PRESENT"), ("z", "WARN(rc=1)")]
     monkeypatch.setattr(deps, "install_deps", fake)
@@ -200,6 +200,21 @@ def test_deps_step_installs_missing_tools_and_reports_failures(sd, box, monkeypa
     s = _summary(box)
     assert seen == {"ci": False, "dry_run": False}
     assert s["changed"] == ["dep x: INSTALLED"] and s["errors"] == ["dep z: WARN(rc=1)"]
+
+
+def test_deps_step_heals_base_tools_through_the_os_dispatcher(sd, box, monkeypatch):
+    """`userspace.ensure_userspace` returns [] off POSIX, so the daily run never repaired
+    Windows base tools; `basetools.ensure_base_tools` picks wintools there."""
+    import basetools  # type: ignore
+    monkeypatch.delenv("AGENTIC_MERCY_SKIP_BASE_TOOLS", raising=False)
+    seen: list = []
+    monkeypatch.setattr(basetools, "ensure_base_tools",
+                        lambda env, manifest, *, ci=False, dry_run=False: seen.append((ci, dry_run)) or [("git", "INSTALLED x")])
+    monkeypatch.setattr(deps, "install_deps", lambda env, **k: [])
+    _only(sd, monkeypatch, "deps")
+    sd.main([])
+    assert seen == [(False, False)]
+    assert _summary(box)["changed"] == ["dep git: INSTALLED x"]
 
 
 def _settings(sd, box, monkeypatch, *, exists: bool, stale: bool):

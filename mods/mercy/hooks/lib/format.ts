@@ -33,6 +33,9 @@ export function meter(percent: number, width = 10): string {
   return '▰'.repeat(full) + '▱'.repeat(width - full)
 }
 
+/** Cuts to `max` UTF-16 units with an ellipsis, never inside a surrogate pair (a lone half breaks XML and env). */
 export function clip(text: string, max: number): string {
-  return text.length <= max ? text : `${text.slice(0, Math.max(0, max - 1))}…`
+  if (text.length <= max) return text
+  const cut = text.slice(0, Math.max(0, max - 1))
+  return `${/[\uD800-\uDBFF]$/.test(cut) ? cut.slice(0, -1) : cut}…`
 }

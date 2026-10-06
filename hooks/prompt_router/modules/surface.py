@@ -55,9 +55,10 @@ _BE_DIR_SUFFIX = ("-server", "-api", "-backend", "-service", "-worker")
 
 
 def prompt_paths(text: str) -> list[str]:
-    """Path-like tokens mentioned in the prompt (lower-cased, deduped)."""
+    """Path-like tokens mentioned in the prompt (lower-cased, deduped, ``/`` separators:
+    a Windows ``src\\components\\Button.tsx`` is the same path, A4-10)."""
     seen: list[str] = []
-    for m in PATH_RE.finditer(text or ""):
+    for m in PATH_RE.finditer((text or "").replace("\\", "/")):
         tok = m.group(0).lower()
         if tok.startswith(("http", "www.")) or tok in seen:
             continue

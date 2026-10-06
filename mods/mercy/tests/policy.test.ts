@@ -91,6 +91,20 @@ describe('bridge plan', () => {
     expect(planFor(CFG, owned, 'pre-tool-use', facts('Bash', { command: 'echo hi > notes.txt' }), 'async').sync).toEqual(['bash-write-gate'])
     expect(planFor(CFG, owned, 'pre-tool-use', facts('Bash', { command: 'npm test 2>&1' }), 'async').sync).toEqual([])
   })
+  test('PowerShell writers run the owned write gate; reads and quiet commands do not (A1v2-04)', () => {
+    const cfg = parseConfig(JSON.stringify({ chains: { 'pre-tool-use': [{ id: 'bash-write-gate', type: 'gate', tools: 'Bash|PowerShell' }] } }))
+    if (!cfg) throw new Error('config fixture did not parse')
+    const own = ownedLinks(cfg, { tddGuard: 'async', bashWriteDenyArmed: false })
+    const sync = (tool: string, command: string) => planFor(cfg, own, 'pre-tool-use', facts(tool, { command }), 'async').sync
+    for (const command of ["Set-Content D:\\p\\a.py 'x'", "'x' | Out-File a.py", "[IO.File]::WriteAllText('a.py','x')", "[System.IO.File]::AppendAllText('a.py','x')",
+      "Add-Content a.py x", "sc a.py x", "Get-Date; ac a.py x", "SET-CONTENT a.py x", 'powershell -c "sc a.py x"', 'printf x > a.py']) {
+      expect(sync('PowerShell', command), command).toEqual(['bash-write-gate'])
+    }
+    expect(sync('Bash', "powershell -c \"Set-Content a.py 'x'\"")).toEqual(['bash-write-gate'])
+    for (const command of ['Get-Content x', 'Write-Host hi', 'npm test 2>&1', 'git log --format=%sc', 'Get-ChildItem | Select-Object -Last 3', 'ls -sc']) {
+      expect(sync('PowerShell', command), command).toEqual([])
+    }
+  })
   test('writes: dox only when the root lacks CLAUDE.md; tdd async unless off', () => {
     const edit = (has: boolean | undefined) => planFor(CFG, owned, 'pre-tool-use', facts('Edit', { file_path: '/r/a.ts' }, { rootHasClaudeMd: has }), 'async')
     expect(edit(true)).toEqual({ sync: [], async: ['tdd-guard-launcher-pre'] })

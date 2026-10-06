@@ -6,35 +6,70 @@
 import type { EngineInterface, On } from 'claude-code'
 
 import type { SoundKind } from '../lib/deck'
-import { inQuietHours, playerArgvs, shouldSound } from '../lib/deck'
+import { inQuietHours, playerCmds, shouldSound } from '../lib/deck'
 import { clip, duration } from '../lib/format'
 import { hostOffsetMinutes, noteError, rt, ui } from '../lib/runtime'
 import { PREFS_KEY } from '../lib/specs'
+import type { Cmd } from '../lib/winalerts'
+import { toastCmd } from '../lib/winalerts'
 
 const DECK = { plugin: 'mercy', key: 'deck' } as const
 const WAITING = /^(?:permission_prompt|elicitation_dialog|agent_needs_input)$/
+const WINDOWS_MS = 15_000 // PowerShell start-up plus WinRT or the clip: 0.35-3.4 s measured on a loaded box
 
+const STRIKES = 3
 let player: number | undefined
+const strikes = new Map<number, number>() // consecutive failures per player index (Windows)
 const asked = new Set<string>()
+const reported = new Set<string>()
+
+/** Windows only (a missing Linux player is normal): one `/mercy status` line per alert kind and session, not one per alert. */
+function failedOnce(what: 'sound' | 'notify', why: Error | { exitCode: number; stderr: string }): void {
+  if (!rt.windows || reported.has(what)) return
+  reported.add(what)
+  noteError(what, why instanceof Error ? why : new Error(`exit ${why.exitCode}: ${clip(why.stderr.trim(), 200)}`))
+}
+
+const runInit = (cmd: Cmd, otherMs: number): { timeoutMs: number; env?: Record<string, string> } => ({ timeoutMs: rt.windows ? WINDOWS_MS : otherMs, ...(cmd.env ? { env: cmd.env } : {}) })
 
 function quietNow(now: number): boolean {
   const minute = (((Math.floor(now / 60_000) + hostOffsetMinutes()) % 1440) + 1440) % 1440
   return inQuietHours(rt.options.quietHours, minute)
 }
 
-/** Tries the players in order (the last one that worked first); a missing binary rejects and the next is tried. */
+/** A player's name without its directory (a Windows player runs by absolute path, `/sound` names it plainly). */
+const shown = (argv0: string | undefined): string => (argv0 ?? '').replace(/^.*[\\/]/, '')
+
+/**
+ * The order to try the players in. Linux: the last one that worked first (a missing binary is permanent). Windows:
+ * always the wav first, so one transient failure (a busy audio endpoint, a slow start) does not leave the session on
+ * SystemSounds, which is silent under "No Sounds"; a player that failed STRIKES times in a row goes last (A2v2-02).
+ */
+function playerOrder(n: number): number[] {
+  const all = Array.from({ length: n }, (_, i) => i)
+  if (!rt.windows) return player === undefined ? all : [player, ...all.filter(i => i !== player)]
+  const struck = (i: number): boolean => (strikes.get(i) ?? 0) >= STRIKES
+  return [...all.filter(i => !struck(i)), ...all.filter(struck)]
+}
+
+/** Tries the players in order; a missing binary rejects and the next is tried. */
 async function sound($: EngineInterface, kind: SoundKind): Promise<string | undefined> {
-  const argvs = playerArgvs(kind)
-  const order = player === undefined ? argvs.map((_, i) => i) : [player, ...argvs.map((_, i) => i).filter(i => i !== player)]
-  for (const i of order) {
+  const cmds = playerCmds(kind, rt.windows, rt.systemRoot)
+  for (const i of playerOrder(cmds.length)) {
+    const cmd = cmds[i] ?? { argv: [] }
     try {
-      const r = await $.process.run(argvs[i] ?? [], { timeoutMs: 8000 })
+      const r = await $.process.run(cmd.argv, runInit(cmd, 8000))
       if (r.exitCode === 0) {
         player = i
-        return argvs[i]?.[0]
+        strikes.delete(i)
+        return shown(cmd.argv[0])
       }
-    } catch {
+      strikes.set(i, (strikes.get(i) ?? 0) + 1)
+      failedOnce('sound', r)
+    } catch (err) {
       // not installed here: try the next player
+      strikes.set(i, (strikes.get(i) ?? 0) + 1)
+      failedOnce('sound', err instanceof Error ? err : new Error(String(err)))
     }
   }
   return undefined
@@ -47,11 +82,13 @@ async function play($: EngineInterface, kind: SoundKind, turnMs?: number): Promi
   $.clock.after(0, () => void sound($, kind))
 }
 
-async function notify($: EngineInterface, title: string, body: string, urgency: 'normal' | 'critical'): Promise<void> {
+async function notify($: EngineInterface, title: string, body: string, urgency: 'normal' | 'critical', kind?: SoundKind): Promise<void> {
   if (!ui().notify || quietNow(await $.clock.now())) return
-  // `--`: a title or body starting with `-` is text, never an option
-  const argv = ['notify-send', '-a', 'Claude Code', '-i', 'utilities-terminal', '-u', urgency, '-t', '10000', '--', title, clip(body, 240)]
-  $.clock.after(0, () => void $.process.run(argv, { timeoutMs: 5000 }).catch(() => undefined))
+  const cmd = toastCmd(title, body, urgency, rt.windows, kind, rt.systemRoot)
+  $.clock.after(0, () => void $.process.run(cmd.argv, runInit(cmd, 5000)).then(
+    r => (r.exitCode === 0 ? undefined : failedOnce('notify', r)),
+    err => failedOnce('notify', err instanceof Error ? err : new Error(String(err))),
+  ))
 }
 
 function firstLine(text: string): string {
@@ -80,7 +117,7 @@ export function registerAlerts(on: On): void {
       if (e.reason === 'error') {
         if (f.toasts !== 'none') $.ui.toast('✗ the turn ended with an error', { timeoutMs: 8000 })
         await play($, 'error')
-        await notify($, 'Claude Code: the turn failed', firstLine(e.answer) || 'API error', 'critical')
+        await notify($, 'Claude Code: the turn failed', firstLine(e.answer) || 'API error', 'critical', 'error')
       } else if (e.reason === 'answer') {
         const long = e.durationMs >= rt.options.soundAfter * 1000
         const edited = Object.keys(rt.ledger.turnEdits).length
@@ -129,6 +166,7 @@ export function registerAlerts(on: On): void {
     $.clock.after(1500, () => void sound($, 'input'))
     $.clock.after(3000, () => void sound($, 'error'))
     const state = ui().sound ? 'on' : 'off (mode or /ui sound off)'
-    return { text: used ? `mercy sound test: done, input, error via ${used}; alerts are ${state}` : 'mercy sound: no player worked (tried canberra-gtk-play, pw-play, paplay, afplay)' }
+    const tried = [...new Set(playerCmds('done', rt.windows, rt.systemRoot).map(c => shown(c.argv[0])))].join(', ')
+    return { text: used ? `mercy sound test: done, input, error via ${used}; alerts are ${state}` : `mercy sound: no player worked (tried ${tried})` }
   })
 }

@@ -5,7 +5,7 @@ Detached (``async: true``): a session never waits. Once per 24 h (``at`` in
 ``state/selfheal-daily.json``), one copy at a time (non-blocking ``selfheal-daily.lock``).
 Independent steps, one failing never stops the others: ``mcp`` (re-add a missing manifest
 server, pin + env reconcile), ``deps`` (base tools node/claude/uv/gh in ~/.local, then absent
-CLIs, never upgrade), ``settings`` (re-render when the template/manifest is newer),
+CLIs, never upgrade), ``settings`` (re-render when the template/manifest is newer or a pinned interpreter path is gone),
 ``vendor`` (``vendor_skill.py --all`` only on DRIFT). Summary {"at","changed","errors",
 "reported"} for the aggregator; names / specs / return codes to ``state/selfheal-daily.log``:
 no env, no tokens. ``--dry-run`` prints the plan and writes nothing. No-op for
@@ -44,6 +44,7 @@ class Ctx:
     def __init__(self, dry: bool, target: Path, budget: float):
         self.dry, self.target = dry, target
         self.deadline = time.time() + budget
+        self.steps_ok = 0  # steps that ran and reported no error row
         self._env = None
 
     def env(self):
@@ -68,10 +69,11 @@ def _mcp(ctx: Ctx):
 def _deps(ctx: Ctx):
     import deps  # type: ignore
     rows: list = []
-    if not os.environ.get("AGENTIC_MERCY_SKIP_BASE_TOOLS"):  # node / claude / uv / gh, no sudo
-        import userspace  # type: ignore
-        rows += userspace.ensure_userspace(ctx.env(), deps._load_manifest(), ci=False, dry_run=ctx.dry)
-    rows += deps.install_deps(ctx.env(), ci=False, dry_run=ctx.dry)
+    if not os.environ.get("AGENTIC_MERCY_SKIP_BASE_TOOLS"):  # node / claude / uv / gh (+ git on Windows), no admin
+        import basetools  # type: ignore
+        rows += basetools.ensure_base_tools(ctx.env(), deps._load_manifest(), ci=False, dry_run=ctx.dry)
+    # an absent optional dep is the user's choice (A4-16)
+    rows += deps.install_deps(ctx.env(), ci=False, dry_run=ctx.dry, skip_optional=True)
     return [("dep", n, s) for n, s in rows]
 
 
@@ -81,7 +83,7 @@ def _settings(ctx: Ctx):
     if st.exists() and not selfheal._stale(st):
         return []
     if ctx.dry:
-        return [("settings", "settings.json", "WOULD-RENDER (missing, or template/manifest newer)")]
+        return [("settings", "settings.json", "WOULD-RENDER (missing, template/manifest newer, or a pinned interpreter is gone)")]
     out: list = []
     selfheal._ensure_settings(ctx.target, ctx.env(), lambda k, n, s: out.append((k, n, s)))
     return out
@@ -182,6 +184,7 @@ def _run_steps(ctx: Ctx, log: Path | None):
             if log:
                 _log(log, errors[-1])
             continue
+        step_ok = True
         for kind, n, status in rows:
             line = _line(kind, n, status)
             if log:
@@ -191,17 +194,21 @@ def _run_steps(ctx: Ctx, log: Path | None):
                 changed.append(line)
             elif verdict == "error":
                 errors.append(line)
+                step_ok = False
             if verdict or status.startswith("WOULD"):
                 plan.append(line)
+        ctx.steps_ok += step_ok
     return changed, errors, plan
 
 
-def _write_summary(path: Path, prev: dict, changed: list[str], errors: list[str]) -> None:
+def _write_summary(path: Path, prev: dict, changed: list[str], errors: list[str], stamp: bool = True) -> None:
+    """``stamp=False``: errors still reported, no ``at`` -> ``_fresh`` is false, retry next session."""
     if prev.get("reported") is False:  # the aggregator has not shown the last run yet
         changed = [c for c in prev.get("changed") or [] if c not in changed] + changed
         errors = [e for e in prev.get("errors") or [] if e not in errors] + errors
-    summary = {"at": _now().isoformat(timespec="seconds"), "changed": changed, "errors": errors,
-               "reported": not (changed or errors)}
+    summary = {"changed": changed, "errors": errors, "reported": not (changed or errors)}
+    if stamp:
+        summary = {"at": _now().isoformat(timespec="seconds"), **summary}
     plat.locked_update(path, lambda _old: summary)
 
 
@@ -226,8 +233,9 @@ def main(argv=None) -> int:
                 if got and not _fresh(prev):
                     import selfheal  # type: ignore
                     selfheal.pin_config_dir(target)  # never CLAUDE_CONFIG_DIR=~/.claude for the CLI
-                    changed, errors, _ = _run_steps(Ctx(False, target, args.budget), state / "selfheal-daily.log")
-                    _write_summary(summary, prev, changed, errors)
+                    ctx = Ctx(False, target, args.budget)
+                    changed, errors, _ = _run_steps(ctx, state / "selfheal-daily.log")
+                    _write_summary(summary, prev, changed, errors, stamp=ctx.steps_ok > 0)
     except Exception:  # noqa: BLE001 - never block or fail a session
         pass
     print("{}")

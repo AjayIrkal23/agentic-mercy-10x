@@ -16,6 +16,8 @@ from pathlib import Path
 
 import pytest
 
+import live_interpreter
+
 _ROOT = Path(__file__).resolve().parents[1]
 for _p in (str(_ROOT / "installer"), str(_ROOT / "hooks"), str(_ROOT / "hooks" / "tools")):
     if _p not in sys.path:
@@ -44,7 +46,8 @@ def sandbox_home(tmp_path, monkeypatch):
     return home
 
 
-def test_doctor_is_green(sandbox_home):
+def test_doctor_is_green(sandbox_home, monkeypatch):
+    live_interpreter.pin(monkeypatch)  # A7v2-03: the render compares the live file's interpreter, not pytest's
     doctor = _load("doctor", "installer/doctor.py")
     rows = doctor.run_doctor()
     fails = [(n, d) for n, s, d in rows if s == "FAIL"]
@@ -56,6 +59,7 @@ def test_doctor_is_green(sandbox_home):
     # nothing machine-specific leaked in: sandbox has no ~/.claude.json / lean-ctx config
     assert by.get("mcp-roster") == "WARN"
     assert by.get("lean-ctx-config") in ("WARN", "PASS")
+    assert by.get("statusline") in ("PASS", "SKIP")  # runs the rendered statusLine.command when settings.json exists
 
 
 def _routing_status(tmp_path, mutate) -> tuple[str, str]:

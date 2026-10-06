@@ -91,6 +91,11 @@ try:
     import dispatch_support as _sup
 except Exception:  # noqa: BLE001
     _sup = None  # type: ignore
+try:  # Bash and PowerShell share one command-rewrite rule (tool_compat owns the set)
+    from tool_compat import is_shell_tool as _is_shell_tool
+except Exception:  # noqa: BLE001
+    def _is_shell_tool(name: str) -> bool:
+        return name == "Bash"
 
 CONFIG = _HOOKS / "dispatch.config.json"
 
@@ -176,16 +181,9 @@ def _spawn_async(link: dict, event: str, payload_text: str, sid: str) -> None:
     """Fire-and-forget: detached child, payload on stdin, never waited on."""
     lid = link.get("id", "?")
     try:
-        proc = subprocess.Popen(  # noqa: S603 - trusted internal command lists
-            _resolve_cmd(link.get("cmd", [])), stdin=subprocess.PIPE,
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            start_new_session=True, text=True,
-        )
-        try:
-            proc.stdin.write(payload_text)
-            proc.stdin.close()
-        except (BrokenPipeError, OSError):
-            pass
+        pid = _plat.spawn_worker(_resolve_cmd(link.get("cmd", [])), stdin_text=payload_text)
+        if pid is None:
+            raise OSError("could not start the worker")
         _telemeter(event, lid, decision="spawned", session=sid, type="exec")
     except Exception as exc:  # noqa: BLE001
         _telemeter(event, lid, decision="error", session=sid, type="exec",
@@ -204,7 +202,7 @@ def _run_link(link: dict, event: str, payload_text: str, sid: str):
     try:
         proc = subprocess.run(  # noqa: S603 - trusted internal command lists
             cmd, input=payload_text, capture_output=True, text=True,
-            timeout=timeout, check=False,
+            timeout=timeout, check=False, **(_plat.no_window_kwargs() if _plat else {}),
         )
         out = proc.stdout or ""
         ms = round((time.perf_counter() - t0) * 1000, 2)
@@ -446,7 +444,7 @@ def _dispatch_one(event: str, payload: dict, cfg: dict, only: frozenset | None =
             parsed, _ = _run_link(ln, event, payload_text, sid)
             ui = _extract_updated_input(parsed)
             if ui is not None:
-                if tool == "Bash" and _has_hidden_control_chars(
+                if _is_shell_tool(tool) and _has_hidden_control_chars(
                         ui.get("command") if isinstance(ui, dict) else ui):
                     # A Bash `command` rewrite with control chars fails the harness
                     # approval check — DROP it; the original command runs unmodified.

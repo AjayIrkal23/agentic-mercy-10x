@@ -62,15 +62,15 @@
   },
   "hooks": {
     "PreToolUse": [
-      {"matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|Read|Grep|Glob|Agent|Task|Workflow|mcp__lean.ctx__(ctx_read|ctx_search|ctx_patch|ctx_shell|shell|ctx_call)|mcp__claude_ai_.*|mcp__plugin_.*",
+      {"matcher": "Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit|Read|Grep|Glob|Agent|Task|Workflow|mcp__lean.ctx__(ctx_read|ctx_search|ctx_patch|ctx_shell|shell|ctx_call)|mcp__claude_ai_.*|mcp__plugin_.*",
        "hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py pre-tool-use", "timeout": 30, "statusMessage": "dispatch: gates"}]}
     ],
     "PostToolUse": [
-      {"matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit|Read|Agent|Task|Skill|mcp__jcodemunch__.*|mcp__semgrep__.*|mcp__lean.ctx__(ctx_patch|ctx_shell|shell|ctx_call)",
+      {"matcher": "Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit|Read|Agent|Task|Skill|mcp__jcodemunch__.*|mcp__semgrep__.*|mcp__lean.ctx__(ctx_patch|ctx_shell|shell|ctx_call)",
        "hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py post-tool-use", "timeout": 25}]}
     ],
     "PostToolUseFailure": [
-      {"matcher": "Edit|Write|Bash|mcp__lean.ctx__(ctx_patch|ctx_shell|shell)",
+      {"matcher": "Edit|Write|Bash|PowerShell|mcp__lean.ctx__(ctx_patch|ctx_shell|shell)",
        "hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py post-tool-use-failure", "timeout": 5}]}
     ],
     "UserPromptSubmit": [
@@ -112,6 +112,6 @@
   "remoteControlAtStartup": true,
   "skillListingBudgetFraction": 0.3,
   "skipDangerousModePermissionPrompt": true,
-  "statusLine": {"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/scripts/statusline.py", "padding": 0, "refreshInterval": 10},
+  "statusLine": {"type": "command", "command": "{{PYTHON_EXE}} {{CLAUDE_DIR}}/scripts/statusline.py", "padding": 0, "refreshInterval": 10},
   "theme": "dark"
 }

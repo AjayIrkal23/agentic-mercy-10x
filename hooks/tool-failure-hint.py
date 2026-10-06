@@ -13,6 +13,10 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from tool_compat import is_shell_tool  # noqa: E402
 
 
 def hint(tool: str, error: str) -> str:
@@ -20,7 +24,7 @@ def hint(tool: str, error: str) -> str:
     if tool in ("Edit", "Write") and ("has not been read" in err or "read deny" in err):
         return ("Edit/Write failed because the file was not read first: Read the exact "
                 "file, then retry the edit immediately (no other call in between). Do not shell out.")
-    if tool == "Bash" and "path escapes project root" in err:
+    if is_shell_tool(tool) and "path escapes project root" in err:
         return "lean-ctx PathJail intercepted this command; re-run it as plain Bash (not ctx_shell)."
     return ""
 

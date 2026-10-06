@@ -47,10 +47,22 @@ def test_long_single_line_stays_linear():
     log line took 1.2-3.9 s (20k: past the 15 s UserPromptSubmit timeout)."""
     import time
     rx = _route("context7")
-    for text in ("x " * 4000, "x " * 4000 + " api"):
-        t0 = time.perf_counter()
-        rx.search(text)
-        assert time.perf_counter() - t0 < 0.2
+
+    def best(text, runs=3):
+        out = float("inf")
+        for _ in range(runs):
+            t0 = time.perf_counter()
+            rx.search(text)
+            out = min(out, time.perf_counter() - t0)
+        return out
+
+    # Scaling, not a wall-clock budget (A7-07): 4x the input must cost about 4x (linear), never 16x
+    # (quadratic). Both sizes are timed here and now, so box load cancels; the slack absorbs
+    # scheduler noise on the millisecond-scale linear timings.
+    for tail in ("", " api"):
+        small = best("x " * 4000 + tail)
+        big = best("x " * 16000 + tail)
+        assert big < 8 * small + 0.05, f"route regex scales badly: 8k={small:.4f}s 32k={big:.4f}s"
 
 
 @pytest.mark.parametrize("prompt", [

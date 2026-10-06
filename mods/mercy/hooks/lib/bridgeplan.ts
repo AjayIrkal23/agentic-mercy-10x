@@ -21,6 +21,9 @@ export type PlanFacts = {
 type Policy = { id: string; event: BridgeEvent; mode: RunMode; when: (f: PlanFacts) => boolean; syncWhen?: (f: PlanFacts) => boolean }
 
 const SHELL_WRITE = /(^|[^0-9&<>|])>{1,2}(?!&)\s*[^\s&|>]|\btee\b|<<-?\s*['"]?[A-Za-z_]/
+// PowerShell writers `bash-write-gate.py` detects (`_PS_WRITERS`, `_PS_DOTNET_RE`): the write cmdlets, `sc`/`ac` in command
+// position, `[IO.File]::Write*/Append*`. A superset is fine (a false hit costs one `--only` run); a miss skips the gate.
+const PS_WRITE = /\b(?:set-content|add-content|out-file)\b|(?:^|[;&|(\n"']\s*)(?:sc|ac)\s+\S|\[(?:system\.)?io\.file\]::(?:write|append)/i
 const GIT_COMMIT = /\bgit\b[^|;&\n]*\bcommit\b/
 const SEMGREP = /\bsemgrep\b/
 const SKILL_MD = /[\\/]skills[\\/][^\\/]+[\\/]SKILL\.md$/
@@ -36,7 +39,7 @@ const POLICIES: readonly Policy[] = [
   { id: 'tdd-guard-launcher-pre', event: 'pre-tool-use', mode: 'async', when: always },
   // the graph nudge is for an Explore agent about to start: in line for Agent/Task (as Python ran it), async for Bash (B1-22)
   { id: 'graphify-enforce', event: 'pre-tool-use', mode: 'async', when: always, syncWhen: f => f.tool === 'Agent' || f.tool === 'Task' },
-  { id: 'bash-write-gate', event: 'pre-tool-use', mode: 'sync', when: f => SHELL_WRITE.test(str(f.input['command'])) },
+  { id: 'bash-write-gate', event: 'pre-tool-use', mode: 'sync', when: f => SHELL_WRITE.test(str(f.input['command'])) || PS_WRITE.test(str(f.input['command'])) },
   { id: 'blocking-doc-enforcer', event: 'pre-tool-use', mode: 'sync', when: f => GIT_COMMIT.test(str(f.input['command'])) },
   { id: 'jdoc-doc-steer', event: 'pre-tool-use', mode: 'sync', when: f => isDoc(str(f.input['file_path'] ?? f.input['path'])) },
   { id: 'jcm-gate-read', event: 'pre-tool-use', mode: 'sync', when: f => !f.jcodemunchUsed },

@@ -31,11 +31,22 @@ NODE = shutil.which("node")
 node_required = pytest.mark.skipif(NODE is None, reason="node not on PATH")
 
 
+_HOMES: list = []
+
+
 def _clean_home() -> Path:
-    """A tmp HOME with an empty ~/.claude/state (no session flags set)."""
+    """A tmp HOME with an empty ~/.claude/state (no session flags set); removed after the test."""
     home = Path(tempfile.mkdtemp(prefix="wfguard-home-"))
+    _HOMES.append(home)
     (home / ".claude" / "state").mkdir(parents=True)
     return home
+
+
+@pytest.fixture(autouse=True)
+def _remove_homes():
+    yield
+    while _HOMES:
+        shutil.rmtree(_HOMES.pop(), ignore_errors=True)
 
 
 def run_hook(tool_input: dict, home: Path | None = None) -> dict:
@@ -172,6 +183,22 @@ def test_t6_session_flag_forces_model(flag, model):
     out = run_hook({"script": script}, home=home)
     calls = run_in_node(rewritten_script(out))
     assert calls[0][1]["model"] == model
+
+
+def test_the_throwaway_homes_are_removed_after_each_test(tmp_path):
+    """A7v2-06: `_clean_home()` left a `wfguard-home-*` dir in %TEMP% per hook run (8 per suite run).
+    Run two of the file's tests in a child pytest whose temp dir is ours: nothing may be left behind."""
+    tmpdir = tmp_path / "tmp"
+    tmpdir.mkdir()
+    env = {**os.environ, "TEMP": str(tmpdir), "TMP": str(tmpdir), "TMPDIR": str(tmpdir),
+           "CLAUDE_HOOK_DOCTOR": "1"}
+    for var in ("CLAUDE_HOOK_TELEMETRY_DIR", "CLAUDE_HOOK_STATE_DIR", "CLAUDE_HOOK_DOTSTATE_DIR"):
+        env.pop(var, None)  # the child's conftest makes its own, inside our temp dir
+    cp = subprocess.run([sys.executable, "-m", "pytest", str(Path(__file__)), "-q", "-p", "no:cacheprovider",
+                         "-k", "t1_toplevel or t5_idempotent"], env=env, capture_output=True, text=True,
+                        encoding="utf-8", errors="replace", timeout=120)
+    assert cp.returncode == 0, cp.stdout[-800:]
+    assert [p.name for p in tmpdir.iterdir() if p.name.startswith("wfguard-home-")] == []
 
 
 if __name__ == "__main__":

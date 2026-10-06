@@ -18,6 +18,7 @@ Pure stdlib; OS branching via hooks/lib/platform.py. Never raises.
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import sys
 from pathlib import Path
@@ -88,11 +89,12 @@ def find_symlinks(scope: Path | None = None) -> list[Path]:
     out: list[Path] = []
     if not base.exists():
         return out
+    isjunction = getattr(os.path, "isjunction", lambda _p: False)  # 3.12+; links.py makes junctions on Windows
     for p in base.rglob("*"):
         if _SYMLINK_SCAN_SKIP & set(p.parts):
             continue
         try:
-            if p.is_symlink():
+            if p.is_symlink() or isjunction(p):
                 out.append(p)
         except OSError:
             continue

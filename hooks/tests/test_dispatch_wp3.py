@@ -47,15 +47,23 @@ def _rows(link_id: str) -> list:
 # ---- B1-02: deferred advisory --------------------------------------------- #
 def test_deferred_advisory_does_not_block_and_arrives_on_the_next_call(tmp_path):
     mod = _load()
-    slow = _script(tmp_path, "slow", "json.load(sys.stdin); time.sleep(1.5)\n"
+    # The advisory blocks on a gate file the test releases, so "dispatch did not wait for it" does
+    # not depend on how fast this box is (A7-07). A synchronous run would sit until `timeout_ms`
+    # (20 s); the bound is half of that.
+    release = tmp_path / "release"
+    slow = _script(tmp_path, "slow",
+                   "import os\n"
+                   "json.load(sys.stdin)\n"
+                   f"for _ in range(300):\n    if os.path.exists({str(release)!r}): break\n    time.sleep(0.1)\n"
                    "print(json.dumps({'hookSpecificOutput': {'additionalContext': 'TDD-NOTE'}}))\n")
     cfg = {"chains": {"pre-tool-use": [
-        {"id": "slow-tdd", "type": "advisory", "defer": True, "tools": "Edit", "cmd": slow, "timeout_ms": 8000}]}}
+        {"id": "slow-tdd", "type": "advisory", "defer": True, "tools": "Edit", "cmd": slow, "timeout_ms": 20000}]}}
     sid = f"defer-{time.time_ns()}"
     t0 = time.perf_counter()
     first = mod.dispatch("pre-tool-use", {"session_id": sid, "tool_name": "Edit"}, cfg)
-    assert time.perf_counter() - t0 < 1.0
+    assert time.perf_counter() - t0 < 10.0
     assert "TDD-NOTE" not in _ctx(first)
+    release.write_text("go", encoding="utf-8")
     seen = ""
     for _ in range(60):
         time.sleep(0.2)

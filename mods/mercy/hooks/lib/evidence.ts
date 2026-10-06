@@ -6,6 +6,7 @@
 
 import type { RawSegment } from './shell'
 import { words } from './shell'
+import { isExitForwarder } from './winshell'
 
 type Options = { errexit: boolean; pipefail: boolean }
 
@@ -36,10 +37,44 @@ function optionsAt(raw: readonly RawSegment[]): Options[] {
   })
 }
 
-/** owns[i]: a failure of segment i makes the whole command exit non-zero. */
-export function exitOwners(raw: readonly RawSegment[]): boolean[] {
-  const opts = optionsAt(raw)
-  const sep = (k: number): string => raw[k]?.sep ?? ''
+// PowerShell statements that set no native exit status: cmdlets (Verb-Noun), their common
+// aliases and the control-flow keywords. The ones that run something else (`iex`, jobs,
+// `Start-Process`) are not here: what they run may set, hide or never report a status.
+const PS_RUNS = /^(?:invoke-expression|iex|invoke-command|icm|start-process|saps|start-job|start-threadjob|invoke-item)$/i
+// Verbs, not any `a-b` word: `vue-tsc`, `svelte-check` and `start-storybook` are native tools
+const PS_NEUTRAL = new RegExp('^(?:(?:get|set|write|out|select|sort|where|foreach|format|tee|measure|test|new|remove|add|clear|copy|move|rename|read|' +
+  'convert|convertto|convertfrom|compare|group|join|split|import|export|wait|receive|resolve|update|push|pop|enable|disable)-[a-z]+' +
+  '|%|\\?|if|else|elseif|try|catch|finally|foreach|for|while|switch|select|sort|where|group|measure|tee|ft|fl|fw|echo|write|cat|gc|ls|dir|gci|sleep|cd|sl|pwd)$', 'i')
+
+/**
+ * The PowerShell tool reports the last native command's `$LASTEXITCODE`, whatever pipes or
+ * cmdlets follow it (A1v2-05, measured): trailing neutral segments (`| Select-Object -Last 20`,
+ * `; Write-Host done`) do not mask it, so they are left out and the segment before them is last.
+ */
+function nativeTail(raw: readonly RawSegment[]): RawSegment[] {
+  let end = raw.length
+  for (; end > 0; end--) {
+    const first = /^\s*([^\s({]+)/.exec(raw[end - 1]?.text ?? '')?.[1] ?? ''
+    if (PS_RUNS.test(first) || !PS_NEUTRAL.test(first)) break
+  }
+  return raw.slice(0, end).map((s, i) => (i === end - 1 ? { ...s, sep: '' } : s))
+}
+
+/**
+ * owns[i]: a failure of segment i makes the whole command exit non-zero. A trailing
+ * PowerShell `if ($LASTEXITCODE …) { exit … }` / `exit $LASTEXITCODE` forwards the status of
+ * the segment before it: that segment is the last one. `powershell`: the PowerShell tool's
+ * status rules (`nativeTail`); a segment past the tail owns nothing.
+ */
+export function exitOwners(all: readonly RawSegment[], powershell = false): boolean[] {
+  const raw = powershell ? nativeTail(all) : all
+  return ownersOf(raw, optionsAt(raw)).concat(all.slice(raw.length).map(() => false))
+}
+
+function ownersOf(raw: readonly RawSegment[], opts: readonly Options[]): boolean[] {
+  const n = raw.length
+  const forwarded = n >= 2 && raw[n - 2]?.sep === ';' && isExitForwarder(raw[n - 1]?.text ?? '')
+  const sep = (k: number): string => (forwarded && k === n - 2 ? '' : raw[k]?.sep ?? '')
   return raw.map((_, i) => {
     let p = i
     while (sep(p) === '|') p++

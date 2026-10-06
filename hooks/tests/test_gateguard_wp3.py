@@ -34,6 +34,10 @@ def gate(tmp_path, monkeypatch):
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    # `~` is read from HOME on POSIX and USERPROFILE on Windows: the gate writes
+    # ~/.claude/.gateguard-last-impact.md, so the sandbox must hold on both (A7-06)
+    assert Path.home() == home, "sandbox home does not hold: the gate would write the live ~/.claude"
     for var in mod._BYPASS_ENV_VARS:
         monkeypatch.delenv(var, raising=False)
     monkeypatch.setattr(mod, "STATE_DIR", tmp_path / "state")

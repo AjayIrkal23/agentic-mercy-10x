@@ -79,7 +79,7 @@
     "sound": {
       "type": "string",
       "title": "Sounds",
-      "description": "Play the desktop sound theme when a long turn ends, a turn fails, or Claude waits for you (canberra-gtk-play, then pw-play, paplay, afplay).",
+      "description": "Play the desktop sound theme when a long turn ends, a turn fails, or Claude waits for you (Linux: canberra-gtk-play, then pw-play, paplay; macOS: afplay; Windows: the Windows Media wav through powershell.exe, then SystemSounds).",
       "default": "on",
       "options": ["on", "off"]
     },
@@ -94,7 +94,7 @@
     "notify": {
       "type": "string",
       "title": "Desktop notifications",
-      "description": "notify-send when a long turn ends or Claude waits for a permission answer.",
+      "description": "A desktop notification when a long turn ends or Claude waits for a permission answer (Linux: notify-send; Windows: a toast through powershell.exe).",
       "default": "on",
       "options": ["on", "off"]
     },
