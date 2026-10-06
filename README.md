@@ -1,5 +1,9 @@
 <div align="center">
 
+<a href="https://storage.googleapis.com/docketrunvalidationbucket/launch-videos/agentic-mercy-10x-launch-v2.mp4"><img src="assets/film.webp" alt="Launch film preview: Claude Code writes the code, Enter, the prompt router ranks skills, graphify, token savings, 14 PreToolUse links on one edit, agentic-mercy-10x end card. Tap to watch the 3:34 film." width="100%"></a>
+
+**[▶ Watch the launch film (3:34)](https://storage.googleapis.com/docketrunvalidationbucket/launch-videos/agentic-mercy-10x-launch-v2.mp4)** · [Download 1080p](https://storage.googleapis.com/docketrunvalidationbucket/launch-videos/download/agentic-mercy-10x-launch-v2-master.mp4) · [Release](https://github.com/AjayIrkal23/agentic-mercy-10x/releases/tag/launch-film-2026-10-06)
+
 <img src="assets/hero.webp" alt="agentic-mercy-10x: a Claude Code workbench with 129 skills, 17 specialist agents, 43 hook links and 16 MCP servers, installed with one command" width="100%">
 
 ### One install, and every Claude Code prompt gets the right skill, tool, model and check.
