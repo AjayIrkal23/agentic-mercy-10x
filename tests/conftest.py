@@ -26,6 +26,9 @@ _own_dir("CLAUDE_HOOK_STATE_DIR", "claude-hook-state-")
 _own_dir("CLAUDE_HOOK_DOTSTATE_DIR", "claude-hook-dotstate-")
 # installer tests must never download node / claude / ollama or call apt (selfheal._base_tools)
 os.environ.setdefault("AGENTIC_MERCY_SKIP_BASE_TOOLS", "1")
+# a machine's OLLAMA_HOST (settings.user.json env reaches every Claude-run shell) never steers a test;
+# set-but-empty = the default, and stops plat.ollama_url() reading the live settings.user.json
+os.environ["OLLAMA_HOST"] = ""
 
 
 def pytest_sessionfinish(session, exitstatus):

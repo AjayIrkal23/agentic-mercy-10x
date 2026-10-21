@@ -114,7 +114,11 @@ tests) and bump the pin.
 - **Context7 key (optional)** — `export CONTEXT7_API_KEY=...` before installing.
 - **Semantic search (optional)** — install [ollama](https://ollama.com) and
   `ollama pull all-minilm qwen2.5-coder:3b` (embeddings + jcodemunch AI summaries; the
-  doctor WARNs until both are present; search falls back to lexical).
+  doctor WARNs until both are present; search falls back to lexical). To use another
+  machine's ollama instead, set `"env": {"OLLAMA_HOST": "http://<host>:11434"}` in
+  `settings.user.json` (that server must listen beyond 127.0.0.1, e.g. `OLLAMA_HOST=0.0.0.0:11434`
+  in its unit): the installer and the daily self-heal then install nothing locally, point the
+  jcodemunch / jdocmunch MCP env and the doctor at that host, and pull missing models there.
 - **Private files** — keep `.env*`, `CLAUDE.machines.local.md`, `.credentials.json` and
   `settings.user.json` at mode 600; the doctor's `secret-perms` row prints the `chmod`.
 - **Escape hatch** — if a hook ever misbehaves: `claude --safe-mode`.

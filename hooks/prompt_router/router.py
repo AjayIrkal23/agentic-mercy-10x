@@ -86,12 +86,25 @@ def _graph_exists(repo) -> bool:
         return False
 
 
+def _infra_root(repo) -> bool:
+    """index-lifecycle's NEVER_INDEX roots ($HOME, ~/.claude, ~/.codex, this checkout):
+    no index or graph is ever built there, so no line may promise one."""
+    try:
+        from lib.code_files import is_infra_root  # noqa: PLC0415
+        return is_infra_root(repo.root)
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def _doc_index_exists(repo) -> bool:
     if repo is None:
         return False
     try:
+        import hashlib  # noqa: PLC0415
         base = Path.home() / ".doc-index" / "local"
-        names = {repo.name}
+        # index-lifecycle._doc_name_for: `<name>-<sha8>` when another checkout owns `<name>`
+        sha = hashlib.sha1(os.path.realpath(str(repo.root)).encode("utf-8")).hexdigest()[:8]
+        names = {repo.name, f"{repo.name}-{sha}"}
         try:
             from lib.repo_context import sanitize_name
             names.add(sanitize_name(repo.name))
@@ -189,18 +202,28 @@ def _substrate_items(profile, ctx: dict) -> list[dict]:
     if ("docs" in profile.surfaces or any(k in profile.text for k in _DOC_KEYWORDS)) and _mcp_ok("jdocmunch", root):
         if _doc_index_exists(repo):
             txt = "Docs work → call jdocmunch search_sections / get_toc now, then get_section (not whole-file reads)."
+        elif repo is not None and _infra_root(repo):
+            txt = "Docs work → jdocmunch never indexes this agent-infra dir; `Read` the doc files."
         else:
             txt = ("Docs work → jdocmunch search_sections / get_toc when indexed; this repo is not "
                    "doc-indexed yet (index-lifecycle builds it on writes) — `Read` meanwhile.")
         items.append({"id": "substrate:jdocmunch", "tier": 1, "section": "SUBSTRATE", "text": txt})
     if (_policy.strong_arch(profile) or _ARCH_RX.search(profile.text or "")) and _mcp_ok("graphify", root):
+        # The graphify MCP keeps the graph it started with (empty when the session began
+        # outside this repo); project_path makes every call read this repo's graph.
+        pp = f'project_path="{repo.root}"' if repo is not None else "project_path=<repo root>"
+        infra = repo is not None and _infra_root(repo)
         if _graph_exists(repo):
             txt = ("Architecture/dependency question → call graphify query_graph / god_nodes / "
-                   "get_neighbors / shortest_path now, instead of grep or Explore.")
+                   f"get_neighbors / shortest_path with {pp} now, instead of grep or Explore."
+                   + (" This infra dir's graph is never auto-refreshed." if infra else ""))
+        elif infra:
+            txt = ("Architecture/dependency question → this agent-infra dir has no graphify graph or "
+                   "jcodemunch index (never auto-built); Read / Grep it directly.")
         else:
             txt = ("Architecture/dependency question → no graphify graph yet: graph is building in the "
                    "background; use jcodemunch get_dependency_graph now, graphify query_graph / "
-                   "god_nodes once it lands.")
+                   f"god_nodes with {pp} once it lands.")
         items.append({"id": "substrate:graphify", "tier": 1, "section": "SUBSTRATE", "text": txt})
     return items
 

@@ -15,7 +15,7 @@ edits, an MCP server's "run `init`" or "start the dev server") never overrides
 |---|---|---|
 | Find / read / change code | jcodemunch `plan_turn` or `get_context_bundle` (task slice) · `search_symbols` · `get_symbol_source` · `get_file_outline` | `grep -r`, `find`, whole-file source reads |
 | Before editing a shared symbol; after touching >3 files | jcodemunch `get_blast_radius` · `find_references` · `check_edit_safe` | guessing |
-| Architecture, "how is X wired", who depends on X, A→B | graphify `query_graph` · `god_nodes` · `get_neighbors` · `shortest_path` (no `graphify-out/` → `graphify update <root>`; meanwhile jcodemunch `get_dependency_graph`) | reading dirs, Explore agents |
+| Architecture, "how is X wired", who depends on X, A→B | graphify `query_graph` · `god_nodes` · `get_neighbors` · `shortest_path`, always with `project_path=<repo root>` (the server keeps its start-up graph, often empty) (no `graphify-out/` → `graphify update <root>`; meanwhile jcodemunch `get_dependency_graph`) | reading dirs, Explore agents |
 | Doc sets (docs/, md trees, READMEs) | jdocmunch `search_sections` · `get_toc` · `get_section` (repo not in `~/.doc-index` → `Read`) | whole-file reads of md trees |
 | Plan, spec, audit, design, debug, compare, decide | sequential-thinking — `03-thinking.md` | reasoning inline |
 | Library / framework / SDK / CLI API | context7 `resolve-library-id` → `query-docs` (one concept per call) | memory, web search |

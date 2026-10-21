@@ -44,10 +44,13 @@ def check_base_tools(ci: bool, which: Callable = winutil.which, environ=None, re
     missing = [n for n in REQUIRED if not found(n)]
     if missing:
         return "FAIL", f"missing: {', '.join(missing)} (the installer installs them per user; re-run it)"
-    soft = [f"{n} missing (optional)" for n in OPTIONAL if not found(n)]
+    # OLLAMA_HOST elsewhere: no local binary (the real env -> None, so settings.user.json is read too)
+    remote = not plat.is_loopback_url(plat.ollama_url(None if environ is os.environ else environ))
+    soft = [f"{n} missing (optional)" for n in OPTIONAL if not (remote and n == "ollama") and not found(n)]
     git = found("git")
     if plat.IS_WINDOWS and git and not winutil.git_bash(git, winutil.bash_values(environ, registry)):
         soft.append("git has no bash.exe beside it (Claude Code's Bash tool needs Git Bash)")
     if soft:
         return "WARN", "; ".join(soft)
-    return "PASS", "claude, node + npm, git, uv resolve; gh and ollama present"
+    return "PASS", ("claude, node + npm, git, uv resolve; gh present, ollama on OLLAMA_HOST" if remote
+                    else "claude, node + npm, git, uv resolve; gh and ollama present")

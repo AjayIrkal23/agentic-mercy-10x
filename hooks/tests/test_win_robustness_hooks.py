@@ -74,12 +74,23 @@ def test_summarizer_probe_skips_the_slow_ipv6_localhost_on_windows(monkeypatch, 
     assert urls == [expect]
 
 
-def test_healthcheck_url_defaults_name_ipv4():
+def test_healthcheck_url_defaults_name_ipv4(monkeypatch):
     il = _il()
     cfg = json.loads((_HOOKS / "index-lifecycle.config.json").read_text(encoding="utf-8"))
-    assert "localhost" not in cfg["summarizer_healthcheck"]["url"]
-    assert "localhost" not in il._DEFAULT_CONFIG["summarizer_healthcheck"]["url"]
-    assert "localhost" not in il._summarizer_cfg({})[1]
+    # no literal URL in either config: the probe follows OLLAMA_HOST like the MCP env does
+    assert "url" not in cfg["summarizer_healthcheck"]
+    assert "url" not in il._DEFAULT_CONFIG["summarizer_healthcheck"]
+    assert il._summarizer_cfg(cfg)[1] == "http://127.0.0.1:11434/api/tags"
+    monkeypatch.setenv("OLLAMA_HOST", "localhost")
+    assert il._summarizer_cfg({})[1] == "http://127.0.0.1:11434/api/tags"
+
+
+def test_healthcheck_follows_a_remote_ollama_host(monkeypatch):
+    il = _il()
+    monkeypatch.setenv("OLLAMA_HOST", "http://192.0.2.10:11434")
+    assert il._summarizer_cfg({"summarizer_healthcheck": {}})[1] == "http://192.0.2.10:11434/api/tags"
+    # an explicit config url still wins
+    assert il._summarizer_cfg({"summarizer_healthcheck": {"url": "http://h:1/x"}})[1] == "http://h:1/x"
 
 
 # --------------------------------------------------------------------------- #

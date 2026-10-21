@@ -6,7 +6,10 @@ import datetime as dt
 import importlib.util
 import io
 import json
+import os
+import shutil
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -18,6 +21,7 @@ import selfheal  # noqa: E402
 
 _ROOT = Path(__file__).resolve().parents[1]
 ENV = {"TOKEN": SECRET}
+_NODE = shutil.which("node")
 
 
 @pytest.fixture
@@ -268,3 +272,32 @@ def test_vendored_skills_are_re_vendored_only_on_drift(sd, box, monkeypatch, tmp
     sd.main([])
     assert log.read_text(encoding="utf-8").split("\n")[:-1] == ["--all --check", "--all"]
     assert any(c.startswith("vendor") for c in _summary(box)["changed"])
+
+
+def test_ponytail_board_import_runs_from_the_installed_plugin(sd, box, monkeypatch):
+    if not _NODE:
+        pytest.skip("no node on PATH")
+    monkeypatch.setattr(sd.plat, "node_exe", lambda: _NODE)  # box trims PATH to the fake claude
+    target = box.home / "claude-dir"
+    hooks = target / "plugins" / "cache" / "ponytail" / "5.3.2" / "hooks"
+    hooks.mkdir(parents=True)
+    projects, ran = box.home / "projects", box.home / "ran.txt"
+    projects.mkdir()
+    for name in ("old.jsonl", "live.jsonl", "notes.txt"):
+        (projects / name).write_text("{}", encoding="utf-8")
+    two_days_ago = time.time() - 2 * 86400
+    os.utime(projects / "old.jsonl", (two_days_ago, two_days_ago))
+    # what the real import sees in a projects dir: a live transcript must stay hidden
+    (hooks / "ponytail-band-import.js").write_text(
+        "const fs = require('fs');\nmodule.exports = { run() { fs.writeFileSync("
+        f"{json.dumps(str(ran))}, fs.readdirSync({json.dumps(str(projects))}).sort().join(',')); return {{}} }} }};\n",
+        encoding="utf-8")
+    monkeypatch.setattr(sd.plat, "claude_dir", lambda: target)
+    _only(sd, monkeypatch, "ponytail-board")
+    sd.main([])  # no installed_plugins.json: nothing to run, not an error
+    assert not ran.exists() and _summary(box)["errors"] == []
+    (target / "plugins" / "installed_plugins.json").write_text(json.dumps(
+        {"plugins": {"ponytail@ponytail": [{"installPath": str(hooks.parent)}]}}), encoding="utf-8")
+    _stamp(box, 30)
+    sd.main([])
+    assert ran.read_text(encoding="utf-8") == "notes.txt,old.jsonl" and _summary(box)["errors"] == []

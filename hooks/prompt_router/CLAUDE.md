@@ -41,7 +41,11 @@ starts servers or mutates the repo; side effects are the session manifest,
 - **No emitted line tells the user to type anything** (autonomy §11): dispatch lines say
   "dispatch `<agent>` with the Agent tool", the heavy-task line says "dispatch the Opus judge
   agent", a missing graph says "graph is building in the background; use jcodemunch
-  `get_dependency_graph` now". Never reintroduce `/invoke <act>`, `/model <id>` or
+  `get_dependency_graph` now". Graphify lines carry `project_path="<repo root>"` (the MCP
+  serves its start-up graph otherwise). For an infra root (`_infra_root`: `$HOME`,
+  `~/.claude`, `~/.codex`, this checkout = index-lifecycle's NEVER_INDEX) no line promises
+  an index or graph build. `_doc_index_exists` checks both manifest names index-lifecycle
+  uses (`<name>`, `<name>-<sha1(realpath)[:8]>`). Never reintroduce `/invoke <act>`, `/model <id>` or
   `graphify update` in router text (`tests/test_autonomy_wpc_text.py`).
 - Caps: `max_skill_pushes` 4, `max_route_lines` 3 (dispatch), `max_mcp_routes` 4,
   `max_routing_lines` 5 (total; model-mode echo first).

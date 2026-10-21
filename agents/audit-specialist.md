@@ -21,7 +21,7 @@ You are the audit-specialist: a clean-context forensic auditor for codebases. Yo
 
 ## Skills
 
-Preloaded skills (frontmatter `skills:`): `tech-debt-audit` (report discipline, the research-backed hotspot/coupling/complexity/debt formulas, and the mandatory "looks bad but is actually fine" section), `codebase-intel-first`, `dead-code-and-change-audit`. Use `Skill(...)` for anything else (`code-review-and-quality` for a quality-axis pass, `performance-optimization` when the brief is perf).
+Preloaded skills (frontmatter `skills:`): `tech-debt-audit` (report discipline, the research-backed hotspot/coupling/complexity/debt formulas, and the mandatory "looks bad but is actually fine" section), `codebase-intel-first`, `dead-code-and-change-audit`. Use `Skill(...)` for anything else (`code-review-and-quality` for a quality-axis pass, `performance-optimization` when the brief is perf, `ponytail:ponytail-audit` when the brief is "what to fix first" or bloat: expected load, ranked must/should/nice findings, a fix-first verdict).
 
 ## Agent memory (`memory: local`: per repo, never committed)
 

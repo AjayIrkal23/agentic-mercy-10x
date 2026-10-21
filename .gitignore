@@ -151,6 +151,8 @@ gh-pr-status-cache.json
 stats-cache.json
 tdd-guard/
 .ponytail-statusline-nudged
+.ponytail-band
+/policy-limits.json
 .cache/
 teams/
 skills/synced/

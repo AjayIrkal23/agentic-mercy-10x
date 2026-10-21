@@ -1,5 +1,105 @@
 # Changelog
 
+## v4.2.0 — 2026-10-21 ponytail 5
+
+Why: ponytail sat at 4.12.0 (its marketplace stays `autoUpdate: false`, A-03). 5.x rewrote the
+prompt, rebuilt `/ponytail-review` and `/ponytail-audit` into full quality reviews and added a band
+and a board inside Claude Code. This release takes 5.3.2 (`09c434a`) and wires it in, plus the two
+change sets below that were waiting for a release.
+
+### 2026-10-21 ponytail 5.3.2
+
+- **Plugin**: 4.12.0 → 5.3.2 by hand (`claude plugin marketplace update ponytail`, then
+  `claude plugin update ponytail@ponytail`). SessionStart now carries the v5 rules (smallest
+  complete change, a closing line on what was skipped and any risk, `shortcut:` comments instead of
+  `ponytail:`) and a 2 KB codebase map (`PONYTAIL_MAP=0` turns it off); a compaction keeps the live
+  level. `PONYTAIL_SUBAGENT_MATCHER` still scopes the rules to the executor agents.
+- **Band**: ponytail's band (cost, tokens, agent time, reuse, tests; level, Review, Audit and Board
+  buttons) shares the AbovePrompt slot with mercy's. mercy's pulse band now draws the bands beneath
+  it (`next(e)`) instead of replacing them: before, whichever handler ran first hid the other.
+- **Board without a command**: the daily self-heal gets a `ponytail-board` step that runs the
+  plugin's `ponytail-band-import.js` (what `/ponytail band import` does), so sessions the live band
+  missed (one that started with mods switched off) still reach `~/.config/ponytail/band/`. The
+  import skips sessions already there; a run over 6 GB of transcripts took 20 s. It never revisits
+  a row, so transcripts written in the last 24 h are hidden from it (Santa finding: a manual run
+  froze three live sessions at partial numbers, and the band then counted them a second time
+  under its own key).
+- **Review and audit**: santa-reviewer's BREAKER takes v5's two new checks (risky logic without a
+  test; scale judged against the load the repo expects) and reads a `shortcut:` comment as a
+  decision. audit-specialist can load `ponytail:ponytail-audit` for a fix-first ranking. Router
+  probes after the index rebuild: "review my PR" still lands on santa-review, "audit this codebase"
+  on audit-specialist, "list the shortcuts" on ponytail-debt.
+- **Style**: the SessionStart directive (`ponytail-caveman-guard.py`) and CLAUDE.md §9 describe v5;
+  `skills-index.json` is rebuilt from the new skill descriptions.
+- **Engine types**: `mods/mercy/tests/bridge.test.ts` answered `env.set` with `{ value: undefined }`;
+  Claude Code 2.1.306 types that value as an object, so `tsc -p mods/mercy` (doctor row
+  `mods-runtime`) failed.
+- `.ponytail-band` (the band's hide flag) and `/policy-limits.json` (Claude Code's account policy
+  cache) are gitignored.
+
+### 2026-10-21 ollama on another machine
+
+Why: the user moved ollama (jcodemunch AI summaries, jcodemunch / jdocmunch embeddings) to an
+always-on office machine and uninstalled it locally. Editing `~/.claude.json` alone would not have
+held: the daily self-heal rewrote the MCP env back to 127.0.0.1, reinstalled ollama into `~/.local`,
+started a local server and re-pulled the weights.
+
+- **One knob, `OLLAMA_HOST`** (ollama's own variable), set per machine in `settings.user.json`
+  `env`; unset keeps the old 127.0.0.1:11434 behavior. `lib/platform.ollama_url()` is its one reader
+  (ollama's default-port rule, `localhost` / `0.0.0.0` → 127.0.0.1); a process Claude Code did not
+  start (`install.py` / `doctor.py` from a terminal) reads it from `settings.user.json` directly, so a
+  manual install cannot revert the move either (Santa finding).
+- **MCP env**: the manifest's jcodemunch / jdocmunch URLs are the `{OLLAMA_URL}` token, resolved at
+  registration and by the daily `reconcile_mcp_env`; jcodemunch gets
+  `JCODEMUNCH_ALLOW_REMOTE_SUMMARIZER=1` (≥1.108.319 ignores a non-localhost `OPENAI_API_BASE`
+  without it and silently falls back to signature summaries).
+- **Installer / self-heal**: a non-loopback `OLLAMA_HOST` installs no binary, starts no server and
+  keeps no weights here (row `ollama REMOTE(<url>)`); missing models are pulled on that host over
+  `POST /api/pull`.
+- **Probes**: the index-lifecycle summarizer healthcheck and the doctor's ollama row follow
+  `OLLAMA_HOST` (the literal URLs left `index-lifecycle.config.json` and `doctor_probes`).
+- **Doc embeddings in hook builds**: the hook ran `jdocmunch-mcp index-local` without the MCP
+  server's embedding env, so no automatic doc rebuild ever added vectors (site-sync-vista: 12k of
+  29k sections, stale since 2026-10-05). The CLI now runs with `mcpServers.jdocmunch.env`
+  (provider, telemetry off). A doc index that already has a vector sidecar embeds its changed
+  docs, with a 900 s cap (`jdocmunch_embed`; a new `OLLAMA_HOST` re-embeds the whole corpus)
+  and the jcodemunch ollama-down DEFER. Every other doc
+  index runs `--embeddings off` (a first embed of CONCORD-WEBSITE's 295k sections cannot finish in
+  a hook). Live: a site-sync-vista hook build embedded 2,846 new sections in 41 s, coverage 99.9%.
+
+### 2026-10-08 code-intel wiring audit
+
+Why: an end-to-end check of the jcodemunch / jdocmunch / graphify / dox wiring found the graphify MCP
+answering from an empty graph in sessions launched from `~`, index build errors logged as a
+deprecation banner, and branch switches never reaching the indexes.
+
+- **graphify**: the MCP keeps the graph it started with (an empty placeholder when the session began
+  outside the repo). Router, graphify-enforce, subagent protocol, `rules/00` and
+  `codebase-intel-first` now name `project_path=<repo root>`; graphify-enforce resolves the repo
+  from the payload `cwd` instead of the launch dir and never pushes an infra dir's stale graph.
+- **index-lifecycle**: `build_fail` rows drop jcodemunch's `Deprecated:` stderr banner so the stdout
+  JSON error is kept; an incremental flush with no index db runs a full index instead of failing
+  `index-file`; the doc-index probe counts untracked docs and ignores `graphify-out/`; a graph build
+  keeps the newest 3 `graphify-out/YYYY-MM-DD/` backups (never git-tracked ones). One sweep freed
+  505 MB (GO_UDP 524 → 235 MB, gatepass 287 → 98 MB). The db lookup also scans every index db
+  by recorded `source_root`: repos whose db is named after the git remote (SubStore,
+  SubStore-laneCI, Software Updater Docketrun, JASHN EVENTS AND ENTERTAINMENT) probed MISSING and
+  fully rebuilt every session. A flush no longer retries a surface in FAILED backoff. The git
+  trigger also sees `git.exe` and quoted / absolute git paths (PowerShell).
+- **One infra-root list**: `lib/code_files.is_infra_root` replaces three copies (the read gate's
+  had drifted and missed `~/.codex`).
+- **`~/.claude` stays unindexed** (2026-08-16 directive). Its stale July graph went to the Trash and
+  its two stale jdocmunch indexes (`local/.claude`, `local/claude-workbench-docs`) were deleted, so
+  nothing answers from them.
+- **dispatch**: new `command_re` link filter; async link `index-git-reprobe` sends
+  `git checkout/pull/commit/...` (Bash and PowerShell) to the reprobe that was written but never wired.
+- **jcodemunch gate**: a bare `Grep pattern` (no path) in a repo counts as a code search; outside a
+  repo it passes; the block names the pattern.
+- **dox**: a code write into a documented leaf dir whose `CLAUDE.md` does not name the file gets one
+  advisory per dir per session (tests skipped).
+- **router**: the jdocmunch line finds `<name>-<sha8>` doc indexes and never promises an index build in
+  `~`, `~/.claude` or `~/.codex`.
+
 ## v4.1.0 — 2026-10-06 Windows parity
 
 Why: v4.0 was built on Ubuntu. On the Windows replica the `PowerShell` tool bypassed every gate, the UI

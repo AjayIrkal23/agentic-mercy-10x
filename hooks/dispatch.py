@@ -167,12 +167,16 @@ def _tool_name(payload: dict) -> str:
     return str(payload.get("tool_name") or payload.get("tool") or "")
 
 
-def _link_matches(link: dict, tool: str) -> bool:
+def _link_matches(link: dict, tool: str, payload: dict | None = None) -> bool:
     pat = link.get("tools")
-    if not pat:
-        return True  # no tool filter -> always applies (session/stop/etc.)
+    cre = link.get("command_re")  # shell links: run only when the command matches
     try:
-        return re.fullmatch(f"(?:{pat})", tool) is not None
+        if pat and re.fullmatch(f"(?:{pat})", tool) is None:
+            return False
+        if cre:
+            cmd = ((payload or {}).get("tool_input") or {}).get("command")
+            return isinstance(cmd, str) and re.search(cre, cmd) is not None
+        return True  # no filter -> always applies (session/stop/etc.)
     except re.error:
         return True  # a bad regex must not silently drop a trigger
 
@@ -382,7 +386,7 @@ def _dispatch_one(event: str, payload: dict, cfg: dict, only: frozenset | None =
     # An adapted lean-ctx call is never owned: the mod plans by the real tool name.
     owned = frozenset() if (only is not None or adapted) else _mod_owned(payload)
     active = [ln for ln in chain
-              if ln.get("enabled", True) and _link_matches(ln, tool)
+              if ln.get("enabled", True) and _link_matches(ln, tool, payload)
               and (only is None or ln.get("id") in only)
               and ln.get("id") not in owned]
 

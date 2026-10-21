@@ -180,6 +180,8 @@ def _reprobe_spawns(env):
     "git checkout main", "git switch -c topic", "git rebase main", "git reset --hard HEAD~1",
     "git cherry-pick abc123", "git revert HEAD", "git stash pop", "git am < p.patch",
     "git -C /x commit -m y", "cd /x && git commit -am z", "make && git pull",
+    # PowerShell spellings the dispatch filter (`\bgit(?:\.exe)?\b`) already lets through
+    "git.exe pull", '& "D:\\Dev\\Git\\cmd\\git.exe" checkout main', "/usr/bin/git switch dev",
 ])
 def test_head_moving_git_command_spawns_one_reprobe(env, cmd):
     assert _bash(env, cmd).strip() == "{}"
@@ -192,6 +194,7 @@ def test_head_moving_git_command_spawns_one_reprobe(env, cmd):
 @pytest.mark.parametrize("cmd", [
     "git status", "git log --oneline", "git diff", "git add .", "git push", "git fetch",
     "git branch", "git stash", "git stash list", "ls -la", "npm test", "gitk",
+    "legit commit", "digit pull",
 ])
 def test_other_commands_do_not_reprobe(env, cmd):
     _bash(env, cmd)

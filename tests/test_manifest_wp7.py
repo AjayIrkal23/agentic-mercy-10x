@@ -98,12 +98,21 @@ def _env_of(server: str, key: str) -> str:
     return _literal_env(server)[key]
 
 
+def _resolved_env(server: str, ollama: str = "http://127.0.0.1:11434") -> dict:
+    return {k: v.replace("{OLLAMA_URL}", ollama) for k, v in _literal_env(server).items()}
+
+
 def test_no_ollama_url_in_the_manifest_names_localhost():
     """`localhost` resolves ::1 first and ollama listens on 127.0.0.1 only: 2.05 s per new connection
-    (urlopen x5 = 2041-2100 ms, `127.0.0.1` 5-31 ms). Works on Linux too."""
-    assert "localhost:11434" not in json.dumps(M)
+    (urlopen x5 = 2041-2100 ms, `127.0.0.1` 5-31 ms). Works on Linux too. The URLs are the
+    `{OLLAMA_URL}` token (OLLAMA_HOST, else 127.0.0.1), never a literal."""
+    import deps
+    adds = json.dumps([s["add"] for s in M["mcp_servers"]])
+    assert "localhost:11434" not in json.dumps(M) and "127.0.0.1:11434" not in adds
     for server, key in _OLLAMA_ENV:
-        assert urlparse(_env_of(server, key)).hostname == "127.0.0.1", (server, key)
+        assert _env_of(server, key) == "{OLLAMA_URL}/v1", (server, key)
+    assert urlparse(deps.plat.ollama_url({})).hostname == "127.0.0.1"
+    assert _env_of("jcodemunch", "JCODEMUNCH_ALLOW_REMOTE_SUMMARIZER") == "1"  # else a LAN URL is ignored
 
 
 def test_a_live_registration_with_the_old_url_is_picked_up_by_the_env_reconcile(tmp_path, monkeypatch):
@@ -119,6 +128,24 @@ def test_a_live_registration_with_the_old_url_is_picked_up_by_the_env_reconcile(
     plan = dict(deps.reconcile_mcp_env(dry_run=True))
     assert "OPENAI_API_BASE" in plan["jcodemunch"] and "OPENAI_BASE_URL" in plan["jcodemunch"]
     assert "JDOCMUNCH_OPENAI_COMPAT_URL" in plan["jdocmunch"]
-    new = {s: {"command": "x", "env": _literal_env(s)} for s in ("jcodemunch", "jdocmunch")}
+    new = {s: {"command": "x", "env": _resolved_env(s)} for s in ("jcodemunch", "jdocmunch")}
     (tmp_path / ".claude.json").write_text(json.dumps({"mcpServers": new}), encoding="utf-8")
+    assert deps.reconcile_mcp_env(dry_run=True) == []
+
+
+def test_a_new_ollama_host_reaches_the_live_registrations(tmp_path, monkeypatch):
+    """Setting OLLAMA_HOST (settings.user.json env) moves only the three URL keys on the next
+    self-heal; once they match, nothing is planned."""
+    import deps
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+    for var in ("HOME", "USERPROFILE"):
+        monkeypatch.setenv(var, str(tmp_path))
+    live = {s: {"command": "x", "env": _resolved_env(s)} for s in ("jcodemunch", "jdocmunch")}
+    (tmp_path / ".claude.json").write_text(json.dumps({"mcpServers": live}), encoding="utf-8")
+    monkeypatch.setenv("OLLAMA_HOST", "192.0.2.10")
+    plan = dict(deps.reconcile_mcp_env(dry_run=True))
+    assert plan["jcodemunch"] == "WOULD-SET-ENV: ['OPENAI_API_BASE', 'OPENAI_BASE_URL']"
+    assert plan["jdocmunch"] == "WOULD-SET-ENV: ['JDOCMUNCH_OPENAI_COMPAT_URL']"
+    moved = {s: {"command": "x", "env": _resolved_env(s, "http://192.0.2.10:11434")} for s in live}
+    (tmp_path / ".claude.json").write_text(json.dumps({"mcpServers": moved}), encoding="utf-8")
     assert deps.reconcile_mcp_env(dry_run=True) == []

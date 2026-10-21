@@ -50,7 +50,7 @@ function world(on: On, py: Partial<Py> = {}, state: { refuse: boolean; refused: 
   on('env.set', (_$, e) => {
     if (e.value === undefined) env.delete(e.name)
     else env.set(e.name, e.value)
-    return { value: undefined }
+    return { value: {} }
   })
   on('ui.toast', (_$, e) => {
     toasts.push(e.text)

@@ -55,6 +55,11 @@ now" lines; follow them.
 
 ## Phase playbook — run these BEFORE anything else
 
+Every graphify call takes `project_path=<repo root>`: the MCP server keeps the graph it
+started with, which is an empty placeholder when the session began outside the repo
+(e.g. in `~`). Without it `graph_stats` says 0 nodes and every query comes back empty.
+jcodemunch and jdocmunch calls take the `repo` id from `resolve_repo` / `doc_resolve_repo`.
+
 ### Planning / "understand X" / architecture
 1. `mcp__graphify__graph_stats` — size + shape
 2. `mcp__graphify__god_nodes` — entry points & most-connected modules

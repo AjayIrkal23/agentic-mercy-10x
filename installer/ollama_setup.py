@@ -8,6 +8,10 @@ tarball into ``~/.local`` (``bin/ollama`` + ``lib/ollama``), starts a ``systemct
 unit when there is a user manager (else one detached ``ollama serve``), and pulls the
 models that are missing. Linux only (macOS: the app / brew). Everything is a status row;
 a blocked download or no zstd is a WARN, never a failure. Pure stdlib.
+
+``OLLAMA_HOST`` naming another machine (``settings.user.json`` ``env``) switches all of that
+off: no binary, no server and no weights here; missing models are pulled on that machine over
+its HTTP API (``setup_remote``).
 """
 from __future__ import annotations
 
@@ -28,7 +32,11 @@ import userspace  # noqa: E402
 from lib import platform as plat  # noqa: E402
 from winutil import which as _which  # noqa: E402  (never a binary from the working directory)
 
-TAGS_URL = "http://127.0.0.1:11434/api/tags"
+def tags_url() -> str:
+    """``<ollama>/api/tags``; ``<ollama>`` = ``OLLAMA_HOST`` (another machine's ollama) or 127.0.0.1."""
+    return plat.ollama_url() + "/api/tags"
+
+
 _UNIT = """[Unit]
 Description=ollama (user-space, agentic-mercy)
 
@@ -155,10 +163,10 @@ def install_ollama(cfg: dict, *, ci: bool, dry_run: bool, which: Callable = _whi
         return f"WARN({type(exc).__name__}: {str(exc)[:90]})"
 
 
-def probe(url: str = TAGS_URL) -> set | None:
-    """Model names the local server has, or None when no server answers."""
+def probe(url: str | None = None) -> set | None:
+    """Model names the server has (local, or ``OLLAMA_HOST``), or None when no server answers."""
     try:
-        return {m.get("name", "") for m in json.loads(userspace.fetch(url, 3)).get("models", [])}
+        return {m.get("name", "") for m in json.loads(userspace.fetch(url or tags_url(), 3)).get("models", [])}
     except Exception:  # noqa: BLE001
         return None
 
@@ -223,10 +231,40 @@ def pull_models(models: list[str], *, run: Callable = plat.run, probe: Callable 
     return rows
 
 
+def pull_remote(base: str, model: str, timeout: float = 3600) -> str:
+    """``POST <base>/api/pull`` (no ollama binary needed here): the status row for ``model``."""
+    import urllib.request
+    req = urllib.request.Request(f"{base}/api/pull", data=json.dumps({"model": model, "stream": False}).encode(),
+                                 headers={"Content-Type": "application/json"}, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:  # noqa: S310 - http(s) from ollama_url()
+            status = json.load(r).get("status", "")
+        return "INSTALLED" if status == "success" else f"WARN(pull said {status[:60]!r})"
+    except Exception as exc:  # noqa: BLE001
+        return f"WARN({type(exc).__name__}: {str(exc)[:90]})"
+
+
+def setup_remote(models: list[str], *, ci: bool, dry_run: bool, probe: Callable = probe,
+                 pull: Callable | None = None) -> list[tuple[str, str]]:
+    """``OLLAMA_HOST`` names another machine: nothing is installed or started here (the binary,
+    a server and the weights all live there); missing models are pulled on that server."""
+    pull = pull or pull_remote
+    base = plat.ollama_url()
+    rows = [("ollama", f"REMOTE({base})")]
+    have = probe()
+    if have is None:
+        return rows + [(f"ollama:{m}", f"WARN(no ollama server at {base})") for m in models]
+    if ci or dry_run:
+        return rows + [(f"ollama:{m}", "PRESENT" if _has(m, have) else "WOULD-PULL") for m in models]
+    return rows + [(f"ollama:{m}", "PRESENT" if _has(m, have) else pull(base, m)) for m in models]
+
+
 def setup_ollama(manifest: dict, *, ci: bool, dry_run: bool, probe: Callable = probe) -> list[tuple[str, str]]:
     cfg = (manifest.get("user_space") or {}).get("ollama")
     if not cfg:
         return []
+    if not plat.is_loopback_url(plat.ollama_url()):
+        return setup_remote(cfg.get("models", []), ci=ci, dry_run=dry_run, probe=probe)
     status = install_ollama(cfg, ci=ci, dry_run=dry_run,
                             win_cfg=(manifest["user_space"].get("windows") or {}).get("ollama"))
     rows = [("ollama", status)]

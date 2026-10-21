@@ -85,6 +85,27 @@ def test_only_run_keeps_a_deferred_link_synchronous(tmp_path):
     assert "NOW" in _ctx(out)
 
 
+# ---- command_re: a shell link runs only for matching commands -------------- #
+def test_command_re_runs_the_link_only_for_a_matching_command(tmp_path):
+    mod = _load()
+    note = _script(tmp_path, "note", "json.load(sys.stdin); print(json.dumps({'additionalContext': 'GIT-SEEN'}))\n")
+    cfg = {"chains": {"post-tool-use": [
+        {"id": "g", "type": "advisory", "tools": "Bash", "command_re": r"\bgit\b", "cmd": note}]}}
+    hit = mod.dispatch("post-tool-use", {"tool_name": "Bash", "tool_input": {"command": "git pull"}}, cfg)
+    miss = mod.dispatch("post-tool-use", {"tool_name": "Bash", "tool_input": {"command": "ls -la"}}, cfg)
+    assert "GIT-SEEN" in _ctx(hit) and "GIT-SEEN" not in _ctx(miss)
+
+
+def test_index_git_reprobe_link_matches_git_commands_only():
+    mod = _load()
+    cfg = json.loads((HOOKS / "dispatch.config.json").read_text(encoding="utf-8"))
+    link = next(ln for ln in cfg["chains"]["post-tool-use"] if ln["id"] == "index-git-reprobe")
+    assert link["async"] is True and "index-lifecycle.py" in " ".join(link["cmd"])
+    for tool in ("Bash", "PowerShell"):
+        assert mod._link_matches(link, tool, {"tool_input": {"command": "git checkout main"}})
+        assert not mod._link_matches(link, tool, {"tool_input": {"command": "npm test"}})
+
+
 # ---- B1-04: lean-ctx write/shell tools reach the gates -------------------- #
 def _echo_gate(tmp_path):
     return _script(tmp_path, "echo", "p = json.load(sys.stdin)\n"

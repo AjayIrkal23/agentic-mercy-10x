@@ -114,16 +114,19 @@ def check_plugins_installed(manifest: dict, ci: bool, which: Callable | None = N
 
 
 def check_ollama(manifest: dict, ci: bool) -> tuple[str, str]:
-    """Semantic search needs a local ollama + the embedding model — WARN only."""
+    """Semantic search needs an ollama (local, or ``OLLAMA_HOST``) + the embedding model — WARN only."""
     probe = (manifest.get("doctor_probes") or {}).get("ollama") or {}
     if ci or not probe:
         return SKIP, "--ci" if ci else "no probe declared"
     import urllib.request
+
+    import ollama_setup  # type: ignore
+    url = probe.get("url") or ollama_setup.tags_url()
     try:
-        with urllib.request.urlopen(probe["url"], timeout=3) as resp:  # noqa: S310 (localhost)
+        with urllib.request.urlopen(url, timeout=3) as resp:  # noqa: S310 (127.0.0.1 or OLLAMA_HOST)
             full = {m.get("name", "") for m in json.load(resp).get("models", [])}
     except Exception as exc:  # noqa: BLE001
-        return WARN, f"ollama unreachable ({type(exc).__name__}) — {probe.get('note', '')}"
+        return WARN, f"ollama unreachable at {url} ({type(exc).__name__}) — {probe.get('note', '')}"
     base = {n.split(":")[0] for n in full}
     # a tagged probe entry (qwen2.5-coder:3b) needs that exact tag; an untagged one any tag
     missing = [m for m in probe.get("models", []) if (m not in full if ":" in m else m not in base)]

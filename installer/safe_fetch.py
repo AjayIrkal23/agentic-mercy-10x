@@ -55,7 +55,7 @@ def _open_https(url: str, timeout: float):
 
 
 def fetch(url: str, timeout: float = 60) -> bytes:
-    with _open(url, timeout) as r:  # http stays allowed here: the ollama probe is http://127.0.0.1
+    with _open(url, timeout) as r:  # http stays allowed here: the ollama probe (127.0.0.1 or OLLAMA_HOST)
         return r.read()
 
 

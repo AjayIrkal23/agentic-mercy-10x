@@ -22,6 +22,8 @@ Exports:
   popen_new_group(cmd, ...)     start child in own process group, return live Popen
   kill_tree(pid)                kill a process and its children, best-effort
   materialize(template, subs)   {PLACEHOLDER} substitution in a command list
+  ollama_url()                  base URL of the ollama the code indexes use (OLLAMA_HOST or 127.0.0.1)
+  is_loopback_url(url)          True when the URL names this machine
   slugify_path(path)            filesystem-safe slug of an arbitrary path
   atomic_write(path, data)      write-to-temp + os.replace atomic file write
   replace_file(src, dst)        os.replace that retries a denied replace on Windows
@@ -32,6 +34,7 @@ Exports:
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shutil
@@ -39,6 +42,7 @@ import subprocess
 import sys
 import tempfile
 import time
+import urllib.parse
 from pathlib import Path
 from typing import Iterable, Mapping, Sequence
 
@@ -419,6 +423,48 @@ def materialize(template: Iterable[str], subs: Mapping[str, str]) -> list[str]:
             s = s.replace("{" + key + "}", str(val))
         out.append(s)
     return out
+
+
+# --------------------------------------------------------------------------- #
+# ollama endpoint (jcodemunch summaries + jcodemunch/jdocmunch embeddings)
+# --------------------------------------------------------------------------- #
+_LOOPBACK = {"127.0.0.1", "localhost", "::1"}
+
+
+def ollama_url(environ: Mapping[str, str] | None = None) -> str:
+    """``http://host:port`` of the ollama server, from ``OLLAMA_HOST`` (ollama's own variable:
+    ``host``, ``host:port`` or a URL) else ``http://127.0.0.1:11434``. A per-machine setting:
+    it lives in ``settings.user.json`` ``env``, so a box can use another machine's ollama.
+    Default port as ollama's own client: 11434, but 80 / 443 when a scheme is spelled out.
+    ``localhost`` and the bind-all ``0.0.0.0`` become ``127.0.0.1`` (``localhost`` tries ``::1``
+    first: 0.8-2 s per connection on Windows). A process Claude Code did not start (``install.py``
+    or ``doctor.py`` from a terminal) has no settings env, so a missing key falls back to
+    ``settings.user.json`` itself; a present-but-empty one means the default."""
+    raw = (os.environ if environ is None else environ).get("OLLAMA_HOST")
+    if raw is None and environ is None:
+        try:
+            user = json.loads((claude_dir() / "settings.user.json").read_text(encoding="utf-8"))
+            raw = (user.get("env") or {}).get("OLLAMA_HOST")
+        except (OSError, ValueError, AttributeError):
+            raw = None
+    raw = str(raw or "").strip()
+    if not raw:
+        return "http://127.0.0.1:11434"
+    u = urllib.parse.urlsplit(raw if "://" in raw else "http://" + raw)
+    default = {"http": 80, "https": 443}.get(u.scheme, 11434) if "://" in raw else 11434
+    host = u.hostname or "127.0.0.1"
+    if host in ("localhost", "0.0.0.0"):
+        host = "127.0.0.1"
+    try:
+        port = u.port or default
+    except ValueError:  # a garbage port: the default, never an exception in a hook
+        port = default
+    host = f"[{host}]" if ":" in host else host
+    return f"{u.scheme or 'http'}://{host}:{port}{u.path.rstrip('/')}"
+
+
+def is_loopback_url(url: str) -> bool:
+    return (urllib.parse.urlsplit(url).hostname or "") in _LOOPBACK
 
 
 # --------------------------------------------------------------------------- #

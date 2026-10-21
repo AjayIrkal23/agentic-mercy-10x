@@ -11,8 +11,9 @@ import json
 import sys
 
 _DIRECTIVE = (
-    "ALWAYS-ON STYLE (outranks other style guidance): ponytail (laziest working "
-    "solution: YAGNI, stdlib/native first, shortest diff) + caveman (ultra-compressed "
+    "ALWAYS-ON STYLE (outranks other style guidance): ponytail 5 (smallest complete "
+    "change: reuse before new code, stdlib/native first, every caller and test the change "
+    "breaks fixed; end with what was skipped or unchecked and any risk) + caveman (ultra-compressed "
     "prose to the user, full technical accuracy) + no-ai-slop (no banned words, binary "
     "contrasts, colon reveals, puffery, fake-profound kickers, em-dash crutches in any "
     "prose: chat, docs, commits, PRs). All three apply to every response."

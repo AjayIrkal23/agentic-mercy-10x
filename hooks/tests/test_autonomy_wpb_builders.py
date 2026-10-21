@@ -131,6 +131,33 @@ def test_build_fail_err_falls_back_to_stdout_tail(env, monkeypatch):
     assert "no index" in row["err"]
 
 
+def test_build_fail_err_skips_the_deprecation_banner_for_the_stdout_error(env, monkeypatch):
+    """jcodemunch prints a `Deprecated:` banner on stderr on every run and its real error
+    as JSON on stdout; the row carried only the banner (face_detect, 2026-10-08)."""
+    _runs(monkeypatch, rc=1,
+          stderr="Deprecated: Using JCODEMUNCH_SHARE_SAVINGS environment variable. "
+                 "This will be removed in v2.0. Use config.jsonc instead.\n",
+          stdout='{"success": false, "error": "database is locked"}')
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: True)
+    a = _A()
+    a.root, a.key, a.surfaces = str(env["repo"]), env["ctx"].key, "jcodemunch"
+    il.mode_build(a, env["cfg"])
+    (row,) = [f for k, f in env["rows"] if k == "build_fail"]
+    assert "database is locked" in row["err"] and "Deprecated" not in row["err"]
+
+
+def test_incremental_flush_without_an_index_runs_a_full_index(env, monkeypatch):
+    """`index-file` fails with "No indexed folder found" until the folder is indexed once."""
+    calls = _runs(monkeypatch)
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: True)
+    monkeypatch.setattr(il, "_index_db_for", lambda root: None)
+    import lib.code_files as cf
+    monkeypatch.setattr(cf, "is_code_file", lambda p: True)
+    assert il._build_jcodemunch(env["repo"], True, [str(env["repo"] / "a.py")],
+                                env["cfg"]) is True
+    assert [c[1] for c in calls] == ["index"]
+
+
 def test_stale_error_text_does_not_leak_into_the_next_failure(env, monkeypatch):
     il._LAST_ERR[0] = "old failure"
     monkeypatch.setattr(il, "_build_dox", lambda *a, **k: False)

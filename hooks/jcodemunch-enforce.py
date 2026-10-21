@@ -161,9 +161,9 @@ def _gate2_exempt_root(root: Path | None) -> bool:
     if root is None:
         return True
     try:
-        rp = root.resolve()
-        return rp == Path.home().resolve() or rp == (Path.home() / ".claude").resolve()
-    except OSError:
+        from lib.code_files import is_infra_root
+        return is_infra_root(root)
+    except Exception:
         return True
 
 
@@ -487,6 +487,21 @@ def _is_exempt(target: str, cfg: dict) -> bool:
     return False
 
 
+def _grep_target(inp: dict, cwd: str) -> str:
+    """The file a Grep stands for: its `path` when that is a file, else `<dir>/<leaf>`
+    from `glob` / `type`. A bare `Grep pattern` searches code in the cwd (it used to map
+    to "" and pass every gate)."""
+    base = str(inp.get("path") or cwd or "")
+    if not base:
+        return ""
+    p = Path(base)
+    if p.is_file() or (p.suffix and not p.is_dir()):
+        return base
+    glob, typ = str(inp.get("glob") or ""), str(inp.get("type") or "")
+    leaf = Path(glob).name if glob else (f"x.{typ}" if typ else "x.py")
+    return str(p / leaf)
+
+
 def pre_tool_use() -> int:
     payload = _read_payload()
     tool = payload.get("tool_name") or payload.get("tool") or ""
@@ -502,7 +517,10 @@ def pre_tool_use() -> int:
     if tool == "Read":
         target = str(inp.get("file_path") or "")
     elif tool == "Grep":
-        target = str(inp.get("path") or inp.get("glob") or "")
+        base = str(inp.get("path") or payload.get("cwd") or "")
+        target = _grep_target(inp, base)  # base already carries `path`
+        if target != base and _gate2_exempt_root(_find_git_root(Path(base))):
+            return 0  # a directory search outside a project repo is not code discovery
     elif tool == "Glob":
         target = str(inp.get("pattern") or "")
     elif tool in (
@@ -612,6 +630,8 @@ def pre_tool_use() -> int:
 
         # Short, punchy block message.
         hint = Path(target).name if target else "this file"
+        if tool == "Grep" and inp.get("pattern"):
+            hint = str(inp["pattern"])[:80]  # a directory search has no real file name
         if remaining_after > 0:
             suffix_note = f"({remaining_after} more block{'s' if remaining_after != 1 else ''} remaining)"
         else:
@@ -619,7 +639,7 @@ def pre_tool_use() -> int:
         block_msg = (
             f"BLOCKED: Use mcp__jcodemunch__search_symbols or get_symbol_source for '{hint}' first. "
             f"jcodemunch returns the same code with ~95% fewer tokens. "
-            f"Call the MCP tool, then retry this Read only if jcodemunch returns nothing. "
+            f"Call the MCP tool, then retry this {tool or 'Read'} only if jcodemunch returns nothing. "
             f"{suffix_note}"
         )
         _emit_block(block_msg)

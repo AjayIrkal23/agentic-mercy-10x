@@ -385,6 +385,7 @@ def test_jcodemunch_build_passes_claude_json_env(env, tmp_path, monkeypatch, inc
     calls = _capture_run(monkeypatch)
     import lib.code_files as cf  # pytest tmp dirs live under /tmp/, a skip segment
     monkeypatch.setattr(cf, "is_code_file", lambda p: True)
+    monkeypatch.setattr(il, "_index_db_for", lambda root: tmp_path / "x.db")  # index-file needs one
     paths = [str(env["repo"] / "x.py")] if incremental else []
     assert il._build_jcodemunch(env["repo"], incremental, paths, env["cfg"]) is True
     assert calls, "jcodemunch CLI was not invoked"
@@ -401,7 +402,7 @@ def test_jcodemunch_build_passes_claude_json_env(env, tmp_path, monkeypatch, inc
 def test_summarizer_env_tolerates_missing_or_bad_claude_json(tmp_path, monkeypatch, raw):
     _fake_home(tmp_path, monkeypatch, raw=raw)
     monkeypatch.delenv("OPENAI_API_BASE", raising=False)
-    e = il._jcodemunch_env()
+    e = il._mcp_env("jcodemunch")
     assert "OPENAI_API_BASE" not in e and "PATH" in e
 
 
@@ -652,6 +653,33 @@ def test_clone_uses_its_own_index_and_canonical_keeps_its_own(tmp_path, monkeypa
     assert il._probe_jcodemunch(canonical, {})[0] == il.STALE
 
 
+def test_db_named_after_the_git_remote_is_found_by_source_root(tmp_path, monkeypatch):
+    """jcodemunch names a db after the git remote (`Docketrun-Tech-assets_management.db` for
+    the SubStore folder); the folder-name globs missed it, so the repo probed MISSING forever."""
+    idx = tmp_path / "code-index"
+    idx.mkdir()
+    repo = _mkrepo(tmp_path / "work" / "SubStore")
+    _fake_db(idx / "owner-SubStore.db", source_root=str(tmp_path / "elsewhere"), git_head="x")
+    _fake_db(idx / "Docketrun-Tech-assets_management.db", source_root=str(repo), git_head="x")
+    monkeypatch.setattr(il, "CODE_INDEX_DIR", idx)
+    assert il._index_db_for(repo) == idx / "Docketrun-Tech-assets_management.db"
+
+
+def test_flush_skips_a_surface_in_failed_backoff(env):
+    """A FAILED surface waits for its fingerprint to change; flushes kept retrying it."""
+    _reset(env)
+    repo, cfg, ctx = env["repo"], env["cfg"], env["ctx"]
+    st = il._load_state(ctx)
+    st["surfaces"] = {"jcodemunch": {"state": il.FAILED, "failures": cfg["max_build_failures"]}}
+    il._save_state(ctx, st)
+    for i in range(cfg["debounce"]["writes_threshold"]):
+        (repo / f"f{i}.py").write_text("x")
+        _silent(il.mode_post_write, {"tool_name": "Write", "cwd": str(repo),
+                                     "tool_input": {"file_path": str(repo / f"f{i}.py")}}, cfg)
+    surfaces, _incremental = env["spawns"][0]
+    assert "jcodemunch" not in surfaces and "graphify" in surfaces
+
+
 def test_unreadable_db_is_skipped_not_borrowed(tmp_path, monkeypatch):
     """santa-diff P6a: a locked/corrupt db must not fall back to 'legacy' and be borrowed."""
     idx = tmp_path / "code-index"
@@ -722,6 +750,76 @@ def test_doc_name_keeps_legacy_manifest_without_source_root(tmp_path, monkeypatc
     assert il._doc_name_for(repo) == "proj"
 
 
+def test_untracked_new_doc_makes_the_doc_index_stale(tmp_path, monkeypatch):
+    """A doc written but not yet `git add`ed must still mark the doc index STALE."""
+    idx = tmp_path / "doc-index"
+    idx.mkdir()
+    repo = _mkrepo(tmp_path / "proj")
+    manifest = idx / "proj.json"
+    _fake_manifest(manifest, str(repo))
+    now = time.time()
+    os.utime(repo / "a.txt", (now - 100, now - 100))  # the tracked doc predates the index
+    os.utime(manifest, (now - 50, now - 50))
+    monkeypatch.setattr(il, "DOC_INDEX_DIR", idx)
+    assert il._probe_jdocmunch(repo, {}, 10)[0] == il.FRESH
+    (repo / "NEW.md").write_text("# new", encoding="utf-8")
+    assert il._probe_jdocmunch(repo, {}, 10)[0] == il.STALE
+
+
+def test_graphify_output_never_makes_the_doc_index_stale(tmp_path, monkeypatch):
+    """A repo that commits graphify-out/ re-staled its doc index on every graph rebuild
+    (GRAPH_REPORT.md / graph.html), so the two builders chased each other (face_detect)."""
+    idx = tmp_path / "doc-index"
+    idx.mkdir()
+    repo = _mkrepo(tmp_path / "proj")
+    manifest = idx / "proj.json"
+    _fake_manifest(manifest, str(repo))
+    now = time.time()
+    os.utime(repo / "a.txt", (now - 100, now - 100))
+    os.utime(manifest, (now - 50, now - 50))
+    (repo / "graphify-out").mkdir()
+    (repo / "graphify-out" / "GRAPH_REPORT.md").write_text("# graph", encoding="utf-8")
+    subprocess.run(["git", "-C", str(repo), "add", "."], check=True)
+    monkeypatch.setattr(il, "DOC_INDEX_DIR", idx)
+    assert il._probe_jdocmunch(repo, {}, 10)[0] == il.FRESH
+
+
+_REAL_RUN = il._run
+
+
+def _graph_repo(tmp_path, monkeypatch, dates):
+    """A repo whose graphify-out/ holds dated backups; graphify itself is faked, git is real."""
+    repo = _mkrepo(tmp_path / "proj")
+    out = repo / "graphify-out"
+    for d in dates:
+        (out / d).mkdir(parents=True)
+        (out / d / "graph.json").write_text("{}", encoding="utf-8")
+    (out / "cache").mkdir(parents=True, exist_ok=True)
+    monkeypatch.setattr(il, "_which", lambda name: True)
+    monkeypatch.setattr(il, "_run", lambda cmd, timeout, env=None: _REAL_RUN(cmd, timeout, env)
+                        if cmd[0] == "git" else subprocess.CompletedProcess(cmd, 0, "", ""))
+    return repo, out
+
+
+def test_graphify_build_keeps_the_newest_three_dated_backups(tmp_path, monkeypatch):
+    """graphify snapshots a curated graph into graphify-out/YYYY-MM-DD/ and never prunes
+    (GO_UDP held 525 MB in 14 copies)."""
+    repo, out = _graph_repo(tmp_path, monkeypatch, ["2026-07-01", "2026-08-01", "2026-09-01",
+                                                    "2026-10-01", "2026-10-08"])
+    (out / "notes-2026").mkdir()
+    assert il._build_graphify(repo, False, [], il._DEFAULT_CONFIG) is True
+    assert sorted(p.name for p in out.iterdir()) == [
+        "2026-09-01", "2026-10-01", "2026-10-08", "cache", "notes-2026"]
+
+
+def test_graph_backup_tracked_by_git_is_never_pruned(tmp_path, monkeypatch):
+    repo, out = _graph_repo(tmp_path, monkeypatch, ["2026-07-01", "2026-08-01", "2026-09-01",
+                                                    "2026-10-01"])
+    subprocess.run(["git", "-C", str(repo), "add", "graphify-out/2026-07-01"], check=True)
+    il._build_graphify(repo, False, [], il._DEFAULT_CONFIG)
+    assert (out / "2026-07-01").is_dir()
+
+
 def test_jdocmunch_build_passes_the_resolved_name(tmp_path, monkeypatch):
     idx = tmp_path / "doc-index"
     idx.mkdir()
@@ -735,6 +833,85 @@ def test_jdocmunch_build_passes_the_resolved_name(tmp_path, monkeypatch):
                         subprocess.CompletedProcess(cmd, 0, "", ""))
     assert il._build_jdocmunch(clone, False, None, il._DEFAULT_CONFIG)
     assert calls[-1][calls[-1].index("--name") + 1] == il._doc_name_for(clone) != "proj"
+
+
+# --------------------------------------------------------------------------- #
+# jdocmunch embeddings: only for a doc index that already has vectors
+# --------------------------------------------------------------------------- #
+_DOC_ENV = {"JDOCMUNCH_EMBEDDING_PROVIDER": "openai-compatible",
+            "JDOCMUNCH_OPENAI_COMPAT_URL": "http://ollama.test:11434/v1",
+            "JDOCMUNCH_OPENAI_COMPAT_MODEL": "all-minilm"}
+
+
+def _doc_repo(tmp_path, monkeypatch, vectors: bool):
+    """A checkout with a doc index (plus a vector sidecar when ``vectors``); returns
+    (repo, calls) with ``_run`` capturing (cmd, timeout, env)."""
+    idx = tmp_path / "doc-index"
+    idx.mkdir()
+    repo = _mkrepo(tmp_path / "work" / "docs")
+    _fake_manifest(idx / "docs.json", str(repo))
+    if vectors:
+        (idx / "docs.embeddings.jsonl").write_text('{"_header": true}\n', encoding="utf-8")
+    monkeypatch.setattr(il, "DOC_INDEX_DIR", idx)
+    monkeypatch.setattr(il, "STATE_DIR", tmp_path)  # the --paths-from listing lands here
+    _fake_home(tmp_path, monkeypatch, {"jdocmunch": {"env": _DOC_ENV}})
+    for k in _DOC_ENV:
+        monkeypatch.delenv(k, raising=False)
+    calls: list = []
+    monkeypatch.setattr(il, "_which", lambda name: True)
+    monkeypatch.setattr(il, "_run", lambda cmd, timeout, env=None: calls.append(
+        (list(cmd), timeout, env)) or subprocess.CompletedProcess(cmd, 0, "", ""))
+    return repo, calls
+
+
+@pytest.mark.parametrize("incremental", [False, True])
+def test_jdocmunch_build_embeds_an_index_that_has_vectors(tmp_path, monkeypatch, incremental):
+    """The hook CLI gets the MCP server's embedding env, so changed docs get vectors
+    (sitesync sat at 12k of 29k vectors for 16 days without it)."""
+    repo, calls = _doc_repo(tmp_path, monkeypatch, vectors=True)
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: True)
+    paths = [str(repo / "README.md")] if incremental else None
+    assert il._build_jdocmunch(repo, incremental, paths, il._DEFAULT_CONFIG) is True
+    cmd, timeout, e = calls[-1]
+    assert "--embeddings" not in cmd and ("--paths-from" in cmd) == incremental
+    assert timeout == il._DEFAULT_CONFIG["build_timeouts_s"]["jdocmunch_embed"]
+    assert all(e[k] == v for k, v in _DOC_ENV.items()) and "PATH" in e
+
+
+def test_jdocmunch_build_keeps_an_index_without_vectors_lexical(tmp_path, monkeypatch):
+    """A first embed of a large corpus (CONCORD-WEBSITE, 295k sections) cannot finish in
+    a hook, and an ambient provider key must not start one."""
+    repo, calls = _doc_repo(tmp_path, monkeypatch, vectors=False)
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: False)  # not consulted
+    assert il._build_jdocmunch(repo, False, None, il._DEFAULT_CONFIG) is True
+    cmd, timeout, e = calls[-1]
+    assert cmd[-2:] == ["--embeddings", "off"]
+    assert e["JDOCMUNCH_EMBEDDING_PROVIDER"] == "openai-compatible"  # same env as the MCP server
+    assert timeout == il._DEFAULT_CONFIG["build_timeouts_s"]["jdocmunch"]
+
+
+def test_jdocmunch_build_defers_an_index_with_vectors_while_ollama_is_down(tmp_path, monkeypatch):
+    """A lexical save now would leave the changed sections without vectors for good."""
+    repo, calls = _doc_repo(tmp_path, monkeypatch, vectors=True)
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: False)
+    monkeypatch.setattr(il, "_sleep", lambda s: None)
+    assert il._build_jdocmunch(repo, True, [str(repo / "README.md")],
+                               il._DEFAULT_CONFIG) == "DEFERRED"
+    assert calls == []
+
+
+def test_session_start_neutral_line_for_a_doc_index_with_vectors(env, monkeypatch):
+    _reset(env)
+    idx = env["tmp"] / "doc-index"
+    idx.mkdir()
+    (idx / "repo.embeddings.jsonl").write_text('{"_header": true}\n', encoding="utf-8")
+    monkeypatch.setattr(il, "DOC_INDEX_DIR", idx)
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: False)
+    for s in il.SURFACES:
+        monkeypatch.setitem(il._PROBE, s, lambda root, prior, cfg: (il.FRESH, {}, ""))
+    monkeypatch.setitem(il._PROBE, "jdocmunch", lambda root, prior, cfg: (il.STALE, {}, "detail"))
+    blob = json.loads(_silent(il.mode_session_start, env["payload"], env["cfg"]))
+    assert f"jdocmunch index: {il.NEUTRAL_DEFER_LINE}" in blob.get("additionalContext", "")
 
 
 if __name__ == "__main__":

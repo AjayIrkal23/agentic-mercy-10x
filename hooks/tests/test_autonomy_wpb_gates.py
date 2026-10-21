@@ -106,6 +106,28 @@ def test_lifecycle_sees_a_fresh_index_so_the_read_is_allowed_silently(gate):
     assert out == {}  # naming mismatch with the gate's own check: never demand index_folder
 
 
+def test_grep_without_a_path_is_a_code_search_of_the_directory(gate):
+    """`Grep pattern=...` (no path) searched the cwd and passed ungated: target was ""."""
+    jcm, repo = gate["jcm"], gate["repo"]
+    assert jcm._grep_target({}, str(repo)) == str(repo / "x.py")
+    assert jcm._grep_target({"type": "ts"}, str(repo)) == str(repo / "x.ts")
+    assert jcm._grep_target({"glob": "**/*.md"}, str(repo)) == str(repo / "*.md")
+    f = repo / "src" / "app.py"
+    assert jcm._grep_target({"path": str(f)}, str(repo)) == str(f)
+
+
+def test_directory_grep_outside_a_repo_is_never_gated(gate, tmp_path, monkeypatch):
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    payload = {"tool_name": "Grep", "session_id": "g1", "cwd": str(plain),
+               "tool_input": {"pattern": "handleSubmit"}}
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
+    buf = io.StringIO()
+    monkeypatch.setattr(sys, "stdout", buf)
+    gate["jcm"].pre_tool_use()
+    assert buf.getvalue().strip() in ("", "{}")
+
+
 def test_foreign_repo_read_is_not_spawned(gate, tmp_path, monkeypatch):
     other = tmp_path / "elsewhere"
     other.mkdir()
@@ -143,6 +165,32 @@ def test_stale_graph_triggers_rebuild_and_says_so(genf, monkeypatch):
     assert "graph rebuilding in the background; answers may lag the last commit" in text
     assert "graphify update" not in text
     assert calls == [str(repo)]
+
+
+def test_reminder_names_the_project_path(genf, monkeypatch):
+    """The MCP serves the graph it started with; only project_path reaches this repo's."""
+    ge, repo, graph = genf
+    monkeypatch.setattr(ge, "_reprobe_graphify", lambda root: "FRESH")
+    assert f'project_path="{repo}"' in ge._reminder(repo, graph, cid="c3")
+
+
+def test_graph_root_follows_the_payload_cwd_not_the_launch_dir(genf, monkeypatch, tmp_path):
+    """A session launched in ~ has CLAUDE_PROJECT_DIR=~ (no repo); the payload cwd is the repo."""
+    ge, repo, graph = genf
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(tmp_path))
+    assert ge._graph_root_and_path({"cwd": str(repo / "graphify-out")}) == (repo, graph)
+
+
+def test_infra_root_graph_is_never_pushed(genf, monkeypatch):
+    """~/.claude is NEVER_INDEX: its graph is never refreshed, so no reminder points at it."""
+    ge, repo, graph = genf
+    monkeypatch.setenv("HOME", str(repo.parent))
+    monkeypatch.setenv("USERPROFILE", str(repo.parent))
+    claude = repo.parent / ".claude"
+    (claude / "graphify-out").mkdir(parents=True)
+    (claude / "graphify-out" / "graph.json").write_text("{}", encoding="utf-8")
+    assert ge._graph_root_and_path({"cwd": str(claude)}) == (claude, None)
+    assert ge._graph_root_and_path({"cwd": str(repo)}) == (repo, graph)
 
 
 def test_stale_graph_probe_is_rate_limited_per_session(genf, monkeypatch):

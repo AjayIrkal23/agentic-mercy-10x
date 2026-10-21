@@ -6,8 +6,8 @@
 
 ### One install, and every Claude Code prompt gets the right skill, tool, model and check.
 
-![Version](https://img.shields.io/badge/version-4.1.0-2E7D32?style=flat-square)
-![Claude Code](https://img.shields.io/badge/Claude_Code-2.1.288%2B_%C2%B7_tested_2.1.290-D97757?style=flat-square)
+![Version](https://img.shields.io/badge/version-4.2.0-2E7D32?style=flat-square)
+![Claude Code](https://img.shields.io/badge/Claude_Code-2.1.288%2B_%C2%B7_tested_2.1.306-D97757?style=flat-square)
 ![Models](https://img.shields.io/badge/models-Opus_5.5_%C2%B7_Sonnet_5.5-D97757?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Ubuntu%20%C2%B7%20macOS%20%C2%B7%20Windows-E95420?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-000000?style=flat-square)
@@ -54,7 +54,7 @@ run `claude` once and sign in · authorize higgsfield and openart in `/mcp` ·
 |---|---|
 | Base tools (no sudo) | Node 22 + npm (official tarball, checksum verified), Claude Code (pinned to the mod's minimum version), uv, gh → `~/.local/bin` |
 | Packages | pinned semgrep, jcodemunch, jdocmunch, graphify (+ its serve venv), lean-ctx, tdd-guard, pyright, PyYAML |
-| Local AI | ollama (user space) + the `all-minilm` embedding and `qwen2.5-coder:3b` summary models |
+| Local AI | ollama (user space) + the `all-minilm` embedding and `qwen2.5-coder:3b` summary models; or another machine's ollama via `OLLAMA_HOST` in `settings.user.json` (nothing installed locally) |
 | Claude Code | 16 MCP servers at pinned versions, 5 marketplaces + 11 plugins, rendered `settings.json` (status line, mods env) |
 | Workbench | re-vendored skills, generated `/invoke` skills and agent blocks, skills index, validators, doctor |
 | OS tools (apt) | `canberra-gtk-play`, `notify-send`, `ss`, `pw-play` for the UI deck: installed with root or passwordless sudo, otherwise one `sudo apt-get install` line is printed. The deck works without them |
@@ -111,6 +111,9 @@ background lane took blocked write time from 11,613 s over 12 days to zero.
 The status line shows model, effort, context, cost, the 5-hour window and git in about
 20 ms. The band above the prompt offers one-key actions (Run checks, Compact, Fix CI), and
 `/pulse` opens 13 views. None of it reaches the model unless you run a command.
+ponytail 5's band shares that slot: the task's cost, tokens, agent time, code reuse and last test
+run, with Review, Audit and Board buttons. The board (`~/.config/ponytail/band/board.html`) is
+filled from past sessions by the daily self-heal, so nobody types `/ponytail band import`.
 
 <img src="assets/deck.webp" alt="Claude Code terminal with the mercy action band, the mod status line and the real status line output, plus the 13 pulse views, background jobs and alerts" width="100%">
 

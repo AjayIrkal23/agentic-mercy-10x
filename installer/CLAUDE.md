@@ -52,7 +52,12 @@ re-check) happens automatically until the doctor reports 0 FAIL.
 ## Local conventions
 
 - **MCP source of truth** = `manifest.json.mcp_servers` → user-scope `~/.claude.json`.
-  The template has NO `mcpServers`. Secrets only via `env_from` (installer env).
+  The template has NO `mcpServers`. Secrets only via `env_from` (installer env). The ollama
+  URLs are the `{OLLAMA_URL}` token (`plat.ollama_url()`: `OLLAMA_HOST`, else 127.0.0.1:11434),
+  resolved by `_exec_tokens` at registration and by `reconcile_mcp_env` daily, so setting
+  `OLLAMA_HOST` in `settings.user.json` moves the live jcodemunch / jdocmunch env on the next
+  self-heal; `JCODEMUNCH_ALLOW_REMOTE_SUMMARIZER=1` lets jcodemunch use a non-localhost URL. The
+  doctor's ollama row probes the same URL (`ollama_setup.tags_url()`).
 - **Windows MCP commands:** Claude Code spawns MCP stdio servers without a shell, so on
   Windows `deps._mcp_argv` registers `npx` and any `.cmd`/`.bat` shim as `cmd /c …`
   (`.exe` and `py` stay direct). A `posix_only` server with a `windows_add` (github →
@@ -89,6 +94,7 @@ re-check) happens automatically until the doctor reports 0 FAIL.
 - **Marketplace auto-update (A-03):** `karpathy-skills`, `nateherk` and `ponytail` are
   `autoUpdate: false` in the template (their plugins run hooks every session from personal
   repos); update them by hand, then run the doctor. `superpowers-marketplace` stays true.
+  Last hand update: ponytail 4.12.0 → 5.3.2 (2026-10-21, v4.2.0).
 - **Pinned tool versions:** every npx MCP server, the lean-ctx npm install and the semgrep /
   jcodemunch-mcp / graphify installs carry an exact version in `manifest.json`. Drift between a
   live registration and an exact pin is repaired, not just reported: `deps.reconcile_mcp_pins`
@@ -99,7 +105,7 @@ re-check) happens automatically until the doctor reports 0 FAIL.
   self-heal repairs it), WARN when no reconcile is possible; the deprecated-github note stays a WARN.
   `doctor_mcp.pin_drift` / `swap_spec` are the one parse shared by doctor and reconcile.
   `hooks/tools/selfheal-daily.py` (async session-start link) runs the reconcile, missing-CLI
-  installs, stale-settings re-render and DRIFT re-vendor once a day. The lean-ctx config is
+  installs, stale-settings re-render, DRIFT re-vendor and the ponytail board import once a day. The lean-ctx config is
   written before lean-ctx is installed.
 - **Counts are computed** (skills/agents), never pinned in the manifest.
 - **Fresh Ubuntu, no sudo (2026-10-05).** `manifest.user_space` + `basetools.py` take a user
@@ -232,7 +238,7 @@ re-check) happens automatically until the doctor reports 0 FAIL.
 | `deps.py` | idempotent deps/MCP/plugins/post-steps from `manifest.json` (post-step script = first `.py` arg — NOT `cmd[1]`; `{PYTHON}`→`py -3` shifts the index on Windows) |
 | `doctor.py` | health verifier, 24 rows (link-doctor, render, hook-command, statusline, settings-safety, lean-ctx-config, jcodemunch-config, plugins-contract, plugins-installed, generated-in-sync, R9/R10, base-tools, mcp-roster, ollama, secret-perms, mods, mods-runtime …); `--ci` skips machine rows; its 0-FAIL is the loop's success gate. Doctor/installer sandboxes hide `claude` and `tsc` from `shutil.which` (I-17) |
 | `doctor_host.py` | host rows: `plugins-installed`, `secret-perms` (POSIX modes; Windows SDDL), lean-ctx floor + unmanaged-keys note |
-| `doctor_basetools.py` | row `base-tools`: git (with `bash.exe`), node, claude, uv, gh present on Windows (same `winutil.git_bash` / `winutil.bash_values` / `winutil.which` as the installer); SKIP under `--ci` and `AGENTIC_MERCY_SKIP_BASE_TOOLS`; git without bash = WARN |
+| `doctor_basetools.py` | row `base-tools`: git (with `bash.exe`), node, claude, uv, gh present on Windows (same `winutil.git_bash` / `winutil.bash_values` / `winutil.which` as the installer); SKIP under `--ci` and `AGENTIC_MERCY_SKIP_BASE_TOOLS`; git without bash = WARN; no local ollama binary is expected when `OLLAMA_HOST` names another machine |
 | `doctor_hook.py`, `npx_cache.py` | rows `hook-command` (runs the rendered PreToolUse command once with a synthetic payload: Git Bash via `CLAUDE_CODE_GIT_BASH_PATH`, else the bash beside git, else cmd.exe; `sh -c` on POSIX; SKIP only without a rendered `settings.json`) and `statusline` (same shell, `statusLine.command`, throwaway cwd + cache dir; both look `_shell` up at call time, so a test can patch it); `prune_npx_cache` / `warm_npx` / `maintenance` (re-exported by `deps`) |
 | `doctor_mcp.py` | `mcp-roster`: extras, pin drift against the manifest, deprecated packages, needs-auth servers |
 | `doctor_mods.py` | `mods` (version policy: the manifest pin is a same-minor minimum) and `mods-runtime` (plugin test, `tsc`) |
@@ -241,7 +247,7 @@ re-check) happens automatically until the doctor reports 0 FAIL.
 | `doctor_checks.py` | source-derived doctor rows shared with `doctor.py` (palette counts, locked-source links, model-routing, hook fixtures) |
 | `basetools.py` | the fresh-machine part of the install pass: `before_deps` (apt tools, then node/claude/uv/gh; re-detects env) and `after_deps` (ollama + models); `ensure_base_tools(env, manifest, ci, dry_run)` is the one entry (POSIX `userspace` / Windows `wintools`), also called by the daily self-heal and `_repair` |
 | `userspace.py` | no-sudo installs into `~/.local`: node (tarball + SHA-256), Claude Code (official installer, pinned), uv, gh; `extract_prefix` (safe tar extraction); all return status rows, never raise |
-| `ollama_setup.py`, `zst_untar.py` | user-space ollama (tar.zst via stdlib zstd / `zstd` / `uv --with zstandard`), user unit or detached serve, model pulls |
+| `ollama_setup.py`, `zst_untar.py` | user-space ollama (tar.zst via stdlib zstd / `zstd` / `uv --with zstandard`), user unit or detached serve, model pulls. **Remote mode:** `OLLAMA_HOST` (`settings.user.json` env) naming a non-loopback host → `setup_remote`: no binary, no server, no weights here; row `ollama REMOTE(<url>)`, missing models pulled on that host via `POST /api/pull` (`pull_remote`), `WARN(no ollama server at <url>)` when it is down. `tags_url()` replaces the old `TAGS_URL` constant |
 | `ostools.py` | apt-only optional OS tools: root or `sudo -n`, else the one batched sudo line; `checklist()` builds the end-of-run message from `manifest.user_space.human_only` |
 | `safe_fetch.py`, `safe_tar.py` | `download` (https-only, Content-Length + pinned SHA-256, `.part` then rename), `fetch`, `extract_zip_prefix` (contained ZIP; extraction dir renamed with a ~10 s PermissionError retry, stale `<dest>.tmp-<pid>` swept only for dead pids); `safe_tar.extract_prefix` (contained tar extraction; re-exported here and by `userspace`) |
 | `wintools.py`, `winprobe.py`, `winlock.py`, `winutil.py` | Windows base tools (`ensure_wintools`: git/node/claude/uv/gh into the tools dir, rows `PRESENT` / `INSTALLED` / `WOULD-INSTALL(user-space, no admin)`, PATH + `CLAUDE_CODE_GIT_BASH_PATH` via `finish`, the npm-prefix repair); `winprobe.Probe` = "already there and working?"; `winlock.InstallLock` = one install per tools dir; helpers: `git_bash` + `bash_values` (the one git-reuse rule and its env reader), `which` (no cwd hit), `pick_python`, `signature_problem` (Authenticode), `sha256_ok` / `drop` |

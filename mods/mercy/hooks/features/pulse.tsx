@@ -89,6 +89,8 @@ export function registerPulse(on: On): void {
     const model = bandModel(snapshot(await $.clock.now()))
     if (!model) return next(e)
     const actions = model.actions.filter(a => !(a.command === 'compact' && e.props.isWorking))
+    // Other mods (ponytail's band) share this slot: draw theirs below ours, never replace it.
+    const below = await next(e).catch(() => undefined)
     const { Box, Text, Button } = $.ui.resolve(e)
     return (
       <Box flexDirection="column">
@@ -100,6 +102,7 @@ export function registerPulse(on: On): void {
             <Button key={`mercy-${a.key}`} label={a.label} dimColor={a.command === 'hide'} variant={a.key === 'verify' || a.key === 'ci' ? 'primary' : undefined} onPress={() => void press($, a)} />
           ))}
         </Box>
+        {below}
       </Box>
     )
   })

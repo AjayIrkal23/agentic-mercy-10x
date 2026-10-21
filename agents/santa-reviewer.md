@@ -50,7 +50,9 @@ Read every changed file and try HARD to break it. Be concrete and skeptical. Wal
 - **Error handling** — swallowed errors, `err` ignored, partial failure leaving inconsistent state, missing rollback, nil/None/undefined deref, unhandled rejection.
 - **Contract & types** — nil vs non-nil comparisons, zero-value traps, type coercion, wrong comparison operator (After/Before/Equal), inclusive-vs-exclusive bounds, timezone/encoding assumptions.
 - **Security** (when relevant) — injection, authz bypass, unsanitized input reaching a sink, SSRF, path traversal, unsafe deserialization.
-- **Resource & performance cliffs** — unbounded growth, N+1, quadratic loops on hot paths, leaked handles, missing pagination limits.
+- **Resource & performance cliffs** — unbounded growth, N+1, quadratic loops on hot paths, leaked handles, missing pagination limits. Judge scale against the load the repo expects (README, deploy config: one user or many processes) and name the load you assumed.
+- **Missing test** — risky new logic (a branch, a parser, money, security, data writes, a bug fix) with no test that fails when it breaks. One good test, not coverage.
+A `shortcut:` (or older `ponytail:`) comment naming its limit is a decision, not a finding, unless the expected load already crosses it.
 For each candidate: `SEVERITY (HIGH/MED/LOW) | file:line | the concrete failing scenario | minimal fix`. If a category is clean, one line: `OK: <why it's actually safe>`.
 
 ### 2. SIMPLIFIER — needless complexity (NOT bugs)

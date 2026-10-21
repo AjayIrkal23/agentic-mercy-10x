@@ -24,6 +24,9 @@ _own_dir("CLAUDE_HOOK_TELEMETRY_DIR", "claude-hook-telemetry-")
 _own_dir("CLAUDE_HOOK_STATE_DIR", "claude-hook-state-")
 # hooks/.state (gate evidence, index state) — audit J-02
 _own_dir("CLAUDE_HOOK_DOTSTATE_DIR", "claude-hook-dotstate-")
+# a machine's OLLAMA_HOST (settings.user.json env reaches every Claude-run shell) never steers a test;
+# set-but-empty = the default, and stops plat.ollama_url() reading the live settings.user.json
+os.environ["OLLAMA_HOST"] = ""
 
 
 def pytest_sessionfinish(session, exitstatus):

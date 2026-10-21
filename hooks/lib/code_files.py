@@ -88,4 +88,18 @@ def is_home(root: "str | os.PathLike | None") -> bool:
         return False
 
 
-__all__ = ["CODE_EXTENSIONS", "SKIP_SEGMENTS", "is_code_file", "git_root", "is_home"]
+def is_infra_root(root: "str | os.PathLike | None") -> bool:
+    """True for the agent-infra roots that are never indexed or graphed: ``$HOME``,
+    ``~/.claude``, ``~/.codex`` and this checkout. Mirrors ``index-lifecycle.NEVER_INDEX``
+    (kept there for its no-libs fallback); every other hook asks this. Never raises."""
+    if root is None:
+        return False
+    try:
+        r, h = Path(root).expanduser().resolve(), Path.home().resolve()
+        return r in (h, h / ".claude", h / ".codex", Path(__file__).resolve().parents[2])
+    except (OSError, RuntimeError):
+        return False
+
+
+__all__ = ["CODE_EXTENSIONS", "SKIP_SEGMENTS", "is_code_file", "git_root", "is_home",
+           "is_infra_root"]

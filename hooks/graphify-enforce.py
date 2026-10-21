@@ -121,11 +121,13 @@ def _graph_stale_cached(cid: str, root, graph) -> bool:
 # --------------------------------------------------------------------------- #
 # Graph resolution + freshness (open-repo scoped, git-root aware)
 # --------------------------------------------------------------------------- #
-def _graph_root_and_path() -> tuple[Path | None, Path | None]:
+def _graph_root_and_path(payload: dict | None = None) -> tuple[Path | None, Path | None]:
     """Return (repo_root, graph.json) for the OPEN repo, walking up to the git
     root so a subdir cwd still resolves the repo-root graph. ``graph`` is None
-    when the repo has no built graph. Fail-open."""
-    cwd = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+    when the repo has no built graph. The payload cwd comes first: CLAUDE_PROJECT_DIR
+    is the launch dir (often ~, never a repo). Fail-open."""
+    pcwd = payload.get("cwd") if isinstance(payload, dict) else None
+    cwd = pcwd or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
     root = None
     try:
         from lib.repo_context import git_root
@@ -135,7 +137,16 @@ def _graph_root_and_path() -> tuple[Path | None, Path | None]:
     if root is None:
         root = Path(cwd)
     g = Path(root) / "graphify-out" / "graph.json"
-    return (Path(root), g if g.is_file() else None)
+    return (Path(root), g if g.is_file() and not _is_infra_root(root) else None)
+
+
+def _is_infra_root(root) -> bool:
+    """NEVER_INDEX roots: their graph is never refreshed, so never pushed. Fail-open."""
+    try:
+        from lib.code_files import is_infra_root
+        return is_infra_root(root)
+    except Exception:
+        return False
 
 
 def _graph_stale(root: Path, graph: Path) -> bool:
@@ -162,6 +173,8 @@ def _reminder(root: Path, graph: Path, *, compact: bool = False, cid: str = "") 
         lines.append("  graph rebuilding in the background; answers may lag the last commit")
     lines.append("  Use graphify BEFORE broad exploration / Explore agents:")
     lines.append('    MCP: mcp__graphify__query_graph "<q>" · get_neighbors "<node>" · god_nodes · shortest_path "<A>" "<B>" · graph_stats')
+    # the MCP keeps the graph it started with (empty when the session began outside this repo)
+    lines.append(f'    Pass project_path="{root}" on every graphify call.')
     lines.append("    Fallback if graphify MCP tools are not listed this session:")
     lines.append(f'      `graphify query "<q>"` · read {root}/graphify-out/GRAPH_REPORT.md')
     if not compact:
@@ -194,7 +207,7 @@ def handle_prompt_submit():
         json.dump({"continue": True}, sys.stdout)
         return
 
-    root, graph = _graph_root_and_path()
+    root, graph = _graph_root_and_path(hook_input)
     if graph is None:
         json.dump({"continue": True}, sys.stdout)
         return
@@ -243,7 +256,7 @@ def handle_pre_tool_use():
         json.dump({"continue": True}, sys.stdout)
         return
 
-    root, graph = _graph_root_and_path()
+    root, graph = _graph_root_and_path(hook_input)
     if graph is None:
         json.dump({"continue": True}, sys.stdout)
         return

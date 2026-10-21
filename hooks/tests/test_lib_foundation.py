@@ -53,6 +53,40 @@ def test_materialize_substitutes_and_leaves_unknown():
     assert out == ["py", "/h/x.py", "{UNKNOWN}"]
 
 
+def test_ollama_url_reads_every_ollama_host_form():
+    for raw, want in [("", "http://127.0.0.1:11434"), ("localhost", "http://127.0.0.1:11434"),
+                      ("0.0.0.0", "http://127.0.0.1:11434"), ("192.0.2.10", "http://192.0.2.10:11434"),
+                      ("192.0.2.10:8080", "http://192.0.2.10:8080"),
+                      ("http://192.0.2.10:11434/", "http://192.0.2.10:11434"),
+                      ("https://ai.example/ollama", "https://ai.example:443/ollama"),  # as ollama's client
+                      ("http://192.0.2.10", "http://192.0.2.10:80"),
+                      ("[::1]:11434", "http://[::1]:11434"), ("host:notaport", "http://host:11434")]:
+        assert plat.ollama_url({"OLLAMA_HOST": raw}) == want, raw
+    assert plat.is_loopback_url(plat.ollama_url({})) and plat.is_loopback_url("http://[::1]:11434")
+    assert not plat.is_loopback_url("http://192.0.2.10:11434")
+
+
+def test_ollama_url_falls_back_to_settings_user_json_outside_claude():
+    """install.py / doctor.py from a terminal have no settings env: the key is read from the file;
+    a present-but-empty env value (the conftest's) still means the default."""
+    saved = {k: os.environ.get(k) for k in ("OLLAMA_HOST", "CLAUDE_CONFIG_DIR")}
+    with tempfile.TemporaryDirectory() as d:
+        try:
+            pathlib.Path(d, "settings.user.json").write_text('{"env": {"OLLAMA_HOST": "192.0.2.10"}}',
+                                                             encoding="utf-8")
+            os.environ["CLAUDE_CONFIG_DIR"] = d
+            os.environ.pop("OLLAMA_HOST", None)
+            assert plat.ollama_url() == "http://192.0.2.10:11434"
+            os.environ["OLLAMA_HOST"] = ""
+            assert plat.ollama_url() == "http://127.0.0.1:11434"
+            os.environ.pop("OLLAMA_HOST")
+            pathlib.Path(d, "settings.user.json").write_text("not json", encoding="utf-8")
+            assert plat.ollama_url() == "http://127.0.0.1:11434"
+        finally:
+            for k, v in saved.items():
+                os.environ.pop(k, None) if v is None else os.environ.__setitem__(k, v)
+
+
 def test_atomic_write_roundtrip():
     tmp = pathlib.Path(tempfile.mkdtemp()) / "deep" / "f.txt"
     assert plat.atomic_write(tmp, "payload")
@@ -114,6 +148,16 @@ def test_home_is_never_a_repo_root():
     assert ctx is not None and ctx.root != home
     # unnormalized paths must not slip the guard (git_root used to miss these)
     assert rc.git_root(home + os.sep + "nonexistent-dir" + os.sep + "..") is None
+
+
+def test_infra_roots_match_index_lifecycle_never_index():
+    """One helper for every hook; it once drifted (the read gate missed ~/.codex and this checkout)."""
+    from lib.code_files import is_infra_root
+    home = pathlib.Path.home()
+    for root in (home, home / ".claude", home / ".codex", _HOOKS.parent):
+        assert is_infra_root(root), root
+    assert not is_infra_root(home / "CODE_FILES" / "proj")
+    assert not is_infra_root(None)
 
 
 def test_is_inside_containment():

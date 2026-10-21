@@ -306,6 +306,12 @@ def test_icacls_and_whoami_fall_back_to_the_bare_name_without_systemroot(monkeyp
 
 
 # --- A6-08: the doctor probes 127.0.0.1 (IPv6 `localhost` costs 2 s on Windows) ---- #
-def test_the_manifest_ollama_probe_uses_the_ipv4_literal():
+def test_the_manifest_ollama_probe_uses_the_ipv4_literal(monkeypatch):
+    """No literal in the manifest: the probe follows OLLAMA_HOST, and its default (and a
+    `localhost` OLLAMA_HOST) is the IPv4 literal."""
+    import ollama_setup
     m = json.loads((_ROOT / "installer" / "manifest.json").read_text(encoding="utf-8"))
-    assert urlparse(m["doctor_probes"]["ollama"]["url"]).hostname == "127.0.0.1"
+    assert "url" not in m["doctor_probes"]["ollama"]
+    assert urlparse(ollama_setup.tags_url()).hostname == "127.0.0.1"
+    monkeypatch.setenv("OLLAMA_HOST", "localhost:11434")
+    assert urlparse(ollama_setup.tags_url()).hostname == "127.0.0.1"

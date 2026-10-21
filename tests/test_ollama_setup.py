@@ -82,6 +82,24 @@ def test_pull_models_only_pulls_missing_ones_when_the_server_is_up(home):
     assert dict(rows)["ollama:all-minilm"] == "PRESENT"
 
 
+def test_a_remote_ollama_host_installs_and_starts_nothing_here(home, monkeypatch):
+    """OLLAMA_HOST on another machine: no binary, no server, no weights on this one; only the
+    missing models are pulled, on that machine, over HTTP."""
+    monkeypatch.setenv("OLLAMA_HOST", "192.0.2.10")
+    monkeypatch.setattr(ollama_setup, "install_ollama", lambda *a, **k: pytest.fail("installed locally"))
+    monkeypatch.setattr(ollama_setup, "ensure_server", lambda *a, **k: pytest.fail("started locally"))
+    pulled: list = []
+    monkeypatch.setattr(ollama_setup, "pull_remote", lambda base, m: pulled.append((base, m)) or "INSTALLED")
+    rows = dict(ollama_setup.setup_ollama(M, ci=False, dry_run=False, probe=lambda: {"all-minilm:latest"}))
+    assert rows["ollama"] == "REMOTE(http://192.0.2.10:11434)"
+    assert rows["ollama:all-minilm"] == "PRESENT" and rows["ollama:qwen2.5-coder:3b"] == "INSTALLED"
+    assert pulled == [("http://192.0.2.10:11434", "qwen2.5-coder:3b")]
+    assert dict(ollama_setup.setup_ollama(M, ci=True, dry_run=True, probe=lambda: set()))["ollama:all-minilm"] == "WOULD-PULL"
+    down = dict(ollama_setup.setup_ollama(M, ci=False, dry_run=False, probe=lambda: None))
+    assert down["ollama:all-minilm"].startswith("WARN(no ollama server at http://192.0.2.10:11434")
+    assert ollama_setup.tags_url() == "http://192.0.2.10:11434/api/tags"
+
+
 def test_pull_models_warns_when_no_server_can_be_started(home):
     rows = ollama_setup.pull_models(CFG["models"], run=_run_rec([]), probe=lambda: None,
                                     ensure_server=lambda: False)

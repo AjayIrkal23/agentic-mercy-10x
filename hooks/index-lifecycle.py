@@ -98,15 +98,17 @@ DOC_GLOBS = ["*.md", "*.mdx", "*.markdown", "*.rst", "*.adoc", "*.txt",
 _DEFAULT_CONFIG = {
     "debounce": {"writes_threshold": 5, "seconds_threshold": 45},
     "probe_timeouts_ms": {"jcodemunch": 500, "jdocmunch": 800, "graphify": 3000, "dox": 300},
-    "build_timeouts_s": {"jcodemunch": 300, "jdocmunch": 120, "graphify": 300, "dox": 60},
+    # jdocmunch_embed: a doc index with vectors; a provider change re-embeds the whole corpus
+    "build_timeouts_s": {"jcodemunch": 300, "jdocmunch": 120, "jdocmunch_embed": 900,
+                         "graphify": 300, "dox": 60},
     "max_build_failures": 3,
     "lock_ttl_minutes": 30,  # must outlive the longest build cap + summarizer wait
     "max_doc_stats": 5000,
     "incremental_file_cap": 20,
     "surfaces_enabled": {"jcodemunch": True, "jdocmunch": True, "graphify": True, "dox": True},
     "relax_read_gate_while_building": True,
-    "summarizer_healthcheck": {"enabled": True, "url": "http://127.0.0.1:11434/api/tags",
-                               "timeout_ms": 800, "wait_s": 90},
+    # no "url": the probe follows OLLAMA_HOST (plat.ollama_url), like the MCP env the installer writes
+    "summarizer_healthcheck": {"enabled": True, "timeout_ms": 800, "wait_s": 90},
 }
 
 NEUTRAL_DEFER_LINE = "summarizer unavailable; index refresh deferred, retrying automatically"
@@ -115,7 +117,7 @@ REPROBE_WALL_S = 1.8
 REPROBE_PROBE_CAP_MS = 1200
 # Bash commands that move HEAD or rewrite the tree in bulk (mid-session reprobe trigger).
 _GIT_MOVES_RE = re.compile(
-    r"(?:^|[;&|(\s])git(?:\s+(?:-[Cc]\s+\S+|--[\w-]+(?:=\S+)?))*\s+"
+    r"(?:^|[;&|(\s\"'\\/])git(?:\.exe)?[\"']?(?:\s+(?:-[Cc]\s+\S+|--[\w-]+(?:=\S+)?))*\s+"
     r"(?:commit|pull|merge|checkout|switch|rebase|reset|cherry-pick|revert|am|stash\s+pop)"
     r"(?![\w-])")
 _sleep = time.sleep  # indirection so tests never really wait
@@ -173,10 +175,14 @@ def _scrub(text: str) -> str:
 def _ok(cp) -> bool:
     """True when the builder exited 0; else remember the last ~400 chars of its
     stderr (stdout when stderr is empty: jcodemunch reports errors there) in
-    ``_LAST_ERR`` for the ``build_fail`` row. Secrets are scrubbed."""
+    ``_LAST_ERR`` for the ``build_fail`` row. Secrets are scrubbed. ``Deprecated:``
+    banners do not count as stderr: jcodemunch prints one on every run, which hid
+    the real JSON error on stdout."""
     if cp.returncode == 0:
         return True
-    body = (cp.stderr or "").strip() or (cp.stdout or "").strip()
+    err = "\n".join(ln for ln in (cp.stderr or "").splitlines()
+                    if not ln.startswith("Deprecated:"))
+    body = err.strip() or (cp.stdout or "").strip()
     head = "timeout; " if cp.returncode == 124 else ""
     _LAST_ERR[0] = _scrub(f"{head}rc={cp.returncode} {body}")[-400:]
     return False
@@ -210,19 +216,20 @@ def _summarizer_alive(url: str, timeout_ms: int) -> bool:
         return True
 
 
-def _jcodemunch_env() -> dict:
-    """os.environ + the env block of mcpServers.jcodemunch in ~/.claude.json.
+def _mcp_env(server: str) -> dict:
+    """os.environ + the env block of mcpServers.<server> in ~/.claude.json.
 
-    The MCP server gets its summarizer endpoint (OPENAI_API_BASE, ...) from that
-    block; a CLI spawned from a hook does not inherit it, and jcodemunch-mcp then
-    defaults to api.openai.com and refuses it, silently degrading every summary
-    to the signature/docstring fallback. Absent/unparsable file => plain
-    os.environ. Values are never logged.
+    The MCP server gets its ollama endpoints (jcodemunch OPENAI_API_BASE, jdocmunch
+    JDOCMUNCH_OPENAI_COMPAT_URL, ...) from that block; a CLI spawned from a hook does
+    not inherit it. jcodemunch-mcp then defaults to api.openai.com and refuses it,
+    silently degrading every summary to the signature/docstring fallback; jdocmunch
+    finds no embedding provider and saves changed docs without vectors.
+    Absent/unparsable file => plain os.environ. Values are never logged.
     """
     env = dict(os.environ)
     try:
         data = json.loads((Path.home() / ".claude.json").read_text(encoding="utf-8"))
-        extra = data["mcpServers"]["jcodemunch"]["env"]
+        extra = data["mcpServers"][server]["env"]
         env.update({k: v for k, v in extra.items()
                     if isinstance(k, str) and isinstance(v, str)})
     except Exception:  # noqa: BLE001 - missing file / bad shape => no extra env
@@ -533,20 +540,25 @@ def _index_db_for(root: Path):
     `source_root`: a same-named clone (worktree, scratch copy) must not borrow
     another path's index (audit MAIN-01). Dbs without the field (older
     jcodemunch) keep the old name order: exact `<owner>-<name>.db` first, the fuzzy
-    globs matched sibling clones (SubStore ↔ SubStore-laneCI)."""
+    globs matched sibling clones (SubStore ↔ SubStore-laneCI). A db named after the git
+    remote or a sanitized name (`Docketrun-Tech-assets_management.db` for `SubStore`)
+    matches no glob: the rest are scanned by `source_root` before any legacy fallback."""
     ordered: list = []
     for pat in (f"*-{root.name}.db", f"*-{root.name}*.db", f"*{root.name}*.db"):
         for db in sorted(CODE_INDEX_DIR.glob(pat)):
             if db not in ordered:
                 ordered.append(db)
+    named = len(ordered)
+    ordered += [db for db in sorted(CODE_INDEX_DIR.glob("*.db")) if db not in ordered]
     want = os.path.realpath(str(root))
     legacy = []
-    for db in ordered:
+    for i, db in enumerate(ordered):
         src = _db_meta(db, "source_root")
         if src is _UNREADABLE:
             continue  # locked/corrupt: never borrow it as "legacy"
         if not src:
-            legacy.append(db)
+            if i < named:  # an unrelated name never becomes "legacy"
+                legacy.append(db)
         elif os.path.realpath(src) == want:
             return db
     return legacy[0] if legacy else None
@@ -609,7 +621,10 @@ def _probe_jdocmunch(root: Path, prior: dict, max_stats: int) -> tuple:
     manifest = DOC_INDEX_DIR / f"{name}.json"
     if not manifest.is_file():
         return (MISSING, {}, "no doc manifest")
-    cp = _git(root, ["ls-files", "-z", "--"] + DOC_GLOBS, timeout=5)
+    # --others: a doc written but not yet `git add`ed counts too (ignored files never).
+    # graphify-out/ is graph output: a committed one re-staled the docs on every graph build.
+    cp = _git(root, ["ls-files", "-z", "--cached", "--others", "--exclude-standard", "--"]
+              + DOC_GLOBS + [":(exclude)graphify-out/"], timeout=5)
     newest = 0.0
     if cp.returncode == 0 and cp.stdout:
         rels = cp.stdout.split("\0")[:max_stats]
@@ -721,8 +736,9 @@ def _probe_all(ctx, state: dict, cfg: dict, wall: float | None = None) -> dict:
 # --------------------------------------------------------------------------- #
 def _summarizer_cfg(cfg: dict) -> tuple:
     hc = cfg.get("summarizer_healthcheck") or {}
+    base = plat.ollama_url() if _LIBS_OK else "http://127.0.0.1:11434"
     return (bool(hc.get("enabled", True)),
-            hc.get("url", "http://127.0.0.1:11434/api/tags"),
+            hc.get("url") or f"{base}/api/tags",
             hc.get("timeout_ms", 800))
 
 
@@ -760,16 +776,18 @@ def _build_jcodemunch(root: Path, incremental: bool, paths, cfg: dict):
     and the next probe retries."""
     if not _which("jcodemunch-mcp"):
         return False
+    db = _index_db_for(root)
     no_ai = False
     if not _wait_summarizer(cfg):
-        if incremental or _index_db_for(root) is not None:
+        if incremental or db is not None:
             _telem("summarizer_down_build_deferred", surface="jcodemunch",
                    key=_repo_key(root), incremental=bool(incremental))
             return "DEFERRED"
         no_ai = True
-    env = _jcodemunch_env()
+    env = _mcp_env("jcodemunch")
     to = cfg["build_timeouts_s"]["jcodemunch"]
-    if incremental and paths and len(paths) <= cfg["incremental_file_cap"]:
+    # `index-file` needs an indexed folder ("No indexed folder found"): no db yet -> full index
+    if incremental and paths and len(paths) <= cfg["incremental_file_cap"] and db is not None:
         # Only CODE files go to `index-file` (md/json journal entries used to fail
         # the surface); one bad path never marks the whole surface failed.
         try:
@@ -791,11 +809,31 @@ def _build_jcodemunch(root: Path, incremental: bool, paths, cfg: dict):
     return _ok(_run(cmd, timeout=to, env=env))
 
 
-def _build_jdocmunch(root: Path, incremental: bool, paths, cfg: dict) -> bool:
+def _doc_vectors(root: Path) -> bool:
+    """This checkout's doc index has a vector sidecar (``<name>.embeddings.jsonl``)."""
+    return (DOC_INDEX_DIR / f"{_doc_name_for(root)}.embeddings.jsonl").is_file()
+
+
+def _build_jdocmunch(root: Path, incremental: bool, paths, cfg: dict):
+    """True/False, or "DEFERRED" when an embedded index's ollama stays down.
+
+    The CLI runs with the MCP server's env (its embedding provider). Embeddings only for an
+    index that already has a vector sidecar: jdocmunch embeds just the changed sections (a
+    provider change re-embeds the corpus, hence the longer cap). Every other index runs
+    `--embeddings off`: a first embed of a large corpus (CONCORD-WEBSITE, 295k sections)
+    cannot finish in a hook."""
     if not _which("jdocmunch-mcp"):
         return False
-    to = cfg["build_timeouts_s"]["jdocmunch"]
     name = _doc_name_for(root)
+    embed = _doc_vectors(root)
+    if embed and not _wait_summarizer(cfg):
+        # a lexical save now leaves those sections without vectors until they change again
+        _telem("summarizer_down_build_deferred", surface="jdocmunch", key=_repo_key(root),
+               incremental=bool(incremental))
+        return "DEFERRED"
+    env = _mcp_env("jdocmunch")  # its provider, and the manifest's telemetry-off flag
+    to = cfg["build_timeouts_s"]["jdocmunch_embed" if embed else "jdocmunch"]
+    flags = [] if embed else ["--embeddings", "off"]
     if incremental and paths:
         docs = [str(p) for p in paths
                 if Path(p).suffix.lower() in
@@ -806,22 +844,44 @@ def _build_jdocmunch(root: Path, incremental: bool, paths, cfg: dict) -> bool:
         listing = STATE_DIR / f".jdoc-paths-{os.getpid()}-{int(time.time())}.txt"
         try:
             listing.write_text("\n".join(docs) + "\n", encoding="utf-8")
-            return _ok(_run(["jdocmunch-mcp", "index-local", "--path", str(root),
-                             "--name", name, "--paths-from", str(listing)], timeout=to))
+            return _ok(_run(["jdocmunch-mcp", "index-local", "--path", str(root), "--name", name,
+                             "--paths-from", str(listing)] + flags, timeout=to, env=env))
         finally:
             try:
                 listing.unlink()
             except OSError:
                 pass
-    return _ok(_run(["jdocmunch-mcp", "index-local", "--path", str(root),
-                     "--name", name], timeout=to))
+    return _ok(_run(["jdocmunch-mcp", "index-local", "--path", str(root), "--name", name] + flags,
+                    timeout=to, env=env))
+
+
+_BACKUP_DIR_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+GRAPH_BACKUPS_KEEP = 3  # graphify snapshots a curated graph per day and never prunes
+
+
+def _prune_graph_backups(root: Path) -> None:
+    """Keep the newest GRAPH_BACKUPS_KEEP `graphify-out/YYYY-MM-DD/` snapshots. A dir git
+    tracks (or one git cannot vouch for) is never deleted. Never raises."""
+    import shutil
+    try:
+        dated = sorted(p.name for p in (root / "graphify-out").iterdir()
+                       if p.is_dir() and _BACKUP_DIR_RE.match(p.name))
+        for name in dated[:-GRAPH_BACKUPS_KEEP]:
+            cp = _git(root, ["ls-files", "--", f"graphify-out/{name}"])
+            if cp.returncode == 0 and not cp.stdout.strip():
+                shutil.rmtree(root / "graphify-out" / name, ignore_errors=True)
+    except OSError:
+        pass
 
 
 def _build_graphify(root: Path, incremental: bool, paths, cfg: dict) -> bool:
     if not _which("graphify"):
         return False
-    return _ok(_run(["graphify", "update", str(root)],
-                    timeout=cfg["build_timeouts_s"]["graphify"]))
+    ok = _ok(_run(["graphify", "update", str(root)],
+                  timeout=cfg["build_timeouts_s"]["graphify"]))
+    if ok:
+        _prune_graph_backups(root)
+    return ok
 
 
 def _build_dox(root: Path, incremental: bool, paths, cfg: dict) -> bool:
@@ -895,7 +955,11 @@ def _flush(ctx, state: dict, cfg: dict) -> None:
         # the surface STALE and fully rebuilds. Truncate and move on.
         state["journal"] = {"first_write_at": None, "entries": []}
         return
-    enabled = [s for s in SURFACES if cfg["surfaces_enabled"].get(s, True)]
+    # A surface in FAILED backoff waits for the next probe (its fingerprint changes on edit).
+    recs = state.get("surfaces") or {}
+    enabled = [s for s in SURFACES if cfg["surfaces_enabled"].get(s, True)
+               and not (recs.get(s, {}).get("state") == FAILED
+                        and int(recs.get(s, {}).get("failures", 0) or 0) >= cfg["max_build_failures"])]
     ttl = cfg["lock_ttl_minutes"]
     claimed = [s for s in enabled
                if not _lock_is_live(ctx.key, s, ttl)
@@ -953,7 +1017,8 @@ def _apply_probes(ctx, state: dict, probes: dict, cfg: dict) -> tuple:
             # ollama DOWN: the detached builder waits for it, then builds without AI
             # summaries (MISSING index) or defers (existing index). Keep the INDEXED
             # fingerprint meanwhile: saving `fp` would let a retry probe FRESH.
-            down = surface == "jcodemunch" and _summarizer_down(cfg)
+            down = ((surface == "jcodemunch" or surface == "jdocmunch" and _doc_vectors(Path(ctx.root)))
+                    and _summarizer_down(cfg))
             if down:
                 rec["fingerprint"] = prior.get("fingerprint", {})
             failures = prior.get("failures", 0)

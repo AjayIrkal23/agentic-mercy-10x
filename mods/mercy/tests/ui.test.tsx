@@ -147,6 +147,17 @@ describe('deck: start, pane and band', () => {
     expect(await band.find({ key: 'mercy-ci' })).toBeDefined()
     expect(await band.find({ key: 'mercy-ci-pane' })).toBeDefined()
   })
+  test("another mod's band (ponytail) still draws below ours", async ($, on) => {
+    const w = world(on)
+    on('ui.render', { component: 'AbovePrompt' }, ($e, e) => {
+      const { Text } = $e.ui.resolve(e)
+      return <Text>ponytail band</Text>
+    })
+    await boot($, w)
+    const band = await $.ui.mount({ plugin: 'mercy', surface: 'terminal', component: 'AbovePrompt', props: BAND })
+    expect(await band.find({ text: /CI failing on PR #12/ })).toBeDefined()
+    expect(await band.find({ text: 'ponytail band' })).toBeDefined()
+  })
 
   for (const surface of ['terminal', 'desktop'] as const) {
     test(`every pane view draws on ${surface}; tabs switch; the sparkline is terminal-only`, async ($, on) => {

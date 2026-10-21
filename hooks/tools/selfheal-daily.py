@@ -6,7 +6,8 @@ Detached (``async: true``): a session never waits. Once per 24 h (``at`` in
 Independent steps, one failing never stops the others: ``mcp`` (re-add a missing manifest
 server, pin + env reconcile), ``deps`` (base tools node/claude/uv/gh in ~/.local, then absent
 CLIs, never upgrade), ``settings`` (re-render when the template/manifest is newer or a pinned interpreter path is gone),
-``vendor`` (``vendor_skill.py --all`` only on DRIFT). Summary {"at","changed","errors",
+``vendor`` (``vendor_skill.py --all`` only on DRIFT), ``ponytail-board`` (the ponytail band
+import of past sessions). Summary {"at","changed","errors",
 "reported"} for the aggregator; names / specs / return codes to ``state/selfheal-daily.log``:
 no env, no tokens. ``--dry-run`` prints the plan and writes nothing. No-op for
 CLAUDE_HOOK_DOCTOR, link-doctor's probe payload and pytest (``PYTEST_CURRENT_TEST`` unless
@@ -105,7 +106,37 @@ def _vendor(ctx: Ctx):
     return [("vendor", "--all", f"VENDORED{note}" if rc == 0 else f"WARN(rc={rc})")]
 
 
-STEPS = [("mcp", _mcp), ("deps", _deps), ("settings", _settings), ("vendor", _vendor)]
+# The import never revisits a session it wrote, so a live transcript would stay half-counted (and a
+# band row under another key would count it twice): hide transcripts written in the last 24 h.
+# shortcut: patches fs.readdirSync of ponytail-band-import.js (5.3.2), drop it once upstream skips live sessions.
+_IDLE_ONLY = (
+    "const fs=require('fs'),path=require('path'),list=fs.readdirSync;"
+    "const idle=(d,f)=>{try{return Date.now()-fs.statSync(path.join(d,f)).mtimeMs>864e5}catch(e){return false}};"
+    "fs.readdirSync=(d,...a)=>list(d,...a).filter(f=>typeof f!=='string'||!f.endsWith('.jsonl')||idle(d,f));"
+    "require(process.argv[1]).run()"
+)
+
+
+def _ponytail_board(ctx: Ctx):
+    """Adds past sessions to the ponytail board (`/ponytail band import`, which nobody types here).
+    The live band misses sessions that started with mods switched off; the import skips sessions
+    the ledger already has (~20 s over 6 GB of transcripts)."""
+    try:
+        meta = json.loads((ctx.target / "plugins" / "installed_plugins.json").read_text(encoding="utf-8"))
+        script = Path(meta["plugins"]["ponytail@ponytail"][0]["installPath"]) / "hooks" / "ponytail-band-import.js"
+    except (OSError, ValueError, KeyError, IndexError, TypeError):
+        return []
+    node = plat.node_exe()
+    if not node or not script.is_file():
+        return []
+    if ctx.dry:
+        return [("ponytail-board", "import", "WOULD-IMPORT past sessions")]
+    cp = plat.run([node, "-e", _IDLE_ONLY, str(script)], timeout=300)
+    return [("ponytail-board", "import", "OK" if cp.returncode == 0 else f"WARN(rc={cp.returncode})")]
+
+
+STEPS = [("mcp", _mcp), ("deps", _deps), ("settings", _settings), ("vendor", _vendor),
+         ("ponytail-board", _ponytail_board)]
 
 
 # --- plumbing ---------------------------------------------------------------- #

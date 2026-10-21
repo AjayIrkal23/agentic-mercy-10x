@@ -55,7 +55,8 @@ def _exec_tokens(env) -> dict:
     real = env.real_dir or str(plat.claude_dir())
     claude_dir = str(_ROOT) if str(_ROOT) != real else real
     return {"PYTHON": env.python, "NODE": env.node, "CLAUDE_DIR": claude_dir,
-            "USER_SITE": str(Path(site.getusersitepackages())), "HOME": str(Path.home())}
+            "USER_SITE": str(Path(site.getusersitepackages())), "HOME": str(Path.home()),
+            "OLLAMA_URL": plat.ollama_url()}
 
 
 _LAUNCHER = re.compile(r"(.+?)((?:\s+-\S+)*)")
@@ -338,16 +339,19 @@ def reconcile_mcp_env(*, dry_run: bool = False) -> list[tuple[str, str]]:
     """For MCP servers already registered, add the manifest's literal ``-e K=V``
     pairs that are missing/different (telemetry-off flags …) via the claude CLI
     (remove + add-json of the SAME entry with env merged — nothing else changes).
-    Secrets (``env_from``) and existing extra env keys are never touched."""
+    ``{OLLAMA_URL}`` is resolved first (so a new ``OLLAMA_HOST`` reaches the live
+    entries); other tokens stay skipped. Secrets (``env_from``) and existing extra
+    env keys are never touched."""
     try:
         live = json.loads(user_config_file().read_text(encoding="utf-8")).get("mcpServers") or {}
     except (OSError, ValueError):
         return []
     out: list[tuple[str, str]] = []
+    ollama = plat.ollama_url()
     for srv in _load_manifest().get("mcp_servers", []):
         name, add = srv["name"], srv["add"]
-        want = dict(add[i + 1].split("=", 1) for i, a in enumerate(add)
-                    if a == "-e" and "{" not in add[i + 1])
+        want = dict(s.split("=", 1) for i, a in enumerate(add)
+                    if a == "-e" and "{" not in (s := add[i + 1].replace("{OLLAMA_URL}", ollama)))
         entry = live.get(name)
         if not entry or not want:
             continue

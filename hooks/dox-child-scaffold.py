@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -40,6 +41,7 @@ SKIP_SEGMENTS = (
     "/__pycache__/", "/vendor/", "/.next/", "/target/", "/.venv/",
     "/graphify-out/", "/.code-index/", "/.planning/",
 )
+_TEST_RE = re.compile(r"(?:^test_|[._]test\.|\.spec\.|_spec\.)", re.I)
 
 
 def _safe(cid: str) -> str:
@@ -129,8 +131,27 @@ def main() -> int:
         rel = d.name
 
     if (d / "CLAUDE.md").exists():
-        # Already documented — nothing to create (root index already includes it).
-        print("{}")
+        # Already documented: nothing to create. Nudge once per dir per session when the
+        # doc does not name this code file (leaf dirs only; tests are not Key files).
+        name = file_path.name
+        rel_posix = rel.replace("\\", "/")
+        state = _load_state(cid)
+        nudged = state.get("unnamed_nudged", [])
+        if _TEST_RE.search(name) or rel_posix in nudged:  # cheap checks before the dir scan
+            print("{}")
+            return 0
+        try:
+            unnamed = name in dox_engine.unnamed_code_files(root, rel_posix, cfg)
+        except Exception:
+            unnamed = False
+        if not unnamed:
+            print("{}")
+            return 0
+        state["unnamed_nudged"] = nudged + [rel_posix]
+        _save_state(cid, state)
+        print(json.dumps({"additionalContext": (
+            f"dox: `{rel_posix}/CLAUDE.md` does not name `{name}`. Add it to that doc's "
+            "Key files table before completing (Phase 7).")}))
         return 0
 
     state = _load_state(cid)

@@ -62,6 +62,12 @@ def test_gh_and_ollama_are_only_a_warn(gone):
     assert status == "WARN" and gone in detail
 
 
+def test_no_local_ollama_is_expected_when_ollama_host_is_another_machine():
+    status, detail = check({k: v for k, v in ALL.items() if k != "ollama"}, env={"OLLAMA_HOST": "192.0.2.10"})
+    assert status == "PASS" and "OLLAMA_HOST" in detail
+    assert check({k: v for k, v in ALL.items() if k != "ollama"}, env={"OLLAMA_HOST": "localhost"})[0] == "WARN"
+
+
 def test_everything_on_the_path_passes():
     assert check(ALL)[0] == "PASS"
 

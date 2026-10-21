@@ -99,6 +99,55 @@ def test_missing_graph_line_says_it_is_building_and_gives_the_fallback(monkeypat
     assert "graph is building in the background; use jcodemunch get_dependency_graph now" in txt
 
 
+def _arch(monkeypatch, root):
+    monkeypatch.setattr(R, "_mcp_ok", lambda *a, **k: True)
+    repo = SimpleNamespace(root=str(root), path=root, name=root.name)
+    prof = _p(text="how is the auth module wired", intents={"PLAN": 1}, is_arch=True,
+              arch_hit=["architecture"], surface_source="prompt")
+    return next(i["text"] for i in R._substrate_items(prof, {"repo": repo, "payload": {}})
+                if i["id"] == "substrate:graphify")
+
+
+@pytest.mark.parametrize("built", [True, False])
+def test_graphify_line_names_the_project_path(monkeypatch, tmp_path, built):
+    """The graphify MCP serves the graph it was started with (an empty one when the session
+    began in ~); only `project_path` reaches this repo's graph."""
+    if built:
+        (tmp_path / "graphify-out").mkdir()
+        (tmp_path / "graphify-out" / "graph.json").write_text("{}", encoding="utf-8")
+    assert f'project_path="{tmp_path}"' in _arch(monkeypatch, tmp_path)
+
+
+def _docs(monkeypatch, home, root):
+    monkeypatch.setattr(R, "_mcp_ok", lambda *a, **k: True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    repo = SimpleNamespace(root=str(root), path=root, name=root.name)
+    prof = _p(text="update the readme docs", surface_source="prompt")
+    return next(i["text"] for i in R._substrate_items(prof, {"repo": repo, "payload": {}})
+                if i["id"] == "substrate:jdocmunch")
+
+
+def test_doc_line_finds_the_checkouts_suffixed_doc_index(monkeypatch, tmp_path):
+    import hashlib
+    import os
+    home, root = tmp_path / "home", tmp_path / "work" / "proj"
+    root.mkdir(parents=True)
+    idx = home / ".doc-index" / "local"
+    idx.mkdir(parents=True)
+    sha = hashlib.sha1(os.path.realpath(str(root)).encode("utf-8")).hexdigest()[:8]
+    (idx / f"proj-{sha}.json").write_text("{}", encoding="utf-8")
+    assert "call jdocmunch search_sections" in _docs(monkeypatch, home, root)
+
+
+def test_doc_line_never_promises_an_index_for_an_infra_root(monkeypatch, tmp_path):
+    home = tmp_path / "home"
+    root = home / ".claude"
+    root.mkdir(parents=True)
+    txt = _docs(monkeypatch, home, root)
+    assert "builds it" not in txt and "Read" in txt
+
+
 # --------------------------------------------------------------------------- gate texts
 def _gate(monkeypatch, tmp_path):
     monkeypatch.setenv("CLAUDE_HOOK_DOTSTATE_DIR", str(tmp_path / "dot"))
