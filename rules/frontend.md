@@ -65,6 +65,27 @@ project's memory or `CLAUDE.md` says so.
 **3D split:** a GLB asset → Higgsfield `generate_3d`; a procedural Three.js model coded
 from a reference image → `img2threejs`; consuming a GLB in React → `threejs-r3f`.
 
+**PWA (every new app and website, standing order 2026-10-25).** Apps, phone apps,
+marketing and plain content sites all ship as installable PWAs from the first commit.
+Libraries, CLIs, APIs and browser extensions are out of scope. The bar:
+- Manifest: `id`, `name`, `short_name`, `start_url`, `scope`, `display: standalone`,
+  `theme_color`, `background_color`; PNG icons 192 + 512 (`any` and `maskable`), 180 px
+  `apple-touch-icon`, `apple-mobile-web-app-*` tags, iOS launch images.
+- Service worker in prompt mode (Vite: `vite-plugin-pwa` injectManifest + Workbox; other
+  stacks: their maintained PWA plugin or a hand-written worker). App: precache the shell,
+  answer navigations from `index.html`, never cache `/api`. Content site: network-first
+  pages with an offline page, so readers never get a stale page.
+- Update: a big, visible "New version ready" banner with Reload that reloads on
+  `controllerchange` (vite-plugin-pwa's `onNeedReload` misses a first-visit tab); check
+  hourly and when the tab comes back. Install: a button from `beforeinstallprompt`, the
+  Share › Add to Home Screen hint on iOS. Offline: a notice, never a blank screen.
+- Phone fit: `viewport-fit=cover`, safe-area insets on fixed bars, `100dvh` (not `100vh`),
+  `theme-color` that follows the theme.
+- Hosting: HTTPS; `sw.js`, `index.html` and the manifest `no-cache`; hashed assets immutable.
+- Done = a post-build check (manifest, icons, worker, precache list) and a live check that
+  the worker controls the page and the app is installable. Reference build: site-sync-vista
+  `mobile/` and `src/pwa/`.
+
 **Reticle / browser guard:** never run `reticle init`; never start dev servers or open
 browsers to verify — attach to the app I am already running (playwright MCP,
 browser-tools when its extension is live). Otherwise verify with `npm run build`,

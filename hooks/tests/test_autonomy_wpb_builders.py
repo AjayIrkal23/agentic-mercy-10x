@@ -63,6 +63,7 @@ def _runs(monkeypatch, rc=0, stderr="", stdout=""):
         calls.append(list(cmd))
         return subprocess.CompletedProcess(cmd, rc, stdout, stderr)
     monkeypatch.setattr(il, "_run", fake)
+    monkeypatch.setattr(il, "_mem_available_mb", lambda: None)  # the host's free memory never decides a test
     return calls
 
 

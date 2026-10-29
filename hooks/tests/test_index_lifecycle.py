@@ -796,9 +796,32 @@ def _graph_repo(tmp_path, monkeypatch, dates):
         (out / d / "graph.json").write_text("{}", encoding="utf-8")
     (out / "cache").mkdir(parents=True, exist_ok=True)
     monkeypatch.setattr(il, "_which", lambda name: True)
+    monkeypatch.setattr(il, "_mem_available_mb", lambda: None)
     monkeypatch.setattr(il, "_run", lambda cmd, timeout, env=None: _REAL_RUN(cmd, timeout, env)
                         if cmd[0] == "git" else subprocess.CompletedProcess(cmd, 0, "", ""))
     return repo, out
+
+
+def test_graphify_build_is_skipped_when_memory_is_low(tmp_path, monkeypatch):
+    """A 4.4 GB graphify run on a busy box OOM-killed the terminal scope (2026-10-26)."""
+    repo, _ = _graph_repo(tmp_path, monkeypatch, [])
+    ran = []
+    monkeypatch.setattr(il, "_run", lambda cmd, timeout, env=None: ran.append(cmd))
+    monkeypatch.setattr(il, "_mem_available_mb", lambda: il.GRAPHIFY_MIN_AVAIL_MB - 1)
+    assert il._build_graphify(repo, False, [], il._DEFAULT_CONFIG) is False
+    assert ran == []
+
+
+def test_graphify_runs_in_its_own_capped_scope_when_systemd_is_there(tmp_path, monkeypatch):
+    (tmp_path / "bus").touch()
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setattr(il, "_which", lambda name: True)
+    cmd = il._graphify_cmd(tmp_path / "proj")
+    assert cmd[:4] == ["systemd-run", "--user", "--scope", "--quiet"]
+    assert f"MemoryMax={il.GRAPHIFY_MEMORY_MAX}" in cmd
+    assert cmd[-3:] == ["graphify", "update", str(tmp_path / "proj")]
+    monkeypatch.setattr(il, "_which", lambda name: name != "systemd-run")
+    assert il._graphify_cmd(tmp_path / "proj") == ["graphify", "update", str(tmp_path / "proj")]
 
 
 def test_graphify_build_keeps_the_newest_three_dated_backups(tmp_path, monkeypatch):

@@ -75,6 +75,9 @@ secrets or session state.
 Scroll-driven motion → invoke `nateherk-design:scroll-craft` before writing scroll code.
 Raster / video / 3D / audio assets → Higgsfield (`mcp__higgsfield__*`), never
 placeholders or stock URLs. Details and carve-outs: `rules/frontend.md`.
+Every new app and every new website is a PWA (standing order, 2026-10-25): web apps, phone
+apps, marketing and plain content sites alike, installable from day one. Existing projects
+change only when I ask. The bar: `rules/frontend.md` § PWA.
 
 ## 9. Style
 

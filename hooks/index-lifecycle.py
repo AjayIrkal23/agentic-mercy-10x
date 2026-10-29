@@ -874,11 +874,41 @@ def _prune_graph_backups(root: Path) -> None:
         pass
 
 
+GRAPHIFY_MIN_AVAIL_MB = 12288  # graphify peaks ~4.4 GB on site-sync-vista, agents' vitest ~3 GB more
+GRAPHIFY_MEMORY_MAX = "5G"
+
+
+def _mem_available_mb():
+    """MemAvailable in MB, or None where /proc/meminfo does not exist (Windows, macOS)."""
+    try:
+        with open("/proc/meminfo", encoding="ascii") as fh:
+            for line in fh:
+                if line.startswith("MemAvailable:"):
+                    return int(line.split()[1]) // 1024
+    except (OSError, ValueError, IndexError):
+        pass
+    return None
+
+
+def _graphify_cmd(root: Path) -> list:
+    cmd = ["graphify", "update", str(root)]
+    bus = Path(os.environ.get("XDG_RUNTIME_DIR", "/nonexistent")) / "bus"
+    if _which("systemd-run") and bus.exists():
+        # Own cgroup: an OOM kill of graphify (2026-10-26 03:34, 16:58) then never stops the
+        # caller's scope, which takes every Claude session and tmux server in it (OOMPolicy=stop).
+        cmd = ["systemd-run", "--user", "--scope", "--quiet",
+               "-p", f"MemoryMax={GRAPHIFY_MEMORY_MAX}", "-p", "MemorySwapMax=0"] + cmd
+    return cmd
+
+
 def _build_graphify(root: Path, incremental: bool, paths, cfg: dict) -> bool:
     if not _which("graphify"):
         return False
-    ok = _ok(_run(["graphify", "update", str(root)],
-                  timeout=cfg["build_timeouts_s"]["graphify"]))
+    avail = _mem_available_mb()
+    if avail is not None and avail < GRAPHIFY_MIN_AVAIL_MB:
+        _telem("build_deferred", surface="graphify", key=_repo_key(root), mem_available_mb=avail)
+        return False  # FAILED backoff; the next probe retries when memory is back
+    ok = _ok(_run(_graphify_cmd(root), timeout=cfg["build_timeouts_s"]["graphify"]))
     if ok:
         _prune_graph_backups(root)
     return ok
