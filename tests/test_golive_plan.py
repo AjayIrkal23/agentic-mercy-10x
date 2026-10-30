@@ -138,6 +138,38 @@ def test_before_deps_emits_gitleaks_row(monkeypatch):
     assert ("base", "gitleaks", "WOULD-INSTALL gitleaks v8.30.1") in rows
 
 
+LP = {"version": "1.0.2",
+      "download": "https://github.com/lightpanda-io/browser/releases/download/{version}/{asset}",
+      "assets": {"linux-x64": {"name": "lightpanda-x86_64-linux", "sha256": "c" * 64}}}
+
+
+def test_ensure_lightpanda_downloads_the_pinned_binary(home, monkeypatch):
+    seen = {}
+
+    def fake_download(url, dest, timeout=None, sha256=None):
+        seen.update(url=url, sha256=sha256)
+        Path(dest).write_bytes(b"\x7fELF")
+    monkeypatch.setattr(basetools, "_os_arch", lambda: ("linux", "x64"))
+    row = basetools.ensure_lightpanda({"user_space": {"lightpanda": LP}}, ci=False, dry_run=False,
+                                      download=fake_download, which=lambda n: None)
+    assert row == ("lightpanda", "INSTALLED lightpanda 1.0.2")
+    binary = home / ".local" / "bin" / "lightpanda"
+    assert binary.is_file() and (os.name == "nt" or binary.stat().st_mode & 0o111)  # no exec bits on Windows
+    assert seen == {"url": "https://github.com/lightpanda-io/browser/releases/download/1.0.2/lightpanda-x86_64-linux",
+                    "sha256": "c" * 64}
+
+
+def test_ensure_lightpanda_skips_windows_unpinned_arch_and_plans_in_ci(monkeypatch):
+    m = {"user_space": {"lightpanda": LP}}
+    assert basetools.ensure_lightpanda({}, ci=False, dry_run=False, which=lambda n: None)[1] == "SKIP(no manifest entry)"
+    assert basetools.ensure_lightpanda(m, ci=True, dry_run=False, which=lambda n: None)[1] == "WOULD-INSTALL lightpanda 1.0.2"
+    assert basetools.ensure_lightpanda(m, ci=False, dry_run=False, which=lambda n: "/x/lightpanda")[1] == "PRESENT"
+    monkeypatch.setattr(basetools, "_os_arch", lambda: ("linux", "riscv64"))
+    assert basetools.ensure_lightpanda(m, ci=False, dry_run=False, which=lambda n: None)[1] == "SKIP(linux-riscv64: no pinned asset)"
+    monkeypatch.setattr(plat, "IS_WINDOWS", True)
+    assert basetools.ensure_lightpanda(m, ci=False, dry_run=False, which=lambda n: None)[1] == "SKIP(windows)"
+
+
 # ---------------------------------------------------------------- golive plan
 
 def test_plan_prints_ordered_steps_and_runs_nothing(calls, capsys):

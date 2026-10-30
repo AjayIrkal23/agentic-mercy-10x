@@ -17,11 +17,13 @@ are never read into a message. Pure stdlib.
 from __future__ import annotations
 
 import json
+import os
 import re
 import shutil
 from pathlib import Path
 
 PASS, WARN, FAIL, SKIP = "PASS", "WARN", "FAIL", "SKIP"
+IS_WINDOWS = os.name == "nt"
 _SPEC = r"((?:@[\w.-]+/)?[\w.-]+(?:(?:@|==)[\w.^~<>=-]+)?)"
 _NPX = re.compile(r"\b(?:npx|uvx)\s+(?:-y\s+|--yes\s+)*" + _SPEC)
 
@@ -86,6 +88,9 @@ def roster_status(manifest: dict, live: dict, auth: set, repairable: bool = Fals
     self-heal ``_repair`` routes to ``deps.reconcile_mcp_pins``; without it, a WARN."""
     servers = {s["name"]: s for s in manifest.get("mcp_servers", [])}
     expected = manifest.get("doctor_probes", {}).get("mcp_roster") or list(servers)
+    if IS_WINDOWS:  # register_mcps skips these on Windows, so they are never missing there
+        expected = [m for m in expected
+                    if not (servers.get(m, {}).get("posix_only") and not servers[m].get("windows_add"))]
     issues = []
     missing = [m for m in expected if m not in live]
     if missing:

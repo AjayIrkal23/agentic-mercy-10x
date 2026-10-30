@@ -86,7 +86,9 @@ def _deps(ctx: Ctx):
     rows: list = []
     if not os.environ.get("AGENTIC_MERCY_SKIP_BASE_TOOLS"):  # node / claude / uv / gh (+ git on Windows), no admin
         import basetools  # type: ignore
-        rows += basetools.ensure_base_tools(ctx.env(), deps._load_manifest(), ci=False, dry_run=ctx.dry)
+        manifest = deps._load_manifest()
+        rows += basetools.ensure_base_tools(ctx.env(), manifest, ci=False, dry_run=ctx.dry)
+        rows.append(basetools.ensure_lightpanda(manifest, ci=False, dry_run=ctx.dry))  # retries a failed first download
     # an absent optional dep is the user's choice (A4-16)
     rows += deps.install_deps(ctx.env(), ci=False, dry_run=ctx.dry, skip_optional=True)
     import selfheal  # type: ignore  # a lean-ctx install or run may rewrite its config (F2): merge it back

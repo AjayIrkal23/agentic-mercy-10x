@@ -7,6 +7,8 @@ Returns the re-detected env (the new claude / npm / uv are on PATH) and the pend
 ``after_deps``: ollama + the models the code indexes use. ``AGENTIC_MERCY_SKIP_BASE_TOOLS=1``
 (offline machines, the test suite) skips both. ``ensure_gitleaks``: the pinned gitleaks release
 (layer 1 of scripts/golive.py's secrets scan) into ``~/.local/bin``, Linux only, no sudo.
+``ensure_lightpanda``: the pinned Lightpanda binary (the headless browser behind the ``lightpanda``
+MCP server) into ``~/.local/bin``; POSIX only (no native Windows build).
 """
 from __future__ import annotations
 
@@ -74,6 +76,36 @@ def ensure_gitleaks(manifest: dict, *, ci: bool, dry_run: bool, download: Callab
         return "gitleaks", f"WARN({type(exc).__name__}: {str(exc)[:80]})"
 
 
+def ensure_lightpanda(manifest: dict, *, ci: bool, dry_run: bool, download: Callable = _download,
+                      which: Callable | None = None) -> tuple[str, str]:
+    """Lightpanda from the pinned release binary into ~/.local/bin, sha256-checked
+    (manifest.user_space.lightpanda: version, download template, one asset per ``<os>-<arch>``).
+    ``download`` verifies into ``<dest>.part`` and renames, so a bad hash leaves nothing behind."""
+    cfg = (manifest.get("user_space") or {}).get("lightpanda")
+    if not cfg:
+        return "lightpanda", "SKIP(no manifest entry)"
+    if plat.IS_WINDOWS:
+        return "lightpanda", "SKIP(windows)"
+    if (which or shutil.which)("lightpanda"):
+        return "lightpanda", "PRESENT"
+    if ci or dry_run:
+        return "lightpanda", f"WOULD-INSTALL lightpanda {cfg['version']}"
+    os_tag, arch = _os_arch()
+    asset = (cfg.get("assets") or {}).get(f"{os_tag}-{arch}")
+    if not asset:
+        return "lightpanda", f"SKIP({os_tag}-{arch}: no pinned asset)"
+    try:
+        binary = Path.home() / ".local" / "bin" / "lightpanda"
+        binary.parent.mkdir(parents=True, exist_ok=True)
+        download(cfg["download"].format(version=cfg["version"], asset=asset["name"]), binary,
+                 timeout=600, sha256=asset["sha256"])
+        binary.chmod(0o755)
+        userspace.ensure_path()
+        return "lightpanda", f"INSTALLED lightpanda {cfg['version']}"
+    except Exception as exc:  # noqa: BLE001  best effort; register_mcps then skips the server (manifest `which`), the daily self-heal retries
+        return "lightpanda", f"WARN({type(exc).__name__}: {str(exc)[:80]})"
+
+
 def ensure_base_tools(env, manifest: dict, *, ci: bool = False, dry_run: bool = False) -> list[tuple[str, str]]:
     """The OS's no-admin installer for node / claude / uv / gh (+ git on Windows)."""
     ensure = wintools.ensure_wintools if plat.IS_WINDOWS else userspace.ensure_userspace
@@ -91,9 +123,9 @@ def before_deps(env, manifest: dict, ci: bool, emit):
             emit("base", name, s)
     for name, s in ensure_base_tools(env, manifest, ci=ci, dry_run=ci):
         emit("base", name, s)
-    g = ensure_gitleaks(manifest, ci=ci, dry_run=ci)
-    if not g[1].startswith("SKIP"):  # Windows / no manifest entry: nothing to report
-        emit("base", *g)
+    for g in (ensure_gitleaks(manifest, ci=ci, dry_run=ci), ensure_lightpanda(manifest, ci=ci, dry_run=ci)):
+        if not g[1].startswith("SKIP"):  # Windows / no manifest entry: nothing to report
+            emit("base", *g)
     return (env if ci else detect.detect()), sudo_cmd
 
 

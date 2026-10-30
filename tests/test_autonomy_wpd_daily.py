@@ -214,11 +214,13 @@ def test_deps_step_heals_base_tools_through_the_os_dispatcher(sd, box, monkeypat
     seen: list = []
     monkeypatch.setattr(basetools, "ensure_base_tools",
                         lambda env, manifest, *, ci=False, dry_run=False: seen.append((ci, dry_run)) or [("git", "INSTALLED x")])
+    monkeypatch.setattr(basetools, "ensure_lightpanda",
+                        lambda manifest, *, ci=False, dry_run=False: ("lightpanda", "INSTALLED lightpanda 1.0.2"))
     monkeypatch.setattr(deps, "install_deps", lambda env, **k: [])
     _only(sd, monkeypatch, "deps")
     sd.main([])
     assert seen == [(False, False)]
-    assert _summary(box)["changed"] == ["dep git: INSTALLED x"]
+    assert _summary(box)["changed"] == ["dep git: INSTALLED x", "dep lightpanda: INSTALLED lightpanda 1.0.2"]
 
 
 def _settings(sd, box, monkeypatch, *, exists: bool, stale: bool):

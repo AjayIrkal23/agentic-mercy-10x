@@ -352,6 +352,10 @@ def register_mcps(env, *, ci: bool = False, dry_run: bool = False) -> list[tuple
         if srv.get("posix_only") and env.os_name != "posix" and not srv.get("windows_add"):
             results.append((name, "SKIP(posix-only)"))
             continue
+        if srv.get("which") and not (dry_run or ci) and not winutil.which(srv["which"]):
+            # a server whose binary failed to install stays unregistered (roster WARN), not a cli-on-path FAIL
+            results.append((name, f"SKIP(no {srv['which']} on PATH)"))
+            continue
         cmd = _mcp_argv(srv, env)
         if dry_run or (ci and srv.get("ci_stub")):
             results.append((name, f"WOULD-ADD: {_redact(cmd, srv)}"))

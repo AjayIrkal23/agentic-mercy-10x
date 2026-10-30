@@ -171,6 +171,17 @@ def test_register_mcps_windows_uses_windows_add_for_posix_only(monkeypatch):
     assert posix["github"] == "WOULD-ADD: claude mcp add github -- sh -c x"
 
 
+def test_register_mcps_skips_a_server_whose_binary_is_missing(monkeypatch):
+    deps = _load("deps", "installer/deps.py")
+    monkeypatch.setattr(deps.shutil, "which", lambda c: None)
+    monkeypatch.setattr(deps, "registered_user_mcps", lambda: set())
+    monkeypatch.setattr(deps, "_load_manifest", lambda: {"mcp_servers": [
+        {"name": "lp", "which": "lightpanda", "add": ["claude", "mcp", "add", "lp", "--", "lightpanda", "mcp"]}]})
+    monkeypatch.setattr(deps.plat, "run", lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not register")))
+    assert deps.register_mcps(_env("posix", "python3")) == [("lp", "SKIP(no lightpanda on PATH)")]
+    assert deps.register_mcps(_env("posix", "python3"), dry_run=True) == [("lp", "WOULD-ADD: claude mcp add lp -- lightpanda mcp")]
+
+
 def test_manifest_github_has_windows_launcher():
     m = json.loads((_ROOT / "installer" / "manifest.json").read_text(encoding="utf-8"))
     gh = next(s for s in m["mcp_servers"] if s["name"] == "github")

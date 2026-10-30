@@ -17,6 +17,8 @@ metadata:
     - mcp
     - mcp server
     - which tool
+    - lightpanda
+    - headless browser
     - playwright
     - browser-tools
     - reticle
@@ -47,7 +49,8 @@ by hand. Full generated table: [`references/mcp-inventory.md`](references/mcp-in
 | Compressed file/shell I/O | `lean-ctx` | optional; `Read`/Bash are equally fine |
 | Library/SDK/CLI docs | `context7` | `resolve-library-id` → `query-docs`, one concept per query |
 | Security scan | `semgrep` | THE security path (satisfies stop Gate 3) |
-| Drive a browser | `playwright` (pinned 0.0.82) | flows, clicks, a11y snapshots, screenshots |
+| Headless browser (default) | `lightpanda` (pinned 1.0.2, telemetry off, POSIX only) | goto, markdown, a11y tree, clicks, forms, evaluate; no pixels, no real layout |
+| Pixels + fallback browser | `playwright` (pinned 0.0.83, Chromium) | screenshots, layout, visual checks; any page lightpanda renders blank or broken; Windows |
 | DevTools of user's tab | `browser-tools-mcp` (pinned 2.0.2) | console/network/Lighthouse of an already-open tab |
 | In-app state truth | `reticle` (pinned 3.3.0, telemetry off) | attach to the user's running dev app |
 | Cross-session facts | `memory` | see memory protocol below |
@@ -97,7 +100,8 @@ Follow the line; don't wait to be asked.
    / we decided" → `add_observations`.
 6. Browser evidence ladder (only when the user's app is already running): `reticle`
    (`verify-ui-change` / `debug-broken-ui`: in-app store/network vs screen; false greens) →
-   `playwright` (drive/screenshot) → `browser-tools-mcp` (DevTools of the user's open tab).
+   `lightpanda` (DOM, a11y tree, clicks, forms) → `playwright` (screenshots, layout, or lightpanda
+   not connected / page blank or broken) → `browser-tools-mcp` (DevTools of the user's open tab).
    One browser tool per question.
 7. **Never start dev servers or open browsers on your own.** Reticle and browser-tools attach
    to what the user already runs; never run `reticle init`/`setup` (they write agent configs

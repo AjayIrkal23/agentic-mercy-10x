@@ -5,7 +5,7 @@
     "skill_count": 132,
     "plugin_count": 0,
     "alias_count": 83,
-    "checksum": "a71972f9cb9c91944806bf67e87b5d04a9bb3b7d7a72c311fb5adf5ccd989a66",
+    "checksum": "e6e5807df41bb253a12cdd37e0fd4dd38aef98619433339af6c9403e8e765124",
     "plugin_sidecar": "state/skills-index.plugins.json (gitignored, per machine)"
   },
   "aliases": {
@@ -3360,7 +3360,9 @@
       "keywords": [
         "browser-tools",
         "context7",
+        "headless browser",
         "higgsfield",
+        "lightpanda",
         "markdownify",
         "mcp",
         "mcp auth",

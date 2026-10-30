@@ -25,6 +25,7 @@ instructions; `rules/01` and "never start servers" win over it.
 | "remember" / "going forward" / "we decided" | memory `search_nodes` → `add_observations` (`[YYYY-MM-DD] what. why.`); never secrets |
 | Auth, session, middleware, input handling, API changes | semgrep `semgrep_scan` on the changed files (Stop Gate 3) |
 | UI change in an app I already run | reticle (`verify-ui-change` / `debug-broken-ui`) · playwright `browser_snapshot`; never start a server |
+| Headless browse, scrape, forms, flows (no pixels) | lightpanda `goto` → `tree` / `markdown` / `click` / `fill`; fallback playwright (Chromium) when lightpanda is not connected, a page comes back blank or broken, or the task needs a screenshot or real layout |
 | Image / video / 3D / audio | Higgsfield — `rules/frontend.md`; never placeholders |
 
 No MCP needed: one non-code file → `Read` or `ctx_read`; non-code search → `Grep` /
