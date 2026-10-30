@@ -69,10 +69,7 @@ adversarial inputs per gate):
   skills fit as bodies versus pointers), `memory-load-on-start.py`,
   `index-lifecycle.py` (NEVER_INDEX, ollama-down DEFER, detached builds, state
   machine), `session-lifecycle.py`, `settings-permissions-selfheal.py`.
-- Weights loop (retired 2026-10-05: link `weights-loop` disabled, the feeder's `stop`
-  mode removed): `weekly-retro-trigger.py`, `skill-router-weight-updater.py`,
-  `skill-effectiveness-report.py`: confirm it stays a no-op without new input and that
-  `skill_router_weights.json` is not rewritten when unchanged.
+- Weights loop: retired 2026-10-05, files deleted in the 2026-10 ECC merge (superset `scripts/skill_health.py`); confirm nothing re-creates `hooks/skill_router_weights.json` and `select.py` / `skill_router.py` carry only the 'weights retired' comments.
 - `hard-completion-gate.py` (Gates 2–5, thresholds, `_INFRA_PATH_MARKERS`) and
   `lib/turns.py`: are Stop-hook feedback, `<task-notification>` rows and skill loads
   counted as user turns (`isMeta` rows)? Reproduce with a synthetic transcript.
@@ -89,7 +86,7 @@ FILES: `hooks/prompt_router/router.py`, `select.py`, `classify.py`, `budget.py`,
 `manifest.py`, `router.config.json`, `modules/surface.py`, `modules/mcp_routes.py`,
 `modules/code_intel.py`, `modules/model_advice.py`;
 `hooks/autonomous-skill-router.config.json`, `hooks/skill_router.config.json`,
-`hooks/skill_router_weights.json`, `hooks/skills-index.json` (structure plus samples),
+`hooks/skills-index.json` (structure plus samples),
 `hooks/trigger-floor.json`, `hooks/ui-keywords.json`, `hooks/tool-intelligence.json`,
 `hooks/skill-aliases.json`, `hooks/skill_router.py`.
 
@@ -99,8 +96,8 @@ CHECKS:
    "blank page").
 2. Scoring: keyword weights; is the half weight for description-derived keywords
    applied (compare the `source` value `select.py` checks with what the index builder
-   writes); intent boost case matching; where `skill_router_weights.json` came from
-   (which telemetry, how many sessions, when) and whether it is still fed.
+   writes); intent boost case matching; that no weight file is read
+   (`skill_router_weights.json` was deleted; `select.py:346`, `skill_router.py:327`).
 3. Exclusions: are `disable-model-invocation` (hidden) skills ever pushed? core skills?
 4. Surface detection for THIS project: run the sandboxed surface module on `PROJECT`
    and record the detected stack; is it right?

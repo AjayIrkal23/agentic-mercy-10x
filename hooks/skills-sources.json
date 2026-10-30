@@ -10,6 +10,8 @@
     "repo": "https://github.com/higgsfield-ai/skills.git",
     "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "subpath": "higgsfield-generate",
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** the default engine is the claude.ai Higgsfield connector (`mcp__claude_ai_higgsfield__generate_image` / `generate_video` / `generate_3d` / `generate_audio`, `models_explore`, `upscale_*`, `remove_background`); this skill's prompt craft applies to those tools. Use the `higgsfield` CLI only when the user asks for it by name, never run its installer, and never `higgsfield auth login` on the user's behalf — ask once.\n\n",
+    "patches": [{"file": "SKILL.md", "find": "   curl -fsSL https://raw.githubusercontent.com/higgsfield-ai/cli/main/install.sh | sh", "replace": "   (CLI installer: never run it yourself; if the CLI is missing, say so and use the connector tools)"}],
     "frontmatter_overrides": {
       "description": "Generate images, video, 3D (GLB) and audio through the Higgsfield CLI: generic generation, workflows, Marketing Studio ads and the virality predictor.",
       "when_to_use": "Generate, edit, animate or reframe an image or video, make a 3D model, sound effect or music, or a UGC/product ad. Not for Soul training, brand kits, photoshoots, marketplace cards, thumbnails, explainers, games or TTS (their own higgsfield-* skills).",
@@ -24,6 +26,8 @@
     "repo": "https://github.com/higgsfield-ai/skills.git",
     "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "subpath": "higgsfield-marketplace-cards",
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** the default engine is the claude.ai Higgsfield connector (`mcp__claude_ai_higgsfield__generate_image` / `generate_video` / `generate_3d` / `generate_audio`, `models_explore`, `upscale_*`, `remove_background`); this skill's prompt craft applies to those tools. Use the `higgsfield` CLI only when the user asks for it by name, never run its installer, and never `higgsfield auth login` on the user's behalf — ask once.\n\n",
+    "patches": [{"file": "SKILL.md", "find": "install it by running the official installer with Bash: `curl -fsSL https://raw.githubusercontent.com/higgsfield-ai/cli/main/install.sh | sh`", "replace": "do not install it yourself: say so and use the connector tools"}],
     "frontmatter_overrides": {
       "description": "Marketplace product image cards through Higgsfield: a compliant main image, secondary product images and A+ content modules.",
       "when_to_use": "Marketplace listing images, product detail cards, product infographics, A+ content. Not for brand photography outside a listing (higgsfield-product-photoshoot), video or UGC ads (higgsfield-generate), or Soul training (higgsfield-soul-id).",
@@ -36,6 +40,8 @@
     "repo": "https://github.com/higgsfield-ai/skills.git",
     "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "subpath": "higgsfield-product-photoshoot",
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** the default engine is the claude.ai Higgsfield connector (`mcp__claude_ai_higgsfield__generate_image` / `generate_video` / `generate_3d` / `generate_audio`, `models_explore`, `upscale_*`, `remove_background`); this skill's prompt craft applies to those tools. Use the `higgsfield` CLI only when the user asks for it by name, never run its installer, and never `higgsfield auth login` on the user's behalf — ask once.\n\n",
+    "patches": [{"file": "SKILL.md", "find": "   curl -fsSL https://raw.githubusercontent.com/higgsfield-ai/cli/main/install.sh | sh", "replace": "   (CLI installer: never run it yourself; if the CLI is missing, say so and use the connector tools)"}],
     "frontmatter_overrides": {
       "description": "Brand-quality product images through Higgsfield product-photoshoot prompt enhancement: studio, lifestyle, hero/banner, carousel, ad creative, virtual try-on, restyle.",
       "when_to_use": "Product photo, studio shot, lifestyle or hands-on closeup, Pinterest pin, Meta ad creative, a model wearing the product. Not for images without a product (higgsfield-generate) or marketplace cards; never freehand the prompt.",
@@ -48,6 +54,8 @@
     "repo": "https://github.com/higgsfield-ai/skills.git",
     "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "subpath": "higgsfield-soul-id",
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** the default engine is the claude.ai Higgsfield connector (`mcp__claude_ai_higgsfield__generate_image` / `generate_video` / `generate_3d` / `generate_audio`, `models_explore`, `upscale_*`, `remove_background`); this skill's prompt craft applies to those tools. Use the `higgsfield` CLI only when the user asks for it by name, never run its installer, and never `higgsfield auth login` on the user's behalf — ask once.\n\n",
+    "patches": [{"file": "SKILL.md", "find": "   curl -fsSL https://raw.githubusercontent.com/higgsfield-ai/cli/main/install.sh | sh", "replace": "   (CLI installer: never run it yourself; if the CLI is missing, say so and use the connector tools)"}],
     "frontmatter_overrides": {
       "description": "Train a Higgsfield Soul Character on a person's face for identity-faithful image and video generation (one-time; returns a reference_id for higgsfield-generate --soul-id).",
       "when_to_use": "Create my Soul, train my face, a digital twin or an avatar of me. Not for one-shot face swaps or non-photo characters (higgsfield-generate).",
@@ -60,6 +68,8 @@
     "repo": "https://github.com/higgsfield-ai/skills.git",
     "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "subpath": "higgsfield-websites",
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** the default engine is the claude.ai Higgsfield connector (`mcp__claude_ai_higgsfield__generate_image` / `generate_video` / `generate_3d` / `generate_audio`, `models_explore`, `upscale_*`, `remove_background`); this skill's prompt craft applies to those tools. Use the `higgsfield` CLI only when the user asks for it by name, never run its installer, and never `higgsfield auth login` on the user's behalf — ask once.\n\n",
+    "patches": [{"file": "SKILL.md", "find": "   curl -fsSL https://raw.githubusercontent.com/higgsfield-ai/cli/main/install.sh | sh", "replace": "   (CLI installer: never run it yourself; if the CLI is missing, say so and use the connector tools)"}],
     "frontmatter_overrides": {
       "description": "Build, edit and deploy websites, apps and games hosted on Higgsfield via `higgsfield website …` (React 19 + TanStack Start on one Cloudflare Worker), plus game art.",
       "when_to_use": "Only when the site, app or game is built and hosted with the Higgsfield CLI, or for game art (spritesheets, tileable textures, game music/SFX). Not for an existing repo's own frontend (local frontend skills) or single media assets (higgsfield-generate).",
@@ -74,7 +84,8 @@
     "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "subpath": "higgsfield-brandkit",
     "prune": ["agents"],
-    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** never run the `curl … | sh` CLI installer or `npx playwright install` from `references/prerequisites.md` without an explicit yes from the user; if a prerequisite is missing, name it and stop.\n\n",
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** never run the `curl … | sh` CLI installer or `npx playwright install` from `references/prerequisites.md` without an explicit yes from the user; if a prerequisite is missing, name it and stop.\n\n> The default engine is the claude.ai Higgsfield connector (`mcp__claude_ai_higgsfield__generate_image` / `generate_video` / `generate_3d` / `generate_audio`, `models_explore`, `upscale_*`, `remove_background`); this skill's prompt craft applies to those tools. Use the `higgsfield` CLI only when the user asks for it by name, never run its installer, and never `higgsfield auth login` on the user's behalf — ask once.\n\n",
+    "patches": [{"file": "SKILL.md", "find": "   curl -fsSL https://raw.githubusercontent.com/higgsfield-ai/cli/main/install.sh | sh", "replace": "   (CLI installer: never run it yourself; if the CLI is missing, say so and use the connector tools)"}],
     "frontmatter_overrides": {
       "description": "Complete visual brand systems through the Higgsfield CLI and local tooling: palettes, SVG logo marks, typography, mockups, packaging, signage and editable PPTX/PDF brandbooks.",
       "when_to_use": "Create a brand kit or visual identity, a logo plus brandbook, branded assets from a logo, packaging or signage. Not for unbranded images (higgsfield-generate), catalog photos (higgsfield-product-photoshoot) or websites.",
@@ -88,6 +99,8 @@
     "repo": "https://github.com/higgsfield-ai/skills.git",
     "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "subpath": "higgsfield-video-explainer",
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** the default engine is the claude.ai Higgsfield connector (`mcp__claude_ai_higgsfield__generate_image` / `generate_video` / `generate_3d` / `generate_audio`, `models_explore`, `upscale_*`, `remove_background`); this skill's prompt craft applies to those tools. Use the `higgsfield` CLI only when the user asks for it by name, never run its installer, and never `higgsfield auth login` on the user's behalf — ask once.\n\n",
+    "patches": [{"file": "SKILL.md", "find": "   curl -fsSL https://raw.githubusercontent.com/higgsfield-ai/cli/main/install.sh | sh", "replace": "   (CLI installer: never run it yourself; if the CLI is missing, say so and use the connector tools)"}],
     "frontmatter_overrides": {
       "description": "Narrated non-photoreal explainer or story videos built from ordered 10-second blocks: one narrator, one style key, a Seed Audio take and a clip per block, server-side assembly.",
       "when_to_use": "Make an explainer video, turn a topic or document into a narrated video, or a faceless narrated or animated story video. Not for photoreal films, ads/UGC, talking heads, podcasts or editing a finished video.",
@@ -100,6 +113,8 @@
     "repo": "https://github.com/higgsfield-ai/skills.git",
     "ref": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "subpath": "higgsfield-youtube-thumbnail",
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** the default engine is the claude.ai Higgsfield connector (`mcp__claude_ai_higgsfield__generate_image` / `generate_video` / `generate_3d` / `generate_audio`, `models_explore`, `upscale_*`, `remove_background`); this skill's prompt craft applies to those tools. Use the `higgsfield` CLI only when the user asks for it by name, never run its installer, and never `higgsfield auth login` on the user's behalf — ask once.\n\n",
+    "patches": [{"file": "SKILL.md", "find": "   curl -fsSL https://raw.githubusercontent.com/higgsfield-ai/cli/main/install.sh | sh", "replace": "   (CLI installer: never run it yourself; if the CLI is missing, say so and use the connector tools)"}],
     "frontmatter_overrides": {
       "description": "High-click-through YouTube thumbnails and vertical video covers through the Higgsfield CLI: a truthful information-gap concept, up to three identities, logos and variants.",
       "when_to_use": "YouTube thumbnail, Shorts or Instagram video cover, MrBeast-style cover. Not for the video itself (higgsfield-generate), catalog photos or marketplace cards.",
@@ -112,12 +127,14 @@
     "repo": "https://github.com/vercel-labs/skills.git",
     "ref": "7407f3893ad4dceab546ac002c3ef806e4000c73",
     "subpath": "skills/find-skills",
+    "prepend_body": "> **ECC graft (ecc:skills/skill-scout@25278e7d):** vetting before any install:\n> - read the SKILL.md fully;\n> - check it for shell writes, installers, servers and network calls;\n> - check the licence and pin a commit sha;\n> - record provenance in `hooks/skills-sources.json` (vendored skills change only there).\n\n",
     "notes": "Upstream v1.7.0 description is already de-inflated; no override needed."
   },
   "mmx-cli": {
     "repo": "https://github.com/MiniMax-AI/cli.git",
     "ref": "33453cf123927f41c00e1935450e504d8a630763",
     "subpath": "skill",
+    "patches": [{"file": "SKILL.md", "find": "use the dedicated [mmx-h3-video skill](h3-video/SKILL.md) instead.", "replace": "read `~/.claude/skills/mmx-cli/h3-video/SKILL.md` directly (it is not a registered skill; the Skill tool cannot load it)."}],
     "frontmatter_overrides": {
       "disable-model-invocation": true,
       "when_to_use": "Only when the user names MiniMax/mmx. Higgsfield is the default media engine."
@@ -128,6 +145,7 @@
     "repo": "https://github.com/Leonxlnx/taste-skill.git",
     "ref": "ce26fc25c0e5e8cab638f883de62d9a86ee5e45b",
     "subpath": "skills/taste-skill",
+    "prepend_body": "> **ECC graft (ecc:skills/frontend-design-direction, scripts/hooks/design-quality-check.js@25278e7d):**\n> - Before designing, write an evidence record: brand references, audience, three competitor screens.\n> - Reject the six generic-template tells: a centered hero over 3 feature cards; gradient blob backgrounds; Inter-only type; emoji icons; stock illustrations; identical card grids.\n\n",
     "frontmatter_overrides": {
       "when_to_use": "Landing pages, portfolios, redesigns, 'looks templated'."
     },
@@ -137,6 +155,7 @@
     "repo": "https://github.com/claudiocebpaz/vite-react-best-practices.git",
     "ref": "74b9e4fc8e4ee0bb58d65ed71e9f14512ca0082a",
     "subpath": ".",
+    "prepend_body": "> **ECC graft (ecc:skills/react-performance, skills/vite-patterns, skills/nextjs-turbopack@25278e7d):** rule families to check:\n> - render count and memo boundaries; stable list keys;\n> - bundle splitting by route;\n> - Vite `optimizeDeps` / `manualChunks` pitfalls.\n> Next/Turbopack-only items are out of scope here.\n\n",
     "frontmatter_overrides": {
       "paths": ["**/vite.config.*", "**/index.html", "**/src/main.{tsx,jsx}"]
     }
@@ -194,7 +213,7 @@
         "guard": "Never run reticle init / start dev servers / open browsers unprompted; attach to the user's running app."
       }
     },
-    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted. If Reticle is missing or no session is connected, say so in one line and fall back to playwright / `verification-loop`.\n\n",
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted. If Reticle is missing or no session is connected, say so in one line and fall back to playwright / `verification-loop`.\n\n> **ECC graft (ecc:skills/browser-qa@25278e7d):** end with a verdict `SHIP` or `DO-NOT-SHIP`, the one blocking finding first; Reticle stays the engine.\n\n",
     "patches": [
       {
         "file": "SKILL.md",
@@ -226,7 +245,7 @@
         "guard": "Never run reticle init / start dev servers / open browsers unprompted; attach to the user's running app."
       }
     },
-    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted. `debug-investigation` stays the doctrine; Reticle is the evidence tool.\n\n",
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted. `debug-investigation` stays the doctrine; Reticle is the evidence tool.\n\n> **ECC graft (ecc:skills/click-path-audit@25278e7d):** trace click → handler → store touchpoint → request → render, and list every touchpoint with `file:line` before proposing a fix.\n\n",
     "patches": [
       {
         "file": "SKILL.md",
@@ -253,7 +272,7 @@
         "guard": "Never run reticle init / start dev servers / open browsers unprompted; attach to the user's running app."
       }
     },
-    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted.\n\n",
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted.\n\n> **ECC graft (ecc:agents/pr-test-analyzer.md@25278e7d):** rate each coverage gap 1–10 by the blast radius of the untested branch; report the top three, each with the missing assertion.\n\n",
     "patches": [
       {
         "file": "SKILL.md",
@@ -307,7 +326,7 @@
         "guard": "Never run reticle init / start dev servers / open browsers unprompted; attach to the user's running app."
       }
     },
-    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted.\n\n",
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted.\n\n> **ECC graft (ecc:skills/design-system@25278e7d):** extract tokens in this order: color, type, space, radius, shadow. Report a 0–100 adherence score = the share of computed styles that resolve to a token.\n\n",
     "patches": [
       {
         "file": "SKILL.md",
@@ -336,6 +355,7 @@
     "repo": "https://github.com/ibelick/ui-skills.git",
     "ref": "v0.2.3",
     "subpath": "skills/fixing-accessibility",
+    "prepend_body": "> **ECC graft (ecc:skills/accessibility, skills/frontend-a11y, agents/a11y-architect.md@25278e7d):** WCAG 2.2 AA checklist, in this order:\n> - name, role and value on every interactive element;\n> - focus order follows reading order, and focus is always visible;\n> - contrast 4.5:1 for text (3:1 for large text and UI parts);\n> - target size at least 24×24 px;\n> - `prefers-reduced-motion` respected;\n> - live regions announce async results (loading, success, error).\n> The a11y lane stays inside this skill; there is no separate a11y agent.\n\n",
     "frontmatter_overrides": {
       "when_to_use": "a11y / accessibility audits and fixes: ARIA, keyboard navigation, focus trap, contrast, screen reader, form errors, WCAG.",
       "paths": ["**/*.{tsx,jsx,vue,svelte,astro,html}"],
@@ -397,6 +417,7 @@
     "ref": "f9515cb90e9d1ed1eee9384f79f1e0ac6c26825e",
     "subpath": "skills/improve-ui",
     "prune": ["agents"],
+    "prepend_body": "> **ECC graft (ecc:skills/make-interfaces-feel-better@25278e7d):** polish checklist, one pass per screen with a before/after record: spacing rhythm; optical alignment; hover, pressed and disabled states; loading and empty states; motion 150–250 ms; copy casing.\n\n",
     "frontmatter_overrides": {
       "when_to_use": "Read-only UI audit of an existing surface (design drift, polish plan, design handoff); writes plans to design-plans/ only.",
       "metadata": {

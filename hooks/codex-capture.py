@@ -60,16 +60,19 @@ HIGH_SIGNAL_EXTENSIONS = {
     ".go", ".py",
 }
 
-# Paths to always skip (lock files, generated output, docs that are not decisions)
-SKIP_PATTERNS = [
-    "node_modules/",
-    "dist/",
-    ".expo/",
-    "graphify-out/",
-    "bun.lockb",
-    "package-lock.json",
-    ".tsbuildinfo",
-]
+# Paths to always skip: lib.code_files' anchored list (node_modules, dist, docs, …)
+# plus this hook's own extras (generated output, lock files).
+_EXTRA_DIRS = (".expo", "graphify-out")
+_EXTRA_NAMES = ("bun.lockb", "package-lock.json", ".tsbuildinfo")
+_HOOKS = Path(__file__).resolve().parent
+if str(_HOOKS) not in sys.path:
+    sys.path.insert(0, str(_HOOKS))
+try:
+    from lib import code_files as _cf
+except Exception:  # noqa: BLE001 - fall back to the old substring list
+    _cf = None
+_FALLBACK_SKIP = ("node_modules/", "dist/", ".expo/", "graphify-out/", "bun.lockb",
+                  "package-lock.json", ".tsbuildinfo")
 
 CODEX_FILENAME = "CODEX.md"
 
@@ -82,9 +85,11 @@ def is_high_signal_path(file_path: str) -> bool:
     # Normalise: forward slashes (Windows sends `a\b`), no leading slash
     norm = file_path.replace("\\", "/").lstrip("/")
     # Check skip patterns first
-    for skip in SKIP_PATTERNS:
-        if skip in norm:
+    if _cf is not None:
+        if _cf.is_skipped("/" + norm, extra_dirs=_EXTRA_DIRS, extra_names=_EXTRA_NAMES):
             return False
+    elif any(skip in norm for skip in _FALLBACK_SKIP):
+        return False
     # Check extension
     _, ext = os.path.splitext(norm)
     if ext.lower() not in HIGH_SIGNAL_EXTENSIONS:

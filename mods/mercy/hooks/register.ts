@@ -13,6 +13,8 @@ import { registerBridge } from './features/bridge'
 import { registerCmds } from './features/cmds'
 import { registerDeck } from './features/deck'
 import { registerLifecycle } from './features/lifecycle'
+import { registerMemwatch } from './features/memwatch'
+import { registerModelCaps } from './features/model-caps'
 import { registerTools } from './features/mtools'
 import { registerPrompts } from './features/prompts'
 import { registerPulse } from './features/pulse'
@@ -32,6 +34,11 @@ export const register: Register = (on, options) => {
     registerLifecycle(on)
   } catch (err) {
     failed('lifecycle', err)
+  }
+  try {
+    registerModelCaps(on)
+  } catch (err) {
+    failed('modelCaps', err)
   }
   try {
     registerToolflow(on)
@@ -72,6 +79,11 @@ export const register: Register = (on, options) => {
     registerAuto(on)
   } catch (err) {
     failed('auto', err)
+  }
+  try {
+    registerMemwatch(on)
+  } catch (err) {
+    failed('memwatch', err)
   }
   try {
     registerAlerts(on)

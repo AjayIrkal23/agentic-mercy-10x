@@ -109,3 +109,25 @@ def test_non_write_tool_and_bad_payload_fail_open(monkeypatch):
     cp = subprocess.run([sys.executable, str(_HOOKS / "mcp-post-hints.py")], input="not json",
                         text=True, capture_output=True, timeout=10, check=False)
     assert cp.stdout.strip() == "{}"
+
+
+def test_write_tools_come_from_tool_compat_plus_notebook():
+    import tool_compat
+    assert tool_compat.WRITE_TOOLS <= H.WRITE_TOOLS and "NotebookEdit" in H.WRITE_TOOLS
+
+
+def test_placeholder_asset_url_points_at_the_higgsfield_connector(tmp_path, monkeypatch):
+    fp = _repo(tmp_path) / "src" / "components" / "Hero.tsx"
+    st: dict = {}
+    hs = _run(monkeypatch, _edit(fp, '<img src="https://via.placeholder.com/600x400" />'), st, servers=())
+    hint = [h for h in hs if "mcp__claude_ai_higgsfield__" in h]
+    assert hint and "placeholder" in hint[0] and len(hint[0]) <= 190
+    again = _run(monkeypatch, _edit(fp, '<img src="https://picsum.photos/200" />'), st, servers=())
+    assert not any("higgsfield" in h for h in again)  # once per session
+
+
+def test_asset_hint_ignores_non_frontend_and_old_text(tmp_path, monkeypatch):
+    fp = _repo(tmp_path) / "src" / "api.ts"
+    assert not any("higgsfield" in h for h in _run(monkeypatch, _edit(fp, "const u = 'https://picsum.photos/1'"), {}, servers=()))
+    hero = _repo(tmp_path / "b") / "src" / "components" / "Hero.tsx"
+    assert not any("higgsfield" in h for h in _run(monkeypatch, _edit(hero, "x https://picsum.photos/1", old="https://picsum.photos/1"), {}, servers=()))

@@ -130,6 +130,8 @@ export function classifyArgv(argv: readonly string[], ci = false): CommandKind {
   const t1 = a[1] ?? ''
   const rest = a.slice(1)
   if (!t0) return 'other'
+  // golive.py runs git commit/merge/push as child processes: an automatic run counts as a commit (subagents never commit)
+  if (a.includes('--yes-automatic') && a.some(x => /(^|[\\/])golive\.py$/.test(x))) return 'git-commit'
   if (t0 === 'git') return gitKind(a)
   if (PMS.has(t0)) return packageManager(a)
   if (t0 === 'nodemon') return 'server'

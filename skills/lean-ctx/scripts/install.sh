@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# installer-only: run by installer/deps.py / a human; never run from a session (writes hooks and settings via lean-ctx init --global).
 
 REPO="yvgude/lean-ctx"
 INSTALL_DIR="${HOME}/.local/bin"
@@ -63,6 +64,7 @@ ensure_path() {
 }
 
 setup_mcp() {
+    [ "${LEAN_CTX_ALLOW_INIT:-0}" = 1 ] || { echo "skip: lean-ctx init --global (set LEAN_CTX_ALLOW_INIT=1)"; return 0; }
     echo "Configuring lean-ctx MCP server..."
     lean-ctx init --global 2>/dev/null || true
     lean-ctx doctor --fix 2>/dev/null || true

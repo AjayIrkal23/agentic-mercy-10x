@@ -28,6 +28,9 @@ _STALE_OK = {("skills/mcp-usage-standards/SKILL.md", "claude-mermaid"),
              ("skills/mcp-usage-standards/references/mcp-inventory.md", "claude-mermaid")}
 _MD_LINK = re.compile(r"\]\(([^)#\s]+)(?:#[^)]*)?\)")
 _RULE_REF = re.compile(r"rules/([\w.-]+\.md)")
+# A provenance citation (`ecc:skills/x, rules/y.md @25278e7d`) names an upstream path, not an
+# installed skill or a local rules file (ECC merge 2026-10-29).
+_ECC_CITE = re.compile(r"ecc:[\w./#-]+(?:,\s*[\w./#-]+)*\s*@[0-9a-f]{7,40}")
 _RULE_OK = {"area-description.md"}  # composition-patterns: "copy _template.md to rules/<area>-<desc>.md"
 _FENCE = re.compile(r"^```.*?^```", re.M | re.S)
 
@@ -52,6 +55,7 @@ def test_skills_name_no_uninstalled_plugins_or_missing_skills():
             continue
         if t.startswith("# ") and "Absorbed into" in t[:300]:  # absorbed file keeps its old title
             t = t.split("\n", 1)[1]
+        t = _ECC_CITE.sub("", t)
         rel = f.relative_to(ROOT).as_posix()  # _STALE_OK uses `/` on every OS
         hits += [f"{rel}: {n}" for n in STALE_NAMES if n in t and (rel, n) not in _STALE_OK]
     assert not hits, hits
@@ -135,3 +139,21 @@ def test_workflow_audit_body_is_lean_and_user_only():
     fm, body = _fm("workflow-audit")
     assert fm.get("disable-model-invocation") is True
     assert len(body) <= 16000, f"{len(body)} chars; move tables to references/"
+
+
+# --------------------------------------------------------------------------- ECC merge 2026-10-29
+def test_harmonization_doc_lists_every_alias():
+    """The alias table and the cluster doc agree (graft of ecc:scripts/ci/catalog.js@25278e7d)."""
+    doc = (ROOT / "docs" / "SKILL-HARMONIZATION.md").read_text(encoding="utf-8")
+    aliases = json.loads((ROOT / "hooks" / "skill-aliases.json").read_text(encoding="utf-8"))
+    missing = [k for k in aliases if not k.startswith("_") and f"`{k}`" not in doc]
+    assert not missing, f"aliases absent from docs/SKILL-HARMONIZATION.md: {missing}"
+    unknown = []
+    for line in doc.splitlines():
+        cells = line.split("|")
+        if not line.startswith("|") or len(cells) < 4 or set(cells[2].strip()) <= {"-", " "}:
+            continue
+        for name in re.findall(r"`([\w-]+)`", cells[2]):  # column 2 = the local skill (or agent)
+            if not ((SKILLS / name / "SKILL.md").exists() or (ROOT / "agents" / f"{name}.md").exists()):
+                unknown.append(name)
+    assert not unknown, f"local names in the doc's tables that do not exist: {unknown}"

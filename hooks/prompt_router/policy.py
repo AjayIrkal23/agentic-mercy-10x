@@ -126,7 +126,7 @@ def session_model(payload: dict) -> str:
 def ui_line(available) -> str:
     """``available(name) -> bool`` decides which asset servers are named."""
     text = "UI signal → design-taste-frontend is the visual authority"
-    if available("higgsfield"):
+    if available("higgsfield") or available("claude_ai_higgsfield"):
         text += "; assets via Higgsfield"
         if available("openart"):
             text += " (OpenArt when the project says so)"

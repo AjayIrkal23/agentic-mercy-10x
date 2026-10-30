@@ -17,7 +17,7 @@
   "priority_tiers": {
     "0": "gate-adjacent — first-write baseline, TDD (backend surface / TEST intent only)",
     "1": "substrate precedence (jcodemunch for code, jdocmunch for docs, graphify for architecture) + indexed symbols + at most ONE deep-injected skill body",
-    "2": "ranked skill pushes: rank 1 MUST-READ, ranks 2-5 SHOULD-READ; aliases collapsed; core-skill-set skills never re-pushed",
+    "2": "ranked skill pushes: rank 1 MUST-READ (none when its body is inlined), ranks 2-4 SHOULD-READ; aliases collapsed; core-skill-set skills never re-pushed; surface pointer, WORKFLOW and LIBRARY routing lines",
     "3": "routing (UI signal, MCP routes, /invoke act or specialist dispatch, per-project model mode) + model advice"
   },
   "dedup": {
@@ -34,7 +34,57 @@
       "DOCS": ["readme", "update the readme", "server_docs", "frontend_docs", "document the", "documentation", "docs"],
       "DEBUG": ["returns 500", "returns a 500", "http 500", "status 500", "returns 404", "figure out why", "find out why", "crashed", "crashing", "didn't work", "did not work", "didnt work"],
       "REVIEW": ["review my changes", "review the diff", "review this pr", "code review"],
-      "VERIFY": ["verify", "verify that", "check it works", "check that it works", "make sure it works", "confirm it works", "prove", "prove it", "prove that", "prove it works", "does it actually work"]
+      "VERIFY": ["verify", "verify that", "check it works", "check that it works", "make sure it works", "confirm it works", "prove", "prove it", "prove that", "prove it works", "does it actually work"],
+      "MODEL_ROUTING": ["model routing", "model selector", "model selection", "model picker", "model switcher", "opus model", "fable model", "haiku model", "sonnet model", "subagent model", "subagent models", "plan tier", "plan tiers", "pro plan", "max plan", "20$ plan", "usage limit", "usage limits", "5-hour", "five-hour", "rate limit tier", "model-policy", "model policy", "opus-guard", "tier cap", "tier caps", "which model", "model routing talk"]
+    },
+    "_model_routing_weak_comment": "REVIEW2 Fix 1: bare model / plan-size tokens. One alone is the 'use opus for this' override phrase, not model-routing talk; MODEL_ROUTING fires on an intents.MODEL_ROUTING keyword or on >= 2 distinct weak hits (classify.py).",
+    "model_routing_weak": ["opus", "fable", "haiku", "sonnet", "5x", "20x"],
+    "ui_veto": {
+      "_comment": "R3.6: these words score UI only with a UI noun within `window` words; with a MODEL_ROUTING hit they never score UI or DESIGN unless a noun is near, and with no UI noun anywhere the frontend surfaces are dropped (classify.py).",
+      "words": ["redesign", "design", "selector", "picker", "switcher", "restyle"],
+      "ui_nouns": ["page", "pages", "component", "components", "screen", "screens", "layout", "button", "buttons", "css", "form", "forms", "modal", "landing", "hero", "ui", "ux", "frontend", "dashboard", "widget", "panel", "view", "menu", "navbar", "sidebar"],
+      "window": 6
+    },
+    "stack_indicators": {
+      "_comment": "ECC project-stack-mappings.json (config/, @25278e7d) reduced to router tags. `file` is a glob on the marker NAME, `contains` a case-insensitive substring of its body (first 64 KB); a stack's tag attaches when any indicator matches. side backend/frontend also adds that surface; any/mobile tag only. Scanned by surface._scan within 3 levels, cached in state/<repo>.stack.json (sig _v 5). A backend-side marker under android/ or ios/, or next to an RN package.json / pubspec.yaml, is skipped (surface._mobile_shell). Stack tags are weak unless the prompt names them; backend/frontend-side tags attach only when that side is in play.",
+      "stacks": [
+        {"tag": "typescript", "side": "any", "indicators": [{"file": "tsconfig.json"}, {"file": "tsconfig.*.json"}]},
+        {"tag": "react", "side": "frontend", "indicators": [{"file": "package.json", "contains": "\"react\":"}]},
+        {"tag": "nextjs", "side": "frontend", "indicators": [{"file": "next.config.*"}, {"file": "package.json", "contains": "\"next\":"}]},
+        {"tag": "angular", "side": "frontend", "indicators": [{"file": "angular.json"}, {"file": "package.json", "contains": "@angular/core"}]},
+        {"tag": "vue", "side": "frontend", "indicators": [{"file": "package.json", "contains": "\"vue\":"}]},
+        {"tag": "nuxt", "side": "frontend", "indicators": [{"file": "nuxt.config.*"}]},
+        {"tag": "svelte", "side": "frontend", "indicators": [{"file": "svelte.config.*"}]},
+        {"tag": "go", "side": "backend", "indicators": [{"file": "go.mod"}]},
+        {"tag": "python", "side": "any", "_side_comment": "any, not backend: a requirements.txt next to a helper script is not a service (surface.py keeps the _PY_BE web-framework rule for that)", "indicators": [{"file": "pyproject.toml"}, {"file": "setup.py"}, {"file": "setup.cfg"}, {"file": "requirements.txt"}, {"file": "Pipfile"}, {"file": "poetry.lock"}]},
+        {"tag": "django", "side": "backend", "indicators": [{"file": "manage.py"}, {"file": "requirements.txt", "contains": "django"}, {"file": "pyproject.toml", "contains": "django"}]},
+        {"tag": "fastapi", "side": "backend", "indicators": [{"file": "requirements.txt", "contains": "fastapi"}, {"file": "pyproject.toml", "contains": "fastapi"}]},
+        {"tag": "rust", "side": "backend", "indicators": [{"file": "Cargo.toml"}]},
+        {"tag": "java", "side": "any", "_side_comment": "any, not backend (REVIEW2 Fix 2): every RN / Flutter / Android app has android/build.gradle; springboot carries the backend side", "indicators": [{"file": "pom.xml"}, {"file": "build.gradle"}, {"file": "build.gradle.kts"}]},
+        {"tag": "springboot", "side": "backend", "indicators": [{"file": "pom.xml", "contains": "spring-boot"}, {"file": "build.gradle*", "contains": "spring-boot"}]},
+        {"tag": "kotlin", "side": "any", "_side_comment": "any, not backend: Android apps are Kotlin (REVIEW2 Fix 2)", "indicators": [{"file": "settings.gradle.kts"}, {"file": "build.gradle", "contains": "kotlin"}]},
+        {"tag": "android", "side": "mobile", "indicators": [{"file": "AndroidManifest.xml"}, {"file": "build.gradle*", "contains": "android"}]},
+        {"tag": "swift", "side": "mobile", "indicators": [{"file": "Package.swift"}, {"file": "*.xcodeproj"}, {"file": "Podfile"}]},
+        {"tag": "dart", "side": "mobile", "indicators": [{"file": "pubspec.yaml"}]},
+        {"tag": "php", "side": "backend", "indicators": [{"file": "composer.json"}, {"file": "artisan"}]},
+        {"tag": "ruby", "side": "any", "_side_comment": "any, not backend: a stock RN app ships a root Gemfile for CocoaPods (REVIEW2 Fix 2)", "indicators": [{"file": "Gemfile"}, {"file": "Rakefile"}]},
+        {"tag": "csharp", "side": "backend", "indicators": [{"file": "*.csproj"}, {"file": "*.sln"}, {"file": "global.json"}]},
+        {"tag": "fsharp", "side": "backend", "indicators": [{"file": "*.fsproj"}]},
+        {"tag": "cpp", "side": "backend", "indicators": [{"file": "CMakeLists.txt"}, {"file": "meson.build"}, {"file": "*.vcxproj"}]},
+        {"tag": "perl", "side": "backend", "indicators": [{"file": "cpanfile"}, {"file": "Makefile.PL"}, {"file": "Build.PL"}]},
+        {"tag": "arkts", "side": "mobile", "indicators": [{"file": "oh-package.json5"}, {"file": "build-profile.json5"}]},
+        {"tag": "docker", "side": "any", "indicators": [{"file": "Dockerfile"}, {"file": "docker-compose.y*ml"}, {"file": "compose.y*ml"}]}
+      ],
+      "package_managers": {
+        "_comment": "package.json packageManager field wins, then the first lockfile found, root first (ECC scripts/lib/package-manager.js order). Exposed as tag pm:<name>.",
+        "order": ["pnpm", "yarn", "bun", "npm"],
+        "lockfiles": {"pnpm": ["pnpm-lock.yaml"], "yarn": ["yarn.lock"], "bun": ["bun.lock", "bun.lockb"], "npm": ["package-lock.json"]}
+      }
+    },
+    "surface_pointers": {
+      "_comment": "ROUTING pointer lines per surface (files, not skills). Fires once per session (manifest id route:pointer:<surface>) when the surface is present and, if `intents` is set, one of them hit.",
+      "claude-infra": {"intents": ["MODEL_ROUTING"],
+        "text": "Model routing → the single truth is hooks/model-policy.json (opus-guard and workflow-model-guard enforce it); read rules/04-model-routing.md and docs/MODEL-ROUTING.md before changing tiers, pins or the task matrix."}
     },
     "surface_skills": {
       "frontend": {"frontend-standards-always-follow": 3.0, "frontend-structure-standards": 1.5, "react-hooks-patterns": 1.5, "frontend-response-handling": 1.0, "vite-react-best-practices": 0.8, "modern-web-guidance": 0.8},
@@ -53,7 +103,8 @@
       "ui": {"design-taste-frontend": 3.5, "frontend-design:frontend-design": 1.5, "tailwind-design-system": 1.2, "shadcn": 1.2, "higgsfield-generate": 1.5, "nateherk-design:scroll-craft": 1.0}
     },
     "demote": {
-      "_comment": "Process/meta skills multiply by this factor before the score floor: they are doctrine (CLAUDE.md, core-skill-set) rather than surface skills, and without a demotion they take 2 of the 5 slots on every build prompt. A strong intent signal (PLAN/SPEC/DEBUG category boost) still lifts them over the floor.",
+      "_comment": "Process/meta skills multiply by this factor (clamped to <= 1.0: never a boost) before the score floor: they are doctrine (CLAUDE.md, core-skill-set) rather than surface skills, and without a demotion they take 2 of the 4 slots on every build prompt. A strong intent signal (PLAN/SPEC/DEBUG category boost) still lifts them over the floor. `dox-doc-tree` 0.7 is the only value the retired `skill_router_weights.json` carried; it is a core skill and never ranks, kept for the record.",
+      "dox-doc-tree": 0.7,
       "doubt-driven-development": 0.5,
       "source-driven-development": 0.5,
       "tool-and-doc-selection": 0.5,

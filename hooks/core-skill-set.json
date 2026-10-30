@@ -1,10 +1,9 @@
 {
- "_comment": "Always-active core skill set injected at session start. full=body digest, pointer=name+description line. Names are canonical (aliases resolved via lib/skill_aliases at load). Budget: session-start-aggregator gives this block what is left of MAX_AGGREGATED_CHARS (5500) after the superpowers + MCP tails, about 4.3k chars; nine pointers take about 1.6k, so exactly one short body fits. Only caveman is full (capped at its Scope+Rules part); the rest are pointers the model loads with the Skill tool. tests/test_skills_wp2.py asserts every full entry actually arrives.",
+ "_comment": "Always-active core skill set injected at session start as one pointer line each (name + description; the model loads a body with the Skill tool). session-start-aggregator caps this block at CAPS['core'] = 2000 chars. No entry is `full`: the caveman rules ride in the `caveman` output style (output-styles/caveman.md), which the system prompt caches. tests/test_skills_wp2.py asserts every `full` entry arrives (none today) and that no pointer skill claims full injection.",
  "always": [
   {
    "skill": "caveman",
-   "mode": "full",
-   "max_chars": 2400
+   "mode": "pointer"
   },
   {
    "skill": "codebase-intel-first",

@@ -41,6 +41,9 @@ def test_invoke_lets_opus_guard_route():
     invoke = gen.render_all(CFG, POLICY)[gen.SKILLS_DIR / "invoke" / "SKILL.md"]
     assert 'model="<model>"' not in invoke
     assert "Previous attempt failed:" in invoke
+    # ECC merge 2026-10-29: the saved workflow is the default for big runs; size tiers pick the acts.
+    assert "workflows/invoke.js" in invoke and "tier_hint" in invoke
+    assert "## Size tiers" in invoke
 
 
 def test_check_flags_unexpected_invoke_dir(tmp_path, monkeypatch, capsys):

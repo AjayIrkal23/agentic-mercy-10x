@@ -1,0 +1,3 @@
+{"id": "promote-me", "text": "Run the type checker before every commit in this repository", "domain": "workflow", "confidence": 0.85, "seen": 6, "first": "__TS__", "last": "__TS__", "promoted": false, "source": "ollama"}
+{"id": "decay-me", "text": "Keep changelog entries short and grouped by release version", "domain": "docs", "confidence": 0.5, "seen": 3, "first": "__OLD__", "last": "__OLD__", "promoted": false, "source": "ollama"}
+{"id": "prune-me", "text": "Rebase feature branches onto main before opening pull requests", "domain": "git", "confidence": 0.5, "seen": 2, "first": "__OLDER__", "last": "__OLDER__", "promoted": false, "source": "ollama"}

@@ -34,6 +34,8 @@ when_to_use: A button does nothing, a form will not submit, data will not load, 
 
 > **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted. `debug-investigation` stays the doctrine; Reticle is the evidence tool.
 
+> **ECC graft (ecc:skills/click-path-audit@25278e7d):** trace click → handler → store touchpoint → request → render, and list every touchpoint with `file:line` before proposing a fix.
+
 # The app is broken and the code looks fine
 
 Reading the source again will not tell you why. The evidence is in the running app, and most of it never reaches the screen: the request that failed, the store that never moved, the handler that was never bound, the element covered by something invisible.

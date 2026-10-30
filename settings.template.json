@@ -23,6 +23,11 @@
     "CLAUDE_CODE_PLUGIN_DIRS": "{{MOD_DIRS}}",
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1",
     "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "2",
+    "CLAUDE_CODE_TOOL_MEMORY_LIMIT": "6G",
+    "CLAUDE_CODE_TOOL_MEMORY_CGROUP_EXCLUDE": "all-new",
+    "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "5",
+    "CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS": "4",
+    "CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH": "600",
     "MCP_TIMEOUT": "30000",
     "RETICLE_TELEMETRY": "0",
     "VALIDATION_CLIENT": "sdk",
@@ -60,9 +65,10 @@
       }
     }
   },
+  "maxEffortLevel": "xhigh",
   "hooks": {
     "PreToolUse": [
-      {"matcher": "Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit|Read|Grep|Glob|Agent|Task|Workflow|mcp__lean.ctx__(ctx_read|ctx_search|ctx_patch|ctx_shell|shell|ctx_call)|mcp__claude_ai_.*|mcp__plugin_.*",
+      {"matcher": "Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit|Read|Grep|Glob|Agent|Task|Workflow|mcp__lean.ctx__(ctx_read|ctx_search|ctx_patch|ctx_shell|shell|ctx_call)|mcp__claude_ai_.*|mcp__plugin_.*|mcp__github__.*|mcp__playwright__browser_navigate",
        "hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py pre-tool-use", "timeout": 30, "statusMessage": "dispatch: gates"}]}
     ],
     "PostToolUse": [
@@ -70,11 +76,11 @@
        "hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py post-tool-use", "timeout": 25}]}
     ],
     "PostToolUseFailure": [
-      {"matcher": "Edit|Write|Bash|PowerShell|mcp__lean.ctx__(ctx_patch|ctx_shell|shell)",
+      {"matcher": "Edit|Write|Bash|PowerShell|mcp__.*",
        "hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py post-tool-use-failure", "timeout": 5}]}
     ],
     "UserPromptSubmit": [
-      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/prompt_router/router.py", "timeout": 15}]}
+      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py user-prompt-submit", "timeout": 15}]}
     ],
     "SessionStart": [
       {"matcher": ".*",
@@ -83,20 +89,20 @@
     "SubagentStart": [
       {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py subagent-start", "timeout": 5}]}
     ],
-    "SubagentStop": [
-      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py subagent-stop", "timeout": 10}]}
-    ],
     "TeammateIdle": [
       {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py teammate-idle", "timeout": 10}]}
     ],
     "Stop": [
-      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py stop", "timeout": 30, "statusMessage": "completion gates"}]}
+      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py stop", "timeout": 40, "statusMessage": "completion gates"}]}
+    ],
+    "StopFailure": [
+      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py stop-failure", "timeout": 5}]}
+    ],
+    "InstructionsLoaded": [
+      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py instructions-loaded", "timeout": 3}]}
     ],
     "PreCompact": [
       {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py pre-compact", "timeout": 10}]}
-    ],
-    "PostCompact": [
-      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py post-compact", "timeout": 10}]}
     ],
     "ConfigChange": [
       {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py config-change", "timeout": 5}]}
@@ -104,6 +110,36 @@
     "SessionEnd": [
       {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py session-end", "timeout": 10}]}
     ]
+  },
+  "outputStyle": "caveman",
+  "skillOverrides": {
+    "higgsfield-brandkit": "name-only",
+    "higgsfield-generate": "name-only",
+    "higgsfield-marketplace-cards": "name-only",
+    "higgsfield-product-photoshoot": "name-only",
+    "higgsfield-soul-id": "name-only",
+    "higgsfield-video-explainer": "name-only",
+    "higgsfield-websites": "name-only",
+    "higgsfield-youtube-thumbnail": "name-only",
+    "invoke-audit": "name-only",
+    "invoke-clean": "name-only",
+    "invoke-debug": "name-only",
+    "invoke-design": "name-only",
+    "invoke-docs": "name-only",
+    "invoke-impl": "name-only",
+    "invoke-plan": "name-only",
+    "invoke-refactor": "name-only",
+    "invoke-review": "name-only",
+    "invoke-security": "name-only",
+    "invoke-session": "name-only",
+    "invoke-spec": "name-only",
+    "invoke-status": "name-only",
+    "invoke-test": "name-only",
+    "invoke-update": "name-only",
+    "invoke-verify": "name-only",
+    "kokonutui": "name-only",
+    "mmx-cli": "name-only",
+    "workflow-audit": "name-only"
   },
   "permissions": {
     "defaultMode": "bypassPermissions",

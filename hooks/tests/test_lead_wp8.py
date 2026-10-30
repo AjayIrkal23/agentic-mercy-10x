@@ -233,10 +233,13 @@ def test_link_doctor_children_never_write_live_state():
 
 @pytest.mark.parametrize("script", ["security-scan-gate.py", "security-semgrep-tracker.py",
                                     "first-write-skill-gate.py", "fullstack-skills-reminder.py",
-                                    "desloppify-cleanup.py"])
+                                    "desloppify-cleanup.py", "hard-completion-gate.py",
+                                    "invoke-suite-gate.py", "jcodemunch-enforce.py",
+                                    "dox-write-gate.py", "graphify-enforce.py",
+                                    "jdocmunch-enforce.py"])
 def test_state_writers_go_through_locked_update(script):
     """J-01: no shared per-session state file is written with a bare write_text RMW."""
     src = (HOOKS / script).read_text(encoding="utf-8")
-    assert "locked_update" in src
+    assert ("locked_update" in src) or ("gate_state" in src)
     for line in src.splitlines():
         assert not ("write_text(json.dumps" in line and "state" in line.lower()), line

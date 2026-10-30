@@ -1,7 +1,7 @@
 // Pure view models for the deck: the usage, git, ci and todo pane views (coloured rows)
 // and the markdown of the slash command cards. The render hooks only map these to elements.
 
-import type { CiState, Deck, GitState, Limit, Todo } from '../../types'
+import type { CiState, Deck, GitState, Limit, MemState, Todo } from '../../types'
 import { crossed, resetLabel } from './deck'
 import { ago, clip, compact, duration, meter, usd } from './format'
 import { lastEvidenceAt, loops, runningAgents, unverified } from './ledger'
@@ -105,9 +105,53 @@ export function todoRows(todos: readonly Todo[], width: number): Row[] {
   ]
 }
 
-/** Band rows the deck adds: context, the 5-hour window, a failing CI. */
-export function deckBand(s: Snapshot): Array<{ line: string; key: string; label?: string; prompt?: string; command?: 'compact' | 'open-ci' }> {
-  const out: Array<{ line: string; key: string; label?: string; prompt?: string; command?: 'compact' | 'open-ci' }> = []
+export type DeckBandRow = { line: string; key: string; label?: string; prompt?: string; command?: 'compact' | 'open-ci' | 'open-mem' }
+
+/** Decimal GB from memwatch's MB, one decimal: 6100 → `6.1 GB`. */
+export function gb(mb: number): string {
+  return `${(mb / 1000).toFixed(1)} GB`
+}
+
+function memNumbers(m: MemState): string {
+  const parts: string[] = []
+  if (m.memAvailableMb !== undefined) parts.push(`${gb(m.memAvailableMb)} free`)
+  if (m.swapFreePct !== undefined) parts.push(`swap ${Math.round(m.swapFreePct)}% free`)
+  if (m.psi !== undefined) parts.push(`psi ${m.psi}`)
+  return parts.join(', ')
+}
+
+/** The memory band line: only at warn and above (a stale file already reads as ok). */
+export function memBand(m: MemState | undefined): DeckBandRow | undefined {
+  if (!m || m.level === 'ok') return undefined
+  const crit = m.level === 'crit'
+  const advice = crit ? 'stop fan-out, let the guard shed' : 'do not fan out agents or start vitest'
+  return { line: `${crit ? '✗' : '⚠'} memory ${m.level.toUpperCase()}: ${memNumbers(m)} — ${advice}`, key: 'mem', label: 'Memory', command: 'open-mem' }
+}
+
+/** The pane's memory view. */
+export function memRows(m: MemState | undefined, now: number, width: number): Row[] {
+  const fit = (t: string): string => clip(t, Math.max(30, width))
+  if (!m) return [{ text: fit('no memwatch state (claude-memwatch.service not running, or not Linux)'), dim: true }]
+  if (m.unsupported) return [{ text: fit('memory guard not supported on this OS'), dim: true }]
+  const color = m.level === 'crit' ? 'red' : m.level === 'warn' ? 'yellow' : 'green'
+  const rows: Row[] = [
+    { text: fit(`memory ${m.level.toUpperCase()}${m.stale ? ` (stale file; last level ${m.rawLevel})` : ''}`), color, bold: true },
+    { text: fit(memNumbers(m) || 'no numbers in the file') },
+  ]
+  if (m.top.length) rows.push({ text: 'Largest processes:', dim: true })
+  for (const t of m.top) rows.push({ text: fit(`${t.name.padEnd(18)} ${gb(t.rssMb).padStart(8)}  ${t.unit ?? ''}`) })
+  if (m.stuck) rows.push({ text: fit(`${m.stuck} stuck session(s)`), color: 'yellow' })
+  if (m.shed) rows.push({ text: fit(`${m.shed} process(es) shed by the guard`), color: 'yellow' })
+  if (m.restorePending) rows.push({ text: fit('restore pending: killed sessions come back when memory recovers'), color: 'cyan' })
+  rows.push({ text: fit(`updated ${m.ts > 0 ? ago(now, m.ts) : 'never'} · notifications: ${m.notifyOwner}`), dim: true })
+  return rows
+}
+
+/** Band rows the deck adds: memory, context, the 5-hour window, a failing CI. */
+export function deckBand(s: Snapshot): DeckBandRow[] {
+  const out: DeckBandRow[] = []
+  const mem = memBand(s.deck?.mem)
+  if (mem) out.push(mem)
   const t = s.autoCompact ?? 0
   if (s.contextPct >= 80) out.push({ line: `◔ context ${Math.round(s.contextPct)}%${t ? `: compacts by itself between turns at ${t}%` : ''}`, key: 'compact', label: 'Compact now', command: 'compact' })
   const five = s.deck?.limits.find(l => l.kind === 'five_hour')

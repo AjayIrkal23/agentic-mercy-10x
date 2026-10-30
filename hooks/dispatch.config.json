@@ -1,5 +1,5 @@
 {
-  "_about": "The ONE ordered chain map for dispatch.py. Every hook is a LINK here (its own file, run as a subprocess); settings.json registers dispatch.py once per event. Link types: gate|mutator|advisory|exec. exec links with \"async\": true are spawned detached and never waited on. tools = regex FULL-matched against tool_name. enabled toggles a link off without deleting it. priority 0 = mandatory advisory (never budget-dropped); higher = droppable once gates blew the wall budget. budgets.ms is that advisory-drop threshold only, not a rung of the timeout ladder: every link timeout_ms is above it by design, and the real ladder is harness timeout > sum of the sequential link timeouts (tests/test_timeout_ladder.py). timeout_ms is per-link. \"defer\": true (advisories) = spawned detached, text delivered on the session's next PreToolUse/PostToolUse; --only runs it synchronously. Pass order: gates+mutators in declared order, execs, advisories. CLAUDE_HOOK_DOCTOR stops detached writers (index builds, dox sweeps), not telemetry or gate state: point CLAUDE_HOOK_TELEMETRY_DIR and CLAUDE_HOOK_STATE_DIR at temp dirs to isolate a run (tests do, via conftest.py); hooks/.state is not redirected yet. Every budgets.chars stays under Claude Code's 8,000-char additionalContext cap: above it the harness saves the text to a file and shows the model a 2 KB preview.",
+  "_about": "The ONE ordered chain map for dispatch.py. Every hook is a LINK here (its own file, run as a subprocess); settings.json registers dispatch.py once per event: 15 chains, 13 registered events (subagent-stop and post-compact keep a disabled link and no registration). UserPromptSubmit joins the dispatcher (link \"router\"); StopFailure and InstructionsLoaded are exec-only chains; \"crit_exempt\": true keeps a link through the crit memory profile. Link types: gate|mutator|advisory|exec. exec links with \"async\": true are spawned detached and never waited on. tools = regex FULL-matched against tool_name. enabled toggles a link off without deleting it. priority 0 = mandatory advisory (never budget-dropped); higher = droppable once gates blew the wall budget. budgets.ms is that advisory-drop threshold only, not a rung of the timeout ladder: every link timeout_ms is above it by design, and the real ladder is harness timeout > sum of the sequential link timeouts (tests/test_timeout_ladder.py). timeout_ms is per-link. \"defer\": true (advisories) = spawned detached, text delivered on the session's next PreToolUse/PostToolUse; --only runs it synchronously. Pass order: gates+mutators in declared order, execs, advisories. CLAUDE_HOOK_DOCTOR stops detached writers (index builds, dox sweeps), not telemetry or gate state: point CLAUDE_HOOK_TELEMETRY_DIR and CLAUDE_HOOK_STATE_DIR at temp dirs to isolate a run (tests do, via conftest.py); hooks/.state is not redirected yet. Every budgets.chars stays under Claude Code's 8,000-char additionalContext cap: above it the harness saves the text to a file and shows the model a 2 KB preview.",
   "budgets": {
     "session-start": {"ms": 2500, "chars": 7800},
     "pre-tool-use": {"ms": 2000, "chars": 7800},
@@ -12,32 +12,45 @@
     "post-compact": {"ms": 1500, "chars": 6000},
     "config-change": {"ms": 1500, "chars": 500},
     "teammate-idle": {"ms": 1500, "chars": 1000},
-    "session-end": {"ms": 1000, "chars": 0}
+    "session-end": {"ms": 1000, "chars": 0},
+    "user-prompt-submit": {"ms": 3000, "chars": 7800},
+    "stop-failure": {"ms": 800, "chars": 0},
+    "instructions-loaded": {"ms": 800, "chars": 0}
   },
   "chains": {
     "session-start": [
       {"id": "settings-permissions-selfheal", "type": "exec", "cmd": ["{PY}", "{HOOKS}/settings-permissions-selfheal.py"], "timeout_ms": 3000, "enabled": true, "_note": "runs FIRST: repairs a permissions.deny that drifted from settings.template.json"},
       {"id": "state-cleanup", "type": "exec", "async": true, "cmd": ["{PY}", "{HOOKS}/tools/state-cleanup.py"], "timeout_ms": 5000, "enabled": true},
+      {"id": "memwatch-ensure", "type": "exec", "async": true, "cmd": ["{PY}", "{HOOKS}/memwatch-ensure.py"], "timeout_ms": 8000, "enabled": true, "_note": "OOM guard L3: ensure claude-memwatch.service runs (systemctl start, or oomguard_setup.ensure when the unit is missing); one-shot, never spawns a scope; doctor/pytest no-op"},
+      {"id": "session-ledger-start", "type": "exec", "cmd": ["{PY}", "{HOOKS}/session-ledger.py", "start"], "timeout_ms": 2000, "enabled": true, "_note": "L4 ledger: state/live-sessions/<sid>.json; prints sessionTitle (forwarded once dispatch.py learns to; inert until then)"},
+      {"id": "plan-tier-detect", "type": "exec", "cmd": ["{PY}", "{HOOKS}/plan-tier-detect.py", "--quiet"], "timeout_ms": 3000, "enabled": true, "crit_exempt": true, "_note": "R3.3: the only credentials reader; writes state/plan-tier.json, regenerates workflows/ on a tier change; before the aggregator so session_notices.tier_line() reads a fresh file"},
       {"id": "session-start-aggregator", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/session-start-aggregator.py"], "timeout_ms": 30000, "priority": 0, "enabled": true},
-      {"id": "memory-load-on-start", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/memory-load-on-start.py"], "timeout_ms": 5000, "priority": 1, "enabled": true},
-      {"id": "session-lifecycle-start", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/session-lifecycle.py", "session-start"], "timeout_ms": 10000, "priority": 1, "enabled": true},
-      {"id": "ponytail-session", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/ponytail-caveman-guard.py", "session-start"], "timeout_ms": 5000, "priority": 2, "enabled": true},
+      {"id": "memory-load-on-start", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/memory-load-on-start.py"], "timeout_ms": 5000, "priority": 1, "enabled": true, "crit_exempt": true},
+      {"id": "session-lifecycle-start", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/session-lifecycle.py", "session-start"], "timeout_ms": 10000, "priority": 1, "enabled": true, "crit_exempt": true},
       {"id": "skills-index-guard", "type": "exec", "async": true, "cmd": ["{PY}", "{HOOKS}/build-skills-index.py", "--hook"], "timeout_ms": 10000, "enabled": true, "_note": "rebuilds skills-index.json when any SKILL.md is newer (mtime no-op otherwise)"},
       {"id": "selfheal-daily", "type": "exec", "async": true, "cmd": ["{PY}", "{HOOKS}/tools/selfheal-daily.py"], "timeout_ms": 1800000, "enabled": true, "_note": "autonomy WP-D: once a day, locked, detached (never waited on; the timeout is only the script's own 30 min budget): MCP pin reconcile, missing CLIs, stale settings re-render, vendored DRIFT, ponytail board import; writes state/selfheal-daily.json for the aggregator"}
     ],
+    "user-prompt-submit": [
+      {"id": "router", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/prompt_router/router.py"], "timeout_ms": 12000, "priority": 0, "enabled": true, "_note": "the prompt router as a link (was its own registration): classify, surface, <=5 skills, MCP/WORKFLOW/LIBRARY/ROUTING lines"},
+      {"id": "hookify-prompt", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/hookify-gate.py"], "timeout_ms": 2000, "priority": 1, "enabled": true, "_note": "hookify prompt rules, advisory only"}
+    ],
     "pre-tool-use": [
       {"id": "dangerous-bash-gate", "type": "gate", "tools": "Bash|PowerShell", "cmd": ["{PY}", "{HOOKS}/dangerous-bash-gate.py"], "timeout_ms": 5000, "enabled": true, "_order": "DANGER FIRST"},
-      {"id": "connector-ask-gate", "type": "gate", "tools": "mcp__claude_ai_.*|mcp__plugin_.*", "cmd": ["{PY}", "{HOOKS}/connector-ask-gate.py"], "timeout_ms": 3000, "enabled": true, "_note": "G-02: ask (never deny) for delete/trash/share/send/mutation verbs on claude.ai connector and plugin MCP tools"},
+      {"id": "connector-ask-gate", "type": "gate", "tools": "mcp__claude_ai_.*|mcp__plugin_.*|mcp__github__.*", "cmd": ["{PY}", "{HOOKS}/connector-ask-gate.py"], "timeout_ms": 3000, "enabled": true, "_note": "G-02: ask (never deny) for delete/trash/share/send/mutation verbs on claude.ai connector and plugin MCP tools; github MCP write tools (merge/push/create_or_update_file/PR/issue) ask, deny for subagents and workflow scripts (git belongs to the user)"},
       {"id": "first-write-skill-gate", "type": "gate", "tools": "Write|Edit|MultiEdit|NotebookEdit", "cmd": ["{PY}", "{HOOKS}/first-write-skill-gate.py"], "timeout_ms": 5000, "enabled": true},
+      {"id": "config-protection", "type": "gate", "tools": "Write|Edit|MultiEdit|NotebookEdit", "cmd": ["{PY}", "{HOOKS}/config-protection-gate.py"], "timeout_ms": 2000, "enabled": true, "_note": "ECC config-protection as an ask: an EXISTING lint/format config asks unless the turn's prompt names it; once per file per session; ~/.claude exempt; gate_mode downgrade"},
       {"id": "gateguard-write-gate", "type": "gate", "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/gateguard-write-gate.py"], "timeout_ms": 8000, "enabled": true},
       {"id": "dox-write-gate-write", "type": "gate", "tools": "Write|Edit|MultiEdit|NotebookEdit", "cmd": ["{PY}", "{HOOKS}/dox-write-gate.py"], "timeout_ms": 6000, "enabled": true},
       {"id": "bash-write-gate", "type": "gate", "tools": "Bash|PowerShell", "cmd": ["{PY}", "{HOOKS}/bash-write-gate.py"], "timeout_ms": 6000, "enabled": true},
       {"id": "blocking-doc-enforcer", "type": "gate", "tools": "Bash|PowerShell", "cmd": ["{PY}", "{HOOKS}/blocking-doc-enforcer.py"], "timeout_ms": 5000, "enabled": true},
+      {"id": "hookify-gate", "type": "gate", "tools": "Bash|PowerShell|Write|Edit|MultiEdit|NotebookEdit", "cmd": ["{PY}", "{HOOKS}/hookify-gate.py"], "timeout_ms": 2500, "enabled": true, "_note": "repo-local .claude/hookify.*.local.md rules (untrusted: symlinks, tracked files, >64 KB refused; 100 rules, 400-char patterns, 1 s): block -> deny, warn -> additionalContext"},
       {"id": "jcm-gate-read", "type": "gate", "tools": "Read|Grep|Glob", "cmd": ["{PY}", "{HOOKS}/jcodemunch-enforce.py", "pre-tool-use"], "timeout_ms": 5000, "enabled": true},
       {"id": "jcm-gate-leanctx", "type": "gate", "tools": "mcp__lean-ctx__ctx_read|mcp__lean-ctx__ctx_search", "cmd": ["{PY}", "{HOOKS}/jcodemunch-enforce.py", "pre-tool-use"], "timeout_ms": 3000, "enabled": true},
       {"id": "jdoc-doc-steer", "type": "advisory", "tools": "Read|mcp__lean-ctx__ctx_read", "cmd": ["{PY}", "{HOOKS}/jdocmunch-enforce.py", "pre-tool-use"], "timeout_ms": 4000, "priority": 1, "enabled": true},
       {"id": "tdd-guard-launcher-pre", "type": "advisory", "defer": true, "tools": "Write|Edit|MultiEdit", "cmd": ["{PY}", "{HOOKS}/tdd_guard_launcher.py"], "timeout_ms": 17000, "priority": 2, "enabled": true, "_note": "warn-mode advisory, never a gate; defer: runs detached, its advisory arrives on the session's next tool event (B1-02: p90 4.6 s off the write path); 15 s validator cap"},
       {"id": "graphify-enforce", "type": "advisory", "tools": "Task|Agent|Bash|PowerShell", "cmd": ["{PY}", "{HOOKS}/graphify-enforce.py", "pre-tool-use"], "timeout_ms": 5000, "priority": 1, "enabled": true},
+      {"id": "memwatch-brake", "type": "gate", "tools": "Agent|Task|Workflow|mcp__playwright__browser_navigate", "cmd": ["{PY}", "{HOOKS}/memwatch-brake.py"], "timeout_ms": 3000, "enabled": true, "_note": "OOM guard L5: warn = one advisory per tier per session; crit = ask (advisory when unattended, lib/gate_mode)"},
+      {"id": "memwatch-brake-shell", "type": "gate", "tools": "Bash|PowerShell", "command_re": "\\b(vitest|jest|playwright|graphify|tsc|pytest)\\b|\\bnpm\\s+(run\\s+)?(test|build)\\b", "cmd": ["{PY}", "{HOOKS}/memwatch-brake.py"], "timeout_ms": 3000, "enabled": true, "_note": "OOM guard L5, heavy shell commands only (HEAVY_RE in memwatch-brake.py, verbatim)"},
       {"id": "opus-guard", "type": "mutator", "tools": "Agent|Task", "cmd": ["{PY}", "{HOOKS}/opus-guard.py"], "timeout_ms": 5000, "enabled": true},
       {"id": "workflow-model-guard", "type": "mutator", "tools": "Workflow", "cmd": ["{PY}", "{HOOKS}/workflow-model-guard.py"], "timeout_ms": 5000, "enabled": true}
     ],
@@ -52,17 +65,27 @@
       {"id": "security-semgrep-tracker", "type": "exec", "tools": "Bash|PowerShell|mcp__semgrep__.*", "cmd": ["{PY}", "{HOOKS}/security-semgrep-tracker.py", "post-tool-use"], "timeout_ms": 5000, "enabled": true},
       {"id": "index-git-reprobe", "type": "exec", "async": true, "tools": "Bash|PowerShell", "command_re": "\\bgit(?:\\.exe)?\\b", "cmd": ["{PY}", "{HOOKS}/index-lifecycle.py", "post-write"], "timeout_ms": 5000, "enabled": true, "_note": "git pull/checkout/commit/... mid-session: index-lifecycle's _GIT_MOVES_RE decides, then spawns one detached reprobe of the active repo (jcodemunch/jdocmunch/graphify). command_re keeps every other shell call from spawning Python"},
       {"id": "jcm-mcp-used", "type": "exec", "tools": "mcp__jcodemunch__.*", "cmd": ["{PY}", "{HOOKS}/jcodemunch-enforce.py", "mcp-used"], "timeout_ms": 3000, "enabled": true},
-      {"id": "mcp-post-hints", "type": "advisory", "tools": "Write|Edit|MultiEdit|NotebookEdit", "cmd": ["{PY}", "{HOOKS}/mcp-post-hints.py"], "timeout_ms": 3000, "priority": 1, "enabled": true, "_note": "call-X-now MCP hints after writes: semgrep (security files), context7 (new imports), reticle/playwright (FE edit + app running), postgres-patterns (migrations), jcodemunch blast radius (>3 files); deduped per session"}
+      {"id": "mcp-post-hints", "type": "advisory", "tools": "Write|Edit|MultiEdit|NotebookEdit", "cmd": ["{PY}", "{HOOKS}/mcp-post-hints.py"], "timeout_ms": 3000, "priority": 1, "enabled": true, "_note": "call-X-now MCP hints after writes: semgrep (security files), context7 (new imports), reticle/playwright (FE edit + app running), postgres-patterns (migrations), jcodemunch blast radius (>3 files); deduped per session"},
+      {"id": "context-monitor", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/context-monitor.py"], "timeout_ms": 3000, "priority": 1, "enabled": true, "_note": "loop (5 identical tool+input), scope (20 files), compaction nudge from transcript usage when the mod is absent; state/<sid>.toolring.json"},
+      {"id": "observe-log", "type": "exec", "async": true, "tools": "(?!(?:Read|Glob|Grep|LS|TodoWrite|TodoRead|NotebookRead|ListMcpResourcesTool|ReadMcpResourceTool)$).*", "cmd": ["{PY}", "{HOOKS}/observe-log.py"], "timeout_ms": 1500, "enabled": true, "_note": "learning (docs/LEARNING.md): one scrubbed <= 2 KB row per tool call that settings.template.json's PostToolUse matcher sends to dispatch (not every tool) into state/learning/<repo_key>/observations.jsonl; the tools regex mirrors hooks/learning.config.json skip_tools (test_observe_log.py::test_dispatch_link_mirrors_skip_tools); detached, never waited on"}
     ],
     "post-tool-use-failure": [
-      {"id": "tool-failure-hint", "type": "advisory", "tools": "Edit|Write|Bash|PowerShell", "cmd": ["{PY}", "{HOOKS}/tool-failure-hint.py"], "timeout_ms": 3000, "priority": 0, "enabled": true}
+      {"id": "tool-failure-hint", "type": "advisory", "tools": "Edit|Write|Bash|PowerShell|mcp__.*", "cmd": ["{PY}", "{HOOKS}/tool-failure-hint.py"], "timeout_ms": 3000, "priority": 0, "enabled": true},
+      {"id": "observe-log-failure", "type": "exec", "async": true, "tools": "(?!(?:Read|Glob|Grep|LS|TodoWrite|TodoRead|NotebookRead|ListMcpResourcesTool|ReadMcpResourceTool)$).*", "cmd": ["{PY}", "{HOOKS}/observe-log.py"], "timeout_ms": 1500, "enabled": true, "_note": "learning: failed tool calls arrive here, not on PostToolUse; observe-log.py sets ok=false from hook_event_name/error (test_observe_log.py::test_dispatch_failure_link_mirrors_the_success_link)"}
     ],
     "stop": [
       {"id": "hard-completion-gate", "type": "gate", "cmd": ["{PY}", "{HOOKS}/hard-completion-gate.py"], "timeout_ms": 12000, "enabled": true},
       {"id": "invoke-suite-gate", "type": "gate", "cmd": ["{PY}", "{HOOKS}/invoke-suite-gate.py"], "timeout_ms": 12000, "enabled": true},
+      {"id": "stop-format-typecheck", "type": "gate", "cmd": ["{PY}", "{HOOKS}/stop-format-typecheck.py"], "timeout_ms": 6000, "enabled": true, "_note": "once per turn: formatter --check + tsc --noEmit --incremental (tsbuildinfo under state/typecheck/) on this turn's edited files; skipped at memory warn+; block reason <= 1200 chars"},
+      {"id": "hookify-stop", "type": "gate", "cmd": ["{PY}", "{HOOKS}/hookify-gate.py"], "timeout_ms": 2000, "enabled": true, "_note": "hookify stop rules as a top-level systemMessage (dispatch forwards a Stop gate's systemMessage); never blocks; honours stop_hook_active"},
       {"id": "index-flush", "type": "exec", "async": true, "cmd": ["{PY}", "{HOOKS}/index-lifecycle.py", "flush"], "timeout_ms": 5000, "enabled": true},
-      {"id": "session-lifecycle-stop", "type": "exec", "async": true, "cmd": ["{PY}", "{HOOKS}/session-lifecycle.py", "stop"], "timeout_ms": 10000, "enabled": true},
-      {"id": "weights-loop", "type": "exec", "async": true, "cmd": ["{PY}", "{HOOKS}/weekly-retro-trigger.py", "stop"], "timeout_ms": 5000, "enabled": false, "_note": "retired 2026-10-05 (audit B2-08/J-04): its feeder is gone; the updater only ran on frozen input and re-stamped a tracked file"}
+      {"id": "session-lifecycle-stop", "type": "exec", "async": true, "cmd": ["{PY}", "{HOOKS}/session-lifecycle.py", "stop"], "timeout_ms": 10000, "enabled": true}
+    ],
+    "stop-failure": [
+      {"id": "stop-failure-log", "type": "exec", "cmd": ["{PY}", "{HOOKS}/stop-failure-log.py"], "timeout_ms": 3000, "enabled": true, "_note": "telemetry row per API-error stop; state/<sid>.stop-failure.json only for rate_limit (restore_sessions --resume-after-limit reads it)"}
+    ],
+    "instructions-loaded": [
+      {"id": "instructions-loaded-log", "type": "exec", "async": true, "cmd": ["{PY}", "{HOOKS}/instructions-loaded-log.py"], "timeout_ms": 3000, "enabled": true, "_note": "one row per loaded CLAUDE.md/rules file into hooks/.telemetry/<YYYY-MM-DD>.instructions-loaded.jsonl; measure_context_cost.py --observed reads it"}
     ],
     "subagent-start": [
       {"id": "subagent-context", "type": "advisory", "cmd": ["{PY}", "{HOOKS}/subagent-context.py"], "timeout_ms": 3000, "priority": 0, "enabled": true, "_note": "write protocol + no-servers/no-commit + surface pointer (D3; replaces opus-guard prompt mutation)"}
@@ -84,7 +107,8 @@
     ],
     "session-end": [
       {"id": "settings-permissions-selfheal-end", "type": "exec", "cmd": ["{PY}", "{HOOKS}/settings-permissions-selfheal.py"], "timeout_ms": 3000, "enabled": true, "_note": "repairs AFTER the exiting session flushes its in-memory permissions"},
-      {"id": "index-session-end", "type": "exec", "cmd": ["{PY}", "{HOOKS}/index-lifecycle.py", "session-end"], "timeout_ms": 5000, "enabled": true}
+      {"id": "index-session-end", "type": "exec", "cmd": ["{PY}", "{HOOKS}/index-lifecycle.py", "session-end"], "timeout_ms": 5000, "enabled": true},
+      {"id": "session-ledger-end", "type": "exec", "cmd": ["{PY}", "{HOOKS}/session-ledger.py", "end"], "timeout_ms": 800, "enabled": true, "_note": "L4: unlinks state/live-sessions/<sid>.json (SessionEnd harness budget 10 s shared: 3 + 5 + 0.8)"}
     ]
   }
 }

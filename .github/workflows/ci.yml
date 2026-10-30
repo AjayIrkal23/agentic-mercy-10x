@@ -80,9 +80,14 @@ jobs:
         run: |
           python hooks/gen-invoke-skills.py --check
           python hooks/gen-agent-skill-blocks.py --check
+          python scripts/build_library_index.py --check
+          python scripts/build_workflows.py --check
 
       - name: Portability grep-gates (no sys.platform outside platform.py; no home/drive literals; no new .sh)
         run: python scripts/grep_gates.py
+
+      - name: Import hygiene (G7 standalone, JSON on failure)
+        run: python scripts/validate_imports.py library agents
 
       - name: Tests (platform, prompt-router, dispatch parity, index-lifecycle, model-guard, installer, doctor)
         run: python -m pytest tests/ hooks/tests/ -q

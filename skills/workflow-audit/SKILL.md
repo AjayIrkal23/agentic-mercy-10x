@@ -266,3 +266,5 @@ The run is done only when every row is done, the project's `git status` and `HEA
 file listing) equal the start snapshot, every change sits in `~/.claude` and is
 covered by a test or a check, the doctor shows 0 FAIL, nothing is committed without
 the user's word, and no output contains a secret value.
+
+ECC graft: `references/ecc-harness-audit.md` — scored categories, keep/merge/cut/fix, soft-delete ladder.

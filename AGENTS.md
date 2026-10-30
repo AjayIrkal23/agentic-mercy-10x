@@ -1,1 +1,3 @@
-See `CLAUDE.md` in this directory for agent instructions. Directory docs are indexed in `docs/INDEX.md`.
+See `CLAUDE.md` here for the operating rules; `docs/DIRECTIVES.md` lists the standing
+directives and their enforcement; `docs/TOKEN-BUDGET.md` holds the measured context cost.
+Directory docs are indexed in `docs/INDEX.md`.

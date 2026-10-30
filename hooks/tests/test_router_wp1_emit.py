@@ -205,3 +205,29 @@ def test_one_line_rename_has_no_write_gates(repo_home):
                home, root, "t-c10-rename")
     body = (out.get("hookSpecificOutput") or {}).get("additionalContext", "")
     assert "First substantive change" not in body and "TDD:" not in body
+
+
+# --------------------------------------------------------------------------- H4: deep injection
+def test_deep_inject_ignores_size_buckets(monkeypatch):
+    from prompt_router import select as S
+    from prompt_router.classify import TaskProfile
+    monkeypatch.setattr(S, "rank_skills", lambda *a, **k: [("debug-investigation", 9.0), ("x", 1.0)])
+    monkeypatch.setattr(R, "_skill_excerpt", lambda name, n=3000: "BODY")
+    prof = TaskProfile(text="add update change fix", intents={"SMALL": 4}, surfaces=set())   # size words only
+    items = R._skill_items(prof, {"config": {"auto_dispatch_threshold": 3}})
+    assert not any(it["id"].startswith("deep:") for it in items)
+
+
+def test_deep_inject_replaces_the_must_read_line(monkeypatch):
+    from prompt_router import select as S
+    from prompt_router.classify import TaskProfile
+    monkeypatch.setattr(S, "rank_skills", lambda *a, **k: [("debug-investigation", 9.0), ("owasp-security", 3.0)])
+    monkeypatch.setattr(R, "_skill_excerpt", lambda name, n=3000: "BODY")
+    prof = TaskProfile(text="debug the crash", intents={"DEBUG": 3}, surfaces=set())
+    ctx = {"config": {"auto_dispatch_threshold": 3}}
+    items = R._skill_items(prof, ctx)
+    ids = [it["id"] for it in items]
+    assert "deep:debug-investigation" in ids and not any(i.startswith("skill:debug-investigation:") for i in ids)
+    assert any(i.startswith("skill:owasp-security:") for i in ids)       # rank 2 keeps its SHOULD-READ line
+    assert items[[i.startswith("skill:owasp") for i in ids].index(True)]["text"].count("MUST-READ") == 0
+    assert ctx["_must_read"] == []                                           # delivered inline, not gated

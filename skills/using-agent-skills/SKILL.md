@@ -203,3 +203,5 @@ Not every task needs every skill. A bug fix might only need: `debug-investigatio
 | Ship | ci-cd-and-automation | Automated quality gates on every change |
 | Ship | update-docs | Document the why, not just the what |
 | Ship | shipping-and-launch | Pre-launch checklist, monitoring, rollback plan |
+
+ECC graft: `references/ecc-skills-first.md` — skills are canonical; commands are shims; agents need own context.

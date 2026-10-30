@@ -8,7 +8,10 @@ Answers "what is the user working on?" from four signals, most specific first:
                           ``server|api|internal|cmd|backend`` -> backend (only when the
                           repo stack has that surface, or the stack is unknown)
   4. repo stack           fingerprint of package.json / go.mod / pyproject / components.json /
-                          tailwind|vite|next config within 3 levels of the repo root, cached at
+                          tailwind|vite|next config within 3 levels of the repo root, plus the
+                          ECC stack indicators and package-manager lockfiles in
+                          ``router.config.json`` ``additions.stack_indicators`` (language tags
+                          like ``rust`` / ``python`` / ``docker`` and ``pm:<name>``), cached at
                           ``state/<repo.key>.stack.json`` keyed on the marker files' mtimes.
 
 Prompt beats cwd beats stack. The winner is reported as ``source`` so the ranker
@@ -16,17 +19,21 @@ can weight a stack-only inference (project happens to be Go+React) lower than an
 explicit prompt signal ("write a Go service"). Tags (``go sql clickhouse api three
 scroll motion shadcn tailwind``) are additive: prompt tags always attach; stack
 tags attach only when their side (backend / frontend) is in the final set, so a
-React prompt in a Go+React repo never drags in golang-patterns.
+React prompt in a Go+React repo never drags in golang-patterns. Indicator tags of
+side ``any`` / ``mobile`` and ``pm:*`` attach whenever the repo has them; every stack
+tag is weak unless the prompt names it.
 
 Pure stdlib; never raises past ``detect`` (fail-open to an empty set).
 """
 
 from __future__ import annotations
 
+import fnmatch
 import json
 import os
 import re
 import sys
+from functools import lru_cache
 from pathlib import Path
 
 _HOOKS = Path(__file__).resolve().parents[2]
@@ -217,6 +224,53 @@ _BE_DEPS = {"express", "fastify", "@nestjs/core", "koa", "hono", "prisma", "@pri
             "mongoose", "typeorm", "drizzle-orm", "pg", "mysql2", "bullmq", "@clickhouse/client",
             "ioredis", "sequelize"}
 _PY_BE = ("fastapi", "django", "flask", "sqlalchemy", "celery", "uvicorn", "starlette")
+_BODY_MAX = 64 * 1024  # a `contains` indicator reads at most this much of a marker
+
+
+@lru_cache(maxsize=1)
+def _stack_cfg() -> dict:
+    """``additions.stack_indicators`` from router.config.json ({} on any error)."""
+    try:
+        cfg = json.loads((_HOOKS / "prompt_router" / "router.config.json").read_text(encoding="utf-8"))
+        si = (cfg.get("additions") or {}).get("stack_indicators")
+        return si if isinstance(si, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def _stacks() -> list[dict]:
+    return [s for s in (_stack_cfg().get("stacks") or [])
+            if isinstance(s, dict) and s.get("tag") and isinstance(s.get("indicators"), list)]
+
+
+def _pm_cfg() -> tuple[list[str], dict]:
+    pm = _stack_cfg().get("package_managers") or {}
+    lock = pm.get("lockfiles") if isinstance(pm.get("lockfiles"), dict) else {}
+    return [str(x) for x in pm.get("order") or []], lock
+
+
+@lru_cache(maxsize=256)
+def _glob_rx(pattern: str) -> re.Pattern:
+    # case-insensitive on every OS (Dockerfile vs dockerfile on Windows)
+    return re.compile(fnmatch.translate(pattern), re.IGNORECASE)
+
+
+@lru_cache(maxsize=1)
+def _indicator_rx() -> re.Pattern | None:
+    """One alternation over every indicator glob and lockfile name (scan-time filter)."""
+    pats = {str(ind.get("file")) for s in _stacks() for ind in s["indicators"]
+            if isinstance(ind, dict) and ind.get("file")}
+    for names in _pm_cfg()[1].values():
+        pats.update(str(n) for n in (names or []))
+    if not pats:
+        return None
+    return re.compile("|".join(f"(?:{fnmatch.translate(p)})" for p in sorted(pats)), re.IGNORECASE)
+
+
+@lru_cache(maxsize=1)
+def _side_tags() -> dict[str, str]:
+    """indicator tag -> side (backend / frontend / mobile / any)."""
+    return {str(s["tag"]): str(s.get("side") or "any") for s in _stacks()}
 
 
 def _cache_dir() -> Path:
@@ -233,6 +287,7 @@ def _scan(root: Path) -> tuple[list[Path], bool, bool, bool]:
     sql = migrations = clickhouse = False
     root_depth = str(root).count(os.sep)
     seen_dirs = 0
+    ind = _indicator_rx()
     for dirpath, dirnames, filenames in os.walk(root):
         seen_dirs += 1
         if seen_dirs > _SCAN_MAX_DIRS:
@@ -244,8 +299,10 @@ def _scan(root: Path) -> tuple[list[Path], bool, bool, bool]:
             migrations = True
         if "clickhouse" in low:
             clickhouse = True
+        if ind is not None:  # directory-shaped indicators (*.xcodeproj)
+            markers.extend(Path(dirpath) / d for d in dirnames if ind.match(d))
         for fn in filenames:
-            if fn in _MARKERS or fn.startswith(_MARKER_PREFIX):
+            if fn in _MARKERS or fn.startswith(_MARKER_PREFIX) or (ind is not None and ind.match(fn)):
                 markers.append(Path(dirpath) / fn)
             elif fn.endswith(".sql"):
                 sql = True
@@ -315,11 +372,91 @@ def _compute(root: Path, markers: list[Path], sql: bool, migrations: bool, ch: b
     if ch:
         surfaces.add("backend")
         tags.add("clickhouse")
-    return {"surfaces": sorted(surfaces), "tags": sorted(tags)}
+    _indicator_tags(markers, surfaces, tags, root)
+    pm =_package_manager(root, markers)
+    if pm:
+        tags.add(f"pm:{pm}")
+    return {"surfaces": sorted(surfaces), "tags": sorted(tags), "pm": pm}
+
+
+def _mobile_shell(root: Path, markers: list[Path], mobile_pkgs: set[Path]) -> set[Path]:
+    """Markers that belong to a mobile app's native shell: under an ``android``/``ios`` dir
+    of the repo, or next to an RN package.json / pubspec.yaml. A backend-side indicator
+    there (Gradle, a Gemfile for CocoaPods) is not a server (REVIEW2 Fix 2)."""
+    app_dirs = {m.parent for m in mobile_pkgs} | {m.parent for m in markers if m.name == "pubspec.yaml"}
+    out: set[Path] = set()
+    for m in markers:
+        try:
+            parts = set(m.relative_to(root).parts[:-1])
+        except ValueError:
+            parts = set()
+        if {"android", "ios"} & parts or m.parent in app_dirs:
+            out.add(m)
+    return out
+
+
+def _indicator_tags(markers: list[Path], surfaces: set[str], tags: set[str], root: Path | None = None) -> None:
+    """ECC stack indicators: a matching marker attaches the stack's tag (and its side)."""
+    bodies: dict[Path, str] = {}
+
+    def body(m: Path) -> str:
+        if m not in bodies:
+            try:
+                with open(m, encoding="utf-8", errors="replace") as f:
+                    bodies[m] = f.read(_BODY_MAX).lower()
+            except OSError:
+                bodies[m] = ""
+        return bodies[m]
+
+    # an RN app's package.json names react: not a web frontend stack (C-07)
+    mobile_pkgs = {m for m in markers if m.name == "package.json" and _deps(m) & _MOBILE_DEPS}
+    native = _mobile_shell(root, markers, mobile_pkgs) if root is not None else set()
+    for st in _stacks():
+        side = str(st.get("side") or "any")
+        hit = False
+        for ind in st["indicators"]:
+            if not isinstance(ind, dict) or not ind.get("file"):
+                continue
+            rx, need = _glob_rx(str(ind["file"])), str(ind.get("contains") or "").lower()
+            for m in markers:
+                if side == "frontend" and m in mobile_pkgs:
+                    continue
+                if side == "backend" and m in native:
+                    continue
+                if rx.match(m.name) and (not need or (m.is_file() and need in body(m))):
+                    hit = True
+                    break
+            if hit:
+                break
+        if hit:
+            tags.add(str(st["tag"]))
+            if side in ("backend", "frontend"):
+                surfaces.add(side)
+
+
+def _package_manager(root: Path, markers: list[Path]) -> str:
+    """package.json ``packageManager`` wins, then the first lockfile in ``order`` (root first)."""
+    order, lock = _pm_cfg()
+    if not order:
+        return ""
+    root = Path(root)
+    try:
+        field = json.loads((root / "package.json").read_text(encoding="utf-8")).get("packageManager")
+        name = str(field or "").split("@", 1)[0].strip().lower()
+        if name in order:
+            return name
+    except (OSError, ValueError, AttributeError):
+        pass
+    for at_root in (True, False):
+        for name in order:
+            for lf in lock.get(name) or []:
+                if any(m.name == lf and (m.parent == root) == at_root for m in markers):
+                    return name
+    return ""
 
 
 def stack_fingerprint(repo) -> dict:
-    """{'surfaces': [...], 'tags': [...]} for the repo, cached on marker mtimes."""
+    """{'surfaces': [...], 'tags': [...], 'pm': str} for the repo, cached on marker mtimes."""
     if repo is None:
         return {}
     root = Path(getattr(repo, "root", "") or "")
@@ -329,14 +466,15 @@ def stack_fingerprint(repo) -> dict:
         markers, sql, migrations, ch = _scan(root)
         sig = {str(m.relative_to(root)): int(m.stat().st_mtime) for m in markers}
         sig["_flags"] = int(sql) | (int(migrations) << 1) | (int(ch) << 2)
-        sig["_v"] = 3  # bump when _compute derives new tags, so old caches recompute
+        sig["_v"] = 5  # bump when _compute derives new tags, so old caches recompute
     except OSError:
         return {}
     cache = _cache_dir() / f"{getattr(repo, 'key', 'repo')}.stack.json"
     try:
         cached = json.loads(cache.read_text(encoding="utf-8"))
         if cached.get("sig") == sig:
-            return {"surfaces": cached.get("surfaces", []), "tags": cached.get("tags", [])}
+            return {"surfaces": cached.get("surfaces", []), "tags": cached.get("tags", []),
+                    "pm": cached.get("pm", "")}
     except (OSError, json.JSONDecodeError, AttributeError):
         pass
     result = _compute(root, markers, sql, migrations, ch)
@@ -458,6 +596,17 @@ def _detect_impl(payload: dict, text: str | None) -> tuple[set[str], str, set[st
     if "frontend" in code:
         weak |= (stack_tags & _FE_TAGS) - tags
         tags |= stack_tags & _FE_TAGS
+    # ECC indicator tags: backend/frontend-side ones follow the same side rule; any,
+    # mobile and pm:* attach whenever the repo has them; weak unless the prompt names them
+    side_of = _side_tags()
+    for tg in stack_tags - _BE_TAGS - _FE_TAGS:
+        side = side_of.get(tg) or ("any" if tg.startswith("pm:") else "")
+        if not side or (side in ("backend", "frontend") and side not in code):
+            continue
+        tags.add(tg)
+        word = tg.split(":", 1)[-1]
+        if not re.search(rf"(?<!\w){re.escape(word)}(?!\w)", t):
+            weak.add(tg)
 
     out = set(code) | tags
     if {"frontend", "backend"} <= out:

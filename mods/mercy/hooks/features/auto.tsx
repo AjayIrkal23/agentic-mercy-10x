@@ -8,12 +8,12 @@ import type { EngineInterface, On } from 'claude-code'
 import { update } from 'claude-code'
 
 import type { Card, DepRow, DepsState, LastSession, PortRow, Standup } from '../../types'
-import { dayKey, depsDue, sessionSummary, shouldCompact, standupDays, withCard, portChanges } from '../lib/auto'
+import { compactThreshold, dayKey, depsDue, sessionSummary, shouldCompact, standupDays, withCard, portChanges } from '../lib/auto'
 import { depsMarkdown, portsMarkdown, standupMarkdown } from '../lib/deckviews'
 import { clip } from '../lib/format'
 import { join } from '../lib/paths'
 import { netstatRows, npmFailed, parseNetstat, parseOutdated, parsePorts, parseTasklist, portCmds } from '../lib/probes'
-import { hostOffsetMinutes, noteError, rt, ui } from '../lib/runtime'
+import { hostOffsetMinutes, keepTimer, noteError, rt, ui } from '../lib/runtime'
 import { snapshot } from '../lib/snap'
 import { PANE_ID } from '../lib/specs'
 
@@ -170,7 +170,7 @@ export function registerAuto(on: On): void {
         if (depsDue(deps, now)) later($, 60_000, 'deps', () => refreshDeps($))
       }
       later($, 2000, 'ports', () => refreshPorts($, false))
-      $.clock.every(60_000, () => void refreshPorts($, true).catch(err => noteError('ports', err)))
+      keepTimer('ports', $.clock.every(60_000, () => void refreshPorts($, true).catch(err => noteError('ports', err))))
     } catch (err) {
       noteError('auto start', err)
     }
@@ -183,8 +183,11 @@ export function registerAuto(on: On): void {
       if (e.agentId !== undefined) return r
       const now = await $.clock.now()
       if (rt.repoRoot) await $.store.set(`recap:${rt.repoRoot}`, sessionSummary(rt.ledger, now, rt.costUsd))
-      const ctx = (await $.session.usage().catch(() => undefined))?.context.percent ?? rt.contextPct
-      if (!compacting && shouldCompact({ threshold: rt.options.autoCompact, contextPct: ctx, now, lastAt: compactedAt, interactive: rt.interactive })) {
+      const usage = await $.session.usage().catch(() => undefined)
+      const ctx = usage?.context.percent ?? rt.contextPct
+      const acw = await $.settings.read({ key: 'autoCompactWindow' }).catch(() => undefined)
+      const threshold = compactThreshold(rt.options.autoCompact, typeof acw === 'number' ? acw : undefined, usage?.context.window)
+      if (!compacting && shouldCompact({ threshold, contextPct: ctx, now, lastAt: compactedAt, interactive: rt.interactive })) {
         compacting = true
         toast($, `mercy: context ${Math.round(ctx)}%, compacting between turns`, false)
         // the 10-minute spacing counts from a compaction that happened: one a racing prompt

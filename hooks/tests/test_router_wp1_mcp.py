@@ -84,3 +84,15 @@ def test_post_hint_names_playwright_in_a_repo_without_reticle(tmp_path, monkeypa
     payload = {"tool_name": "Edit", "tool_input": {"file_path": str(fp), "old_string": "", "new_string": "x"}}
     hint = next(h for h in H.hints(payload, {}) if ":5173" in h)
     assert "playwright" in hint and "reticle" not in hint.lower()
+
+
+def test_connectors_count_as_available_without_a_user_scope_entry(monkeypatch):
+    MR.available_servers.cache_clear()
+    monkeypatch.setattr(MR, "_user_cfg", lambda: {"mcpServers": {}})
+    monkeypatch.setattr(MR, "_load_json",
+                        lambda p: {"connectors": ["claude_ai_higgsfield"]}
+                        if str(p).endswith("tool-intelligence.json") else {})
+    try:
+        assert "claude_ai_higgsfield" in MR.available_servers()
+    finally:
+        MR.available_servers.cache_clear()

@@ -1,8 +1,8 @@
 """workflow_script.py — pure script surgery for hooks/workflow-model-guard.py.
 
 meta_end_index: where the `export const meta = {...}` declaration ends, or None.
-build_wrapper:  the injected `__wfAgent` JS wrapper that pins agent() models.
-No I/O, no policy reads: the guard passes the agent sets in.
+build_wrapper:  the injected `__wfAgent` JS wrapper that pins agent() models per role and tier.
+No I/O, no policy reads: the guard passes precomputed tables in (cfg).
 """
 from __future__ import annotations
 
@@ -50,30 +50,51 @@ def meta_end_index(script: str) -> int | None:
     return None
 
 
-def build_wrapper(forced: str | None, sonnet_agents: list[str], opus_agents: list[str],
-                  fable_agents: list[str]) -> str:
-    """The `__wfAgent` wrapper. Arg-drop safe: every trailing arg is forwarded via
-    `...rest`, and a 2nd arg that is not a plain object passes through untouched."""
-    forced_js = f"'{forced}'" if forced else "null"
+def build_wrapper(cfg: dict) -> str:
+    """The `__wfAgent` wrapper. The guard precomputes every table; the JS only looks up.
+
+    cfg = {"forced": str|None, "roles": {agent: role}, "labels": {prefix: role}, "default_role": str,
+           "models": {role: model}, "models_up": {role: model}, "escalated": bool,
+           "retry_markers": [regex], "explicit": {model: model}, "tier": str, "usage": bool}.
+    models/models_up already include the usage step-down and the tier ceiling; explicit maps an
+    opts.model the script passes to what it may run as. A label matches a labels key when one of its
+    word tokens equals or starts with that key (`review:pkg`, `integrator`; not `preview`). A call
+    whose prompt matches a retry marker takes models_up (per call; `escalated` lifts every call). A
+    marker JS cannot compile is skipped. Arg-drop safe: every trailing arg is forwarded via `...rest`,
+    and a 2nd arg that is not a plain object passes through untouched."""
+    j = json.dumps
     return (
-        "\n/* injected by workflow-model-guard: default subagents to sonnet */\n"
+        "\n/* injected by workflow-model-guard: plan-tier " + str(cfg.get("tier"))
+        + (" (usage-guard)" if cfg.get("usage") else "") + " */\n"
         "const __wfOrigAgent = agent;\n"
-        "const __wfForce = " + forced_js + ";\n"
-        "const __wfFableAgents = new Set(" + json.dumps(fable_agents) + ");\n"
-        "const __wfOpusAgents = new Set(" + json.dumps(opus_agents) + ");\n"
-        "const __wfSonnetAgents = new Set(" + json.dumps(sonnet_agents) + ");\n"
+        f"const __wfForce = {j(cfg.get('forced'))};\n"
+        f"const __wfRoles = {j(cfg.get('roles') or {})};\n"
+        f"const __wfLabels = {j(cfg.get('labels') or {})};\n"
+        f"const __wfModels = {j(cfg.get('models') or {})};\n"
+        f"const __wfModelsUp = {j(cfg.get('models_up') or {})};\n"
+        f"const __wfEscalated = {j(bool(cfg.get('escalated')))};\n"
+        f"const __wfRetry = {j([str(s) for s in cfg.get('retry_markers') or []])}"
+        ".flatMap((s) => { try { return [new RegExp(s, 'i')]; } catch (e) { return []; } });\n"
+        f"const __wfExplicit = {j(cfg.get('explicit') or {})};\n"
+        f"const __wfDefaultRole = {j(cfg.get('default_role') or 'default')};\n"
+        "const __wfRole = (o) => {\n"
+        "  const at = String(o.agentType || '').toLowerCase();\n"
+        "  if (at && __wfRoles[at]) return __wfRoles[at];\n"
+        "  const toks = String(o.label || '').toLowerCase().split(/[^a-z]+/).filter(Boolean);\n"
+        "  for (const k in __wfLabels) { if (toks.some((t) => t.startsWith(k))) return __wfLabels[k]; }\n"
+        "  return __wfDefaultRole;\n"
+        "};\n"
         "const __wfAgent = (p, opts, ...rest) => {\n"
         "  if (opts !== undefined && (typeof opts !== 'object' || Array.isArray(opts))) {\n"
         "    return __wfOrigAgent(p, opts, ...rest);\n"
         "  }\n"
         "  const o = opts ? { ...opts } : {};\n"
         "  if (__wfForce) { o.model = __wfForce; return __wfOrigAgent(p, o, ...rest); }\n"
-        "  if (!o.model) {\n"
-        "    const at = (o.agentType || '').toLowerCase();\n"
-        "    if (__wfFableAgents.has(at)) o.model = 'fable';\n"
-        "    else if (__wfOpusAgents.has(at)) o.model = 'opus';\n"
-        "    else if (__wfSonnetAgents.has(at)) o.model = 'sonnet';\n"
-        "    else o.model = 'sonnet';\n"
+        "  const role = __wfRole(o);\n"
+        "  if (o.model) { o.model = __wfExplicit[String(o.model).toLowerCase()] || __wfModels[role] || 'sonnet'; }\n"
+        "  else {\n"
+        "    const esc = __wfEscalated || __wfRetry.some((r) => r.test(String(p)));\n"
+        "    o.model = (esc && __wfModelsUp[role]) || __wfModels[role] || 'sonnet';\n"
         "  }\n"
         "  return __wfOrigAgent(p, o, ...rest);\n"
         "};\n"

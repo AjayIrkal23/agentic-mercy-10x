@@ -71,6 +71,18 @@ def test_lists_only_reclaimable_items(tmp_path):
                    for p in paths), paths
 
 
+def test_reports_index_store_sizes_and_never_says_rm_rf(tmp_path, capsys):
+    lay = _layout(tmp_path)
+    rows = rr.report(lay["claude"], lay["docs"], lay["code"], keep_days=30)
+    kinds = {r[2] for r in rows}
+    assert any(k.startswith("index store: ~/.code-index") for k in kinds)
+    assert any(k.startswith("index store: ~/.doc-index") for k in kinds)
+    rr.main(["--claude-dir", str(lay["claude"]), "--doc-index", str(lay["docs"]),
+             "--code-index", str(lay["code"])])
+    out = capsys.readouterr().out
+    assert "rm -rf" not in out and "reclaimable" in out and "MB" in out and "Sizes:" in out
+
+
 def test_never_deletes_anything(tmp_path):
     lay = _layout(tmp_path)
     before = sorted(str(p) for p in tmp_path.rglob("*"))

@@ -51,6 +51,23 @@ il = _load()
 _REAL_ALIVE = il._summarizer_alive  # fixtures stub il._summarizer_alive; keep the real one
 
 
+@pytest.fixture(autouse=True)
+def _no_user_bus(tmp_path, monkeypatch):
+    """Builders run plain (no systemd-run scope) unless a test sets up a bus: the host's
+    own user bus never changes a command shape."""
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "no-user-bus"))
+
+
+def _tier(monkeypatch, tmp_path, level, age=0):
+    """state/mem-pressure.json as memwatch writes it."""
+    state = tmp_path / "state"
+    state.mkdir(parents=True, exist_ok=True)
+    (state / "mem-pressure.json").write_text(
+        json.dumps({"schema": 1, "ts": time.time() - age, "level": level}), encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(state))
+    return state / "mem-pressure.json"
+
+
 def _mkrepo(where: Path) -> Path:
     where.mkdir(parents=True, exist_ok=True)
     subprocess.run(["git", "init", "-q", str(where)], check=True)
@@ -802,26 +819,304 @@ def _graph_repo(tmp_path, monkeypatch, dates):
     return repo, out
 
 
-def test_graphify_build_is_skipped_when_memory_is_low(tmp_path, monkeypatch):
+def _recorder(monkeypatch):
+    ran: list = []
+    monkeypatch.setattr(il, "_run", lambda cmd, timeout, env=None:
+                        (ran.append(list(cmd)), subprocess.CompletedProcess(cmd, 0, "", ""))[1])
+    return ran
+
+
+def test_graphify_build_is_deferred_not_failed_when_memory_is_low(tmp_path, monkeypatch):
     """A 4.4 GB graphify run on a busy box OOM-killed the terminal scope (2026-10-26)."""
     repo, _ = _graph_repo(tmp_path, monkeypatch, [])
-    ran = []
-    monkeypatch.setattr(il, "_run", lambda cmd, timeout, env=None: ran.append(cmd))
-    monkeypatch.setattr(il, "_mem_available_mb", lambda: il.GRAPHIFY_MIN_AVAIL_MB - 1)
-    assert il._build_graphify(repo, False, [], il._DEFAULT_CONFIG) is False
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path / "no-tier"))
+    cfg = il._load_config()
+    ran = _recorder(monkeypatch)
+    monkeypatch.setattr(il, "_mem_available_mb", lambda: cfg["memory"]["fallback_min_avail_mb"] - 1)
+    assert il._build_graphify(repo, False, [], cfg) == "DEFERRED"
+    assert ran == [] and il._LAST_DEFER[0] == "memory"
+
+
+def test_memavailable_fallback_applies_only_to_graphify_and_only_without_a_tier_file(tmp_path, monkeypatch):
+    repo, _ = _graph_repo(tmp_path, monkeypatch, [])
+    cfg = il._load_config()
+    low = cfg["memory"]["fallback_min_avail_mb"] - 1
+    _tier(monkeypatch, tmp_path, "ok")
+    ran = _recorder(monkeypatch)
+    monkeypatch.setattr(il, "_mem_available_mb", lambda: low)
+    assert il._build_graphify(repo, False, [], cfg) is True and ran
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path / "no-tier"))
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: True)
+    monkeypatch.setattr(il, "_index_db_for", lambda root: None)
+    ran.clear()
+    assert il._build_jcodemunch(repo, False, [], cfg) is True
+    assert ran and ran[0][:2] == ["jcodemunch-mcp", "index"]
+
+
+@pytest.mark.parametrize("level", ["warn", "crit"])
+def test_tier_warn_defers_graphify_jcodemunch_and_embedded_jdocmunch_but_not_dox(tmp_path, monkeypatch, level):
+    repo, _ = _graph_repo(tmp_path, monkeypatch, [])
+    monkeypatch.setattr(il, "DOC_INDEX_DIR", tmp_path / "doc-index")
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: True)
+    cfg = il._load_config()
+    _tier(monkeypatch, tmp_path, level)
+    ran = _recorder(monkeypatch)
+    assert il._build_graphify(repo, False, [], cfg) == "DEFERRED"
+    assert il._build_jcodemunch(repo, False, [], cfg) == "DEFERRED"
+    monkeypatch.setattr(il, "_doc_vectors", lambda root: True)
+    assert il._build_jdocmunch(repo, False, [], cfg) == "DEFERRED"
     assert ran == []
+    monkeypatch.setattr(il, "_doc_vectors", lambda root: False)
+    assert il._build_jdocmunch(repo, False, [], cfg) is True and ran[-1][0] == "jdocmunch-mcp"
+    assert il._build_dox(repo, False, [], cfg) is True
+    assert ran[-1][-2:] == ["sweep", str(repo)]
 
 
-def test_graphify_runs_in_its_own_capped_scope_when_systemd_is_there(tmp_path, monkeypatch):
+def test_stale_or_missing_tier_file_counts_as_ok(tmp_path, monkeypatch):
+    repo, _ = _graph_repo(tmp_path, monkeypatch, [])
+    cfg = il._load_config()
+    tier = _tier(monkeypatch, tmp_path, "warn", age=120)
+    ran = _recorder(monkeypatch)
+    assert il._build_graphify(repo, False, [], cfg) is True and ran
+    tier.write_text("{not json", encoding="utf-8")
+    ran.clear()
+    assert il._build_graphify(repo, False, [], cfg) is True and ran
+
+
+def _scope_props(cfg):
+    m = cfg["memory"]
+    return [f"MemoryHigh={m['memory_high']}", f"MemoryMax={m['memory_max']}", "MemorySwapMax=0",
+            "CPUWeight=20", "IOWeight=20"]
+
+
+def test_scoped_builder_command_shape(tmp_path, monkeypatch):
     (tmp_path / "bus").touch()
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     monkeypatch.setattr(il, "_which", lambda name: True)
-    cmd = il._graphify_cmd(tmp_path / "proj")
-    assert cmd[:4] == ["systemd-run", "--user", "--scope", "--quiet"]
-    assert f"MemoryMax={il.GRAPHIFY_MEMORY_MAX}" in cmd
-    assert cmd[-3:] == ["graphify", "update", str(tmp_path / "proj")]
-    monkeypatch.setattr(il, "_which", lambda name: name != "systemd-run")
-    assert il._graphify_cmd(tmp_path / "proj") == ["graphify", "update", str(tmp_path / "proj")]
+    cfg = il._load_config()
+    repo = tmp_path / "proj"
+    cmd = il._scoped("graphify", repo, ["graphify", "update", str(repo)], cfg)
+    assert cmd[:5] == ["systemd-run", "--user", "--scope", "--quiet", "--collect"]
+    assert cmd[cmd.index("--unit") + 1].startswith(f"claude-index-graphify-{il._repo_key(repo)[-8:]}-")
+    for prop in _scope_props(cfg):
+        assert prop in cmd
+    tail = cmd[cmd.index("IOWeight=20") + 1:]
+    assert tail == ["nice", "-n", "19", "ionice", "-c", "3", "graphify", "update", str(repo)]
+
+
+def test_scoped_unit_names_are_unique_per_call(tmp_path, monkeypatch):
+    """systemd drops a finished scope asynchronously: a reused name fails the next index-file
+    with "Unit ... was already loaded"."""
+    (tmp_path / "bus").touch()
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setattr(il, "_which", lambda name: True)
+    cfg = il._load_config()
+    a = il._scoped("jcodemunch", tmp_path, ["x"], cfg)
+    b = il._scoped("jcodemunch", tmp_path, ["x"], cfg)
+    ua, ub = a[a.index("--unit") + 1], b[b.index("--unit") + 1]
+    assert ua != ub
+    assert ua.startswith("claude-index-jcodemunch-") and ub.startswith("claude-index-jcodemunch-")
+
+
+def test_index_file_loop_fails_when_any_file_fails(tmp_path, monkeypatch):
+    repo = _mkrepo(tmp_path / "proj")
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path / "no-tier"))
+    monkeypatch.setattr(il, "_which", lambda name: True)
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: True)
+    monkeypatch.setattr(il, "_index_db_for", lambda root: tmp_path / "db")
+    seen: list = []
+
+    def fake_run(cmd, timeout, env=None):
+        seen.append(cmd[-1])
+        return subprocess.CompletedProcess(cmd, 0 if len(seen) == 1 else 1, "", "Unit already loaded")
+
+    monkeypatch.setattr(il, "_run", fake_run)
+    cfg = il._load_config()
+    paths = [f"src/m{i}.py" for i in range(3)]  # relative: code_files skips anything under /tmp
+    assert il._build_jcodemunch(repo, True, paths, cfg) is False
+    assert seen == paths
+    seen.clear()
+    monkeypatch.setattr(il, "_run", lambda cmd, timeout, env=None:
+                        (seen.append(cmd[-1]), subprocess.CompletedProcess(cmd, 0, "", ""))[1])
+    assert il._build_jcodemunch(repo, True, paths, cfg) is True
+
+
+def test_graphify_floor_applies_when_the_tier_file_is_stale(tmp_path, monkeypatch):
+    cfg = il._load_config()
+    monkeypatch.setattr(il, "_mem_available_mb", lambda: 2000)
+    _tier(monkeypatch, tmp_path, "ok", age=3600)  # memwatch down, its file left behind
+    assert il._memory_defer_reason("graphify", cfg) == "mem_available 2000"
+    _tier(monkeypatch, tmp_path, "ok")
+    assert il._memory_defer_reason("graphify", cfg) == ""
+    _tier(monkeypatch, tmp_path, "crit")
+    assert il._memory_defer_reason("graphify", cfg) == "tier crit"
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path / "no-tier"))
+    assert il._memory_defer_reason("graphify", cfg) == "mem_available 2000"
+    assert il._memory_defer_reason("jcodemunch", cfg) == ""  # the floor is graphify's only
+
+
+def test_scoped_omits_nice_and_ionice_when_absent(tmp_path, monkeypatch):
+    (tmp_path / "bus").touch()
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setattr(il, "_which", lambda n: n not in ("nice", "ionice"))
+    cmd = il._scoped("dox", tmp_path, ["x", "y"], il._load_config())
+    assert cmd[0] == "systemd-run" and cmd[cmd.index("IOWeight=20") + 1:] == ["x", "y"]
+
+
+def test_scoped_is_plain_without_systemd_or_bus_or_on_windows(tmp_path, monkeypatch):
+    cfg = il._load_config()
+    (tmp_path / "bus").touch()
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setattr(il, "_which", lambda n: n != "systemd-run")
+    assert il._scoped("graphify", tmp_path, ["g"], cfg) == ["g"]
+    monkeypatch.setattr(il, "_which", lambda n: True)
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "nobus"))
+    assert il._scoped("graphify", tmp_path, ["g"], cfg) == ["g"]
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
+    monkeypatch.setattr(il.plat, "IS_WINDOWS", True)
+    assert il._scoped("graphify", tmp_path, ["g"], cfg) == ["g"]
+
+
+def test_every_builder_runs_through_the_scope_wrapper(tmp_path, monkeypatch):
+    repo, _ = _graph_repo(tmp_path, monkeypatch, [])
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path / "no-tier"))
+    monkeypatch.setattr(il, "DOC_INDEX_DIR", tmp_path / "doc-index")
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: True)
+    import lib.code_files as cf
+    monkeypatch.setattr(cf, "is_code_file", lambda p: True)
+    cfg = il._load_config()
+    seen: list = []
+    monkeypatch.setattr(il, "_scoped", lambda surface, root, cmd, cfg: (seen.append(surface), list(cmd))[1])
+    _recorder(monkeypatch)
+    monkeypatch.setattr(il, "_index_db_for", lambda root: None)
+    il._build_jcodemunch(repo, False, [], cfg)
+    monkeypatch.setattr(il, "_index_db_for", lambda root: tmp_path / "x.db")
+    il._build_jcodemunch(repo, True, [str(repo / "x.py")], cfg)
+    assert seen == ["jcodemunch", "jcodemunch"]
+    il._build_jdocmunch(repo, False, [], cfg)
+    il._build_graphify(repo, False, [], cfg)
+    il._build_dox(repo, False, [], cfg)
+    assert seen[2:] == ["jdocmunch", "graphify", "dox"]
+
+
+class _BuildArgs:
+    incremental = False
+    journal = ""
+
+
+def _deferred_build(env, monkeypatch, cause):
+    _reset(env)
+    ctx = env["ctx"]
+    st = il._load_state(ctx)
+    st.setdefault("surfaces", {})["graphify"] = {"state": il.STALE, "failures": 2,
+                                                 "fingerprint": {"head": "H0", "dirty_sha": "D0"}}
+    il._save_state(ctx, st)
+    rows: list = []
+    monkeypatch.setattr(il, "_telem", lambda kind, **f: rows.append((kind, f)))
+    monkeypatch.setitem(il._BUILD, "graphify",
+                        lambda *a, **k: (il._LAST_DEFER.__setitem__(0, cause) or "DEFERRED"))
+    a = _BuildArgs()
+    a.root, a.key, a.surfaces = str(env["repo"]), ctx.key, "graphify"
+    il.mode_build(a, env["cfg"])
+    return il._load_state(ctx)["surfaces"]["graphify"], rows
+
+
+def test_mode_build_memory_deferral_keeps_failures_and_emits_the_memory_event(env, monkeypatch):
+    rec, rows = _deferred_build(env, monkeypatch, "memory")
+    assert rec["state"] == il.STALE and rec["failures"] == 2
+    assert rec["fingerprint"]["dirty_sha"] == "deferred"
+    assert any(k == "build_deferred_memory" and f["surface"] == "graphify" for k, f in rows)
+    assert "build_deferred" not in [k for k, _ in rows]
+
+
+def test_mode_build_summarizer_deferral_emits_the_summarizer_event(env, monkeypatch):
+    rec, rows = _deferred_build(env, monkeypatch, "summarizer")
+    kinds = [k for k, _ in rows]
+    assert "build_deferred_summarizer" in kinds and "build_deferred" not in kinds
+
+
+def test_probe_defers_new_builders_at_warn_and_says_so_once(env, tmp_path, monkeypatch):
+    _reset(env)
+    _tier(monkeypatch, tmp_path, "warn")
+    monkeypatch.setattr(il, "_doc_vectors", lambda root: True)
+    rows: list = []
+    monkeypatch.setattr(il, "_telem", lambda kind, **f: rows.append((kind, f)))
+    for s in il.SURFACES:
+        monkeypatch.setitem(il._PROBE, s, lambda root, prior, cfg: (il.STALE, {"head": "H1"}, "dirty"))
+    out = _silent(il.mode_session_start, env["payload"], env["cfg"])
+    assert env["spawns"] == [(["dox"], False)]
+    blob = json.loads(out)["additionalContext"]
+    assert "graphify index: STALE — refresh deferred (memory warn)" in blob
+    assert blob.count("refresh deferred (memory warn)") == 3
+    for s in ("graphify", "jcodemunch", "jdocmunch"):
+        assert not il._lock_path(env["ctx"].key, s).exists()
+    probe_rows = [f for k, f in rows if k == "build_deferred_memory"]
+    assert len(probe_rows) == 3 and all(f["stage"] == "probe" for f in probe_rows)
+
+
+def _journal(env, n=2):
+    st = il._load_state(env["ctx"])
+    entries = []
+    for i in range(n):
+        p = env["repo"] / f"j{i}.py"
+        p.write_text("x", encoding="utf-8")
+        entries.append({"path": str(p), "tool": "Write", "ts": time.time()})
+    st["journal"] = {"first_write_at": time.time(), "entries": entries}
+    il._save_state(env["ctx"], st)
+
+
+def test_flush_skips_deferred_surfaces_at_warn(env, tmp_path, monkeypatch):
+    _reset(env)
+    _tier(monkeypatch, tmp_path, "warn")
+    monkeypatch.setattr(il, "_doc_vectors", lambda root: True)
+    _journal(env)
+    _silent(il.mode_flush, env["payload"], env["cfg"])
+    assert env["spawns"] == [(["dox"], True)]
+    for s in ("graphify", "jcodemunch", "jdocmunch"):
+        assert not il._lock_path(env["ctx"].key, s).exists()
+    # nothing left to build: the journal stays for the next flush
+    _reset(env)
+    _journal(env)
+    cfg = json.loads(json.dumps(env["cfg"]))
+    cfg["surfaces_enabled"]["dox"] = False
+    _silent(il.mode_flush, env["payload"], cfg)
+    assert env["spawns"] == []
+    assert len(il._load_state(env["ctx"])["journal"]["entries"]) == 2
+
+
+_MEMORY_KEYS = {"tier_stale_s", "defer_at", "fallback_min_avail_mb", "memory_high", "memory_max",
+                "swap_max", "cpu_weight", "io_weight", "nice", "ionice_class", "defer_surfaces"}
+
+
+def test_memory_config_block_is_complete():
+    cfg = il._load_config()
+    mem = {k: v for k, v in cfg["memory"].items() if k != "_note"}
+    assert set(mem) == _MEMORY_KEYS
+    assert mem["defer_surfaces"] == ["jcodemunch", "jdocmunch", "graphify"]
+    assert mem["fallback_min_avail_mb"] == 12288
+    on_disk = json.loads((_HOOKS / "index-lifecycle.config.json").read_text(encoding="utf-8"))["memory"]
+    assert {k: v for k, v in on_disk.items() if k != "_note"} == il._DEFAULT_CONFIG["memory"]
+
+
+def test_no_module_level_memory_constants_remain():
+    assert not hasattr(il, "GRAPHIFY_MIN_AVAIL_MB") and not hasattr(il, "GRAPHIFY_MEMORY_MAX")
+
+
+def test_mem_tier_reader_prefers_memwatch_state_when_importable(tmp_path, monkeypatch):
+    import types
+    import lib
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path / "no-tier"))
+    cfg = il._load_config()
+    fake = types.ModuleType("lib.memwatch_state")
+    fake.read = lambda stale_s=30: types.SimpleNamespace(level="crit")
+    monkeypatch.setitem(sys.modules, "lib.memwatch_state", fake)
+    monkeypatch.setattr(lib, "memwatch_state", fake, raising=False)
+    assert il._mem_tier(cfg) == "crit"
+    monkeypatch.setitem(sys.modules, "lib.memwatch_state", None)  # import now fails
+    monkeypatch.delattr(lib, "memwatch_state")
+    assert il._mem_tier(cfg) == "ok"
+    _tier(monkeypatch, tmp_path, "warn")
+    assert il._mem_tier(cfg) == "warn"
 
 
 def test_graphify_build_keeps_the_newest_three_dated_backups(tmp_path, monkeypatch):

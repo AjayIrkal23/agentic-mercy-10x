@@ -6,6 +6,10 @@ description: Anti-slop frontend skill for landing pages, portfolios, and redesig
 when_to_use: Landing pages, portfolios, redesigns, 'looks templated'.
 ---
 
+> **ECC graft (ecc:skills/frontend-design-direction, scripts/hooks/design-quality-check.js@25278e7d):**
+> - Before designing, write an evidence record: brand references, audience, three competitor screens.
+> - Reject the six generic-template tells: a centered hero over 3 feature cards; gradient blob backgrounds; Inter-only type; emoji icons; stock illustrations; identical card grids.
+
 # tasteskill: Anti-Slop Frontend Skill
 
 > Landing pages, portfolios, and redesigns. Not dashboards, not data tables, not multi-step product UI.

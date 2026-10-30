@@ -95,6 +95,14 @@ def test_doctor_ci_skips_machine_rows(sandbox_home):
     assert by["mcp-roster"] == "SKIP" and by["lean-ctx-config"] == "SKIP"
 
 
+def test_doctor_ci_and_doctor_mode_skip_the_oomguard_rows(sandbox_home):
+    doctor = _load("doctor", "installer/doctor.py")
+    for ci in (True, False):                       # sandbox_home sets CLAUDE_HOOK_DOCTOR=1
+        by = {n: (s, d) for n, s, d in doctor.run_doctor(ci=ci)}
+        for name in ("oom-policy", "memwatch-unit", "restore-unit", "claude-launcher", "launch-caps", "attach-live"):
+            assert by[name][0] == "SKIP", (name, by[name])
+
+
 def test_link_doctor_detects_a_broken_link(tmp_path):
     ld = _load("link_doctor", "hooks/tools/link-doctor.py")
     # a minimal dispatch config whose one GATE link emits NON-JSON garbage -> FAIL

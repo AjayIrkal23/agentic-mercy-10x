@@ -21,6 +21,31 @@ def test_manifest_version_matches_the_changelog_head():
     assert head and M["version"] == head.group(1)
 
 
+def test_post_steps_carry_the_merge_steps_in_order():
+    ids = [s["id"] for s in M["post_steps"]]
+    for a, b in (("validate-mods", "oomguard"), ("oomguard", "machines-split"), ("machines-split", "plan-tier"),
+                 ("plan-tier", "build-workflows"), ("build-workflows", "library-check")):
+        assert ids.index(a) < ids.index(b), ids
+    assert next(s for s in M["post_steps"] if s["id"] == "oomguard")["optional"] is False
+
+
+def test_higgsfield_mcp_is_gone_and_openart_stays():
+    names = {s["name"] for s in M["mcp_servers"]}
+    assert "higgsfield" not in names and "openart" in names
+    assert set(M["doctor_probes"]["mcp_roster"]) == names
+    assert [c["id"] for c in M["connectors"]] == ["openart"]
+
+
+def test_gitleaks_is_pinned_per_arch():
+    g = M["user_space"]["gitleaks"]
+    assert g["version"] == "8.30.1" and "{version}" in g["download"] and "{arch}" in g["download"]
+    assert set(g["sha256"]) == {"x64", "arm64"} and all(len(v) == 64 for v in g["sha256"].values())
+
+
+def test_sequential_thinking_is_the_only_always_load():
+    assert [s["name"] for s in M["mcp_servers"] if s.get("alwaysLoad") is True] == ["sequential-thinking"]
+
+
 def test_windows_github_launcher_runs_the_manifest_pin():
     want = doctor_mcp.npx_spec(" ".join(SERVERS["github"]["add"]))
     text = (_ROOT / "scripts" / "github-mcp-launcher.py").read_text(encoding="utf-8")

@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import json
 import re
-from collections import deque
 from functools import lru_cache
 from pathlib import Path
 
@@ -71,19 +70,11 @@ def _turn_tool_uses(transcript) -> "list | None":
     """(name, input) of every tool_use since the last real user prompt; None if unreadable."""
     if _turns is None or not transcript:
         return None
-    try:
-        with Path(str(transcript)).open(encoding="utf-8", errors="replace") as fh:
-            tail = deque(fh, maxlen=_turns.TAIL_LINES)
-    except Exception:  # noqa: BLE001
+    rows = _turns.tail_entries(transcript)
+    if rows is None:
         return None
     uses: list = []
-    for line in tail:
-        try:
-            entry = json.loads(line)
-        except Exception:  # noqa: BLE001
-            continue
-        if not isinstance(entry, dict):
-            continue
+    for entry in rows:
         if _turns._prompt_text(entry) is not None:
             uses = []  # a new human turn starts
             continue

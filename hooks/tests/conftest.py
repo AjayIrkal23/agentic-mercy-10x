@@ -9,6 +9,8 @@ import os
 import shutil
 import tempfile
 
+import pytest
+
 _MY_DIRS: list = []
 
 
@@ -33,3 +35,16 @@ def pytest_sessionfinish(session, exitstatus):
     """A7-17: do not leave three temp dirs per run behind."""
     for d in _MY_DIRS:
         shutil.rmtree(d, ignore_errors=True)
+
+
+@pytest.fixture(autouse=True)
+def _no_leaked_plan_tier():
+    """The session-start chain's `plan-tier-detect` link writes plan-tier.json into the shared test
+    state dir; a later test (statusline suffix, model routing) must not inherit that tier."""
+    d = os.environ.get("CLAUDE_HOOK_STATE_DIR")
+    if d:
+        try:
+            os.unlink(os.path.join(d, "plan-tier.json"))
+        except OSError:
+            pass
+    yield

@@ -7,6 +7,8 @@ WARN (a fresh machine registers on the next install) on
     FAIL when the claude CLI is present (``selfheal._repair`` runs
     ``deps.reconcile_mcp_pins``), WARN when no reconcile is possible;
   * a registered server whose manifest entry is marked ``deprecated`` (G-01);
+  * an ``npx``/``uvx`` package spec with no exact version or a dist-tag (``@latest``) —
+    ECC ``mcp-dependency-review``;
   * servers that still need ``/mcp`` auth.
 
 Reads only ``command`` / ``args`` / ``url`` of each live entry; ``env`` values (tokens)
@@ -63,6 +65,22 @@ def swap_spec(text: str, have: str, want: str) -> str:
     return re.sub(r"(?<![\w@/.=-])" + re.escape(have) + r"(?![\w.=-])", lambda _m: want, text, count=1)
 
 
+def unpinned_live(live: dict) -> list[tuple[str, str]]:
+    """[(name, spec)] for live stdio ``npx``/``uvx`` launchers whose package spec has no exact
+    version: none at all, a dist-tag (``@latest``, ``@next``) or a range (``^1``, ``~1``)."""
+    out = []
+    for name, entry in sorted((live or {}).items()):
+        if not isinstance(entry, dict) or entry.get("url") or entry.get("type") == "http":
+            continue
+        have = npx_spec(_live_text(entry))
+        if not have:
+            continue
+        ver = spec_version(have)
+        if ver is None or not ver[:1].isdigit():
+            out.append((name, have))
+    return out
+
+
 def roster_status(manifest: dict, live: dict, auth: set, repairable: bool = False) -> tuple[str, str]:
     """``repairable``: a reconcile can run (claude CLI present), so pin drift is a FAIL the
     self-heal ``_repair`` routes to ``deps.reconcile_mcp_pins``; without it, a WARN."""
@@ -81,6 +99,9 @@ def roster_status(manifest: dict, live: dict, auth: set, repairable: bool = Fals
     deprecated = [f"{n}: {s['deprecated']}" for n, s in servers.items() if s.get("deprecated") and n in live]
     if deprecated:
         issues.append(f"deprecated package: {deprecated}")
+    unpinned = unpinned_live(live)
+    if unpinned:  # WARN only: a reconcile fixes manifest drift, not an unpinned extra
+        issues.append(f"unpinned/@latest launcher (mcp-dependency-review): {[f'{n} {s}' for n, s in unpinned]}")
     needs = sorted(m for m in expected if m in auth)
     if needs:
         issues.append(f"needs /mcp auth: {needs}")

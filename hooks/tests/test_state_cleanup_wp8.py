@@ -94,3 +94,74 @@ def test_unreadable_index_state_is_left_alone(tmp_path):
     bad = _put(tmp_path / "hooks/.state/index/bad-1.json", 40, "{not json")
     sc.run(tmp_path)
     assert bad.exists()
+
+
+# --------------------------------------------------------------------------- #
+# PKG hooks-hygiene-mod step 15: one retention table, new families
+# --------------------------------------------------------------------------- #
+def test_oom_state_families(tmp_path):
+    alive, dead = os.getpid(), 999_999_983           # dead pid: pid_alive False
+    old = [_put(tmp_path / "state/live-sessions/d1.json", 8, json.dumps({"sid": "d1", "pid": dead})),
+           _put(tmp_path / "state/live-sessions/d2.json", 8, json.dumps({"sid": "d2", "pid": alive, "ended": 1})),
+           _put(tmp_path / "state/session-bridge/s1.json", 2), _put(tmp_path / "state/resume-lock/s1", 2, "{}"),
+           _put(tmp_path / "state/mercy-mod.active.d/x.json", 2, json.dumps({"sid": "x", "ts": 1})),
+           _put(tmp_path / "state/mercy-mod.active", 2, json.dumps({"sid": "x", "ts": 1})),  # legacy single flag
+           _put(tmp_path / "state/launch-caps/123.json", 2), _put(tmp_path / "state/launch-settings-123.json", 2),
+           _put(tmp_path / "state/advisory-queue/old.jsonl", 8)]
+    keep = [_put(tmp_path / "state/live-sessions/l1.json", 40, json.dumps({"sid": "l1", "pid": alive})),
+            _put(tmp_path / "state/live-sessions/y1.json", 2, json.dumps({"sid": "y1", "pid": dead})),
+            _put(tmp_path / "state/live-sessions/bad.json", 40, "{nope"),
+            _put(tmp_path / "state/session-bridge/s2.json", 0.2), _put(tmp_path / "state/resume-lock/s2", 0.2, "{}"),
+            _put(tmp_path / "state/mem-pressure.json", 40, "{}"),            # never touched
+            _put(tmp_path / "state/mercy-mod.active.d/y.json", 0.2, json.dumps({"sid": "y", "ts": 1})),
+            _put(tmp_path / "state/advisory-queue/new.jsonl", 2)]
+    counts = sc.run(tmp_path)
+    assert [p.name for p in old if p.exists()] == [] and [p.name for p in keep if not p.exists()] == []
+    assert counts["live-sessions"] == 2 and counts["session-bridge"] == 1
+    assert counts["resume-lock"] == 1 and counts["mod-flag"] == 1 and counts["mod-flag-legacy"] == 1
+
+
+def test_oomguard_events_rotate_at_2mb(tmp_path):
+    ev = _put(tmp_path / "state/oomguard.events", 0, ('{"kind":"tier"}\n' * 200_000))   # ~3.2 MB
+    sc.run(tmp_path)
+    assert ev.stat().st_size < 2 * 1024 * 1024 and len(ev.read_text(encoding="utf-8").splitlines()) == 5000
+
+
+def test_teams_dirs_age_out_unless_the_lead_session_is_live(tmp_path):
+    old = tmp_path / "teams/session-aaaaaaaa"
+    _put(old / "config.json", 20, json.dumps({"leadSessionId": "gone"}))
+    os.utime(old, (time.time() - 20 * DAY,) * 2)
+    live = tmp_path / "teams/session-bbbbbbbb"
+    _put(live / "config.json", 20, json.dumps({"leadSessionId": "L"}))
+    os.utime(live, (time.time() - 20 * DAY,) * 2)
+    _put(tmp_path / "state/live-sessions/L.json", 20, json.dumps({"sid": "L", "pid": os.getpid()}))
+    young = tmp_path / "teams/session-cccccccc"
+    _put(young / "config.json", 1, "{}")
+    sc.run(tmp_path)
+    assert not old.exists() and live.exists() and young.exists()
+
+
+def test_ponytail_legacy_keys_and_launch_files(tmp_path):
+    legacy = _put(tmp_path / "ponytail-modes/6dcc99ed-a957-4897-8e2e-5446b56602d4", 8, "full")
+    current = _put(tmp_path / ("ponytail-modes/" + "a" * 64), 400, "full")
+    sc.run(tmp_path)
+    assert not legacy.exists() and current.exists()
+
+
+def test_learning_rows_older_than_30_days_are_trimmed(tmp_path):
+    now = time.time()
+    rows = [{"ts": now - 40 * DAY, "tool": "a"}, {"ts": now - 1 * DAY, "tool": "b"}, {"tool": "no-ts"}]
+    f = _put(tmp_path / "state/learning/repo-1/observations.jsonl", 0,
+             "\n".join(json.dumps(r) for r in rows) + "\n")
+    counts = sc.run(tmp_path, now=now)
+    kept = [json.loads(line) for line in f.read_text(encoding="utf-8").splitlines()]
+    assert [r["tool"] for r in kept] == ["b", "no-ts"] and counts["learning"] == 1
+
+
+def test_table_flag_matches_docstring():
+    import subprocess
+    import sys
+    cp = subprocess.run([sys.executable, str(Path(sc.__file__)), "--table"], capture_output=True,
+                        text=True, timeout=30)
+    assert cp.returncode == 0 and cp.stdout.strip() and cp.stdout.strip() in sc.__doc__
+    assert all(row[0] in cp.stdout for row in sc.RETENTION)

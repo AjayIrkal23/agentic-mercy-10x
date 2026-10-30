@@ -1,10 +1,20 @@
 {
   "name": "mercy",
   "version": "1.0.0",
-  "description": "Workflow intelligence for agentic-mercy-10x: session ledger, Python hook bridge (advisories off the critical path), guards, verification gate, repo brain, router governor, skill-listing focus, auto-resume after usage limits, and the UI deck (pane, action band, toasts, sounds, desktop notifications, git/CI/usage views, slash command cards)",
+  "description": "Workflow intelligence for agentic-mercy-10x: session ledger, Python hook bridge (advisories off the critical path), guards, verification gate, repo brain, router governor, skill-listing focus, auto-resume after usage limits, subagent model caps, the memory guard view and monitor relay, and the UI deck (pane, action band, toasts, sounds, desktop notifications, git/CI/usage views, slash command cards)",
   "author": { "name": "Ajay Irkal" },
   "license": "MIT",
   "types": "./types/index.d.ts",
+  "experimental": {
+    "monitors": [
+      {
+        "name": "oomguard",
+        "command": "tail -n0 -F \"$HOME/.claude/state/oomguard.events\" 2>/dev/null | grep -E --line-buffered '\"kind\": ?\"tier\"'",
+        "description": "OOM guard tier changes (warn/crit/ok) from hooks/tools/memwatch.py; shed, kill and restore lines never reach the model",
+        "when": "always"
+      }
+    ]
+  },
   "userConfig": {
     "bridge": {
       "type": "string",

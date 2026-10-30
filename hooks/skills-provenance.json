@@ -41,8 +41,8 @@
     "sha": "0b8afcc0e81050f79a850d30d0fc774ab53dcc54",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py debug-broken-ui",
     "hashBasis": "content-hash",
-    "baselineHash": "06a64f34d0186b0e512342ac1133c44e6dd75d0d54ac462a8abbc077482d4ca4",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "083535d8fa31726ae1f53b88ae78fa443e5ce563d2610b428eb49c0714cb5760",
+    "capturedAt": "2026-10-29"
   },
   "design-system-compliance": {
     "family": "vendored-git",
@@ -54,8 +54,8 @@
     "sha": "0b8afcc0e81050f79a850d30d0fc774ab53dcc54",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py design-system-compliance",
     "hashBasis": "content-hash",
-    "baselineHash": "f5aff9923797f2d417e35099fcfee769d324d1047b3d543e2967727ca9bd664a",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "9fa8256db1c70bdcf61d7a45e832bcdc1839b1c8c7e412046c09ba9bcb72eca0",
+    "capturedAt": "2026-10-29"
   },
   "design-taste-frontend": {
     "family": "vendored-git",
@@ -67,8 +67,8 @@
     "sha": "ce26fc25c0e5e8cab638f883de62d9a86ee5e45b",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py design-taste-frontend",
     "hashBasis": "content-hash",
-    "baselineHash": "911469502938b15298651167788c50e7adaacb2a891871fcb4a42c4e36a01072",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "9eb4535e2ed67d5db9abf3751572696a30c446a14013aa27bee967ff8e3cd665",
+    "capturedAt": "2026-10-29"
   },
   "false-green-tests": {
     "family": "vendored-git",
@@ -80,8 +80,8 @@
     "sha": "0b8afcc0e81050f79a850d30d0fc774ab53dcc54",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py false-green-tests",
     "hashBasis": "content-hash",
-    "baselineHash": "0daf071265d60a3f2fa8d6e8569077e4650cbe8ece8bbd60558decd6ee697379",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "92704ff9d5620b2531e03ad4faa915e99c18be9ba14ac9ae85fd5e234c74f931",
+    "capturedAt": "2026-10-29"
   },
   "find-skills": {
     "family": "vendored-git",
@@ -93,8 +93,8 @@
     "sha": "7407f3893ad4dceab546ac002c3ef806e4000c73",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py find-skills",
     "hashBasis": "content-hash",
-    "baselineHash": "2ebacb2c06d20e191b29d3f3a9720d3202a569fbd9c71f6365ca8b2f4cea0519",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "7687f0fb25755a78d745aa62b1ed1240d9f1699529d076645ff7c75743007c5f",
+    "capturedAt": "2026-10-29"
   },
   "fixing-accessibility": {
     "family": "vendored-git",
@@ -106,8 +106,8 @@
     "sha": "4d766c65fc3c63c611ecbc375882231152dea8c4",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py fixing-accessibility",
     "hashBasis": "content-hash",
-    "baselineHash": "36620242a817756d6b1a18287ebca68015be9552a06be1e39d678270404fd041",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "350c5b4ae1b5bfa7cc836f49d543cc500b332c7ab797337f16b13609586a7a4f",
+    "capturedAt": "2026-10-29"
   },
   "fixing-metadata": {
     "family": "vendored-git",
@@ -145,8 +145,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-brandkit",
     "hashBasis": "content-hash",
-    "baselineHash": "ca7ce0882e8c8d4dd5a897138f92b0b7e0081b4dd4db0c0cb12ae1cdc779a527",
-    "capturedAt": "2026-10-05"
+    "baselineHash": "bdb776373c99e9a271478e2c5c0c404f72bbf9a33e2a5fba738597ce6b95fbeb",
+    "capturedAt": "2026-10-29"
   },
   "higgsfield-generate": {
     "family": "vendored-git",
@@ -158,8 +158,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-generate",
     "hashBasis": "content-hash",
-    "baselineHash": "4f8f1068323eae78c5fade0edc7432c35371ae20bd02d2972ff413452d2e9c21",
-    "capturedAt": "2026-10-05"
+    "baselineHash": "f8b0d99dc38e0c3508ae34fef3789e939f669726205d3322910e08a14f8d3bcb",
+    "capturedAt": "2026-10-29"
   },
   "higgsfield-marketplace-cards": {
     "family": "vendored-git",
@@ -171,8 +171,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-marketplace-cards",
     "hashBasis": "content-hash",
-    "baselineHash": "27524a0d851bdaad8ab4cd195cf37b2d9aa9e16d14248d80eb2c52e5ad095c48",
-    "capturedAt": "2026-10-05"
+    "baselineHash": "cbbada9b4b7eee6af7be35a96070f4661dedaf0ed4b953cb49ff8bc6a9ade4f2",
+    "capturedAt": "2026-10-29"
   },
   "higgsfield-product-photoshoot": {
     "family": "vendored-git",
@@ -184,8 +184,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-product-photoshoot",
     "hashBasis": "content-hash",
-    "baselineHash": "94b0a20ef2e8fb86465dcf4e32725b3f9a43ab07598d64e3bc008a8e2097e624",
-    "capturedAt": "2026-10-05"
+    "baselineHash": "1e812837e9369d5a190bc2862b4bd56933bc9010af073bea5fc1533ad0918271",
+    "capturedAt": "2026-10-29"
   },
   "higgsfield-soul-id": {
     "family": "vendored-git",
@@ -197,8 +197,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-soul-id",
     "hashBasis": "content-hash",
-    "baselineHash": "7064b93e782b9bcb59db3d50bdc1051fb5175ac4b4235c9a20b4a3e4ee7d456f",
-    "capturedAt": "2026-10-05"
+    "baselineHash": "74d85fa56695203111162fe300d61c8b977bd875a8a65e4e82058672db2ccdc4",
+    "capturedAt": "2026-10-29"
   },
   "higgsfield-video-explainer": {
     "family": "vendored-git",
@@ -210,8 +210,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-video-explainer",
     "hashBasis": "content-hash",
-    "baselineHash": "bcf65a807d59efb2fef0a4e156fb2b380063242716ccab585e19a1b1babdc967",
-    "capturedAt": "2026-10-05"
+    "baselineHash": "2af497a3739e067b7ac555f5db01064b14e9b5a8a56d90281d4936e9d5225c81",
+    "capturedAt": "2026-10-29"
   },
   "higgsfield-websites": {
     "family": "vendored-git",
@@ -223,8 +223,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-websites",
     "hashBasis": "content-hash",
-    "baselineHash": "24923bc55de869135e26dd68fe4dd7ef0d33a92a3fce98eb88b5a186aea4eae8",
-    "capturedAt": "2026-10-05"
+    "baselineHash": "c6b267605b93c0075a3ea8995aace12827ecc38471cf8a53bf60027f4cb523f2",
+    "capturedAt": "2026-10-29"
   },
   "higgsfield-youtube-thumbnail": {
     "family": "vendored-git",
@@ -236,8 +236,8 @@
     "sha": "f83af0bc1d937c8119099a11f8ebbf5e6fb99819",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py higgsfield-youtube-thumbnail",
     "hashBasis": "content-hash",
-    "baselineHash": "b2a50e4b8f31fe6a667f9dfd60181c8b494236552c9b642a01fdf8500eb9ff39",
-    "capturedAt": "2026-10-05"
+    "baselineHash": "e999f5c9afd8a94a54e26b1126c9f5271e10717816945c31046b6e426e4fc501",
+    "capturedAt": "2026-10-29"
   },
   "img2threejs": {
     "family": "vendored-git",
@@ -262,8 +262,8 @@
     "sha": "f9515cb90e9d1ed1eee9384f79f1e0ac6c26825e",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py improve-ui",
     "hashBasis": "content-hash",
-    "baselineHash": "f1a3893872ede5bcdcc3cbd64fc12b21704145e81a3b62dd9b936fc1a94d1fcb",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "b037a128b392c3b5d0ab0d57a6f28d87acecba9e290a4b35e8f4f7b5f13362b3",
+    "capturedAt": "2026-10-29"
   },
   "mmx-cli": {
     "family": "vendored-git",
@@ -275,8 +275,8 @@
     "sha": "33453cf123927f41c00e1935450e504d8a630763",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py mmx-cli",
     "hashBasis": "content-hash",
-    "baselineHash": "3e1032979b4f7901b7069220287bfdb94f773c75c2487550621a63cc6203404e",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "ab65925b60c156cc634a5bc2499bd7a13b3919cc5f9c469bd4515bf01c3e09e0",
+    "capturedAt": "2026-10-29"
   },
   "modern-web-guidance": {
     "family": "vendored-git",
@@ -340,8 +340,8 @@
     "sha": "0b8afcc0e81050f79a850d30d0fc774ab53dcc54",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py verify-ui-change",
     "hashBasis": "content-hash",
-    "baselineHash": "8ff225a2b2a49dcd440921d48065b468830e82101cb4c3bdc549016593c8df27",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "480745e6589e1e87c23bb42bf806c9647e06ecdb03a3f40269d8bd660ef92614",
+    "capturedAt": "2026-10-29"
   },
   "vite-react-best-practices": {
     "family": "vendored-git",
@@ -353,7 +353,7 @@
     "sha": "74b9e4fc8e4ee0bb58d65ed71e9f14512ca0082a",
     "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py vite-react-best-practices",
     "hashBasis": "content-hash",
-    "baselineHash": "054c32747eda09e31d77164f44eca4b686357ddfa879ad3a32e04caec901f29a",
-    "capturedAt": "2026-09-28"
+    "baselineHash": "f5cb54127c8937e4d5e0f45d18bc36032890aa79e992da7d1c147b901b492238",
+    "capturedAt": "2026-10-29"
   }
 }

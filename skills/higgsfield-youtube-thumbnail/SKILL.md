@@ -23,6 +23,8 @@ metadata:
     - design
 ---
 
+> **Local guard (vendor patch, ~/.claude):** the default engine is the claude.ai Higgsfield connector (`mcp__claude_ai_higgsfield__generate_image` / `generate_video` / `generate_3d` / `generate_audio`, `models_explore`, `upscale_*`, `remove_background`); this skill's prompt craft applies to those tools. Use the `higgsfield` CLI only when the user asks for it by name, never run its installer, and never `higgsfield auth login` on the user's behalf — ask once.
+
 # Higgsfield YouTube Thumbnail
 
 Create a clean thumbnail concept, generate each variant through the `higgsfield` CLI, inspect it, and make only requested surgical edits.
@@ -33,7 +35,7 @@ Before any generation:
 
 1. If `higgsfield` is missing, install it:
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/higgsfield-ai/cli/main/install.sh | sh
+   (CLI installer: never run it yourself; if the CLI is missing, say so and use the connector tools)
    ```
 2. If `higgsfield account status` reports `Session expired` or `Not authenticated`, ask the user to run `higgsfield auth login`, then wait.
 3. Confirm the locked model contracts when the catalog may have changed:

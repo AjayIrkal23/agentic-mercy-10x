@@ -1,0 +1,7 @@
+router at 192.168.50.200
+db on 10.0.0.5
+gateway 172.16.4.4
+terminal ptyxis-spawn wrapper
+box example-box-01 is up
+public 172.32.0.1
+docs 192.0.2.9

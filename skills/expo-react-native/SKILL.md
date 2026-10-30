@@ -92,3 +92,5 @@ the report.
 
 Web React (`frontend-standards-always-follow`), backend contracts
 (`api-contract-standards`), store slice conventions in the repo's own docs.
+
+ECC graft: `references/ecc-rn-rules.md` — Expo Router layouts, SecureStore, EAS checklist, RN a11y, list performance.

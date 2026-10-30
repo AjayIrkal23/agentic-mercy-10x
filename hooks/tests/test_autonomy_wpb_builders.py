@@ -42,6 +42,10 @@ def _mkrepo(where: Path) -> Path:
 
 @pytest.fixture
 def env(tmp_path, monkeypatch):
+    # no user bus: builders run plain, whatever the host has (the scope wrapper has its own tests)
+    monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "no-user-bus"))
+    # a private state dir: no memwatch tier file unless a test writes one
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path / "hook-state"))
     state = tmp_path / "state" / "index"
     state.mkdir(parents=True)
     monkeypatch.setattr(il, "STATE_DIR", state)
@@ -240,6 +244,26 @@ def test_deferred_build_forces_the_next_probe_stale(env, monkeypatch):
                         .stdout.strip())
     monkeypatch.setattr(il, "_dirty_sha", lambda root: "D0")
     assert il._probe_jcodemunch(env["repo"], prior)[0] == il.STALE
+
+
+@pytest.mark.parametrize("cause", ["summarizer", "memory"])
+def test_deferred_rows_are_named_by_cause_never_bare_build_deferred(env, monkeypatch, cause):
+    ctx = env["ctx"]
+    monkeypatch.setitem(il._BUILD, "jcodemunch",
+                        lambda *a, **k: (il._LAST_DEFER.__setitem__(0, cause) or "DEFERRED"))
+    a = _A()
+    a.root, a.key, a.surfaces = str(env["repo"]), ctx.key, "jcodemunch"
+    il.mode_build(a, env["cfg"])
+    kinds = [k for k, _ in env["rows"]]
+    assert f"build_deferred_{cause}" in kinds and "build_deferred" not in kinds
+
+
+def test_summarizer_down_still_defers_under_tier_ok(env, monkeypatch):
+    calls = _runs(monkeypatch)
+    monkeypatch.setattr(il, "_summarizer_alive", lambda *a, **k: False)
+    monkeypatch.setattr(il, "_index_db_for", lambda root: Path("x.db"))
+    assert il._build_jcodemunch(env["repo"], False, [], env["cfg"]) == "DEFERRED"
+    assert il._LAST_DEFER[0] == "summarizer" and calls == []
 
 
 def test_session_start_never_asks_for_ollama_and_spawns_the_builder(env, monkeypatch, capsys):

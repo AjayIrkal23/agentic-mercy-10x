@@ -1,0 +1,40 @@
+{
+ "classes": {
+  "agent": 49,
+  "command": 37,
+  "doc": 1,
+  "example": 46,
+  "guide": 4,
+  "rules": 92,
+  "skill": 284
+ },
+ "code_not_vendored": [
+  "skills/manim-video/assets/network_graph_scene.py",
+  "skills/master-agreement-generator/scripts/build-agreement.js"
+ ],
+ "commit_date": "2026-10-26T00:03:57-04:00",
+ "digests": [
+  "agents-roster",
+  "agentshield",
+  "cross-provider-review",
+  "dashboards",
+  "ecc2-control-plane",
+  "gateguard",
+  "github-coordination",
+  "hooks-runtime",
+  "install-system",
+  "integrations-aura",
+  "learning-observer",
+  "llm-sdk",
+  "mcp-catalogue",
+  "nasiko",
+  "orchestration",
+  "plan-canvas",
+  "security-guide",
+  "sessions",
+  "unified-memory"
+ ],
+ "files": 513,
+ "repo": "https://github.com/affaan-m/ECC",
+ "sha": "25278e7d7b6cf6e6a4e7a6c8e10f14ff22f0eb5b"
+}

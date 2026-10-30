@@ -42,7 +42,7 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 | `test_gateguard.py` | gateguard-write-gate counts Python importers (5 → `ask`, 4 → `{}`, comment/string mentions ignored); skip patterns match Windows separators |
 | `test_blocking_doc_enforcer.py` | `git commit` in GO_UDP/UDP_PLATFORM denied until docs + `PROJECT_LINKAGES.md` are written; other repos, amends, no-state pass |
 | `test_opus_guard.py`, `test_workflow_model_guard.py`, `test_model_mode.py`, `test_model_advice.py` | model routing (pins, escalation, routing log); `test_workflow_model_guard.py` removes its `wfguard-home-*` temp HOMEs after each test (a child pytest run proves nothing is left) |
-| `test_model_policy_consistency.py` | agent frontmatter / template env / escalation agree with `model-policy.json`; `max` effort banned |
+| `test_model_policy_consistency.py` | agent frontmatter / template env / escalation agree with `model-policy.json`; `max` effort banned; `turn_caps` shape, frontmatter `maxTurns` == the table, template agentTypes meet role floors |
 | `test_gen_invoke_skills.py` | `/invoke` skill generator determinism |
 | `test_index_lifecycle.py` | index-lifecycle state machine, jcodemunch env passthrough, ollama-down DEFER, jdocmunch embeds (MCP env, `jdocmunch_embed` cap, DEFER) only a doc index with a vector sidecar and runs `--embeddings off` otherwise, db chosen by recorded `source_root` (same-named clones); the doc probe counts an untracked new doc and ignores a committed `graphify-out/`; a graph build keeps the newest 3 dated backups and never prunes a git-tracked one, is skipped when memory is low and runs in its own capped systemd scope (builder tests stub `_mem_available_mb`, so the host's free memory never decides a result); a db named after the git remote is found by `source_root`; a flush skips a surface in FAILED backoff |
 | `test_session_start_budget.py` | dispatched SessionStart and every `budgets.chars` stay under the 8,000-char cap |
@@ -59,11 +59,11 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 | `test_stop_gates_wp4.py` | suite gate scope (path/one-sided surface match, soft pushes advisory), infra never counts toward gate thresholds, turn key "?" |
 | `test_session_lifecycle_wp4.py` | breadcrumb keyed by git root, pre-compact handoff, retired subagent-stop / post-compact |
 | `test_session_start_wp4.py` | aggregator core block at a fixed budget, startup/clear only |
-| `test_weights_loop_wp4.py` | weights updater never rewrites an unchanged tracked file; weekly-retro-trigger runs only on new input |
+| `test_weights_loop_wp4.py` | state-cleanup rotation and retention only (the weights loop was deleted in the 2026-10 merge) |
 | `test_lifecycle_wp4.py` | teammate-idle-gate, retired fullstack stop mode, subagent-context and permissions self-heal |
 | `test_agents_wp5.py` | run folders, team path, agent contracts, preload cap 20k (uiux 30k), model-mode show state dir |
 | `test_opus_guard_explicit.py` | E-04: an explicit `model` needs the user's override phrase for pinned judges, executors and fable |
-| `test_links_smoke_wp7.py` | fires the 18 previously untested dispatch links in a copied hooks tree with temp HOME/state/telemetry |
+| `test_links_smoke_wp7.py` | fires the previously untested dispatch links (now also `context-monitor`, `stop-format-typecheck`, `stop-failure-log`, `instructions-loaded-log`) in a copied hooks tree with temp HOME/state/telemetry; the removed `ponytail-session` / `weights-loop` links stay gone |
 | `test_lead_wp8.py` | lead items: `ms` on the router live row, `locked_update` concurrency and corrupt-file recovery, hcg consent regex = the mod's, subagent mode line says omit `model`, every writer honours `CLAUDE_HOOK_DOTSTATE_DIR`, link-doctor children never write live state, state writers use `locked_update`; classify timing is a scaling bound (`big(40k) < 8 * small(10k) + 0.5`), not a wall-clock cap |
 | `test_autonomy_wpc_text.py`, `test_autonomy_wpc_memory.py`, `test_autonomy_wpc_session.py`, `test_autonomy_wpc_cleanup.py` | autonomy WP-C: router/gate text never tells the user to type (model advice, dispatch, graph, Gate 2-5); router graphify lines name `project_path`, the jdocmunch line finds a `<name>-<sha8>` doc index and never promises one for an infra root, Higgsfield login line + conditional templates, Gate 7 memory-save block (once per turn, saves counted from the transcript), mod-off and self-heal session lines, test-session purge with logged counts |
 | `test_autonomy_wpb_builders.py`, `test_autonomy_wpb_gates.py`, `test_autonomy_wpb_reprobe.py` | autonomy WP-B: `build_fail` telemetry carries scrubbed builder stderr (a `Deprecated:` banner never hides the stdout error); an incremental flush with no db runs a full index; the detached builder waits for ollama instead of asking; jcodemunch / graphify gates and the graphify launcher start the build themselves; a bare / directory Grep maps to a code target (`_grep_target`) and passes outside a repo; graphify-enforce follows the payload cwd, names `project_path`, skips infra roots; `index-lifecycle.py reprobe` and the HEAD-moving git trigger spawn one reprobe |
@@ -81,6 +81,35 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 | `test_win_platform_env.py`, `test_win_shell_refuse.py` | `platform.py` imported under a patched `sys.platform`: `NoDefaultCurrentDirectoryInExePath=1` (an explicit value is kept), UTF-8 `spawn_worker` stdin; `run` refuses an arg cmd.exe cannot carry (`%`, `!`, CR/LF, odd `"`) with a 127 result and starts nothing, `.exe` targets and POSIX untouched |
 | `test_skill_router_wp8.py` | `skill_router` rule hygiene (NEW-07): no generic review pushes, hidden skills dropped, `be_errors` / `be_debug` / `fe_ui_design` leads |
 | `test_retention_report_wp8.py` | `retention-report.py` lists reclaimable space on a fake layout and deletes nothing |
+| `test_blast_radius.py` | `lib/blast_radius.py`: the one importer counter (pure Python walk) and the sensitive/secret target classifier |
+| `test_code_files_skip.py` | `lib.code_files`: one anchored skip list shared by every consumer |
+| `test_config_protection.py` | config-protection-gate: an existing lint/format config asks unless the prompt asked for it; new and build configs pass |
+| `test_connector_github.py` | connector-ask-gate on the github MCP: write tools ask interactively; when nobody can answer (subagent, unattended) they are denied with the reason `No one can confirm in this ... session` (`connector-ask-gate.py:109-110`, never downgraded to an advisory; the gate has no override file) |
+| `test_context_monitor.py` | context-monitor: loop, scope and compaction nudge (replaces ECC's context monitor scripts) |
+| `test_dispatch_config_schema.py` | `dispatch.config.json` shape: link ids, types, fields, flags (ECC validate-hooks idea) |
+| `test_gate_mode.py` | `lib/gate_mode.py` (directive 31 ask-or-advise) |
+| `test_gate_state.py` | `lib.gate_state`: the one per-session gate state helper |
+| `test_hookify.py` | hookify rules are untrusted input: symlinks, >64 KB and git-tracked files refused, hard rule/pattern/time caps, gate/advisory per event |
+| `test_instincts.py` | `tools/instincts.py`: repo key parity, evolve (skip/defer/write/reaffirm/decay-prune/promote/compact/dry-run/budget/lock), lines ranking, status/export/import, SSRF guard, Windows flag |
+| `test_instructions_loaded_log.py` | instructions-loaded-log: one row per loaded instruction file into `.telemetry/<YYYY-MM-DD>.instructions-loaded.jsonl` |
+| `test_jcodemunch_enforce_state.py` | jcodemunch-enforce: locked state, empty-sid guard, dead prompt mode gone |
+| `test_library_routes.py` | `library_routes.items`: <= 2 LIBRARY lines (stack pack, REVIEW lane, >= 2 trigger hits); never raises |
+| `test_memwatch.py`, `test_memwatch_state.py`, `test_platform_mem.py` | OOM guard: `tools/memwatch.py` tiers, journal, kill ladder, notify, restore, loop; `lib/memwatch_state.py` and the OOM parts of `session_notices`; `platform.py` memory and cgroup probes (`fake_proc`) |
+| `test_memwatch_brake.py` | `memwatch-brake.py` (PreToolUse) and `memwatch-ensure.py` (SessionStart) |
+| `test_observe_log.py` | `lib/scrub.py` (keys, bare tokens, URL creds, private keys, linear time) and `observe-log.py` (row shape, 2 KB cap, skip list, doctor no-op; dispatch regex mirrors `skip_tools`) |
+| `test_ollama_lib.py` | `lib/ollama.py`: host from `OLLAMA_HOST`, alive on any HTTP answer, chat shape and None on every failure, models |
+| `test_oomguard_config.py` | `~/.claude/oomguard.local.json` readers fall back to defaults |
+| `test_router_model_routing.py` | R3.6: a model-routing prompt is not routed as frontend work |
+| `test_session_ledger.py` | `session-ledger.py`: entries, dead-pid detection, `sessionTitle`, end unlink, restore marks |
+| `test_stop_failure_log.py` | stop-failure-log: telemetry row per API-error stop, state file only for rate_limit |
+| `test_stop_format_typecheck.py` | stop-format-typecheck: once per turn, fake tsc/biome/prettier/ruff on PATH, `--check` only, block reason cap |
+| `test_subagent_context.py` | subagent-context block <= 1,800 chars: delivery contract, untrusted-content line, memory line at warn+, dox read line; turn-cap line (cap + deliver-by), survives shedding, reserve fallback, live-tree map |
+| `test_tdd_guard_bare.py` | tdd-guard: one init mode, stack detection, `claude -p --bare` validator, ≤500-char advisory (fake binaries) |
+| `test_tool_failure_hint.py` | tool-failure-hint: legacy hints plus OOM victim, tool-cap inference and the MCP failure cache |
+| `test_usage_guard.py` | `lib/usage_guard.py`: newest bridge file wins, 80/70 hysteresis, reset clears, step-down table, fail-open |
+| `test_workflow_routes.py` | R3.2: big or multi-act prompts get a WORKFLOW line; small tasks stay inline; `run` is absolute UTC under the repo root (the cwd when no repo) |
+| `test_worktree_audit.py` | `tools/worktree_audit.py`: stale, dirty and conflicting linked worktrees in a temp repo; read-only |
+| `fixtures/` | `proc-ok/`, `proc-warn/`, `proc-crit/`, `proc-kill/` (fake /proc trees), `journal/` (user-manager rows), `learning/` (observations, model reply, instinct files, imports), `instructions-loaded.json` |
 
 ## Gotchas / fragile spots
 

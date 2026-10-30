@@ -1,0 +1,5 @@
+{
+  "args": {"run": "/tmp/r/20261029T1200-migrate", "source": "ecc", "target": "dotclaude", "surfaces": ["skills", "hooks"]},
+  "default": {"path": "p", "summary": "s", "count": 2, "groups": 2},
+  "replies": [{"label": "^critic$", "value": {"issues": [{"id": "c1", "severity": "high", "text": "overlapping owned paths"}]}}]
+}

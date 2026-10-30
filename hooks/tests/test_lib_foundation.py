@@ -229,6 +229,54 @@ def test_popen_new_group_windows_flags(monkeypatch):
     assert captured["kwargs"].get("shell") is True
 
 
+# --------------------------------------------------------------------------- #
+# repo_context.repo_key (PKG hooks-hygiene-mod step 2)
+# --------------------------------------------------------------------------- #
+def test_repo_key_is_public_and_matches_ctx_key(tmp_path):
+    (tmp_path / ".git").mkdir()
+    ctx = rc.active_repo(cwd=tmp_path)
+    assert rc.repo_key(tmp_path) == ctx.key and len(ctx.key.rsplit("-", 1)[1]) == 8
+    long, short = rc.repo_key(tmp_path, digits=12), rc.repo_key(tmp_path)
+    assert long.rsplit("-", 1)[1].startswith(short.rsplit("-", 1)[1])   # same digest, longer
+
+
+def test_repo_key_twelve_digits_equals_model_mode_scheme(tmp_path):
+    from lib import model_mode as mm            # model-routing's file; read-only use
+    (tmp_path / ".git").mkdir()
+    assert mm.repo_key(tmp_path) == rc.repo_key(tmp_path, digits=12)
+
+
+def test_write_gates_import_the_one_write_tool_set():
+    for name in ("dox-write-gate.py", "first-write-skill-gate.py", "mcp-post-hints.py"):
+        assert "tool_compat" in (_HOOKS / name).read_text(encoding="utf-8"), name
+
+
+# --------------------------------------------------------------------------- #
+# settings-permissions-selfheal (step 14)
+# --------------------------------------------------------------------------- #
+def test_settings_selfheal_writes_live_under_lock_with_0600(tmp_path, monkeypatch):
+    import importlib.util
+    import io
+    import json
+
+    spec = importlib.util.spec_from_file_location("selfheal_ut", _HOOKS / "settings-permissions-selfheal.py")
+    sh = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(sh)
+    live, tmpl = tmp_path / "settings.json", tmp_path / "settings.template.json"
+    live.write_text(json.dumps({"permissions": {"deny": ["Read"]}, "env": {"A": "1"}}), encoding="utf-8")
+    tmpl.write_text(json.dumps({"permissions": {"deny": []}}), encoding="utf-8")
+    monkeypatch.setattr(sh, "LIVE", live)
+    monkeypatch.setattr(sh, "TEMPLATE", tmpl)
+    buf = io.StringIO()
+    monkeypatch.setattr(sys, "stdout", buf)
+    sh.heal_from_template()
+    data = json.loads(live.read_text(encoding="utf-8"))
+    assert data["permissions"]["deny"] == [] and data["env"] == {"A": "1"}
+    assert (tmp_path / "settings.json.lock").exists() and not list(tmp_path.glob("*.tmp"))
+    if not plat.IS_WINDOWS:
+        assert oct(live.stat().st_mode & 0o777) == "0o600"
+
+
 def _run_all():
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for fn in fns:

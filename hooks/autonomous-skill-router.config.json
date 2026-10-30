@@ -1,5 +1,5 @@
 {
-  "_comment": "Config for autonomous-skill-router.py (UserPromptSubmit hook). Edit keyword arrays to tune intent classification without touching Python.",
+  "_comment": "Intent categories for prompt_router/classify.py + select.py, the /invoke generators and invoke-suite-gate; keywords feed trigger-floor.json through build-trigger-floor.py. Edit keyword arrays to tune intent classification without touching Python.",
   "superpowers_skills_root": "",
   "categories": {
     "TRIVIAL": {
@@ -1611,6 +1611,14 @@
       "artifact": "VERIFY-REPORT.md",
       "checkpoint": false,
       "_new": "2026-07-18: verify act had no category"
+    },
+    "MODEL_ROUTING": {
+      "_comment": "R3.6 regression class. Keywords live in prompt_router/router.config.json additions.intents.MODEL_ROUTING (router-only; this list stays empty so trigger-floor.json needs no rebuild). No act, no agent: a model-routing prompt gets the ROUTING pointer to model-policy.json, never a frontend skill or a design dispatch.",
+      "keywords": [],
+      "local_skills": [],
+      "superpowers_skills": [],
+      "surface": "claude-infra",
+      "skill": null
     }
   },
   "category_priority": [

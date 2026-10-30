@@ -1,0 +1,27 @@
+---
+id: prefer-vitest-run
+trigger: "when running tests"
+confidence: 0.7
+domain: testing
+source: session-observation
+scope: project
+---
+
+# Prefer vitest run
+
+## Action
+Run vitest with --run, never watch mode.
+
+---
+id: run-type-checker
+trigger: "before committing"
+confidence: 1.4
+domain: workflow
+source: session-observation
+scope: project
+---
+
+# Type check before commit
+
+## Action
+Run the type checker before every commit in this repository

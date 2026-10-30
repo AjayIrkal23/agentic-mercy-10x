@@ -3,12 +3,17 @@
 SessionStart aggregator — one advisory link that merges:
 
   * index-lifecycle session-start probe + tdd-guard init (subprocesses, parallel),
-  * one-line notices (lib/session_notices.py): mercy mod off by the remote rollout
-    switch, the daily self-heal summary (said once),
+  * one-line notices (lib/session_notices.py, every helper through getattr so a
+    missing one costs only its line): mercy mod off by the remote rollout switch,
+    the daily self-heal summary (said once), the OOM guard, the worktree audit,
+    learned instincts,
+  * the ALWAYS-ON STYLE directive (ponytail + caveman + no-ai-slop; the caveman
+    sentence is dropped when the caveman output style already carries it),
   * the always-active core skill digests (hooks/core-skill-set.json) at a FIXED
     budget, so the same bodies arrive every session (audit B2-07),
-  * the superpowers bootstrap pointer and the configured MCP roster (dropped first
-    when the total would pass MAX_AGGREGATED_CHARS).
+  * the superpowers bootstrap pointer and the configured MCP roster.
+
+Every source has its own cap (CAPS); a clipped source ends with "…(<source> trimmed)".
 
 ``payload.source`` shapes the output:
   startup | clear  -> everything above
@@ -41,22 +46,35 @@ TDD_INIT_GUARD = HOOK_DIR / "tdd-guard-init-guard.py"
 PLUGINS_ROOT = HOOK_DIR.parent / "plugins"
 # Claude Code persists a hook's additionalContext over 8,000 chars to a file and shows
 # the model a ~2 KB preview. dispatch.py merges every session-start link into one
-# output, so this link keeps to 5,500 and leaves room for the memory directive,
-# the breadcrumb and the style directive (see test_session_start_budget.py).
+# output, so this link keeps to 5,500 and leaves room for the memory directive and
+# the breadcrumb (see test_session_start_budget.py).
 MAX_AGGREGATED_CHARS = 5500
+CAPS = {"index": 600, "notices": 600, "style": 700, "core": 2000, "mcp": 700}
+SEP = "\n\n---\n\n"
+STYLE_CAVEMAN = ("caveman (ultra-compressed prose to the user, full technical accuracy; the "
+                 "output style carries the rules)")
+STYLE_DIRECTIVE_HEAD = "ALWAYS-ON STYLE (outranks other style guidance): "
+STYLE_PONYTAIL = ("ponytail 5 (smallest complete change: reuse before new code, stdlib/native first, "
+                  "every caller and test the change breaks fixed; end with what was skipped or "
+                  "unchecked and any risk)")
+STYLE_SLOP = ("no-ai-slop (no banned words, binary contrasts, colon reveals, puffery, fake-profound "
+              "kickers, em-dash crutches in any prose: chat, docs, commits, PRs)")
+STYLE_TAIL = ". All apply to every response."
+STYLE_DIRECTIVE = STYLE_DIRECTIVE_HEAD + " + ".join((STYLE_PONYTAIL, STYLE_CAVEMAN, STYLE_SLOP)) + STYLE_TAIL
 
 if str(HOOK_DIR) not in sys.path:
     sys.path.insert(0, str(HOOK_DIR))
 
 
 def _cleanup_stale_state() -> None:
-    """Drop .state/*.json older than 24h (unknown.*.json after 1h)."""
+    """Drop .state/*.json older than 24h (unknown.*.json after 1h). Breadcrumbs are
+    session-lifecycle's handoff to the next session and are never swept here."""
     try:
         if not STATE_DIR.is_dir():
             return
         now = time.time()
         for f in STATE_DIR.iterdir():
-            if f.suffix != ".json":
+            if f.suffix != ".json" or f.name.endswith(".breadcrumb.json"):
                 continue
             try:
                 ttl = UNKNOWN_MAX_AGE_SECONDS if f.name.startswith("unknown.") else STATE_MAX_AGE_SECONDS
@@ -97,17 +115,10 @@ def _superpowers_session_context() -> str:
     using = sp_dir / "using-superpowers" / "SKILL.md"
     if not using.is_file():
         return ""
-    skill_names = []
-    try:
-        for d in sorted(sp_dir.iterdir()):
-            if d.is_dir() and (d / "SKILL.md").is_file():
-                skill_names.append(d.name)
-    except OSError:
-        pass
+    # the skill names are left out: the harness already lists every skill
     return (
         "### Superpowers plugin (active)\n\n"
         f"Bootstrap: `{using.resolve()}`\n"
-        f"Skills: {', '.join(skill_names)}\n"
         "Phase routing: Plan→`writing-plans`,`brainstorming` | "
         "Build→`executing-plans`,`subagent-driven-development` | "
         "Test→`test-driven-development` | Debug→`systematic-debugging` | "
@@ -221,14 +232,69 @@ def _core_skill_digests(budget: int = MAX_AGGREGATED_CHARS, bodies_ok: bool = Tr
     return block[:budget]
 
 
-def _session_notices() -> str:
-    """One-liners: the mercy mod is off (remote rollout switch), the daily self-heal's summary
-    (lib/session_notices.py; each fails open)."""
+def _output_style() -> str:
+    """``outputStyle`` from the rendered settings.json, lower-cased; "" when unknown."""
     try:
-        from lib import session_notices
-        return "\n".join(t for t in (session_notices.mod_off_notice(), session_notices.selfheal_line()) if t)
+        from lib import platform as _plat
+        d = json.loads((_plat.claude_dir() / "settings.json").read_text(encoding="utf-8"))
+        return str(d.get("outputStyle") or "").strip().lower()
     except Exception:  # noqa: BLE001
         return ""
+
+
+def _style_block() -> str:
+    """The ALWAYS-ON STYLE directive; the caveman sentence is left to the caveman output style."""
+    parts = [STYLE_PONYTAIL] + ([] if _output_style() == "caveman" else [STYLE_CAVEMAN]) + [STYLE_SLOP]
+    return (STYLE_DIRECTIVE_HEAD + " + ".join(parts) + STYLE_TAIL)[: CAPS["style"]]
+
+
+def _clip(text: str, cap: int, label: str) -> str:
+    """Clip on whole lines, the marker counted inside ``cap``; '' stays ''. When even the
+    first line does not fit, that line is hard-cut at ``cap`` and the marker follows it."""
+    text = (text or "").strip()
+    if len(text) <= cap:
+        return text
+    marker = f"…({label} trimmed)"
+    kept, used = [], 0
+    for line in text.splitlines():
+        if used + len(line) + 1 + len(marker) > cap:
+            break
+        kept.append(line)
+        used += len(line) + 1
+    if not kept:
+        return text.splitlines()[0][:cap] + marker
+    return "\n".join(kept) + "\n" + marker
+
+
+def _notices_module():
+    from lib import session_notices
+    return session_notices
+
+
+def _session_notices(cwd: str = "") -> str:
+    """One-liners in a fixed order: mercy mod off, daily self-heal, OOM guard, worktree audit,
+    instincts. Each helper is looked up with getattr (other packages own some of them) and
+    fails alone."""
+    try:
+        mod = _notices_module()
+    except Exception:  # noqa: BLE001
+        return ""
+    lines: list[str] = []
+    for name in ("mod_off_notice", "selfheal_line", "memwatch_line"):
+        try:
+            lines.append(str(getattr(mod, name, lambda: "")() or ""))
+        except Exception:  # noqa: BLE001
+            pass
+    if not os.environ.get("CLAUDE_HOOK_DOCTOR"):  # it spawns git
+        try:
+            lines.append(str(getattr(mod, "worktree_line", lambda cwd=None: "")(cwd) or ""))
+        except Exception:  # noqa: BLE001
+            pass
+    try:
+        lines.extend(str(x) for x in (getattr(mod, "instinct_lines", lambda cwd=None: [])(cwd) or [])[:3])
+    except Exception:  # noqa: BLE001
+        pass
+    return _clip("\n".join(t.strip() for t in lines if t and t.strip()), CAPS["notices"], "notices")
 
 
 def _join(*chunks: str) -> str:
@@ -254,31 +320,20 @@ def _full_context(payload: dict, payload_txt: str) -> str:
             for fut in futures:  # submission order -> deterministic merge
                 aggregated = _merge_additional_context(aggregated, fut.result())
 
-    aggregated = _merge_additional_context(aggregated, _session_notices())
-
-    # The core block's budget is fixed (MAX minus the static tail), never the room
-    # the hook output above left: the same bodies arrive every session (B2-07).
-    # Overflow drops the tail blocks (they repeat what the superpowers plugin and the
-    # harness already inject), then degrades the core block to pointers.
-    sp, mcp = _superpowers_session_context(), _configured_mcp_context()
-    sep = len("\n\n---\n\n")
-    core_budget = MAX_AGGREGATED_CHARS - sum(len(t) + sep for t in (sp, mcp) if t.strip()) - sep
-    core = _core_skill_digests(max(core_budget, 0))
-    for drop in ("", "sp", "mcp", "core"):
-        if drop == "sp":
-            sp = ""
-        elif drop == "mcp":
-            mcp = ""
-        elif drop == "core":
-            core = _core_skill_digests(max(MAX_AGGREGATED_CHARS - len(aggregated) - sep, 0), bodies_ok=False)
-        out = _join(aggregated, core, sp, mcp)
-        if len(out) <= MAX_AGGREGATED_CHARS:
-            break
-    return out
+    # Every source has a fixed cap, so the core bodies never depend on what the hook
+    # output printed (B2-07) and the sum (4,600 + 4 separators + markers) stays under MAX.
+    index = _clip(aggregated, CAPS["index"], "index")
+    notices = _clip(_session_notices(str(payload.get("cwd") or "")), CAPS["notices"], "notices")
+    style = _style_block()
+    core = _core_skill_digests(CAPS["core"])
+    tail = _clip(_join(_superpowers_session_context(), _configured_mcp_context()), CAPS["mcp"], "mcp")
+    out = _join(index, notices, style, core, tail)
+    if len(out) > MAX_AGGREGATED_CHARS:  # arithmetic guard: unreachable with the caps above
+        out = _join(index, notices, style, _core_skill_digests(CAPS["core"], bodies_ok=False), tail)
+    return out[:MAX_AGGREGATED_CHARS]
 
 
 def main() -> int:
-    _cleanup_stale_state()
     raw_in = sys.stdin.read()
     payload_txt = raw_in if raw_in.strip() else "{}"
     try:
@@ -290,10 +345,12 @@ def main() -> int:
     # resume: the transcript already holds all of this; compact: session-lifecycle
     # re-injects the handoff (its single injector). Both stay slim (NEW-03, B2-09).
     source = str(payload.get("source") or "startup")
-    aggregated = "" if source in ("resume", "compact") else _full_context(payload, payload_txt)
-
-    if len(aggregated) > MAX_AGGREGATED_CHARS:
-        aggregated = aggregated[:MAX_AGGREGATED_CHARS - 30] + "\n…(aggregator trimmed)"
+    if source in ("resume", "compact"):
+        aggregated = ""
+    else:
+        if not os.environ.get("CLAUDE_HOOK_DOCTOR"):  # a dry-fire writes nothing
+            _cleanup_stale_state()
+        aggregated = _full_context(payload, payload_txt)[:MAX_AGGREGATED_CHARS]
     if not aggregated.strip():
         print("{}")
         return 0

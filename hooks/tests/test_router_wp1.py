@@ -84,22 +84,15 @@ def test_scale_phrases_still_make_a_task_large(tmp_path):
                  tmp_path).size == "L"
 
 
-# --------------------------------------------------------------------------- C-16
-def test_both_routers_load_weights_identically(tmp_path, monkeypatch):
-    """One loader: clamp to [0.1, 1.0] (demote only) and drop keys that name no skill."""
+# --------------------------------------------------------------------------- C-16 (weights retired)
+def test_weights_loader_is_gone_and_demote_table_is_the_only_multiplier():
     import importlib
     from prompt_router import select as S
-    f = tmp_path / "w.json"
-    f.write_text(json.dumps({"weights": {"debug-investigation": 1.5, "tdd": 0.01,
-                                         "forensic-hotspot-finder": 0.5, "x": "bad"}}))
-    known = {"debug-investigation", "tdd"}
-    monkeypatch.setattr(S, "_WEIGHTS", f)
-    monkeypatch.setattr(S, "index_meta", lambda: {k: {} for k in known})
+    assert not hasattr(S, "_weights") and not (HOOKS / "prompt_router" / "weights.py").exists()
     sr = importlib.import_module("skill_router")
-    monkeypatch.setattr(sr, "WEIGHTS_FILE", f)
-    want = {"debug-investigation": 1.0, "tdd": 0.1}
-    assert S._weights() == want
-    assert sr._load_weights(known) == want
+    assert not hasattr(sr, "_load_weights") and not hasattr(sr, "WEIGHTS_FILE")
+    demote = json.loads((HOOKS / "prompt_router" / "router.config.json").read_text(encoding="utf-8"))["additions"]["demote"]
+    assert demote.get("dox-doc-tree") == 0.7   # the one live value the retired file carried
 
 
 # --------------------------------------------------------------------------- C-07

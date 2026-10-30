@@ -7,10 +7,7 @@ description: Local context tooling for AI agents. Use it to select, shape, reuse
 
 ## Setup
 
-```bash
-which lean-ctx || curl -fsSL https://raw.githubusercontent.com/yvgude/lean-ctx/main/skills/lean-ctx/scripts/install.sh | bash
-lean-ctx setup
-```
+lean-ctx is installed by `installer/deps.py` (doctor row `lean-ctx`). Never run an installer, `lean-ctx setup` or `lean-ctx init --global` from a session: `init --global` rewrites hooks and settings outside `dispatch.py` (see the lean-ctx incident note in memory). If `which lean-ctx` fails, say so and continue with native tools.
 
 ## Tool Visibility Profiles
 

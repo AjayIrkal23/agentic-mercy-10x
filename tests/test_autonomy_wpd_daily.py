@@ -301,3 +301,141 @@ def test_ponytail_board_import_runs_from_the_installed_plugin(sd, box, monkeypat
     _stamp(box, 30)
     sd.main([])
     assert ran.read_text(encoding="utf-8") == "notes.txt,old.jsonl" and _summary(box)["errors"] == []
+
+
+# --- integrate: the seven merge steps (plan 6.10, R3.7) ------------------------------------
+def _cp(rc=0, out="", err=""):
+    import types
+    return types.SimpleNamespace(returncode=rc, stdout=out, stderr=err)
+
+
+def test_step_ids_and_order(sd):
+    ids = [n for n, _ in sd.STEPS]
+    assert ids == ["mcp", "deps", "plan-tier", "settings", "oomguard", "machines-split", "vendor", "workflows",
+                   "library", "mcp-inventory", "ponytail-board", "learning-evolve"]
+    assert ids.index("plan-tier") < ids.index("settings")  # a new tier lands in the same run's render
+
+
+def test_learning_evolve_rows(sd, monkeypatch, tmp_path):
+    ctx = sd.Ctx(False, tmp_path, 60)
+    monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(0, "evolved k-1: +1 new, 0 reaffirmed, 0 pruned\n"
+                                                               "DEFERRED k-2: no answer\n2 promoted\n"))
+    assert sd._learning_evolve(ctx) == [("learning", "k-1", "EVOLVED +1 new, 0 reaffirmed, 0 pruned"),
+                                        ("learning", "global", "EVOLVED 2 promoted")]
+    monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(1))
+    assert sd._learning_evolve(ctx) == [("learning", "evolve", "WARN(rc=1)")]
+    monkeypatch.setattr(sd, "INSTINCTS", tmp_path / "missing.py")
+    assert sd._learning_evolve(ctx) == []
+
+
+def test_workflows_step_renders_only_on_drift(sd, monkeypatch, tmp_path):
+    def run(argv, timeout=None, **k):
+        return _cp(1 if "--check" in argv else 0)
+    monkeypatch.setattr(sd.plat, "run", run)
+    assert sd._workflows(sd.Ctx(True, tmp_path, 60)) == [("workflows", "render", "WOULD-RENDER (drift or not rendered)")]
+    assert sd._workflows(sd.Ctx(False, tmp_path, 60)) == [("workflows", "render", "OK(rendered)")]
+    monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(0))
+    assert sd._workflows(sd.Ctx(False, tmp_path, 60)) == []
+
+
+def test_library_step_skips_without_the_vault(sd, monkeypatch, tmp_path):
+    monkeypatch.setattr(sd, "LIB_INDEX", tmp_path / "nope.py")
+    assert sd._library(sd.Ctx(False, tmp_path, 60)) == [("library", "index", "SKIP(absent)")]
+
+
+def test_machines_split_rows(sd, monkeypatch, tmp_path):
+    ctx = sd.Ctx(False, tmp_path, 60)
+    monkeypatch.setattr(sd, "SPLIT", tmp_path / "split.py")
+    (tmp_path / "split.py").write_text("", encoding="utf-8")
+    monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(0, "machines-split: moved 3 tails; journal x.md; terms 12"))
+    assert sd._machines_split(ctx) == [("machines-split", "apply", "MOVED(machines-split: moved 3 tails; journal x.md; terms 12)")]
+    monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(0, "unchanged"))
+    assert sd._machines_split(ctx) == []
+    monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(2, "machines-split: REFUSED — journal not gitignored"))
+    assert sd._machines_split(ctx)[0][2].startswith("WARN(rc=2")
+
+
+def test_oomguard_step_splits_rows(sd, monkeypatch, tmp_path):
+    import types
+    monkeypatch.setitem(sys.modules, "oomguard_setup", types.SimpleNamespace(
+        ensure=lambda dry=False: ["unit claude-memwatch.service: CREATED", "SKIP: no systemd user manager"]))
+    assert sd._oomguard(sd.Ctx(False, tmp_path, 60)) == [("oomguard", "unit claude-memwatch.service", "CREATED"),
+                                                         ("oomguard", "SKIP", "no systemd user manager")]
+
+
+def test_plan_tier_step_reports_only_a_change(sd, monkeypatch, tmp_path):
+    ctx = sd.Ctx(False, tmp_path, 60)
+    monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(0, '{"tier": "pro", "changed": true}'))
+    assert sd._plan_tier(ctx) == [("plan-tier", "detect", "UPDATED tier=pro")]
+    monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(0, '{"tier": "pro", "changed": false}'))
+    assert sd._plan_tier(ctx) == []
+    assert sd._plan_tier(sd.Ctx(True, tmp_path, 60)) == [("plan-tier", "detect", "WOULD-DETECT")]
+
+
+def test_mcp_inventory_rewrites_only_on_change(sd, monkeypatch, tmp_path):
+    target = tmp_path / "skills" / "mcp-usage-standards" / "references" / "mcp-inventory.md"
+    target.parent.mkdir(parents=True)
+    target.write_text("old\n", encoding="utf-8")
+    monkeypatch.setattr(sd, "INVENTORY_MD", target)
+    monkeypatch.setattr(sd, "INVENTORY", tmp_path / "inv.py")
+    (tmp_path / "inv.py").write_text("", encoding="utf-8")
+    monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(0, "new\n"))
+    assert sd._mcp_inventory(sd.Ctx(False, tmp_path, 60)) == [("mcp-inventory", "mcp-inventory.md", "UPDATED")]
+    assert target.read_text(encoding="utf-8") == "new\n"
+    assert sd._mcp_inventory(sd.Ctx(False, tmp_path, 60)) == []
+    assert sd._mcp_inventory(sd.Ctx(True, tmp_path, 60)) == []        # dry: never writes
+
+
+def test_mcp_inventory_keeps_the_preamble(sd, monkeypatch, tmp_path):
+    target = tmp_path / "inv.md"
+    target.write_text("# Inventory\nhand text\n\n| Server | x |\n|---|---|\n| a | 1 |\n", encoding="utf-8")
+    monkeypatch.setattr(sd, "INVENTORY_MD", target)
+    monkeypatch.setattr(sd, "INVENTORY", tmp_path / "inv.py")
+    (tmp_path / "inv.py").write_text("", encoding="utf-8")
+    monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(0, "generated header\n| Server | x |\n|---|---|\n| b | 2 |\n"))
+    assert sd._mcp_inventory(sd.Ctx(False, tmp_path, 60)) == [("mcp-inventory", "mcp-inventory.md", "UPDATED")]
+    assert target.read_text(encoding="utf-8") == "# Inventory\nhand text\n\n| Server | x |\n|---|---|\n| b | 2 |\n"
+
+
+def test_mcp_inventory_output_is_public(sd):
+    home = str(Path.home())
+    md = (f"| Server | Scope |\n|---|---|\n| `a` | user | `{home}/.local/bin/a` |\n"
+          f"| `s` | project:{home}/r | http |\n2 servers\n")
+    out = sd._public(md)
+    assert home not in out and "project:" not in out and "`~/.local/bin/a`" in out and out.endswith("2 servers\n")
+
+
+def test_mcp_inventory_scrubs_every_spelling_of_a_windows_home(sd, monkeypatch):
+    from pathlib import PureWindowsPath
+    home = PureWindowsPath("C:" + "\\", "Users", "someone")  # built, not a literal (portability gate G2/G3)
+    fwd, back = home.as_posix(), str(home)
+    monkeypatch.setattr(sd.Path, "home", classmethod(lambda cls: home))
+    md = ("| Server | Scope | Transport | Target | Reach |\n|---|---|---|---|---|\n"
+          f"| `g` | user | stdio | `{fwd}/AppData/py/python.exe {fwd}/.claude/hooks/x.py` | — |\n"
+          f"| `j` | user | stdio | `{back}\\.local\\bin\\j.exe` | — |\n"
+          f"| `s` | project:{fwd}/r | http | `https://x` | — |\n"
+          "| `f` | plugin:f@m | http | `https://f` | — |\n"
+          "\n2 user-scope, 2 project/plugin-scope servers.\n")
+    out = sd._public(md)
+    assert "someone" not in out and "project:" not in out
+    assert "`~/AppData/py/python.exe ~/.claude/hooks/x.py`" in out
+    assert out.endswith("2 user-scope, 1 project/plugin-scope servers.\n")  # recounted after the drop
+
+
+def test_mcp_inventory_skips_on_the_windows_replica(sd, monkeypatch, tmp_path):
+    target = tmp_path / "inv.md"
+    target.write_text("keep\n", encoding="utf-8")
+    monkeypatch.setattr(sd, "INVENTORY_MD", target)
+    monkeypatch.setattr(sd, "INVENTORY", tmp_path / "inv.py")
+    (tmp_path / "inv.py").write_text("", encoding="utf-8")
+    monkeypatch.setattr(sd.plat, "IS_WINDOWS", True)
+    monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(0, "| Server |\n| new |\n"))
+    assert sd._mcp_inventory(sd.Ctx(False, tmp_path, 60)) == [("mcp-inventory", "mcp-inventory.md", "SKIP(replica)")]
+    assert target.read_text(encoding="utf-8") == "keep\n"
+
+
+def test_changed_markers_cover_the_new_statuses(sd):
+    for s in ("CREATED x", "UPDATED", "APPENDED", "ENABLED", "MOVED(x)", "REBUILT", "EVOLVED +1", "ALWAYS-LOAD true",
+              "OK(rendered)"):
+        assert sd._classify(s) == "changed", s
+    assert sd._classify("SKIP(absent)") is None and sd._classify("WARN(rc=1)") == "error"

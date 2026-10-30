@@ -22,6 +22,7 @@ def test_directory_claude_md_names_every_tracked_file():
         tracked = cp.stdout.splitlines() if cp.returncode == 0 else []
     except OSError:  # git not on PATH: skip like a checkout with no .git
         tracked = []
+    tracked = [p for p in tracked if (_ROOT / p).exists()]  # a deletion not yet committed is gone
     docs = [p for p in tracked if p.endswith("/CLAUDE.md") and not p.startswith("skills/")]
     if not docs:
         pytest.skip("not a git checkout")

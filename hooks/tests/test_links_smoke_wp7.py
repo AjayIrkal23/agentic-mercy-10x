@@ -22,15 +22,18 @@ _ROOT = Path(__file__).resolve().parents[2]
 _LIVE_HOOKS = _ROOT / "hooks"
 
 UNTESTED = [
-    "settings-permissions-selfheal", "state-cleanup", "ponytail-session",
+    "settings-permissions-selfheal", "state-cleanup",
     "first-write-skill-gate", "dox-write-gate-write", "bash-write-gate", "jdoc-doc-steer",
     "graphify-enforce", "skill-invocation-tracker", "codex-capture", "post-write-aggregator",
-    "desloppify-cleanup", "santa-method-writer", "security-semgrep-tracker", "weights-loop",
+    "desloppify-cleanup", "santa-method-writer", "security-semgrep-tracker",
     "subagent-context", "permissions-deny-guard", "settings-permissions-selfheal-end",
+    "context-monitor", "stop-format-typecheck", "stop-failure-log", "instructions-loaded-log",
 ]
 _EVENT = {"session-start": "SessionStart", "pre-tool-use": "PreToolUse",
           "post-tool-use": "PostToolUse", "stop": "Stop", "subagent-start": "SubagentStart",
-          "config-change": "ConfigChange", "session-end": "SessionEnd"}
+          "config-change": "ConfigChange", "session-end": "SessionEnd",
+          "stop-failure": "StopFailure", "instructions-loaded": "InstructionsLoaded",
+          "user-prompt-submit": "UserPromptSubmit", "post-tool-use-failure": "PostToolUseFailure"}
 
 
 @pytest.fixture(scope="module")
@@ -79,6 +82,12 @@ def _payload(chain: str, link: dict, ws: Path) -> dict:
         p.update(agent_id="a1", agent_type="general-purpose")
     if chain == "config-change":
         p.update(source="user_settings", file_path=str(ws / "settings.json"))
+    if chain == "instructions-loaded":
+        p.update(file_path=str(ws / "CLAUDE.md"), memory_type="Project", load_reason="session_start")
+    if chain == "stop-failure":
+        p.update(error="server_error", error_details="")
+    if chain == "user-prompt-submit":
+        p["prompt"] = "add a login form"
     return p
 
 
@@ -119,10 +128,9 @@ def _decision(out: str) -> str:
             or data.get("decision") or "allow")
 
 
-def test_ponytail_session_injects_the_directive(box):
-    chain, link = _links(box["root"])["ponytail-session"]
-    ctx = _json_or_empty(_fire(box, link["cmd"], _payload(chain, link, box["ws"])).stdout)
-    assert "ponytail" in ctx["hookSpecificOutput"]["additionalContext"].lower()
+def test_removed_links_are_gone(box):
+    ids = set(_links(box["root"]))
+    assert not {"ponytail-session", "weights-loop"} & ids
 
 
 def test_subagent_context_carries_the_write_protocol(box):

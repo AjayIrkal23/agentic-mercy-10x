@@ -10,12 +10,18 @@ ALWAYS ALLOWED (never gated): writes to docs/scaffold — *.md, CLAUDE.md, AGENT
 CODEX.md, and anything under a .claude/ directory. This keeps scaffolding (and the
 override itself) always possible, and keeps hooks/skills/rules editable.
 
+AD-HOC NOTE ADVISORY (once per session, allow): a ``Write`` of NOTES/TODO/SCRATCH/TEMP/
+DRAFT/BRAINSTORM/SPIKE/DEBUG/WIP ``.md|.txt`` inside a repo but outside docs/, .claude/,
+notes/, wiki/, adr/ gets one line pointing at the reply or docs/ (ECC doc-file-warning).
+State: lib.gate_state (locked write).
+
 Fails OPEN. Exit 0 always. Python 3.8+ stdlib only.
 """
 from __future__ import annotations
 
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -34,6 +40,19 @@ except Exception:  # pragma: no cover - fail-open (no root → allow)
 
     def is_home(root):  # type: ignore
         return True
+try:
+    from tool_compat import WRITE_TOOLS as _WRITE_TOOLS  # noqa: E402
+except Exception:  # noqa: BLE001
+    _WRITE_TOOLS = frozenset({"Write", "Edit", "MultiEdit", "StrReplace"})
+try:
+    from lib import gate_state as _gs  # noqa: E402
+    from lib import code_files as _cf  # noqa: E402
+except Exception:  # noqa: BLE001
+    _gs = _cf = None
+
+# ECC doc-file-warning name list: loose report files at the repo root or in code dirs.
+_ADHOC = re.compile(r"^(NOTES|TODO|SCRATCH|TEMP|DRAFT|BRAINSTORM|SPIKE|DEBUG|WIP)\.(md|txt)$")
+_ADHOC_OK_DIRS = (".claude", "notes", "wiki", "adr")
 
 DEFAULTS = {
     "enabled": True,
@@ -71,6 +90,31 @@ def _state_path(cid: str) -> Path:
     return STATE_DIR / f"{_safe_cid(cid)}.dox-gate.json"
 
 
+def _adhoc_note(file_path: str, tool: str, cid: str, state: dict) -> "str | None":
+    """Once per session: a ``Write`` of NOTES.md / TODO.md / … outside docs/, .claude/,
+    notes/, wiki/, adr/ inside a git repo gets an advisory (allow, never deny)."""
+    if tool != "Write" or not cid or _cf is None or state.get("adhoc_hinted"):
+        return None
+    norm = file_path.replace("\\", "/")
+    base = os.path.basename(norm)
+    if not _ADHOC.match(base):
+        return None
+    abs_path = _abspath(file_path)
+    root = _git_root(abs_path)
+    if root is None:
+        return None
+    try:
+        rel = "/" + os.path.relpath(str(abs_path), str(root)).replace("\\", "/")
+    except ValueError:
+        return None
+    if rel.startswith("/..") or _cf.is_skipped(rel, extra_dirs=_ADHOC_OK_DIRS):
+        return None
+    state["adhoc_hinted"] = True
+    _save_state(cid, state)
+    return (f"Ad-hoc note file `{base}`: CLAUDE.md asks for findings in the reply or in docs/, "
+            "not loose report files. Allowed; move it if it is not meant to stay.")
+
+
 def _load_state(cid: str) -> dict:
     if not cid:
         return {"overridden": [], "asked_dirs": []}
@@ -84,13 +128,9 @@ def _load_state(cid: str) -> dict:
 
 
 def _save_state(cid: str, state: dict) -> None:
-    if not cid:
+    if not cid or _gs is None:
         return
-    try:
-        STATE_DIR.mkdir(parents=True, exist_ok=True)
-        _state_path(cid).write_text(json.dumps(state), encoding="utf-8")
-    except OSError:
-        pass
+    _gs.save_json(_state_path(cid), state)
 
 
 # --------------------------------------------------------------------------- #
@@ -176,7 +216,7 @@ def main() -> int:
 
         # Resolve the write target (Write/Edit only — the Bash redirect path was
         # retired 2026-09-27: 5,318 runs, 0 denies).
-        if tool in ("Write", "Edit", "MultiEdit", "StrReplace"):
+        if tool in _WRITE_TOOLS:
             file_path = (
                 ti.get("file_path") or ti.get("path") or ti.get("target_file") or ""
             )
@@ -188,6 +228,14 @@ def main() -> int:
 
         if not file_path:
             return _allow()
+
+        cid = str(payload.get("conversation_id") or payload.get("session_id") or "")
+        adhoc = cid and _ADHOC.match(os.path.basename(file_path.replace("\\", "/")))
+        note = _adhoc_note(file_path, tool, cid, _load_state(cid)) if adhoc else None
+        if note:
+            print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+                                                     "additionalContext": note}}))
+            return 0
 
         # Doc/scaffold writes are ALWAYS allowed (escape valve).
         if _is_doc_or_scaffold(file_path, cfg):
@@ -201,7 +249,6 @@ def main() -> int:
         if root is None or _is_exempt(root, cfg):
             return _allow()  # not a git repo (or exempt) — out of scope
 
-        cid = str(payload.get("conversation_id") or payload.get("session_id") or "")
         state = _load_state(cid)
         root_doc = root / ROOT_DOC
 

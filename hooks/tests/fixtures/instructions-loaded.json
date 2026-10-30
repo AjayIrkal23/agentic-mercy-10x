@@ -1,0 +1,3 @@
+{"session_id": "doctor-fixture", "hook_event_name": "InstructionsLoaded", "cwd": "/tmp",
+ "file_path": "/tmp/doctor-fixture-repo/CLAUDE.md", "memory_type": "Project", "load_reason": "session_start",
+ "globs": [], "trigger_file_path": null, "parent_file_path": null}

@@ -12,8 +12,8 @@ call MCP tools. The index is a plain sqlite file, so a keyword query over
 Degradation is deliberate. Symbols whose summary is a name echo ("Constant FOO",
 "Function bar") carry no information, so they are never quoted as evidence —
 they can still match by NAME, they just don't contribute a summary line. As
-`jcodemunch-mcp index` populates real AI summaries, the same query gets sharper
-without any change here.
+index-lifecycle fills real AI summaries in the background, the same query gets
+sharper without any change here.
 
 Fails open on every error: a broken index must never block a prompt.
 """
@@ -21,7 +21,6 @@ Fails open on every error: a broken index must never block a prompt.
 from __future__ import annotations
 
 import glob
-import json
 import os
 import re
 import sqlite3
@@ -32,22 +31,6 @@ MAX_SYMBOLS = 5
 MAX_KEYWORDS = 5
 _MIN_KEYWORD_LEN = 3
 BUDGET_MS = 150  # hard wall-clock budget for one prompt's symbol lookup
-
-# intent -> tool-intelligence.json playbook (path is hooks/-relative, not $HOME).
-_TOOLMAP_PATH = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "tool-intelligence.json")
-_PLAYBOOK_STEPS = 5  # top N steps quoted per prompt (token-lean)
-# Router intent category -> tool-intelligence.json intent key.
-_INTENT_MAP = {
-    "PLAN": "understand", "SPEC": "understand",
-    "AUDIT": "audit",
-    "IMPLEMENT": "implement", "TEST": "implement",
-    "DEBUG": "debug",
-    "REVIEW": "review",
-    "CLEANUP": "refactor", "REFACTOR": "refactor",
-}
-_TOOLMAP_CACHE: dict | None = None
 
 # Name-echo summaries the indexer synthesises when a symbol has no docstring.
 _PLACEHOLDER = re.compile(
@@ -231,8 +214,8 @@ def build_item(profile, ctx: dict) -> dict | None:
         tail = (
             "Verify with get_symbol_source / get_blast_radius before editing."
             if real
-            else "Summaries are unpopulated in this index — run "
-                 "`jcodemunch-mcp index <repo>` to enable semantic matching."
+            else "Summaries are unpopulated in this index: index-lifecycle fills them in the "
+                 "background (deferred under memory pressure); match by name meanwhile."
         )
         salt = "-".join(sorted(str(h["name"]).lower() for h in hits))[:60]
         return {
@@ -241,63 +224,6 @@ def build_item(profile, ctx: dict) -> dict | None:
             "section": "INTEL",
             "text": "Indexed symbols matching this prompt (jcodemunch):\n"
                     + "\n".join(lines) + "\n" + tail,
-        }
-    except Exception:
-        return None  # never block a prompt
-
-
-def _load_toolmap() -> dict | None:
-    """Load + memoise tool-intelligence.json (the intent->tool source of truth)."""
-    global _TOOLMAP_CACHE
-    if _TOOLMAP_CACHE is None:
-        try:
-            with open(_TOOLMAP_PATH, encoding="utf-8") as f:
-                _TOOLMAP_CACHE = json.load(f)
-        except Exception:
-            _TOOLMAP_CACHE = {}
-    return _TOOLMAP_CACHE or None
-
-
-def build_playbook_item(profile, ctx: dict) -> dict | None:
-    """Emit the ordered jcodemunch/graphify/jdocmunch playbook for the prompt's
-    intent — the actionable half of 'jcodemunch is the primary engine'. The
-    symbol item (build_item) says WHAT matches; this says WHICH TOOLS to use, in
-    order, including semantic search. Fails open."""
-    try:
-        intents = getattr(profile, "intents", None) or {}
-        top = max(intents, key=intents.get) if intents else None
-        key = _INTENT_MAP.get(top) if top else None
-        if key is None:
-            key = "understand" if getattr(profile, "is_arch", False) else None
-        if key is None:
-            return None
-        tm = _load_toolmap()
-        if not tm:
-            return None
-        entry = (tm.get("intents") or {}).get(key)
-        if not entry:
-            return None
-        lines = []
-        for s in (entry.get("playbook") or [])[:_PLAYBOOK_STEPS]:
-            eng = s.get("engine", "jcodemunch")
-            prefix = "" if eng == "jcodemunch" else f"{eng} "
-            sem = " [semantic]" if (s.get("modifiers") or {}).get("semantic") else ""
-            lines.append(f"  {s.get('n')}. {prefix}{s.get('tool')}{sem} — {s.get('why','')}")
-        if not lines:
-            return None
-        text = (
-            f"jcodemunch playbook — intent {top or key.upper()} "
-            f"(use these tools IN ORDER, not generic reads):\n"
-            + "\n".join(lines)
-            + "\n  Semantic search is live (all-minilm) — use search_symbols(semantic=true) "
-              "when the exact name is unknown."
-            + "\n  Full map: rules/references/tool-intelligence.md"
-        )
-        return {
-            "id": f"intel:playbook:{key}",
-            "tier": 1,
-            "section": "INTEL",
-            "text": text,
         }
     except Exception:
         return None  # never block a prompt

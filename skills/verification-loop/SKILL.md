@@ -80,3 +80,5 @@ VERIFY
 ```
 
 "Ready" only when every run line is clean and the NOT VERIFIED list is stated.
+
+ECC graft: `references/ecc-note.md` — provenance note; same origin, nothing new to add.

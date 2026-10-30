@@ -23,6 +23,12 @@ from pathlib import Path
 
 HOME = Path.home()
 TEMPLATE = HOME / ".claude" / "templates" / "mcp" / "db-readonly.mcp.json"
+_CHECKOUT_TEMPLATE = Path(__file__).resolve().parents[1] / "templates" / "mcp" / "db-readonly.mcp.json"
+
+
+def _template() -> Path:
+    """The installed template, else this checkout's copy (the same file after install)."""
+    return TEMPLATE if TEMPLATE.is_file() else _CHECKOUT_TEMPLATE
 REF_RX = re.compile(r"^[a-z0-9]{20}$")
 MONGO_DEPS = ("mongodb", "mongoose", "pymongo", "motor", "go.mongodb.org/mongo-driver")
 
@@ -97,7 +103,7 @@ def main() -> int:
         print("add-db-mcp: no Supabase/MongoDB usage detected; pass --supabase and/or --mongodb.", file=sys.stderr)
         return 1
 
-    servers = json.loads(TEMPLATE.read_text(encoding="utf-8"))["mcpServers"]
+    servers = json.loads(_template().read_text(encoding="utf-8"))["mcpServers"]
     ref = project_ref(root, a.project_ref)
     if "supabase" in wanted and ref:
         servers["supabase"]["args"] = [x.replace("${SUPABASE_PROJECT_REF}", ref)
@@ -117,7 +123,7 @@ def main() -> int:
         print(f"{verb}: {name}")
     out = json.dumps(data, indent=2) + "\n"
     if not a.dry_run:
-        target.write_text(out, encoding="utf-8")
+        target.write_text(out, encoding="utf-8", newline="\n")  # LF on Windows too
     print(f"{'would write' if a.dry_run else 'wrote'} {target}:\n{out}")
 
     need = []

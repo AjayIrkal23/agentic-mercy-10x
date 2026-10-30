@@ -5,10 +5,13 @@ Sources (D13: ~/.claude.json is the only live MCP store):
   - ~/.claude.json            mcpServers (user scope) + projects.*.mcpServers
   - plugins/installed_plugins.json -> each plugin's .mcp.json (plugin-provided servers)
 
-Used to regenerate skills/mcp-usage-standards/references/mcp-inventory.md and by the doctor.
-  python3 scripts/mcp_inventory.py            # markdown
+Used to regenerate skills/mcp-usage-standards/references/mcp-inventory.md and by the doctor:
+  python3 scripts/mcp_inventory.py --md > skills/mcp-usage-standards/references/mcp-inventory.md
+  python3 scripts/mcp_inventory.py            # markdown (same as --md)
   python3 scripts/mcp_inventory.py --json     # machine-readable
+Output is UTF-8 with LF line endings on every OS and ends with exactly one newline.
 """
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -66,17 +69,31 @@ def collect():
     return rows
 
 
-def main():
-    rows = collect()
-    if "--json" in sys.argv:
-        print(json.dumps([dict(zip(("scope", "name", "transport", "target"), r)) for r in rows], indent=1))
-        return
-    print("| Server | Scope | Transport | Target | Reach for it when |")
-    print("|---|---|---|---|---|")
+def render_md(rows) -> str:
+    out = ["| Server | Scope | Transport | Target | Reach for it when |", "|---|---|---|---|---|"]
     for scope, name, t, target in rows:
-        print(f"| `{name}` | {scope} | {t} | `{target}` | {PURPOSE.get(name, '—')} |")
+        out.append(f"| `{name}` | {scope} | {t} | `{target}` | {PURPOSE.get(name, '—')} |")
     n_user = sum(1 for r in rows if r[0] == "user")
-    print(f"\n{n_user} user-scope, {len(rows) - n_user} project/plugin-scope servers.")
+    out.append(f"\n{n_user} user-scope, {len(rows) - n_user} project/plugin-scope servers.")
+    return "\n".join(out) + "\n"
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="live MCP inventory")
+    fmt = ap.add_mutually_exclusive_group()
+    fmt.add_argument("--md", action="store_true", help="markdown table (default)")
+    fmt.add_argument("--json", action="store_true", help="machine-readable list")
+    a = ap.parse_args(argv)
+    try:  # LF even when a Windows console or redirect would write CRLF
+        sys.stdout.reconfigure(encoding="utf-8", newline="\n")
+    except (AttributeError, ValueError, OSError):
+        pass
+    rows = collect()
+    if a.json:
+        text = json.dumps([dict(zip(("scope", "name", "transport", "target"), r)) for r in rows], indent=1) + "\n"
+    else:
+        text = render_md(rows)
+    sys.stdout.write(text)
 
 
 if __name__ == "__main__":

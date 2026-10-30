@@ -27,6 +27,15 @@ metadata:
     - IMPLEMENT
 ---
 
+> **ECC graft (ecc:skills/accessibility, skills/frontend-a11y, agents/a11y-architect.md@25278e7d):** WCAG 2.2 AA checklist, in this order:
+> - name, role and value on every interactive element;
+> - focus order follows reading order, and focus is always visible;
+> - contrast 4.5:1 for text (3:1 for large text and UI parts);
+> - target size at least 24×24 px;
+> - `prefers-reduced-motion` respected;
+> - live regions announce async results (loading, success, error).
+> The a11y lane stays inside this skill; there is no separate a11y agent.
+
 # fixing-accessibility
 
 Fix accessibility issues.

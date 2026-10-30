@@ -82,7 +82,8 @@ async function play($: EngineInterface, kind: SoundKind, turnMs?: number): Promi
   $.clock.after(0, () => void sound($, kind))
 }
 
-async function notify($: EngineInterface, title: string, body: string, urgency: 'normal' | 'critical', kind?: SoundKind): Promise<void> {
+/** A desktop notification (quiet hours and the `notify` flag honoured). */
+export async function notify($: EngineInterface, title: string, body: string, urgency: 'normal' | 'critical', kind?: SoundKind): Promise<void> {
   if (!ui().notify || quietNow(await $.clock.now())) return
   const cmd = toastCmd(title, body, urgency, rt.windows, kind, rt.systemRoot)
   $.clock.after(0, () => void $.process.run(cmd.argv, runInit(cmd, 5000)).then(

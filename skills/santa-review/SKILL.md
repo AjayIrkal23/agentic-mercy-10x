@@ -35,7 +35,15 @@ Write `SANTA-REVIEW.md` into the newest `.claude/runs/*/` folder when one exists
 
 Return A and the verdict verbatim (plus B when non-empty). Zero confirmed bugs → say so plainly; do not pad. You never edit code — fixes go back to the implementor or the main session.
 
+## Convergence loop (ecc:skills/santa-method, commands/santa-loop.md, commands/code-review.md @25278e7d)
+
+- CHANGES REQUESTED → the owning implementor fixes ONLY the flagged items.
+- A fresh reviewer (a new agent with no memory of the previous round, so no anchoring) reviews the fixed diff.
+- At most 3 rounds; then stop and hand the remaining findings to the user.
+- The loop never commits and you never push: the user commits the reviewed diff.
+
 ## Related
 
+- Saved workflow: `~/.claude/workflows/review.js` (one reviewer per lens in parallel + verifier; the router's WORKFLOW line names it for reviews over 3+ changed files; the Agent form above is the inline path).
 - Agent: `agents/santa-reviewer.md` · same agent inside the orchestrator: `/invoke review` · Gate 4 (Santa): `hooks/hard-completion-gate.py`
 - Siblings: `code-review-and-quality`, `doubt-driven-development`, `dead-code-and-change-audit`

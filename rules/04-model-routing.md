@@ -1,32 +1,13 @@
 # Model routing (mechanism)
 
-Three layers, one truth (`hooks/model-policy.json`):
-
-1. `env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet` — native *default only* (2.1.251+ semantics);
-   an agent's `model:` and a per-call `model` win over it.
-2. Agent frontmatter `model:` on every agent: `opus` for the judges (santa-reviewer,
-   frontend-uiux-designer, planning-director, spec-architect, debug-detective);
-   `sonnet` for every executor. `agents/team-lead.md` is the main session's team playbook
-   (no frontmatter), not an agent.
-3. `opus-guard` (PreToolUse `Agent`) sets `model` and the `[label]`. Precedence:
-   **session flag > per-project mode > explicit `model` / `[label]` (pinned agents,
-   escalation executors and fable only with the user's override phrase this turn) > agent
-   pin > escalation > sonnet**. An ignored explicit model is named in the telemetry reason. Escalation lifts an executor (implementors, integrator, refactor)
-   to Opus when the prompt reports a failed previous attempt, or when it names no
-   plan/spec and the task classifies as size ≥ L and risk ≥ 2. So omit `model` on
-   `Agent` calls unless honoring a user's model request. Every decision is logged to
-   `hooks/.telemetry/<sid>.model-routing.jsonl`. It never touches `prompt` or `name`;
-   the write protocol reaches subagents through a `SubagentStart` hook. Fable is never
-   automatic.
-
-Overrides: per-project `state/model-modes/<repo>` via `scripts/model-mode.py` or the
-phrases "use opus for this project" / "back to normal" (prompt router). Global flags
-`state/sonnet-only-mode` > `opus-only-mode` > `fable-only-mode` hit every project — never
-for one repo.
-
-Effort: per-agent `effort:` frontmatter is the only lever — xhigh santa, debug, uiux;
-high implementors, integrator, refactor, test, audit, spec, plan, security;
-medium docs-sync, deadcode, qa, memory-codex. `max` is banned
-(`hooks/tests/test_model_policy_consistency.py`). Claude Code reads no subagent-effort
-env var (`CLAUDE_CODE_SUBAGENT_EFFORT` does nothing), so built-ins (general-purpose,
-Explore, Plan) run at Claude Code's own default.
+One truth: `hooks/model-policy.json`. The plan tier is detected at session start from the login
+(`pro` / `max5` / `max20` / `api`; `state/plan-tier.json`) and picks a column; the agent's role picks the row.
+Haiku 5.5 is the default worker (explore, docs, cleanup, verify everywhere; every executor on pro); Sonnet
+executes on max5/max20; judges are Sonnet on pro and max5, Opus on max20. Escalation (retry marker, or no
+plan marker with size >= L and risk >= 2) lifts executors one model within the ceiling: pro never Opus or
+Fable; max5 Opus only when my turn says "use opus"; Fable only on max20 when I say "use fable".
+Above 80 % of the 5-hour window every subagent steps down one model (`state/usage-guard.json`, `↓` in the
+statusline) until the window resets or drops under 70 %. `opus-guard` (Agent), `workflow-model-guard`
+(Workflow) and the generated `workflows/*.js` enforce it; the mercy mod caps `agent.spawn` when present.
+My `/model`, my per-turn phrase and a per-project pin (`use opus for this project`, capped) always win.
+Omit `model` on `Agent` calls. Full matrix, state files, telemetry: `docs/MODEL-ROUTING.md`.

@@ -3,6 +3,12 @@ name: find-skills
 description: Helps users discover and install agent skills when they ask questions like "how do I do X", "find a skill for X", "is there a skill that can...", or express interest in extending capabilities. This skill should be used when the user is looking for functionality that might exist as an installable skill.
 ---
 
+> **ECC graft (ecc:skills/skill-scout@25278e7d):** vetting before any install:
+> - read the SKILL.md fully;
+> - check it for shell writes, installers, servers and network calls;
+> - check the licence and pin a commit sha;
+> - record provenance in `hooks/skills-sources.json` (vendored skills change only there).
+
 # Find Skills
 
 This skill helps you discover and install skills from the open agent skills ecosystem.

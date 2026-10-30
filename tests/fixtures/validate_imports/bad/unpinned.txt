@@ -1,0 +1,4 @@
+npx -y some-package
+npm install -g foo@latest
+npx -y @scope/pkg
+npx -y @scope/pkg@1.2.3

@@ -39,6 +39,39 @@ def to_aware(value) -> Optional[datetime]:
     return dt
 
 
+def tail_entries(transcript_path, n: int = TAIL_LINES) -> "list[dict] | None":
+    """Parsed dict rows among the last ``n`` lines, oldest first. None when the
+    transcript is missing or unreadable; [] when readable but empty. The one
+    transcript reader: every scanner here and lib/memory_gate goes through it."""
+    if not transcript_path:
+        return None
+    try:
+        p = Path(str(transcript_path))
+        if not p.is_file():
+            return None
+        with p.open(encoding="utf-8", errors="replace") as fh:
+            tail = deque(fh, maxlen=max(int(n), 1))
+    except Exception:
+        return None
+    out: list = []
+    for line in tail:
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            entry = json.loads(line)
+        except Exception:
+            continue
+        if isinstance(entry, dict):
+            out.append(entry)
+    return out
+
+
+def iter_tail(transcript_path, n: int = TAIL_LINES):
+    """Generator over ``tail_entries``; yields nothing when unreadable."""
+    yield from (tail_entries(transcript_path, n) or [])
+
+
 _NOT_HUMAN_PREFIXES = ("<task-notification>", "[Request interrupted", "<cross-session-message")
 
 
@@ -69,26 +102,7 @@ def _prompt_text(entry: dict) -> Optional[str]:
 
 def last_user_turn(transcript_path) -> Tuple[Optional[datetime], Optional[str]]:
     """(timestamp, text) of the last real user prompt in the transcript tail."""
-    if not transcript_path:
-        return (None, None)
-    try:
-        p = Path(str(transcript_path))
-        if not p.is_file():
-            return (None, None)
-        with p.open(encoding="utf-8", errors="replace") as fh:
-            tail = deque(fh, maxlen=TAIL_LINES)
-    except Exception:
-        return (None, None)
-    for line in reversed(tail):
-        line = line.strip()
-        if not line:
-            continue
-        try:
-            entry = json.loads(line)
-        except Exception:
-            continue
-        if not isinstance(entry, dict):
-            continue
+    for entry in reversed(tail_entries(transcript_path) or []):
         text = _prompt_text(entry)
         if text is None:
             continue
@@ -114,24 +128,11 @@ def turn_written_files(transcript_path) -> Optional[list]:
     """File paths written (Write/Edit/MultiEdit/NotebookEdit tool_use) since the last
     real user prompt, in order. None when the transcript is unreadable (callers
     decide how to fail open); [] when the turn wrote nothing."""
-    if not transcript_path:
-        return None
-    try:
-        p = Path(str(transcript_path))
-        if not p.is_file():
-            return None
-        with p.open(encoding="utf-8", errors="replace") as fh:
-            tail = deque(fh, maxlen=TAIL_LINES)
-    except Exception:
+    rows = tail_entries(transcript_path)
+    if rows is None:
         return None
     files: list = []
-    for line in tail:
-        try:
-            entry = json.loads(line)
-        except Exception:
-            continue
-        if not isinstance(entry, dict):
-            continue
+    for entry in rows:
         if _prompt_text(entry) is not None:
             files = []          # a new real user turn starts
             continue
@@ -150,19 +151,8 @@ def turn_written_files(transcript_path) -> Optional[list]:
 
 def turn_bash_commands(transcript_path) -> list:
     """Bash commands run since the last real user prompt, in order ([] when unknown)."""
-    try:
-        with Path(str(transcript_path)).open(encoding="utf-8", errors="replace") as fh:
-            tail = deque(fh, maxlen=TAIL_LINES)
-    except Exception:
-        return []
     cmds: list = []
-    for line in tail:
-        try:
-            entry = json.loads(line)
-        except Exception:
-            continue
-        if not isinstance(entry, dict):
-            continue
+    for entry in iter_tail(transcript_path):
         if _prompt_text(entry) is not None:
             cmds = []
             continue
@@ -175,5 +165,30 @@ def turn_bash_commands(transcript_path) -> list:
     return cmds
 
 
-__all__ = ["TAIL_LINES", "WRITE_TOOLS", "to_aware", "last_user_turn", "last_user_turn_ts",
-           "turn_key", "turn_written_files", "turn_bash_commands"]
+def turn_bash_results(transcript_path) -> list:
+    """[(command, failed)] for shell tool_use rows since the last real user prompt, each paired
+    with its tool_result (``is_error``) by id; no result yet counts as not failed."""
+    pending: dict = {}
+    out: list = []
+    for entry in iter_tail(transcript_path):
+        if _prompt_text(entry) is not None:
+            pending, out = {}, []
+            continue
+        msg = entry.get("message")
+        for b in (msg.get("content") if isinstance(msg, dict) else None) or []:
+            if not isinstance(b, dict):
+                continue
+            if b.get("type") == "tool_use" and is_shell_tool(b.get("name")):
+                cmd = (b.get("input") or {}).get("command") if isinstance(b.get("input"), dict) else None
+                if isinstance(cmd, str) and cmd:
+                    if b.get("id"):
+                        pending[b["id"]] = len(out)
+                    out.append([cmd, False])
+            elif b.get("type") == "tool_result" and b.get("tool_use_id") in pending:
+                out[pending[b["tool_use_id"]]][1] = bool(b.get("is_error"))
+    return [tuple(x) for x in out]
+
+
+__all__ = ["TAIL_LINES", "WRITE_TOOLS", "to_aware", "tail_entries", "iter_tail", "last_user_turn",
+           "last_user_turn_ts", "turn_key", "turn_written_files", "turn_bash_commands",
+           "turn_bash_results"]

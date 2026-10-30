@@ -13,3 +13,5 @@ This is `/invoke plan` without the closers; `~/.claude/skills/invoke/SKILL.md` g
 2. Set `run.json.expected_artifacts["planning-director"] = "plan-{date}-{slug}.md"`.
 3. `Agent(subagent_type="planning-director", description="plan: <task>", prompt=...)`. The prompt names `$RUN/BRIEF.md`, every artifact already in `$RUN/`, and the exact output path `$RUN/plan-{date}-{slug}.md`. No `model=`: opus-guard routes it (pins, escalation, per-project mode). Artifact missing or the act failed → re-dispatch once with the prompt prefixed `Previous attempt failed: <one-line reason>.`
 4. Append `plan` to `run.json.done`, then report the artifact path and a one-paragraph verdict.
+
+The plan is SOURCE-cited: every task names the file:symbol it changes (ecc:skills/blueprint@25278e7d).

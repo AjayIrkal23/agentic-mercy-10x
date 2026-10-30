@@ -1,0 +1,3 @@
+{"sid": "ended", "pid": 4190001, "cwd": "/tmp/fixture-repo", "transcript": "/tmp/fixture-repo/t2.jsonl",
+ "tmux": null, "scope": null, "started": 1767225600, "seen": 1767225600, "ended": 1767229200, "restored": false,
+ "boot_id": "00000000-0000-0000-0000-000000000000", "title": "fixture-repo 2026-01-01"}

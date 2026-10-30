@@ -66,3 +66,5 @@ metadata:
 - The chosen hook pattern and why it fits.
 - Any effect dependencies, cleanup needs, or stale-closure risks.
 - A recommendation for custom hook extraction when appropriate.
+
+ECC graft: `references/ecc-react-rules.md` — when not to useEffect, cleanup, stale closures, derived state.

@@ -1,0 +1,3 @@
+{"sid": "stale-dead", "pid": 4190000, "cwd": "/tmp/fixture-repo", "transcript": "/tmp/fixture-repo/t.jsonl",
+ "tmux": null, "scope": null, "started": 1767225600, "seen": 1767225600, "ended": null, "restored": false,
+ "boot_id": "00000000-0000-0000-0000-000000000000", "title": "fixture-repo 2026-01-01"}

@@ -101,3 +101,5 @@ as the user's step.
 
 CI pipelines (`ci-cd-and-automation`), production rollout and rollback
 (`shipping-and-launch`), Kubernetes manifests.
+
+ECC graft: `references/ecc-docker.md` — internal networks, non-root user, read-only filesystem, no docker socket.

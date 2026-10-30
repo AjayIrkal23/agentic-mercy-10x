@@ -224,3 +224,5 @@ Before proceeding to implementation, confirm:
 - [ ] Success criteria are specific and testable
 - [ ] Boundaries (Always/Ask First/Never) are defined
 - [ ] The spec is saved to a file in the repository
+
+ECC graft: `references/ecc-intent-and-prd.md` — observable criteria, capability plan, PRD → PLAN → phase files.

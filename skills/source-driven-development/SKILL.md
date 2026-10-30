@@ -219,3 +219,5 @@ After implementing with source-driven development:
 - [ ] No deprecated APIs are used (checked against migration guides)
 - [ ] Conflicts between docs and existing code were surfaced to the user
 - [ ] Anything that could not be verified is explicitly flagged as unverified
+
+ECC graft: `references/ecc-search-first.md` — search order repo, docs, web, with the source cited.

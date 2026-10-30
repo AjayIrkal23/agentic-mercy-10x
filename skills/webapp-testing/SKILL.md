@@ -45,9 +45,9 @@ metadata:
 - `tool-and-doc-selection` when exact Playwright, browser, or test-runner syntax matters.
 
 ## Workflow
-1. Confirm the workspace or environment already has the browser automation runtime you plan to use, then run `python3 scripts/with_server.py --help` before using the helper.
-2. Attach to the app the user is already running (standing rule: never start dev servers yourself); use `with_server.py` only when the user explicitly asks for an automated run, and prefer explicit readiness checks such as `--ready-url`, locator waits, or app-specific assertions over blanket `networkidle`.
-3. Keep Playwright scripts focused on browser actions and assertions while the helper owns startup and teardown.
+1. Attach to the app the user is already running (standing rule: never start dev servers yourself). `scripts/with_server.py` exists for the one case where the user explicitly asks for an automated run that starts and stops its own server; a subagent never calls it.
+2. Confirm the browser automation runtime you plan to use is already installed, and prefer explicit readiness checks such as `--ready-url`, locator waits, or app-specific assertions over blanket `networkidle`.
+3. Keep Playwright scripts focused on browser actions and assertions; startup and teardown belong to the user (or to the helper, when the user asked for it).
 4. Save screenshots and logs to workspace-safe temp locations such as `/tmp` or a task-specific scratch folder inside the current workspace.
 5. Route Playwright or browser-automation API questions through `tool-and-doc-selection` and the docs skills instead of treating this skill as API documentation.
 

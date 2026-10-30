@@ -25,6 +25,8 @@ metadata:
     - design
 ---
 
+> **Local guard (vendor patch, ~/.claude):** the default engine is the claude.ai Higgsfield connector (`mcp__claude_ai_higgsfield__generate_image` / `generate_video` / `generate_3d` / `generate_audio`, `models_explore`, `upscale_*`, `remove_background`); this skill's prompt craft applies to those tools. Use the `higgsfield` CLI only when the user asks for it by name, never run its installer, and never `higgsfield auth login` on the user's behalf — ask once.
+
 # Higgsfield website builder (CLI) — three product types, three flows
 
 You drive the whole lifecycle through the **Higgsfield CLI** (`higgsfield
@@ -115,7 +117,7 @@ are rejected — if that happens, try a close variant.
 
 1. If `higgsfield` is not on `$PATH`, install it:
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/higgsfield-ai/cli/main/install.sh | sh
+   (CLI installer: never run it yourself; if the CLI is missing, say so and use the connector tools)
    ```
 2. If `higgsfield account status` reports `Session expired` / `Not authenticated`,
    ask the user to run `higgsfield auth login` (interactive) and wait for

@@ -32,13 +32,22 @@ def _fixture(name: str) -> dict:
 
 
 def test_agent_rewrite_with_multiline_prompt_survives():
+    """Plumbing only: the opus-guard mutation reaches stdout through dispatch.py byte-identical.
+    The model is whatever the guard picks under the live model-policy.json (model-routing's data),
+    so the test compares against the guard's own answer instead of naming a model."""
     payload = _fixture("pre-tool-use-agent.json")
     payload["tool_input"] = {"description": "do it", "subagent_type": "general-purpose",
                              "prompt": "line one\nline two\r\nline three"}
     proc = _run("pre-tool-use", payload)
     assert proc.returncode == 0
     hso = json.loads(proc.stdout)["hookSpecificOutput"]
-    assert hso["updatedInput"]["model"] == "sonnet"
+    guard = subprocess.run([sys.executable, str(HOOKS / "opus-guard.py")], input=json.dumps(payload),
+                           capture_output=True, text=True, timeout=60)
+    assert guard.returncode == 0, guard.stderr
+    want = json.loads(guard.stdout)["hookSpecificOutput"]["updatedInput"]
+    assert hso["updatedInput"] == want                       # dispatch forwarded the mutation unchanged
+    policy = json.loads((HOOKS / "model-policy.json").read_text(encoding="utf-8"))
+    assert want["model"] in policy["model_ids"]              # the guard did pick a policy model
     assert hso["updatedInput"]["prompt"] == "line one\nline two\r\nline three"
 
 
@@ -283,3 +292,27 @@ def test_non_cp1252_text_survives_a_cp1252_console(tmp_path):
                            "prompt": "Review A — then B → report ”done”"}
     hso = json.loads(_run_cp1252("pre-tool-use", agent).stdout)["hookSpecificOutput"]
     assert hso["updatedInput"]["prompt"] == "Review A — then B → report ”done”"
+
+
+def test_new_event_tokens_are_side_effect_only(tmp_path):
+    mod = _load()
+    assert mod._EVENT_NAME["stop-failure"] == "StopFailure"
+    assert mod._EVENT_NAME["instructions-loaded"] == "InstructionsLoaded"
+    assert {"StopFailure", "InstructionsLoaded"} <= set(mod._NO_HSO_EVENTS)
+    adv = tmp_path / "adv.py"
+    adv.write_text("print('{\"additionalContext\": \"x\"}')\n", encoding="utf-8")
+    for ev in ("stop-failure", "instructions-loaded"):
+        cfg = {"chains": {ev: [{"id": "a", "type": "advisory", "cmd": [sys.executable, str(adv)]}]}}
+        assert mod.dispatch(ev, {"session_id": "s", "error": "rate_limit"}, cfg) == {}
+    cp = _run("stop-failure", {"session_id": "s", "error": "rate_limit", "error_details": "",
+                               "last_assistant_message": ""})
+    assert cp.returncode == 0 and json.loads(cp.stdout) == {}
+
+
+def test_session_start_compact_writes_the_router_reset_marker(tmp_path):
+    mod = _load()
+    base = Path(os.environ["CLAUDE_HOOK_STATE_DIR"])
+    for src, expect in (("compact", True), ("clear", True), ("startup", False), ("resume", False)):
+        sid = f"rs-{src}-{os.getpid()}"
+        mod.dispatch("session-start", {"session_id": sid, "source": src}, {"chains": {"session-start": []}})
+        assert (base / f"{sid}.router-reset").is_file() is expect, src

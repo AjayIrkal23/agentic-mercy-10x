@@ -1,0 +1,5 @@
+{
+  "args": {"task": "t", "run": "/tmp/r/20261029T1200-x", "slug": "x"},
+  "default": {"path": "p", "summary": "s"},
+  "replies": [{"label": "^security$", "value": null}]
+}

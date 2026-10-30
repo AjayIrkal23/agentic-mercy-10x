@@ -6,7 +6,9 @@ with only a rotating backup left (Santa installer review). Instead:
 * ``is_workbench_file``   True when the file is one we rendered (its hooks run our dispatch.py);
 * ``seed_overlay``        the user's own keys as a ``settings.user.json`` overlay: env keys the
                           template lacks (and provider / proxy / auth-like keys on a clash, where the
-                          user's value wins), ``apiKeyHelper``, ``model``, ``permissions.defaultMode``,
+                          user's value wins), ``apiKeyHelper``, ``model`` and ``fallbackModel`` (always:
+                          the render's model keys are tier-derived, lib/plan_tier.render_overrides, so an
+                          equal value is a coincidence, not a template literal), ``permissions.defaultMode``,
                           other top-level keys, and hook entries the template does not have;
 * ``append_hooks``        how ``render`` applies overlay hooks: after the workbench's, never twice.
 
@@ -22,6 +24,10 @@ _BANNED = "lean-ctx"
 _PROVIDER = re.compile(r"^(ANTHROPIC_|AWS_|CLAUDE_CODE_USE_|CLOUD_ML_|GOOGLE_|VERTEX_|AZURE_|NODE_EXTRA_CA)"
                        r"|PROXY|API_KEY|TOKEN|BASE_URL|CA_CERTS", re.I)
 _HANDLED = frozenset({"env", "hooks", "permissions", "enabledPlugins", "extraKnownMarketplaces"})
+# Never "redundant": apiKeyHelper is not rendered at all; model and fallbackModel come from
+# lib/plan_tier.render_overrides() (R3.3) and change with the detected tier, so a value equal to today's
+# render still has to reach settings.user.json, which render() applies AFTER the tier keys.
+_PINNED = frozenset({"apiKeyHelper", "model", "fallbackModel"})
 
 
 def _commands(groups) -> set[str]:
@@ -47,7 +53,7 @@ def seed_overlay(user: dict, rendered: dict, skip: frozenset = frozenset()) -> d
     for k, v in user.items():
         if k in _HANDLED or k in skip or _BANNED in f"{k}{v}":
             continue
-        if k not in rendered or (k in ("apiKeyHelper", "model") and v != rendered.get(k)):
+        if k not in rendered or k in _PINNED:
             out[k] = copy.deepcopy(v)
     perms, rperms = user.get("permissions"), rendered.get("permissions") or {}
     mode = perms.get("defaultMode") if isinstance(perms, dict) else None

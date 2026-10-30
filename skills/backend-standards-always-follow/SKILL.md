@@ -99,3 +99,5 @@ This is the always-on backend baseline. Examples are Go-first; Node/TS/Fastify/M
 - Business logic stayed in services.
 - Query behavior remained backend-driven.
 - No stale backend code was left behind.
+
+ECC graft: `references/ecc-patterns.md` — repository pattern and one transaction boundary per use case.

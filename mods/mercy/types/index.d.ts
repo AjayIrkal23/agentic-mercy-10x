@@ -73,7 +73,25 @@ export type Health = {
   lastError?: string
 }
 
-export type PulseView = 'overview' | 'usage' | 'git' | 'ci' | 'todo' | 'today' | 'ports' | 'deps' | 'files' | 'commands' | 'agents' | 'hooks' | 'brain'
+export type PulseView = 'overview' | 'usage' | 'git' | 'ci' | 'todo' | 'today' | 'ports' | 'deps' | 'files' | 'commands' | 'agents' | 'hooks' | 'brain' | 'memory'
+
+export type MemLevel = 'ok' | 'warn' | 'crit'
+/** state/mem-pressure.json as the mod reads it (hooks/tools/memwatch.py writes it every 5 s). */
+export type MemState = {
+  level: MemLevel
+  rawLevel: MemLevel
+  ts: number
+  stale: boolean
+  unsupported: boolean
+  memAvailableMb?: number
+  swapFreePct?: number
+  psi?: number
+  top: Array<{ name: string; rssMb: number; unit?: string }>
+  stuck: number
+  shed: number
+  restorePending: boolean
+  notifyOwner: string
+}
 
 /** UI loudness: full (everything), focus (no auto pane, failure toasts only), quiet (status line only), off. */
 export type UiMode = 'full' | 'focus' | 'quiet' | 'off'
@@ -134,6 +152,8 @@ export type Deck = {
   deps?: DepsState
   standup?: Standup
   lastSession?: LastSession
+  /** The OOM guard's state (memwatch); unset when the file is missing or never read. */
+  mem?: MemState
   todos: Todo[]
   turns: TurnStat[]
   limits: Limit[]

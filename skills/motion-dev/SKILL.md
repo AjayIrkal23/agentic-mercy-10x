@@ -106,3 +106,5 @@ animate(scope.current, { opacity: 1 });
 - CSS hover/focus/active → native CSS `transition`.
 - Image/video/3D/audio pixels → Higgsfield.
 - Every motion that ships still passes the **motion-dev craft bar** above.
+
+ECC graft: `references/ecc-motion.md` — duration/easing tokens, mandatory reduced-motion fallback, transform-only layout animation.

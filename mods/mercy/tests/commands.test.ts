@@ -76,6 +76,11 @@ describe('classification', () => {
     expect(analyze('git -C repo push origin main').isPush).toBe(true)
     expect(kind('git status')).toEqual(['git'])
   })
+  test('an automatic golive run commits and pushes through child processes', () => {
+    expect(analyze('python3 scripts/golive.py --yes-automatic --skip push').isCommit).toBe(true)
+    expect(analyze('py -3 scripts\\golive.py --from merge --yes-automatic').isCommit).toBe(true)
+    expect(analyze('python3 scripts/golive.py --plan').isCommit).toBe(false)
+  })
   test('text that merely mentions a server is not one', () => {
     expect(analyze('grep "npm run dev" README.md').isServer).toBe(false)
     expect(analyze('echo vite').isServer).toBe(false)

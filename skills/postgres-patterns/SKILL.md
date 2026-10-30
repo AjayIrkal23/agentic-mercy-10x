@@ -177,3 +177,5 @@ SELECT pg_reload_conf();
 ---
 
 *Based on Supabase Agent Skills (credit: Supabase team) (MIT License)*
+
+ECC graft: `references/ecc-note.md` — provenance note; same name and origin, nothing to add.

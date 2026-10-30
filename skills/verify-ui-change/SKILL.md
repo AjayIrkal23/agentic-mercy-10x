@@ -38,6 +38,8 @@ paths:
 
 > **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted. If Reticle is missing or no session is connected, say so in one line and fall back to playwright / `verification-loop`.
 
+> **ECC graft (ecc:skills/browser-qa@25278e7d):** end with a verdict `SHIP` or `DO-NOT-SHIP`, the one blocking finding first; Reticle stays the engine.
+
 # Verify the change in the running app
 
 You edited something a user can see. Nothing is proven until the real app has done it and something other than the DOM agrees.

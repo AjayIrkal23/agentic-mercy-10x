@@ -6,13 +6,13 @@
 
 ### One install, and every Claude Code prompt gets the right skill, tool, model and check.
 
-![Version](https://img.shields.io/badge/version-4.2.0-2E7D32?style=flat-square)
+![Version](https://img.shields.io/badge/version-4.3.0-2E7D32?style=flat-square)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-2.1.288%2B_%C2%B7_tested_2.1.306-D97757?style=flat-square)
-![Models](https://img.shields.io/badge/models-Opus_5.5_%C2%B7_Sonnet_5.5-D97757?style=flat-square)
+![Models](https://img.shields.io/badge/models-Haiku_5.5_%C2%B7_Sonnet_5.5_%C2%B7_Opus_5.5-D97757?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Ubuntu%20%C2%B7%20macOS%20%C2%B7%20Windows-E95420?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-000000?style=flat-square)
 
-**[Install](#install) · [Routing](#every-prompt-is-routed) · [/invoke](#invoke-a-specialist-per-act) · [Hooks](#hooks-that-enforce-the-workflow) · [mercy mod](#mercy-the-in-process-mod) · [Status deck](#status-line-and-pulse-deck) · [MCP](#16-mcp-servers-each-with-a-job) · [Verify](#verify) · [Changelog](docs/CHANGELOG.md)**
+**[Install](#install) · [Routing](#every-prompt-is-routed) · [/invoke](#invoke-a-specialist-per-act) · [Hooks](#hooks-that-enforce-the-workflow) · [mercy mod](#mercy-the-in-process-mod) · [Status deck](#status-line-and-pulse-deck) · [MCP](#15-mcp-servers-each-with-a-job) · [Verify](#verify) · [Changelog](docs/CHANGELOG.md)**
 
 </div>
 
@@ -55,7 +55,7 @@ run `claude` once and sign in · authorize higgsfield and openart in `/mcp` ·
 | Base tools (no sudo) | Node 22 + npm (official tarball, checksum verified), Claude Code (pinned to the mod's minimum version), uv, gh → `~/.local/bin` |
 | Packages | pinned semgrep, jcodemunch, jdocmunch, graphify (+ its serve venv), lean-ctx, tdd-guard, pyright, PyYAML |
 | Local AI | ollama (user space) + the `all-minilm` embedding and `qwen2.5-coder:3b` summary models; or another machine's ollama via `OLLAMA_HOST` in `settings.user.json` (nothing installed locally) |
-| Claude Code | 16 MCP servers at pinned versions, 5 marketplaces + 11 plugins, rendered `settings.json` (status line, mods env) |
+| Claude Code | 15 MCP servers at pinned versions, 5 marketplaces + 11 plugins, rendered `settings.json` (status line, mods env) |
 | Workbench | re-vendored skills, generated `/invoke` skills and agent blocks, skills index, validators, doctor |
 | OS tools (apt) | `canberra-gtk-play`, `notify-send`, `ss`, `pw-play` for the UI deck: installed with root or passwordless sudo, otherwise one `sudo apt-get install` line is printed. The deck works without them |
 
@@ -81,8 +81,8 @@ router output from a prompt about this README, trimmed.
 `/invoke plan impl -- <task>` runs one agent per act in canonical order and writes each
 artifact to `<repo>/.claude/runs/<ts>-<slug>/`. After any act that changes code, the
 closers (clean, review, docs, verify, plus security when auth or input files changed) run
-on their own. Opus judges spec, plan, debug, design and review; Sonnet executes and moves
-up to Opus after a failed attempt. The whole policy lives in `hooks/model-policy.json`.
+on their own. Models follow the plan tier (`rules/04-model-routing.md`); large tasks run as
+saved workflows under `workflows/`. The whole policy lives in `hooks/model-policy.json`.
 
 <img src="assets/invoke.webp" alt="/invoke acts in canonical order with their agents, model and artifact: audit, spec, plan, debug, test, impl, refactor, design, then the closers clean, security, review, docs and verify" width="100%">
 
@@ -117,7 +117,7 @@ filled from past sessions by the daily self-heal, so nobody types `/ponytail ban
 
 <img src="assets/deck.webp" alt="Claude Code terminal with the mercy action band, the mod status line and the real status line output, plus the 13 pulse views, background jobs and alerts" width="100%">
 
-## 16 MCP servers, each with a job
+## 15 MCP servers, each with a job
 
 Each server has a rule for when to call it, set in
 [`rules/00-tool-precedence.md`](rules/00-tool-precedence.md): jcodemunch before any grep,
@@ -145,13 +145,18 @@ Counts change; recompute them rather than trusting this table.
 
 | Thing | Count | Recompute with |
 |---|---|---|
-| Local skills | 129 | `ls skills/*/SKILL.md \| wc -l` |
-| Agents | 17 + the `team-lead.md` playbook | `ls agents/*.md \| grep -v -e README -e team-lead \| wc -l` |
-| Hook events wired | 13 (12 `dispatch.py` chains + the prompt router) | `settings.template.json` → `hooks` |
-| Dispatch links | 43 enabled | `hooks/dispatch.config.json` → `chains` |
-| MCP servers (user scope) | 16 | `installer/manifest.json` → `mcp_servers` |
-| Plugins / marketplaces | 11 / 5 | `installer/manifest.json` → `plugins` |
-| Vendored third-party skills | 27 sources | `hooks/skills-sources.json` |
+| Local skills | 132 | `ls skills/*/SKILL.md \| wc -l` |
+| Plugin skills | 0 | `hooks/skills-index.json` → `_meta.plugin_count` |
+| Agents | 17 | `agents/*.md` minus README and team-lead |
+| Hook events wired | 13 | `settings.template.json` → `hooks` |
+| Dispatch links enabled | 59 | `hooks/dispatch.config.json` → `chains` |
+| MCP servers | 15 | `installer/manifest.json` → `mcp_servers` |
+| Plugins | 11 | `installer/manifest.json` → `plugins.install` |
+| Vendored skill sources | 27 | `hooks/skills-sources.json` |
+| Test files | 185 | `ls tests/test_*.py hooks/tests/test_*.py` |
+| Always-on context | 18,409 chars doctrine | `python3 scripts/measure_context_cost.py` |
+
+Measured context cost before and after the 2026-10 merge: `docs/TOKEN-BUDGET.md`.
 
 </details>
 
@@ -163,33 +168,29 @@ Every hook is a link in `hooks/dispatch.config.json` (types `gate`, `mutator`, `
 
 | Event | Chain highlights |
 |---|---|
-| SessionStart | permissions self-heal, state cleanup (async), aggregator, memory load, ponytail session, skills-index guard |
-| UserPromptSubmit | prompt router |
-| PreToolUse | dangerous-bash, first-write skill gate, gateguard, dox root, bash-write, doc enforcer, jcodemunch read gate, jdocmunch/graphify steer, tdd-guard (advisory), opus-guard, workflow-model-guard |
-| PostToolUse | skill tracker, FE/BE reminder, codex capture, post-write aggregator, desloppify, semgrep tracker, MCP post-hints |
-| PostToolUseFailure | tool-failure hint |
-| Stop | completion gate, invoke-suite gate, index flush (async), lifecycle |
-| SubagentStart / SubagentStop | subagent context / lifecycle |
-| PreCompact / PostCompact | handoff snapshot / restore |
+| SessionStart | permissions self-heal, state cleanup (async), OOM guard ensure (async), session ledger, plan-tier detect, aggregator, memory load, lifecycle, skills-index guard, daily self-heal (async) |
+| UserPromptSubmit | prompt router, hookify prompt rules |
+| PreToolUse | dangerous-bash, connector ask, first-write skill gate, config protection, gateguard, dox root, bash-write, doc enforcer, hookify, jcodemunch read gate, jdocmunch/graphify steer, tdd-guard (advisory), memory brake, opus-guard, workflow-model-guard |
+| PostToolUse | skill tracker, FE/BE reminder, codex capture, post-write aggregator, desloppify, semgrep tracker, MCP post-hints, context monitor, observe log (async) |
+| PostToolUseFailure | tool-failure hint (shell, writes, every MCP tool) |
+| Stop | completion gate, invoke-suite gate, format/typecheck gate, hookify stop rules, index flush (async), lifecycle |
+| StopFailure / InstructionsLoaded | API-error log / loaded-instructions log (async) |
+| SubagentStart | subagent context |
+| PreCompact | handoff snapshot (SubagentStop and PostCompact keep disabled chains, no registration) |
 | ConfigChange | permissions-deny guard |
 | TeammateIdle | teammate-idle gate |
-| SessionEnd | permissions self-heal, index session-end |
+| SessionEnd | permissions self-heal, index session-end, session ledger end |
 
 </details>
 
 <details>
 <summary>Models and teams</summary>
 
-Three layers, one truth (`hooks/model-policy.json`), details in
-[`rules/04-model-routing.md`](rules/04-model-routing.md):
-
-1. `env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet`, the native default.
-2. Every agent pins `model:` and `effort:` in frontmatter (opus for the 5 judges: santa,
-   uiux, plan, spec, debug; sonnet for executors, which escalate).
-3. `opus-guard` aligns the `[sonnet]`/`[opus]`/`[fable]` label with the model. Precedence:
-   session flag > per-project mode > explicit `model` (pinned agents, escalation executors
-   and fable only with the user's override phrase this turn) > agent pin > escalation >
-   sonnet. Fable is never automatic.
+The plan tier (`pro` / `max5` / `max20` / `api`) is detected at session start from the login
+and picks the models; the agent's role picks the row. Haiku 5.5 is the default worker, Sonnet
+executes on max5/max20, Opus judges on max20 only. Your `/model`, a per-turn "use opus" and a
+per-project pin always win. Rules: [`rules/04-model-routing.md`](rules/04-model-routing.md);
+full matrix and state files: [`docs/MODEL-ROUTING.md`](docs/MODEL-ROUTING.md).
 
 Per-project mode: "use opus for this project" / "back to normal", or
 `python3 ~/.claude/scripts/model-mode.py opus|sonnet|clear` inside the repo. A plain

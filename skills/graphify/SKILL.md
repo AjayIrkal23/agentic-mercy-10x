@@ -28,8 +28,8 @@ Turn any folder of files into a navigable knowledge graph with community detecti
 /graphify <path> --neo4j-push bolt://localhost:7687   # push directly to Neo4j
 /graphify <path> --falkordb                           # generate graphify-out/cypher.txt for FalkorDB
 /graphify <path> --falkordb-push falkordb://localhost:6379   # push directly to FalkorDB
-/graphify <path> --mcp                                # start MCP stdio server for agent access
-/graphify <path> --watch                              # watch folder, auto-rebuild on code changes (no LLM needed)
+/graphify <path> --mcp                                # start MCP stdio server for agent access (user-only: starts a server/watcher — ask the user to run it; never run it yourself)
+/graphify <path> --watch                              # watch folder, auto-rebuild on code changes (no LLM needed) (user-only: starts a server/watcher — ask the user to run it; never run it yourself)
 /graphify <path> --wiki                               # build agent-crawlable wiki (index.md + one article per community)
 /graphify <path> --obsidian --obsidian-dir ~/vaults/my-project  # write vault to custom path (e.g. existing vault)
 /graphify add <url>                                   # fetch URL, save to ./raw, update graph
@@ -41,6 +41,10 @@ Turn any folder of files into a navigable knowledge graph with community detecti
 /graphify path "AuthModule" "Database"                # shortest path between two concepts
 /graphify explain "SwinTransformer"                   # plain-language explanation of a node
 ```
+
+## How It Works Here
+
+In this workbench the default build is `hooks/index-lifecycle.py` (event-driven, memory-guarded); run the manual steps below only when the user asks for a one-off build. Sidecar files written by graphify's own Python are pipeline output, not agent edits.
 
 ## What graphify is for
 
@@ -93,18 +97,11 @@ if ! "$PYTHON" -c "import graphify" 2>/dev/null; then
           || "$PYTHON" -m pip install graphifyy -q --break-system-packages 2>&1 | tail -3
     fi
 fi
-# Write interpreter path for all subsequent steps (persists across invocations)
 mkdir -p graphify-out
-"$PYTHON" -c "import sys; open('graphify-out/.graphify_python', 'w', encoding='utf-8').write(sys.executable)"
-# Save scan root so `graphify update` (no args) knows where to look next time.
-# The scan path is passed through a quoted heredoc, never substituted into the
-# command line itself: a bare `cd <path>` (or an unquoted heredoc, which
-# still expands $()/backticks in its body) would let a malicious path execute
-# as shell code the moment this line runs.
-"$PYTHON" -c "import os, sys; out_path = os.path.abspath('graphify-out/.graphify_root'); os.chdir(sys.stdin.readline().rstrip('\n')); open(out_path, 'w', encoding='utf-8').write(os.getcwd())" <<'GRAPHIFY_ROOT_EOF'
-INPUT_PATH
-GRAPHIFY_ROOT_EOF
+"$PYTHON" -c "import sys; print(sys.executable)"   # read-only: the value to record below
 ```
+
+Record the interpreter and scan root with the Write tool: `graphify-out/.graphify_python` = the `$PYTHON` value you resolved above, `graphify-out/.graphify_root` = the absolute scan path. Never write them through `python -c` (rules/01).
 
 If the import succeeds, print nothing and move straight to Step 2.
 
@@ -556,7 +553,7 @@ graphify export html  # auto-aggregates to community view if graph > 5000 nodes
 
 ### Steps 6b-8 - Wiki, Neo4j, FalkorDB, SVG, GraphML, MCP, benchmark (only on their flags)
 
-These run only when their flag is present (`--wiki`, `--neo4j`/`--neo4j-push`, `--falkordb`/`--falkordb-push`, `--svg`, `--graphml`, `--mcp`) or, for the token-reduction benchmark, when `total_words` exceeds 5,000. A default run with no export flags skips all of them. See `references/exports.md` for each one. Run any `--wiki` export before Step 9 cleanup so `.graphify_labels.json` is still available.
+These run only when their flag is present (`--wiki`, `--neo4j`/`--neo4j-push`, `--falkordb`/`--falkordb-push`, `--svg`, `--graphml`, `--mcp` — user-only, it starts a server) or, for the token-reduction benchmark, when `total_words` exceeds 5,000. A default run with no export flags skips all of them. See `references/exports.md` for each one. Run any `--wiki` export before Step 9 cleanup so `.graphify_labels.json` is still available.
 
 ---
 
@@ -676,9 +673,11 @@ if [ ! -f graphify-out/.graphify_python ]; then
         PYTHON="python3"
     fi
     mkdir -p graphify-out
-    "$PYTHON" -c "import sys; open('graphify-out/.graphify_python', 'w', encoding='utf-8').write(sys.executable)"
+    "$PYTHON" -c "import sys; print(sys.executable)"   # read-only: the value to record
 fi
 ```
+
+Then record that value in `graphify-out/.graphify_python` with the Write tool. Never write it through `python -c` (rules/01).
 
 ## For --update and --cluster-only
 

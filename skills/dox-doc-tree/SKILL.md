@@ -41,13 +41,12 @@ metadata:
 
 Agents make blind edits without local context → drift, surprise changes, "why did it
 touch that file?". dox fixes this with a **hierarchical doc tree**: a root file with
-project-wide rules + an auto-synced index, and a child `CLAUDE.md` in **every directory**
-(end-to-end coverage — `documentAllDirs: true`) holding the *local* rules for that area.
+project-wide rules + an auto-synced index, and a child `CLAUDE.md` in every significant directory, or in every directory when a repo opts in (per-repo opt-in: `<root>/.claude/dox.json` `documentAllDirs: true`), holding the *local* rules for that area.
 The loop is: **read root → walk down to the file you're about to touch → follow local
 rules → edit → update the affected doc.**
 
 > **Coverage is automatic.** The SessionStart guard runs a full **sweep** (`dox_engine.py`)
-> that creates a `CLAUDE.md` + `AGENTS.md` in every non-skipped directory and syncs the
+> that creates a `CLAUDE.md` + `AGENTS.md` in every documented directory and syncs the
 > root index. A PostToolUse hook (`dox-child-scaffold.py`) documents any new directory the
 > moment you write a file into it. Your job is to **flesh out the stubs**, not to create them.
 > Run a manual sweep any time with `python3 ~/.claude/hooks/dox_engine.py sweep <repo>`
@@ -61,7 +60,7 @@ rules → edit → update the affected doc.**
 | `<dir>/CLAUDE.md` (**child**) | LOCAL rules for that directory only — what lives here, conventions, gotchas, links to deeper children. Never restate root-level rules; link to them. |
 | `<dir>/AGENTS.md` (**pointer**) | One line: `See CLAUDE.md in this directory for agent instructions (dox tree).` |
 
-Each file **≤250 lines** (matches the global file-limit rule). If a child grows past that,
+Each file **≤250 lines** (the 250-line cap the implementor agents follow). If a child grows past that,
 split it into deeper children.
 
 ## When this skill fires
@@ -87,12 +86,12 @@ split it into deeper children.
    (the SessionStart guard usually leaves a marked stub — flesh that stub out, don't
    replace its marker). If a **hand-written** root already exists (no `<!-- dox:root v1 -->`
    marker), DO NOT overwrite it — append a `## dox index` section linking children instead.
-2. **Every directory.** By default (`documentAllDirs: true`) **every** non-skipped
-   directory gets a `CLAUDE.md` — the sweep/PostToolUse hooks create the stubs for you.
+2. **Directories.** Default (`documentAllDirs: false`): dirs with >= `significantDirThreshold`
+   (3) code files get a child; a repo that opts in via `<root>/.claude/dox.json` gets one in
+   every non-skipped directory. The sweep/PostToolUse hooks create the stubs for you.
    You **flesh each one out** from `references/child-template.md`: the *local* truth —
    what this folder is for, its conventions, its traps. Link up to root and down to deeper
-   children. (Set `documentAllDirs: false` to fall back to the legacy "≥`significantDirThreshold`
-   code files" gate.)
+   children.
 3. **Pointers.** Every folder that gets a `CLAUDE.md` also gets a 1-line `AGENTS.md`
    (`references/agents-pointer.md`). The engine never clobbers an `AGENTS.md`/`CLAUDE.md`
    that already exists.
@@ -114,16 +113,16 @@ After changing files in directory X:
 
 ## Which directories get docs
 
-- **Default (`documentAllDirs: true`): every directory** that isn't on the skip list,
-  regardless of how many code files it holds — end-to-end coverage.
+- **Default (`documentAllDirs: false`):** only dirs with ≥ `significantDirThreshold`
+  (default 3) code files get a child; smaller dirs inherit the parent's `CLAUDE.md`.
+- **Opt-in (`documentAllDirs: true` in `<root>/.claude/dox.json`): every directory** that
+  isn't on the skip list, regardless of how many code files it holds.
 - **Skip list** (build artifacts / deps / VCS / caches, never documented): `node_modules`,
   `.git`, `dist`, `build`, `.next`, `out`, `coverage`, `vendor`, `target`, `bin`, `obj`,
   `__pycache__`, `.venv`/`venv`, `.turbo`, `.cache`, `graphify-out`, `.planning`, `.claude`,
   `.idea`, `.vscode`, and any dot-directory. Extend via `SKIP_DIRS` in `dox_engine.py`.
-- **Bounds:** `sweepMaxDepth` (default 12) and `maxSweepDirs` (default 500) cap a sweep so
+- **Bounds:** `sweepMaxDepth` (default 12) and `maxSweepDirs` (default 300) cap a sweep so
   it can't run away on a huge tree; if truncated, the guard says so — raise the cap.
-- **Legacy mode (`documentAllDirs: false`):** only dirs with ≥ `significantDirThreshold`
-  (default 3) code files get a child; smaller dirs inherit the parent's `CLAUDE.md`.
 
 ## What happens when a `CLAUDE.md` already exists
 
@@ -169,15 +168,17 @@ dox is the **per-directory local-rules layer**. It is distinct from:
 
 | Key | Default | Effect |
 |-----|---------|--------|
-| `documentAllDirs` | `true` | document **every** dir; `false` → ≥`significantDirThreshold` code files |
+| `documentAllDirs` | `false` | ≥`significantDirThreshold` code files; `true` (per-repo opt-in) → every dir |
 | `autoCreateChildren` | `true` | sweep + PostToolUse auto-create child stubs |
 | `syncRootIndex` | `true` | keep the root `dox:index` block synced |
 | `sweepMaxDepth` | `12` | max directory depth to descend |
-| `maxSweepDirs` | `500` | safety cap on dirs documented per sweep |
-| `significantDirThreshold` | `3` | legacy gate (only when `documentAllDirs:false`) |
+| `maxSweepDirs` | `300` | safety cap on dirs documented per sweep |
+| `significantDirThreshold` | `3` | the default gate (ignored when `documentAllDirs:true`) |
 
 ## Templates
 
 - `references/root-template.md` — root `CLAUDE.md` scaffold (paired `dox:index` markers).
 - `references/child-template.md` — child `CLAUDE.md` scaffold.
 - `references/agents-pointer.md` — the 1-line `AGENTS.md` pointer.
+
+ECC graft: `references/ecc-codemaps.md` — codemaps are the dox tree plus the jcodemunch repo map.

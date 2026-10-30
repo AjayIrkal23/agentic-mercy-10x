@@ -1,15 +1,16 @@
 {
   "_meta": {
-    "purpose": "Single source of truth for (a) AGENT INTENT -> ordered jcodemunch/graphify/jdocmunch tool playbooks (`intents`, referenced by rules/skills; code_intel.py can render them) and (b) prompt-time MCP auto-routes (`mcp_routes`, consumed by prompt_router/modules/mcp_routes.py — availability-aware, one 'call X now' line per route, first-listed wins, max `max_mcp_routes` per prompt; jcodemunch/graphify/jdocmunch directives come from router.py SUBSTRATE, per intent). PostToolUse write hints: hooks/mcp-post-hints.py. Facts (jcode/graphify/jdocmunch) -> reasoning -> action.",
+    "purpose": "Single source of truth for (a) AGENT INTENT -> ordered jcodemunch/graphify/jdocmunch tool playbooks (`intents` playbooks are reference data for skills/docs (no hook renders them)) and (b) prompt-time MCP auto-routes (`mcp_routes`, consumed by prompt_router/modules/mcp_routes.py — availability-aware, one 'call X now' line per route, first-listed wins, max `max_mcp_routes` per prompt; jcodemunch/graphify/jdocmunch directives come from router.py SUBSTRATE, per intent). PostToolUse write hints: hooks/mcp-post-hints.py. Facts (jcode/graphify/jdocmunch) -> reasoning -> action.",
     "consumed_by": [
-      "hooks/prompt_router/modules/mcp_routes.py (mcp_routes)",
-      "hooks/prompt_router/modules/code_intel.py (intents playbooks, on demand)",
+      "hooks/prompt_router/modules/mcp_routes.py (mcp_routes, connectors)",
       "rules/codebase-intel-first.md (human mirror)"
     ],
-    "mirror": "rules/references/tool-intelligence.md",
     "version": 2,
     "tool_prefix": "mcp__jcodemunch__ / mcp__graphify__ / mcp__jdocmunch__ (bare names below)"
   },
+
+  "_connectors_comment": "claude.ai connector servers are enabled in claude.ai, not in ~/.claude.json; mcp_routes treats them as available. Tool names are mcp__claude_ai_<name>__*.",
+  "connectors": ["claude_ai_higgsfield"],
 
   "mcp_routes": [
     {
@@ -79,10 +80,13 @@
     },
     {
       "id": "higgsfield",
-      "server": ["higgsfield"],
+      "server": ["claude_ai_higgsfield", "higgsfield"],
       "when": {"surfaces": ["frontend", "ui"], "regex": "\\b(landing page|hero (?:section|image|video|visual)|illustrations?|icons?|background (?:image|video)|texture|3d model|glb|video loop|logo|og image|placeholder|stock (?:photo|image)|unsplash|picsum|imagery|visuals?)\\b", "all": true},
       "tools": ["models_explore", "generate_image", "generate_video", "generate_3d", "generate_image_batch", "jobs_wait"],
-      "text": "Assets on a frontend task → call higgsfield models_explore(recommend) → generate_image (GPT Image 2.5) / generate_video (Seedance 2.5) / generate_3d now; several assets → generate_*_batch → jobs_wait (balance first); OpenArt only when the project says so; never placeholders or stock URLs."
+      "text": "Assets on a frontend task → call higgsfield models_explore(recommend) → generate_image (GPT Image 2.5) / generate_video (Seedance 2.5) / generate_3d now; several assets → generate_*_batch → jobs_wait (balance first); OpenArt only when the project says so; never placeholders or stock URLs.",
+      "text_by_server": {
+        "claude_ai_higgsfield": "Assets on a frontend task → call mcp__claude_ai_higgsfield__models_explore(recommend) → generate_image / generate_video / generate_3d now; several assets → generate_*_batch → jobs_wait (balance first); OpenArt only when the project says so; never placeholders or stock URLs."
+      }
     },
     {
       "id": "github",
@@ -99,13 +103,6 @@
       "text": "ClickHouse work → mcp clickhouse (list_tables / run_select_query) for live schema; pair with clickhouse:clickhouse-best-practices."
     }
   ],
-
-  "engines": {
-    "jcodemunch": "code structure: symbols, refs, call graph, impact, dead code, complexity + SEMANTIC search (embeddings). Reads its own finds (get_symbol_source/get_file_outline/get_file_content) — no second read hop.",
-    "graphify": "architecture: dependency graph, god nodes, cross-module shortest_path, NL structure queries.",
-    "jdocmunch": "documentation SETS: md/rst/adoc trees, docs/ folders, READMEs — section-level index.",
-    "dox": "per-directory CLAUDE.md LOCAL rules — read root->target before editing."
-  },
 
   "intents": {
     "understand": {
@@ -200,35 +197,5 @@
         {"n": 4, "engine": "jdocmunch", "tool": "find_code_examples", "alt": ["find_endpoint", "lookup_term"], "when": "need a usage example / term", "why": "targeted retrieval"}
       ]
     }
-  },
-
-  "cross_cutting": {
-    "semantic_search": {
-      "when": "you can't name the exact symbol; finding related/similar code by MEANING; 'where do we do X'",
-      "tools": ["search_symbols(semantic=true)", "find_similar_symbols", "get_related_symbols", "assemble_task_context (semantic-ranked)"],
-      "requires": "embeddings present. Verify: check_embedding_drift. Build: embed_repo (backend: ollama all-minilm, 384-dim).",
-      "note": "This is the newly-enabled capability — prefer it over lexical search whenever the name is unknown."
-    },
-    "safety_before_edit": {
-      "when": "immediately before any mutate/rename/delete of a shared symbol",
-      "tools": ["check_edit_safe", "check_rename_safe", "check_delete_safe", "check_references", "get_blast_radius"],
-      "note": "get_blast_radius risk null (jcodemunch >=1.108.245) = import graph could not reach the code, not zero risk — fall back to find_references."
-    },
-    "trust_verdicts": {
-      "when": "a search result is used as evidence, especially of absence",
-      "rule": "read verdict.state (ok/absent/degraded) and verdict.working_tree (clean/dirty_in_scope/...) on search_symbols/search_text/get_ranked_context (jcodemunch >=1.108.181); degraded, unknown or dirty_in_scope = stale — re-index or read the file before claiming 'no such code'."
-    },
-    "freshness": {
-      "auto": "index-lifecycle.py keeps the ACTIVE repo fresh (session-start rebuild on HEAD/dirty change; post-write incremental). AI summaries inline via ollama; skipped+warned if ollama down.",
-      "manual_if_stale": ["index_folder(incremental=true)", "index_file", "graphify update <root>"],
-      "semantic": "embed_repo per repo (not auto — run after summaries) ; check_embedding_drift to verify canary"
-    }
-  },
-
-  "handoff_pipeline": {
-    "order": ["facts", "reasoning", "action"],
-    "facts": "jcodemunch (structure) + graphify (architecture) + jdocmunch (docs) — gather in parallel",
-    "reasoning": "sequential-thinking over the facts",
-    "action": "edit via Edit/ctx_patch; then register_edit / index-lifecycle keeps the index fresh"
   }
 }

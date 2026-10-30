@@ -1,18 +1,20 @@
 #!/usr/bin/env python3
-"""opus-guard.py — PreToolUse mutator for the Agent tool: sets `model` and the [label]
-in `description` to the model that will actually run (D2). Sonnet executes, Opus judges
-(pins in model-policy.json), executors escalate, Fable only on the user's word.
+"""opus-guard.py — PreToolUse mutator for the Agent tool: sets `model` and the [label] in
+`description` to the model that will actually run (D2, plan tiers R3.3).
 
-Order (first hit wins): 1 session flags state/<m>-only-mode · 2 per-project mode
-(lib/model_mode) · 3 explicit `model` / [label] — outright only for an unguarded agent;
-a pinned agent, an escalation executor or fable needs the user's own override phrase
-this turn (E-04) · 4 agent_pins · 5 escalation (retry marker, or no plan marker and
-classify() size/risk >= heavy_qualifiers) · 6 default sonnet.
+The model comes from lib/model_mode.resolve(), the one resolver both guards share:
+1 session flags state/<m>-only-mode (haiku > sonnet > opus > fable) · 2 per-project mode
+(lib/model_mode) · 3 explicit `model` / [label] — outright only for an unguarded role; a judge,
+an executor or fable needs the user's own override phrase this turn (E-04) · 4 role x plan tier
+(model-policy.json `roles` + `tiers`; tier from state/plan-tier.json, max20 when missing) ·
+5 escalation one model up for executors (retry marker, or no plan marker and classify()
+size/risk >= heavy_qualifiers) · 6 usage-guard step-down while the 5-hour window is >= 80 %
+(lib/usage_guard) · 7 the tier ceiling, always last.
 
-Each decision goes to .telemetry/<session>.model-routing.jsonl {ts, agent, model,
-reason}; an ignored request is named in the reason. Emits the FULL tool_input echo
-with only `model` / `description` changed, and only when something changes; never
-touches `prompt` or `name`. stdout `{}` or a PreToolUse `updatedInput`; exit always 0.
+Each decision goes to .telemetry/<session>.model-routing.jsonl {ts, agent, model, reason, tier,
+usage_guard, fallback}. Emits the FULL tool_input echo with only `model` / `description` changed,
+and only when something changes; never touches `prompt` or `name`. stdout `{}` or a PreToolUse
+`updatedInput`; exit always 0.
 """
 from __future__ import annotations
 
@@ -28,21 +30,28 @@ if str(_HOOKS) not in sys.path:
     sys.path.insert(0, str(_HOOKS))
 try:
     from lib import model_mode as _mm
-except Exception:  # noqa: BLE001 - never let the per-project layer brick the guard
+except Exception:  # noqa: BLE001 - never let the routing lib brick the guard
     _mm = None  # type: ignore
+try:
+    from lib import plan_tier as _pt
+except Exception:  # noqa: BLE001
+    _pt = None  # type: ignore
+try:
+    from lib import usage_guard as _ug
+except Exception:  # noqa: BLE001
+    _ug = None  # type: ignore
 
-PREFIX_RE = re.compile(r"^\[(sonnet|opus|fable)\]\s", re.IGNORECASE)
+PREFIX_RE = re.compile(r"^\[(haiku|sonnet|opus|fable)\]\s", re.IGNORECASE)
 
 # --- model-policy.json: the single model truth. Fail-open to these literals. -----
 POLICY_PATH = _HOOKS / "model-policy.json"
 _TELEMETRY_DIR = Path(os.environ.get("CLAUDE_HOOK_TELEMETRY_DIR") or _HOOKS / ".telemetry")
 
 _DEFAULT_FLAG_DIR = "state"
-_DEFAULT_FLAG_NAMES = {"sonnet": "sonnet-only-mode", "opus": "opus-only-mode", "fable": "fable-only-mode"}
-_DEFAULT_FLAG_PRECEDENCE = ["sonnet", "opus", "fable"]
-_DEFAULT_SONNET_ONLY_AGENTS = {"explore", "claude-code-guide"}
-_DEFAULT_OPUS_ONLY_AGENTS = {"frontend-uiux-designer", "santa-reviewer"}
-_DEFAULT_VALID_MODELS = {"sonnet", "opus", "fable"}
+_DEFAULT_FLAG_NAMES = {"haiku": "haiku-only-mode", "sonnet": "sonnet-only-mode", "opus": "opus-only-mode",
+                       "fable": "fable-only-mode"}
+_DEFAULT_FLAG_PRECEDENCE = ["haiku", "sonnet", "opus", "fable"]
+_DEFAULT_VALID_MODELS = {"haiku", "sonnet", "opus", "fable"}
 _DEFAULT_MODEL = "sonnet"
 
 _POLICY_CACHE: dict | None = None
@@ -68,21 +77,6 @@ def _claude_dir() -> Path:
         return _plat.claude_dir()
     except Exception:  # noqa: BLE001
         return Path.home() / ".claude"
-
-
-def _agent_sets() -> tuple[set[str], set[str], set[str]]:
-    """(sonnet_only, opus_only, fable_only) agent sets from policy, fail-open to
-    literals. An empty list in the policy is RESPECTED; only a missing/invalid list
-    falls back. Fable is opt-in only, so agent_pins.fable is expected to be empty."""
-    pins = _load_policy().get("agent_pins")
-    pins = pins if isinstance(pins, dict) else {}
-    opus = pins.get("opus")
-    sonnet = pins.get("sonnet")
-    fable = pins.get("fable")
-    opus_set = {str(a).lower() for a in opus} if isinstance(opus, list) else set(_DEFAULT_OPUS_ONLY_AGENTS)
-    sonnet_set = {str(a).lower() for a in sonnet} if isinstance(sonnet, list) else set(_DEFAULT_SONNET_ONLY_AGENTS)
-    fable_set = {str(a).lower() for a in fable} if isinstance(fable, list) else set()
-    return sonnet_set, opus_set, fable_set
 
 
 def _flag_paths() -> dict[str, Path]:
@@ -121,88 +115,76 @@ def _allow_unchanged() -> int:
     return 0
 
 
-def _log_route(sid: str, agent: str, model: str, reason: str) -> None:
+def _fallback_chain(tier: str) -> list:
+    try:
+        return _pt.render_overrides(tier)["fallbackModel"] if _pt is not None else []
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def _log_route(sid: str, agent: str, model: str, reason: str, *, tier: str = "?", usage: bool = False,
+               fallback: list | None = None) -> None:
     """Append one routing decision to .telemetry/<sid>.model-routing.jsonl."""
     if not sid or os.environ.get("CLAUDE_HOOK_DOCTOR"):
         return
     try:
         _TELEMETRY_DIR.mkdir(parents=True, exist_ok=True)
         safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in sid)
-        rec = {"ts": datetime.now(timezone.utc).isoformat(), "agent": agent,
-               "model": model, "reason": reason}
+        rec = {"ts": datetime.now(timezone.utc).isoformat(), "agent": agent, "model": model, "reason": reason,
+               "tier": tier, "usage_guard": bool(usage), "fallback": list(fallback or [])}
         with (_TELEMETRY_DIR / f"{safe}.model-routing.jsonl").open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(rec) + "\n")
     except Exception:  # noqa: BLE001 - telemetry is best-effort
         pass
 
 
-def _routed(subagent_type: str, text: str, cwd: str | None) -> tuple[str, str]:
-    """Pin -> escalation -> default, ignoring any explicit request."""
-    sonnet_agents, opus_agents, fable_agents = _agent_sets()
-    for mdl, agents in (("fable", fable_agents), ("opus", opus_agents), ("sonnet", sonnet_agents)):
-        if subagent_type in agents:
-            return mdl, f"'{subagent_type}' is a pinned {mdl} agent"
-    policy = _load_policy()
-    why = _mm.escalation_reason(policy, subagent_type, text, cwd) if _mm is not None else None
-    target = (policy.get("escalation") or {}).get("to", "opus")
-    if why and target in _valid_models():
-        return target, f"escalated: {why}"
-    return _default_model(), "default (no opus/fable signal)"
-
-
-def _guarded(subagent_type: str) -> bool:
-    """Pinned agents and escalation executors: a request alone may not move them."""
-    esc = _load_policy().get("escalation")
-    esc_agents = {str(a).lower() for a in (esc.get("agents") or [])} if isinstance(esc, dict) else set()
-    return subagent_type in set().union(*_agent_sets(), esc_agents)
-
-
 def _resolve_required(subagent_type: str, model: str, description: str,
                       cwd: str | None = None, prompt: str = "",
-                      transcript: str | None = None) -> tuple[str, str]:
-    """Return (required_model, reason). Order: session flags -> per-project mode ->
-    explicit model / [label] (guarded agents and fable need the user's phrase) ->
-    agent pins -> escalation -> default."""
-    flag_paths = _flag_paths()
-    for mdl in _flag_precedence():
-        fp = flag_paths.get(mdl)
-        if fp is not None and fp.is_file():
-            return mdl, f"{mdl}-only-mode active"
+                      transcript: str | None = None) -> tuple[str, str, str, bool]:
+    """-> (required_model, reason, tier, usage_active). See the module docstring for the order."""
+    policy = _load_policy()
+    try:
+        tier = _pt.read().get("tier", "max20") if _pt is not None else "max20"
+    except Exception:  # noqa: BLE001
+        tier = "max20"
+    try:
+        usage = bool(_ug.state().get("active")) if _ug is not None else False
+    except Exception:  # noqa: BLE001
+        usage = False
+    fps = _flag_paths()
+    flags = [m for m in _flag_precedence() if (fp := fps.get(m)) is not None and fp.is_file()]
+    pin = None
     if _mm is not None and cwd:
         try:
-            pm = _mm.forced_mode(cwd)
+            pin = _mm.forced_mode(cwd, cap=False)  # the resolver caps it and names `tier-cap`
         except Exception:  # noqa: BLE001
-            pm = None
-        if pm:
-            return pm, "per-project model mode"
+            pin = None
     label = PREFIX_RE.match(description)
     if model in _valid_models():
-        asked, src = model, "explicit model param"
+        asked, src = model, "param"
+    elif label:
+        asked, src = label.group(1).lower(), "label"
     else:
-        asked, src = (label.group(1).lower(), "description label") if label else (None, "")
-    if asked and asked != "fable" and not _guarded(subagent_type):
-        return asked, src
-    if asked and _mm is not None:
-        phrase = _mm.user_phrase(asked, transcript, _load_policy().get("override_phrases"))
-        if phrase:
-            return asked, f"{src} (user said '{phrase}')"
-    required, reason = _routed(subagent_type, f"{description}\n{prompt}", cwd)
-    if asked and asked != required:
-        reason += f"; {src} '{asked}' ignored (no '{asked}' override phrase in the user's turn)"
-    elif model and model not in _valid_models():
+        asked, src = None, "param"
+    if _mm is None:  # the lib failed to import: the literal default, capped when plan_tier works
+        req = flags[0] if flags else (asked if asked and asked != "fable" else _default_model())
+        return (_pt.cap(req, tier) if _pt is not None else req), "model_mode unavailable", tier, usage
+    phrases = policy.get("override_phrases")
+
+    def phrase_for(m: str) -> str | None:
+        return _mm.user_phrase(m, transcript, phrases)
+
+    required, reason = _mm.resolve(policy, subagent_type, asked=asked, asked_src=src, phrase_for=phrase_for,
+                                   text=f"{description}\n{prompt}", cwd=cwd, tier=tier,
+                                   usage_active=usage, flags=flags, pin=pin)
+    if model and model not in _valid_models():
         reason += f"; explicit model '{model}' is not a policy model"
-    return required, reason
+    return required, reason, tier, usage
 
 
-def main() -> int:
-    try:
-        payload = json.load(sys.stdin)
-    except (json.JSONDecodeError, EOFError, ValueError):
-        return _allow_unchanged()
-
+def main_with_payload(payload: dict) -> int:
     if not isinstance(payload, dict) or payload.get("tool_name") not in ("Agent", "Task"):
         return _allow_unchanged()
-
     tool_input = payload.get("tool_input", {})
     if not isinstance(tool_input, dict):
         return _allow_unchanged()
@@ -211,13 +193,12 @@ def main() -> int:
     model = (tool_input.get("model") or "").lower()
     subagent_type = (tool_input.get("subagent_type") or "").lower()
     cwd = payload.get("cwd")
-
     prompt, transcript = tool_input.get("prompt"), payload.get("transcript_path")
-    required, reason = _resolve_required(
+    required, reason, tier, usage = _resolve_required(
         subagent_type, model, description, cwd if isinstance(cwd, str) else None,
         prompt if isinstance(prompt, str) else "", transcript if isinstance(transcript, str) else None)
-    _log_route(str(payload.get("session_id") or ""), subagent_type or "general-purpose",
-               required, reason)
+    _log_route(str(payload.get("session_id") or ""), subagent_type or "general-purpose", required, reason,
+               tier=tier, usage=usage, fallback=_fallback_chain(tier))
 
     m = PREFIX_RE.match(description)
     current_prefix = m.group(1).lower() if m else None
@@ -237,13 +218,24 @@ def main() -> int:
     full_input = dict(tool_input)
     full_input.update(updated)
 
-    note = (f"opus-guard: subagent runs on [{required}] ({reason}). Omit `model` on Agent "
-            "calls: pins and escalation decide; a pinned judge, an executor or fable moves "
-            "only on the user's own phrase this turn ('use opus' / 'use sonnet' / 'use fable').")
+    note = (f"opus-guard: {subagent_type or 'general-purpose'} -> [{required}] ({reason}"
+            + ("; usage-guard active" if usage and "usage-guard" not in reason else "")
+            + "). Omit `model`; judges, executors and fable move only on the user's phrase this turn.")
     print(json.dumps({"hookSpecificOutput": {
         "hookEventName": "PreToolUse", "permissionDecision": "allow",
         "updatedInput": full_input, "additionalContext": note}}))
     return 0
+
+
+def main() -> int:
+    try:
+        payload = json.load(sys.stdin)
+    except (json.JSONDecodeError, EOFError, ValueError):
+        return _allow_unchanged()
+    try:
+        return main_with_payload(payload)
+    except Exception:  # noqa: BLE001 - the guard must never block an Agent call
+        return _allow_unchanged()
 
 
 if __name__ == "__main__":

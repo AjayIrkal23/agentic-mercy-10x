@@ -43,10 +43,12 @@ export function statusText(s: Snapshot): string {
   if (s.queued) parts.push(`⏳ ${s.queued} hook${s.queued > 1 ? 's' : ''}`)
   if (s.resumeLabel) parts.push(`⏰ resume ${s.resumeLabel}`)
   if (s.errors) parts.push(`⚠ ${s.errors} hook error${s.errors > 1 ? 's' : ''}`)
+  const mem = s.deck?.mem?.level
+  if (mem === 'warn' || mem === 'crit') parts.push(`mem ${mem === 'crit' ? '✗' : '⚠'}`) // numbers: the Python status line
   return parts.join(' · ')
 }
 
-export type BandAction = { key: string; label: string; prompt?: string; command?: 'hide' | 'cancel-resume' | 'open-pane' | 'compact' | 'open-ci' }
+export type BandAction = { key: string; label: string; prompt?: string; command?: 'hide' | 'cancel-resume' | 'open-pane' | 'compact' | 'open-ci' | 'open-mem' }
 export type BandModel = { lines: string[]; actions: BandAction[] }
 
 /** Only what the user can act on; undefined keeps the band empty. */
@@ -94,10 +96,10 @@ export function stateLine(s: Snapshot): string | undefined {
   return `mercy session state: ${parts.join(' · ')}. Full detail: mcp__mercy__session_state.`
 }
 
-export const VIEWS: readonly PulseView[] = ['overview', 'usage', 'git', 'ci', 'todo', 'today', 'ports', 'deps', 'files', 'commands', 'agents', 'hooks', 'brain']
+export const VIEWS: readonly PulseView[] = ['overview', 'usage', 'git', 'ci', 'todo', 'today', 'ports', 'deps', 'files', 'commands', 'agents', 'hooks', 'brain', 'memory']
 /** The pane's tab hotkeys: mnemonic letters (a Button hotkey is one digit or lowercase letter). */
 export const VIEW_KEYS: Record<PulseView, string> = {
-  overview: 'o', usage: 'u', git: 'g', ci: 'i', todo: 't', today: 's', ports: 'p', deps: 'd', files: 'f', commands: 'c', agents: 'a', hooks: 'h', brain: 'b',
+  overview: 'o', usage: 'u', git: 'g', ci: 'i', todo: 't', today: 's', ports: 'p', deps: 'd', files: 'f', commands: 'c', agents: 'a', hooks: 'h', brain: 'b', memory: 'm',
 }
 
 export function paneRows(view: PulseView, s: Snapshot, width: number): string[] {

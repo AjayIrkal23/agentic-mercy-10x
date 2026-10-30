@@ -120,6 +120,11 @@ def check_locked_source_links(
         f"{len(links)} approved locked-source symlink(s)")
 
 
+# Fallback for a policy without `roles`: the judges pinned before roles existed.
+_LEGACY_JUDGES = frozenset({"santa-reviewer", "frontend-uiux-designer", "planning-director",
+                            "spec-architect", "debug-detective"})
+
+
 def check_model_routing(
     rows: list,
     root: Path,
@@ -138,8 +143,8 @@ def check_model_routing(
         default = policy.get("default")
         pins = policy.get("agent_pins") or {}
         opus_pins = set(pins.get("opus") or [])
-        judges = {"santa-reviewer", "frontend-uiux-designer", "planning-director",
-                  "spec-architect", "debug-detective"}
+        role_map = (policy.get("roles") or {}).get("agents") or {}
+        judges = {a for a, r in role_map.items() if r == "judge"} or set(_LEGACY_JUDGES)
         esc = policy.get("escalation") or {}
         executors = set(esc.get("agents") or [])
         ok = (
@@ -150,9 +155,13 @@ def check_model_routing(
             and (policy.get("invoke_categories") or {}).get("IMPLEMENT") in (None, default)
             and not pins.get("fable")
         )
-        row(rows, "model-routing", passed if ok else failed,
-            f"default={default} judges-on-opus={judges <= opus_pins} "
-            f"executors-pinned={sorted(executors & opus_pins)} escalation->{esc.get('to')}")
+        detail = (f"default={default} judges-on-opus={judges <= opus_pins} "
+                  f"executors-pinned={sorted(executors & opus_pins)} escalation->{esc.get('to')}")
+        if not judges <= opus_pins:
+            detail += f" judges-not-pinned={sorted(judges - opus_pins)}"
+        if not policy.get("tiers"):
+            detail += " (no tiers block)"
+        row(rows, "model-routing", passed if ok else failed, detail)
     except Exception as exc:  # noqa: BLE001
         row(rows, "model-routing", failed,
             f"model-policy.json: {type(exc).__name__}: {exc}")

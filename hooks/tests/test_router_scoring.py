@@ -67,12 +67,15 @@ def test_urls_and_guard_names_are_not_security(tmp_path):
     assert "SECURITY" in _intents("harden the login endpoint against brute force", tmp_path)
 
 
-def test_weights_demote_but_never_boost(tmp_path, monkeypatch):
+def test_demote_table_multiplies_and_never_boosts(tmp_path, monkeypatch):
+    import json
     prof = C.classify({"prompt": "add a REST endpoint with pagination and a vitest test",
                        "cwd": str(tmp_path), "session_id": "t-c01"})
     base = dict(S.rank_all(prof))
     name = next(iter(base))
-    monkeypatch.setattr(S, "_weights", lambda: {name: 1.5})
-    assert dict(S.rank_all(prof))[name] == base[name]
-    monkeypatch.setattr(S, "_weights", lambda: {name: 0.5})
+    cfg = json.loads(json.dumps(S._router_cfg()))          # deep copy of the live config
+    cfg.setdefault("additions", {})["demote"] = {name: 1.5}
+    monkeypatch.setattr(S, "_router_cfg", lambda: cfg)
+    assert dict(S.rank_all(prof))[name] == base[name]      # a demote > 1.0 is clamped to 1.0
+    cfg["additions"]["demote"] = {name: 0.5}
     assert dict(S.rank_all(prof))[name] == base[name] * 0.5

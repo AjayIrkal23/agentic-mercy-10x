@@ -2,7 +2,7 @@
 // (`ss -ltnpH` on Linux; `netstat -ano` + `tasklist` on Windows) and outdated npm packages
 // (`npm outdated --json`).
 
-import type { DepRow, PortRow } from '../../types'
+import type { DepRow, MemLevel, MemState, PortRow } from '../../types'
 import { system32 } from './os'
 
 export type Port = PortRow
@@ -127,4 +127,53 @@ export function parseOutdated(json: string): Outdated[] {
   return Object.entries(data)
     .map(([name, v]) => ({ name, current: v.current ?? '-', wanted: v.wanted ?? '-', latest: v.latest ?? '-', bump: bump(v.current, v.latest ?? '') }))
     .sort((a, b) => ORDER[a.bump] - ORDER[b.bump] || a.name.localeCompare(b.name))
+}
+
+/** A mem-pressure.json older than this reads as `ok` (memwatch writes every 5 s). */
+export const MEM_STALE_MS = 30_000
+
+function finite(v: unknown): number | undefined {
+  return typeof v === 'number' && Number.isFinite(v) ? v : undefined
+}
+
+function memLevel(v: unknown): MemLevel {
+  return v === 'warn' || v === 'crit' ? v : 'ok'
+}
+
+/** state/mem-pressure.json → MemState; undefined for garbage (a torn write keeps the last good state). */
+export function parseMemPressure(text: string, nowMs: number): MemState | undefined {
+  let d: unknown
+  try {
+    d = JSON.parse(text)
+  } catch {
+    return undefined
+  }
+  if (typeof d !== 'object' || d === null || Array.isArray(d)) return undefined
+  const o = d as Record<string, unknown>
+  const ts = (finite(o['ts']) ?? 0) * 1000
+  const raw = memLevel(o['level'])
+  const stale = ts <= 0 || nowMs - ts > MEM_STALE_MS
+  const top: MemState['top'] = []
+  for (const t of Array.isArray(o['top']) ? o['top'] : []) {
+    if (typeof t !== 'object' || t === null) continue
+    const r = t as Record<string, unknown>
+    if (typeof r['name'] !== 'string') continue
+    top.push({ name: r['name'], rssMb: finite(r['rss_mb']) ?? 0, ...(typeof r['unit'] === 'string' ? { unit: r['unit'] } : {}) })
+    if (top.length >= 8) break
+  }
+  return {
+    level: stale ? 'ok' : raw,
+    rawLevel: raw,
+    ts,
+    stale,
+    unsupported: o['unsupported'] === true,
+    memAvailableMb: finite(o['mem_available_mb']),
+    swapFreePct: finite(o['swap_free_pct']),
+    psi: finite(o['psi_some_avg10']),
+    top,
+    stuck: Array.isArray(o['stuck']) ? o['stuck'].length : 0,
+    shed: Array.isArray(o['shed']) ? o['shed'].length : 0,
+    restorePending: o['restore_pending'] === true,
+    notifyOwner: typeof o['notify_owner'] === 'string' ? o['notify_owner'] : 'memwatch',
+  }
 }

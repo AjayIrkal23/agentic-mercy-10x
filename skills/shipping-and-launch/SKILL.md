@@ -336,3 +336,5 @@ After deploying:
 - [ ] Critical user flow works
 - [ ] Logs are flowing
 - [ ] Rollback tested or verified ready
+
+ECC graft: `references/ecc-release.md` — four readiness lenses and the human release-decision gate.

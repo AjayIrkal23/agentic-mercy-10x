@@ -37,6 +37,8 @@ State files read (all under STATE_DIR / {safe_cid}.*):
 
 Own state file:
   .completion-gate.json — {"turn_key": ..., "blocked_this_turn": bool, "failed_gates": [...]}
+
+State helpers: lib/gate_state (safe_cid, tolerant reads, locked writes).
 """
 from __future__ import annotations
 
@@ -129,27 +131,18 @@ def _is_infra_only_session(cid: str) -> bool:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _safe_cid(cid: str) -> str:
-    return "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
+from lib import gate_state as _gs  # noqa: E402
 
-
-def _load_json(path: Path) -> dict:
-    if not path.is_file():
-        return {}
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-        return data if isinstance(data, dict) else {}
-    except Exception:
-        return {}
+_safe_cid = _gs.safe_cid
+_load_json = _gs.load_json
 
 
 def _save_json(path: Path, data: dict) -> None:
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data), encoding="utf-8")
+    _gs.save_json(path, data)
 
 
-def _gate_state_path(cid: str) -> Path:
-    return STATE_DIR / f"{_safe_cid(cid)}.completion-gate.json"
+def _gate_state_path(cid: str) -> "Path | None":
+    return _gs.state_path(cid, "completion-gate", base=STATE_DIR)
 
 
 def _load_gate_state(cid: str) -> dict:

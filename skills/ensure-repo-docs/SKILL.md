@@ -97,3 +97,5 @@ feature work, unless the user scoped docs out.
 - Writing or rewriting docs (use `update-docs`, `dox-doc-tree`).
 - Repo-wide doc audits on request (`update-docs` plus jdocmunch `get_doc_coverage`).
 - Starting servers or building doc sites to "check" them: never.
+
+ECC graft: `references/ecc-note.md` — provenance note; the read-only audit is already here.

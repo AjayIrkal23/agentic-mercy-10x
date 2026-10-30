@@ -24,6 +24,9 @@ and re-render. `hooks/model-policy.json` is the model truth →
 `hooks/dispatch.config.json` declares every hook link (types `exec`, `gate`, `advisory`,
 `mutator`, `async`); each link is isolated and fail-open. Tests:
 `python3 -m pytest hooks/tests -q`; health: `python3 installer/doctor.py`.
+OOM guard files: `hooks/memwatch-brake.py`, `hooks/memwatch-ensure.py`,
+`hooks/memwatch.config.json`, `hooks/tools/memwatch.py`, `hooks/lib/memwatch_state.py`,
+state `state/mem-pressure.json`; runbook `docs/OOM-GUARD.md`.
 
 **Gate reference (what each refusal actually says):**
 
@@ -31,11 +34,15 @@ and re-render. `hooks/model-policy.json` is the model truth →
 |---|---|---|---|
 | `dangerous-bash-gate` | Bash / PowerShell | `DANGEROUS COMMAND BLOCKED:` | deny |
 | `jcodemunch-enforce` (jcm-gate-read) | Read/Grep/Glob/`ctx_read` on source | `BLOCKED: Use mcp__jcodemunch__…` | budget 2, then fails open |
-| `first-write-skill-gate` | first Write/Edit of code | `SKILL GATE: First code write to …` | once per session; load the named skills |
-| `dox-write-gate` | Write/Edit in a repo with no root `CLAUDE.md` | `DOX GATE: no root CLAUDE.md …` | deny once; `DOX FIRST —` is advisory |
+| `first-write-skill-gate` | first Write/Edit of code | `SKILL GATE: First code write to …` | advisory once per session: load the named skills |
+| `dox-write-gate` | Write/Edit in a repo with no root `CLAUDE.md` | `DOX GATE: no root CLAUDE.md …` | deny once per repo |
 | `gateguard-write-gate` | Write/Edit with high blast radius | `GATEGUARD — high-blast-radius write to …` | `ask`, not deny |
 | `tdd-guard-gate` | Write/Edit in a project with a test runner | `⚠️ TDD GUARD (advisory — not blocking):` | advisory, 15 s cap; never in `$HOME` / non-git |
 | `bash-write-gate` | Bash / PowerShell shell-write patterns (`>`, `tee`, `Set-Content`, `Out-File`, …) | advisory unless `BASH_WRITE_GATE_DENY_SHELL_WRITES=1` | rule carried by `01-no-shell-writes.md` |
+| `memwatch-brake` | Agent/Task/Workflow + heavy shell commands | `memory warn:` / `memory crit:` | warn: advisory once per tier per session; crit: `ask`, advisory when unattended |
+| `config-protection-gate` | Write/Edit on lint/format config | — | `ask` unless the prompt asked for it |
+| `hookify-gate` | repo `.claude/hookify.*.local.md` rules | — | gate on tools; advisory on prompt/stop |
+| `connector-ask-gate` | claude.ai connector, plugin and GitHub write tools | — | `ask`; deny for subagents |
 | `hard-completion-gate` | Stop | `Gate 2 (docs)` … `Gate 5 (dead code)` | ≤1 block per turn |
 | `blocking-doc-enforcer` | `git commit` | `BLOCKED: Cannot commit without documentation updates.` | only when doc trees exist |
 | mercy mod guard | Bash / PowerShell dev server / watcher, subagent commit/push, live secret in a write | `mercy guard:` | deny; userConfig `guard` |

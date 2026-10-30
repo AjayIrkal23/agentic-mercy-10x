@@ -85,3 +85,5 @@ Use `dead-code-and-change-audit` if the design becomes a coding task or changes 
 ## References
 
 - Use `references/full-guide.md` if you need the previous full strict guide.
+
+ECC graft: `references/ecc-blueprint-shape.md` — five-section blueprint output: context, components, interfaces, order, risks.

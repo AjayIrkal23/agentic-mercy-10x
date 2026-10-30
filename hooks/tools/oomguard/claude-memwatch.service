@@ -1,0 +1,17 @@
+[Unit]
+Description=agentic-mercy oomguard: memory-pressure sentinel for Claude Code sessions
+Documentation=file://{CLAUDE_DIR}/docs/OOM-GUARD.md
+
+[Service]
+Type=simple
+ExecStart={PY} {HOOKS}/tools/memwatch.py
+Restart=always
+RestartSec=5
+OOMPolicy=continue
+ManagedOOMPreference=omit
+MemoryMax=200M
+Nice=10
+Environment=PYTHONUNBUFFERED=1
+
+[Install]
+WantedBy=default.target

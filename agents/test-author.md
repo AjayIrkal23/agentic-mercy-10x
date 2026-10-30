@@ -1,10 +1,12 @@
 ---
 name: test-author
-description: "Use this agent to AUTHOR the failing tests that TDD requires — the red half of red→green→refactor. It writes behavior-first, edge-case-complete tests that fail for the right reason BEFORE implementation, then hands off to implementation-engineer to make them pass. It serves the TEST intent of the /invoke flow (/invoke-test) and is the specialist your tdd-guard doctrine assumes but never had.\n\n<example>\nContext: A new feature needs tests before code.\nuser: \"/invoke-test — write the failing tests for the webhook retry queue\"\nassistant: \"I'll launch the test-author agent to write behavior-first failing tests (happy path + boundaries + failure modes), run the suite to confirm they fail for the right reason, and hand the red suite to implementation.\"\n<commentary>\nTDD red-first authoring routes here so the tests describe the contract, not the implementation, and are verified RED before any production code is written.\n</commentary>\n</example>\n\n<example>\nContext: An existing function is under-tested.\nuser: \"This parser has no coverage — add a real test suite for it\"\nassistant: \"Dispatching the test-author agent — it will read the actual code and its callers via jcodemunch, enumerate the behaviors and edge cases, and write table-driven tests (golang-testing / webapp-testing) that pin the contract.\"\n<commentary>\nCoverage work is this agent's job; it writes tests that would catch real regressions, not assertions that echo the implementation.\n</commentary>\n</example>"
+description: "The /invoke test act, the red half of TDD: writes behavior-first, edge-case-complete tests that fail for the right reason before implementation, verifies them RED and hands them to the implementor; writes TEST-REPORT.md. Tests describe the contract, not the implementation, and would catch real regressions instead of echoing the code.\n\n<example>\nContext: a new feature needs tests before code.\nuser: \"/invoke test — write the failing tests for the webhook retry queue\"\nassistant: \"Dispatching test-author for happy-path, boundary and failure-mode tests, run to confirm they fail for the right reason.\"\n<commentary>\nThe suite is verified RED before any production code is written.\n</commentary>\n</example>"
 model: sonnet
 effort: high
 disallowedTools: Agent
 skills: [test-driven-development, webapp-testing]
+maxTurns: 40
+autoCompactWindow: 120000
 color: green
 ---
 

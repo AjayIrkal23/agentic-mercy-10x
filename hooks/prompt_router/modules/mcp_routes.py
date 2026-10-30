@@ -65,13 +65,15 @@ def _user_cfg() -> dict:
 
 @lru_cache(maxsize=1)
 def available_servers() -> set[str]:
-    """User-scope MCP servers + enabled plugins (as ``plugin:<name>``)."""
+    """User-scope MCP servers + enabled plugins (as ``plugin:<name>``) + claude.ai
+    connectors declared in tool-intelligence.json (``connectors``)."""
     names: set[str] = set()
     names.update(str(k) for k in (_user_cfg().get("mcpServers") or {}))
     plugins = _load_json(_CLAUDE / "settings.json").get("enabledPlugins") or {}
     for key, on in plugins.items():
         if on:
             names.add("plugin:" + str(key).split("@", 1)[0])
+    names.update(str(c) for c in (_load_json(_TOOLMAP).get("connectors") or []))
     return names
 
 

@@ -4,41 +4,72 @@ Subagent definitions live here as `<name>.md` (YAML frontmatter + body). Claude 
 loads them natively; `/invoke <acts>` (skill `invoke`) dispatches them per act, and the
 prompt router suggests one per prompt. 17 agents, plus `team-lead.md`: the team playbook the
 MAIN session follows (no frontmatter, so it is not a spawnable agent).
+Frontmatter carries `maxTurns` on every agent, `omitClaudeMd: true` on the three narrow
+executors (deadcode-reaper, qa-verifier, memory-codex; the SubagentStart hook gives them a
+dox read line instead) and `autoCompactWindow: 120000` on the two Haiku log readers
+(qa-verifier, test-author). Descriptions stay at or under 1,200 chars with one example
+each (`tests/test_agent_frontmatter.py`).
 
 ## Routing table
 
-| Agent | Act / trigger | Model | Effort | Writes | Preload |
-|---|---|---|---|---|---|
-| `audit-specialist` | AUDIT — tech-debt, hotspots, dead code, repo health | sonnet | high | report only | 3 |
-| `spec-architect` | SPEC — requirements, typed contracts, Not-Doing | opus | high | report only | 3 |
-| `planning-director` | PLAN — dependency-ordered tasks, complete code per step | opus | high | report only | 4 |
-| `debug-detective` | DEBUG — unknown-cause failures; ROOTCAUSE.md | opus | xhigh | instrumentation + 1-file fix | 3 |
-| `test-author` | TEST — failing tests first (RED) | sonnet | high | test files | 2 |
-| `implementation-engineer` | IMPL fallback — infra, scripts, hooks, ambiguous surface | sonnet ↑ | high | code | 7 |
-| `backend-implementor-specialist` | IMPL backend — contract-first; publishes CONTRACT | sonnet ↑ | high | code | 8 |
-| `frontend-implementor-specialist` | IMPL frontend — builds against CONTRACT; Higgsfield assets | sonnet ↑ | high | code | 9 |
-| `integrator-specialist` | IMPL mixed closer — parity diff, wiring fixes, E2E proof on a running app | sonnet ↑ | high | small wiring fixes | 4 |
-| `refactor-specialist` | REFACTOR — behavior-preserving, in the main working tree | sonnet ↑ | high | code | 4 |
-| `frontend-uiux-designer` | DESIGN — any "how it looks/feels" task; anti-slop + assets | opus | xhigh | code + assets | 3 |
-| `deadcode-reaper` | CLEAN — removes only what this diff orphaned | sonnet | medium | removals + lint | 3 |
-| `security-sentinel` | SECURITY — semgrep + OWASP; PASS/BLOCK (Gate 3) | sonnet | high | report only | 2 |
-| `santa-reviewer` | REVIEW — BREAKER/SIMPLIFIER/VERIFIER (Gate 4) | opus | xhigh | report only | 2 |
-| `docs-sync-agent` | DOCS — diff → docs ledger, dox tree, ADR test (Gate 2) | sonnet | medium | docs only, background | 2 |
-| `qa-verifier` | VERIFY — evidence before assertions | sonnet | medium | report only | 2 |
-| `memory-codex` | manual — append one dated CODEX.md entry | sonnet | medium | CODEX.md only | 0 |
+| Agent | Act / trigger | Model | Effort | maxTurns | Writes | Preload |
+|---|---|---|---|---|---|---|
+| `audit-specialist` | AUDIT — tech-debt, hotspots, dead code, repo health | opus | high | 60 | report only | 3 |
+| `spec-architect` | SPEC — requirements, typed contracts, Not-Doing | opus | high | 60 | report only | 3 |
+| `planning-director` | PLAN — dependency-ordered tasks, complete code per step | opus | high | 60 | report only | 4 |
+| `debug-detective` | DEBUG — unknown-cause failures; ROOTCAUSE.md | opus | xhigh | 80 | instrumentation + 1-file fix | 3 |
+| `test-author` | TEST — failing tests first (RED) | sonnet | high | 40 | test files | 2 |
+| `implementation-engineer` | IMPL fallback — infra, scripts, hooks, ambiguous surface | sonnet ↑ | high | 60 | code | 7 |
+| `backend-implementor-specialist` | IMPL backend — contract-first; publishes CONTRACT | sonnet ↑ | high | 60 | code | 8 |
+| `frontend-implementor-specialist` | IMPL frontend — builds against CONTRACT; Higgsfield assets | sonnet ↑ | high | 60 | code | 9 |
+| `integrator-specialist` | IMPL mixed closer — parity diff, wiring fixes, E2E proof on a running app | sonnet ↑ | high | 40 | small wiring fixes | 4 |
+| `refactor-specialist` | REFACTOR — behavior-preserving, in the main working tree | sonnet ↑ | high | 40 | code | 4 |
+| `frontend-uiux-designer` | DESIGN — any "how it looks/feels" task; anti-slop + assets | opus | xhigh | 60 | code + assets | 3 |
+| `deadcode-reaper` | CLEAN — removes only what this diff orphaned | haiku | medium | 30 | removals + lint | 3 |
+| `security-sentinel` | SECURITY — semgrep + OWASP; PASS/BLOCK (Gate 3) | sonnet ↑ | high | 50 | report only | 2 |
+| `santa-reviewer` | REVIEW — BREAKER/SIMPLIFIER/VERIFIER (Gate 4) | opus | xhigh | 80 | report only | 2 |
+| `docs-sync-agent` | DOCS — diff → docs ledger, dox tree, ADR test (Gate 2) | haiku | medium | 30 | docs only, background | 2 |
+| `qa-verifier` | VERIFY — evidence before assertions | haiku | medium | 60 | report only | 2 |
+| `memory-codex` | manual — append one dated CODEX.md entry | haiku | medium | 10 | CODEX.md only | 0 |
 
-↑ = escalates to Opus on a failed previous attempt or large unplanned work (`escalation`
-in `hooks/model-policy.json`).
+Model = `tiers.max20` in `hooks/model-policy.json`; other plan tiers below.
+↑ = escalates one tier on a failed previous attempt or large unplanned work (`escalate`
+in the tier block). Caps are the `turn_caps.agents` table of `hooks/model-policy.json`
+(frontmatter must equal it; every agentType a saved workflow calls must meet
+`turn_caps.schema_floor[role]`). The SubagentStart block tells each agent its cap and its
+deliver-by turn (cap minus `report_reserve`, 6); report-writing agents follow the
+Turn budget section of their body: artifact created early, appended as results are
+confirmed, finalized COMPLETE or `INCOMPLETE: <uncovered>` before the reserve, then
+StructuredOutput / the final message.
 
 Canonical `/invoke` order: audit spec plan debug test impl refactor design clean security
 review docs verify. Closers (clean, security, review, docs, verify) run only after
 code-mutating acts.
 
+## Plan tiers
+
+Truth is `model-policy.json` `tiers` (R3.3); details in `docs/MODEL-ROUTING.md`.
+
+| Role | pro | max5 / api | max20 |
+|---|---|---|---|
+| explore / docs / cleanup | haiku | haiku | haiku |
+| verify | haiku | haiku | haiku (sonnet when size >= L) |
+| test | haiku; sonnet on escalation | sonnet | sonnet |
+| impl | haiku; sonnet on escalation | sonnet (haiku with a plan marker and size <= M) | sonnet; opus on escalation |
+| integrate / security | haiku; sonnet on escalation | sonnet | sonnet; opus on escalation |
+| judges | sonnet | sonnet; opus only with the user's phrase that turn | opus |
+| main session | sonnet | sonnet | opus |
+| ceiling | sonnet | opus, by request | fable, by request only |
+| `fallbackModel` | haiku | haiku | sonnet, haiku |
+
+Usage guard: above 80 % of the five-hour limit, executors step down one tier and judges
+sit one tier above them.
+
 ## Plain delegation vs teams
 
 - **Plain delegation (default):** `Agent(subagent_type, description: "…")` with **no
   `model`** (opus-guard sets it and the `[label]`) and **no `name`**. The agent file's `model`, `effort`, `tools`,
-  `disallowedTools`, `skills`, `memory`, `mcpServers` all apply.
+  `disallowedTools`, `skills`, `memory`, `mcpServers`, `maxTurns` all apply.
 - **Team (deliberate):** only when teammates must message each other — fullstack
   `/invoke impl` (impl-be publishes the CONTRACT → SendMessage → impl-fe builds →
   integrator diffs and bounces by name) or a parallel squad the user asks for. The MAIN
@@ -51,12 +82,12 @@ code-mutating acts.
 
 ## Model and effort
 
-- Sonnet 5.5 executes, Opus 5.5 judges. Default subagent model is Sonnet
-  (`env.CLAUDE_CODE_SUBAGENT_MODEL=sonnet`); every agent file pins its own `model:`
-  (opus for the 5 judges: santa, uiux, plan, spec, debug) so routing holds even if
-  hooks fail. `opus-guard` sets `model` + `[label]` and escalates executors; an explicit
-  `model` moves a judge or an executor only when the user's own turn names the model.
-  Precedence lives in `rules/04-model-routing.md`, pins in `hooks/model-policy.json`.
+- Haiku is the default worker; the tier picks the rest. Every agent file pins its own
+  `model:` (the max20 column) so routing holds even if hooks fail; `opus-guard` sets
+  `model` + `[label]` per tier, escalates executors and caps every result at the tier's
+  ceiling. An explicit `model` moves a judge or an executor only when the user's own turn
+  names the model. Precedence lives in `rules/04-model-routing.md`, the matrix in
+  `hooks/model-policy.json`.
 - Effort comes only from each agent's `effort:` (xhigh santa/debug/uiux; high executors
   and the other judges; medium docs/clean/qa/memory). `max` is banned. Claude Code reads
   no subagent-effort env var, so built-ins run at its own default.
@@ -76,6 +107,10 @@ block into the body naming those SKILL.md files to Read first.
 `hooks/gen-agent-skill-blocks.py` holds the table: run it to rewrite every agent's
 `skills:` line and path-skills block, `--check` exits 1 on any drift (installer verify,
 WP-13). It also prints `drift:` when a preloaded skill is unknown to the routing config.
+Boilerplate (write protocol, no commits, no servers, MCP-first) is not restated per body:
+it comes from the SubagentStart block. The 250-line cap is a body rule: each executor's
+OUTPUT CONTRACT (refactor-specialist: its hard constraints) states it; BE/FE implementors
+also get it from the preloaded `*-standards-always-follow` skills.
 
 ## Least privilege
 
@@ -85,8 +120,30 @@ Read-only roles (`audit-specialist`, `spec-architect`, `planning-director`,
 Every specialist disallows `Agent` (no recursive fan-out). `memory-codex` has an
 explicit `tools:` allowlist. `memory: local` on santa/security/audit/debug keeps
 false-positive lists, noise triage, metric snapshots, and killed hypotheses per repo
-(`.claude/agent-memory-local/`, never committed), so one stack's "safe" never mutes a
-real finding in another.
+(`.claude/agent-memory-local/`, never committed: debug-detective adds the `.gitignore`
+line with Edit when missing; santa/security/audit cannot edit, so they check it and
+report `memory not gitignored` in their artifact instead of writing), so one
+stack's "safe" never mutes a real finding in another. Scoping (ECC subagent-scoping):
+one job per agent, the narrowest tool list that does it, a turn cap, and a single
+artifact as the hand-off.
+
+## ECC equivalents
+
+ECC (@25278e7d) agents that merged into a local agent instead of landing as a second one:
+
+| ECC agent | local agent | what came across |
+|---|---|---|
+| `architect` | `spec-architect` | duplicate role |
+| `planner` | `planning-director` | duplicate role |
+| `doc-updater` | `docs-sync-agent` | duplicate role |
+| `e2e-runner` | `qa-verifier` | duplicate role |
+| `refactor-cleaner` | `deadcode-reaper` | duplicate role |
+| `security-reviewer` | `security-sentinel` | duplicate role |
+| `tdd-guide` | `test-author` | duplicate role |
+| `code-reviewer` (+ review-pr, rules/common/code-review) | `santa-reviewer` | pre-report gate, confidence floor, severity table, false-positive list |
+| `build-error-resolver` (+ build-fix) | `implementation-engineer` | build-resolver discipline |
+| `team-agent-orchestration` / `parallel-execution-optimizer` | `team-lead.md` | delegation completion contract, cascade |
+| `subagent-scoping` (the-shortform-guide) | this README | Least privilege paragraph |
 
 ## Removed (2026-09-27)
 

@@ -14,4 +14,4 @@ This is `/invoke clean` without the closers; `~/.claude/skills/invoke/SKILL.md` 
 3. `Agent(subagent_type="deadcode-reaper", description="clean: <task>", prompt=...)`. The prompt names `$RUN/BRIEF.md`, every artifact already in `$RUN/`, and the exact output path `$RUN/REAP-REPORT.md`. No `model=`: opus-guard routes it (pins, escalation, per-project mode). Artifact missing or the act failed → re-dispatch once with the prompt prefixed `Previous attempt failed: <one-line reason>.`
 4. Append `clean` to `run.json.done`, then report the artifact path and a one-paragraph verdict.
 
-Removes only what THIS session's diff orphaned (each verified with `check_delete_safe`); pre-existing dead code is reported, never touched.
+Removes only what THIS session's diff orphaned (each verified with `check_delete_safe`); pre-existing dead code is reported, never touched. Classify each candidate SAFE (no references, no runtime lookup) / CAUTION (dynamic access, reflection, string-keyed) / DANGER (public export, migration, config key): SAFE is removed, CAUTION is removed only with a passing test, DANGER is reported (ecc:commands/refactor-clean.md@25278e7d).

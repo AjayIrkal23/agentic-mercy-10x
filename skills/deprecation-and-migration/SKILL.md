@@ -232,3 +232,5 @@ After completing a deprecation:
 - [ ] Old code, tests, documentation, and configuration are fully removed
 - [ ] No references to the deprecated system remain in the codebase
 - [ ] Deprecation notices are removed (they served their purpose)
+
+ECC graft: `references/ecc-db-migrations.md` — expand/contract, batched backfills, reversible migrations per ORM.

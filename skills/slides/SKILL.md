@@ -44,3 +44,5 @@ Strategic HTML presentation design with data visualization.
 1. Parse subcommand from `$ARGUMENTS` (first word)
 2. Load corresponding `references/{subcommand}.md`
 3. Execute with remaining arguments
+
+ECC graft: `references/ecc-note.md` — PPTX-to-web note: read with the pptx skill, rebuild here.

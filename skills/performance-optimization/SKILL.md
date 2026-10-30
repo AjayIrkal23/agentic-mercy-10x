@@ -380,3 +380,5 @@ After any performance-related change:
 - [ ] No N+1 queries in new data fetching code
 - [ ] Performance budget passes in CI (if configured)
 - [ ] Existing tests still pass (optimization didn't break behavior)
+
+ECC graft: `references/ecc-benchmark-loop.md` — bounded loop: measure, one change, re-measure, keep or revert.

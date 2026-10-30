@@ -85,3 +85,5 @@ This is the always-on frontend baseline. Apply it to any frontend task; the comp
 - Files remained focused and readable.
 - Root, domain, and feature styling ownership stayed in the correct layer.
 - No stale frontend code was left behind.
+
+ECC graft: `references/ecc-typescript.md` — explicit public types, no `any`, Zod at boundaries, discriminated unions.

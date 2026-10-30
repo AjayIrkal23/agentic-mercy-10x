@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """router.py — the single-process unified prompt router (v3, 2026-09-27).
 
-This module IS the UserPromptSubmit handler (settings.json). One process per
-prompt; ~800 tokens median output; fail-open at every layer.
+Runs as the ``router`` link of ``dispatch.py user-prompt-submit`` (direct invocation
+kept for tests and doctor dry-fires). One process per prompt; 88 tokens mean output
+(310 p90); fail-open at every layer.
 
 Pipeline:
   S0  ingest stdin payload; trivial fast-exit ONLY on an exact-match ack.
@@ -12,20 +13,26 @@ Pipeline:
   S2  ranked skill selection (select.py): <= max_skill_pushes (4) skills above the
       score floor, aliases collapsed, plugin skills included, core-skill-set never
       re-pushed; rank 1 = MUST-READ, the rest SHOULD-READ; at most ONE deep-injected
-      body. Rank 1 is recorded enforce "hard" only when confident (policy.py, C-05).
+      body, which replaces the rank-1 line (size words never trigger it). Rank 1 is
+      recorded enforce "hard" only when confident (policy.py, C-05).
       Chat, questions and one-line renames get no gates/substrate/symbols (C-10).
   S3  substrate precedence (jcodemunch for code, jdocmunch for docs, graphify for
       architecture) + indexed symbols for the prompt (modules/code_intel.py).
-  S4  routing: UI signal, availability-aware MCP routes (modules/mcp_routes.py),
-      specialist dispatch via the Agent tool (IMPLEMENT surface-routed), per-project
-      model-mode phrase, one login line for a waiting asset server
-      (modules/asset_auth.py), heavy-task Opus-agent advice (modules/model_advice.py).
+  S4  routing: per-project model-mode phrase, surface pointer lines
+      (additions.surface_pointers), WORKFLOW line (modules/workflow_routes.py; drops
+      the per-act dispatch lines it covers), UI signal, availability-aware MCP routes
+      (modules/mcp_routes.py), specialist dispatch via the Agent tool (IMPLEMENT
+      surface-routed), one login line for a waiting asset server
+      (modules/asset_auth.py), <= 2 LIBRARY lines (modules/library_routes.py),
+      heavy-task Opus-agent advice (modules/model_advice.py).
   S5  session-manifest dedup (never suppresses a first fire) -> tier-ordered emit
       as {"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",
       "additionalContext": "<!-- prompt-router v3 -->\\n..."}}.
 
 Side effects: state/<sid>.router-manifest.json, hooks/.telemetry/<sid>.pushed-skills.jsonl
-(rank-1 MUST-READ for invoke-suite-gate), telemetry record prompt_router.live.
+(rank-1 MUST-READ for invoke-suite-gate), telemetry record prompt_router.live. A doctor
+dry-fire (CLAUDE_HOOK_DOCTOR without CLAUDE_HOOK_STATE_DIR) neither reads nor writes
+the manifest, so it is repeatable.
 """
 
 from __future__ import annotations
@@ -253,9 +260,28 @@ def _skill_items(profile, ctx: dict) -> list[dict]:
     meta = _select.index_meta()
     top_intent = max(profile.intents, key=profile.intents.get) if profile.intents else "GEN"
     surf_salt = "+".join(sorted(s for s in profile.surfaces if s in ("frontend", "backend", "docs"))) or "any"
+
+    # deep injection (H4): ONE body, rank 1 only, clearly ahead of rank 2, confident
+    # non-size intent ("add update change fix" is not a confident intent). The body
+    # replaces the rank-1 line; no line is MUST-READ then.
+    deep_item = None
+    dev_top = max((v for k, v in (profile.intents or {}).items() if k not in _policy._SIZE_ONLY), default=0)
+    if ranked and dev_top >= threshold:
+        name, s1 = ranked[0]
+        s2 = ranked[1][1] if len(ranked) > 1 else 0.0
+        ratio = float(cfg.get("deep_inject_ratio", 1.5))
+        if s1 >= ratio * s2 and name not in _select.core_skills():
+            body = _skill_excerpt(name, int(cfg.get("deep_inject_chars", 3000)))
+            if body:
+                deep_item = {"id": f"deep:{name}", "tier": 1, "section": "SKILLS",
+                             "text": f"[inlined skill: {name}]\n{body}"}
+    deep_name = ranked[0][0] if deep_item else None
+
     items: list[dict] = []
     for i, (name, score) in enumerate(ranked):
-        label = "MUST-READ" if i == 0 else "SHOULD-READ"
+        if name == deep_name:
+            continue
+        label = "MUST-READ" if (i == 0 and deep_name is None) else "SHOULD-READ"
         # The Skill tool already lists every description (C-11). A `paths:`-scoped
         # skill is "Unknown skill" until a matching file is read, so its line names the
         # absolute SKILL.md to Read instead (a Read counts as loaded).
@@ -268,26 +294,75 @@ def _skill_items(profile, ctx: dict) -> list[dict]:
             "text": _policy.skill_line(name, label, read), "score": round(score, 2),
         })
     ctx["_enforce"] = _policy.enforce_level(ranked, profile, meta, cfg.get("enforce_hard"))
-
-    # deep injection: ONE body, rank 1 only, clearly ahead of rank 2, confident intent
-    deep: list[str] = []
-    if ranked and profile.intents and max(profile.intents.values()) >= threshold:
-        name, s1 = ranked[0]
-        s2 = ranked[1][1] if len(ranked) > 1 else 0.0
-        ratio = float(cfg.get("deep_inject_ratio", 1.5))
-        if s1 >= ratio * s2 and name not in _select.core_skills():
-            body = _skill_excerpt(name, int(cfg.get("deep_inject_chars", 3000)))
-            if body:
-                deep.append(name)
-                items.append({"id": f"deep:{name}", "tier": 1, "section": "SKILLS",
-                              "text": f"[inlined skill: {name}]\n{body}"})
-    ctx["_must_read"] = [ranked[0][0]] if ranked and ranked[0][0] not in deep else []
+    if deep_item:
+        items.append(deep_item)
+    ctx["_must_read"] = [ranked[0][0]] if ranked and deep_name is None else []
     return items
+
+
+def _pointer_items(profile, ctx: dict) -> list[dict]:
+    """``additions.surface_pointers``: a file pointer per surface (R3.6), once per session."""
+    table = ((ctx.get("config") or {}).get("additions") or {}).get("surface_pointers") or {}
+    out: list[dict] = []
+    for surf, spec in table.items():
+        if surf.startswith("_") or not isinstance(spec, dict) or surf not in profile.surfaces:
+            continue
+        need = set(spec.get("intents") or [])
+        if need and not (need & set(profile.intents)):
+            continue
+        if spec.get("text"):
+            out.append({"id": f"route:pointer:{surf}", "tier": 2, "section": "ROUTING",
+                        "text": str(spec["text"])})
+    return out
+
+
+def _workflow_items(profile, ctx: dict) -> list[dict]:
+    try:
+        from prompt_router.modules import workflow_routes as _wf  # noqa: PLC0415
+        return list(_wf.items(profile, ctx) or [])
+    except Exception:  # noqa: BLE001
+        return []
+
+
+_LIBRARY_BUDGET_MS = 50
+
+
+def _library_items(profile, ctx: dict) -> list[dict]:
+    """<= 2 LIBRARY lines from modules/library_routes.py (package `library`); absent -> []."""
+    try:
+        import importlib  # noqa: PLC0415  sys.modules first: a None entry means "absent"
+        _lib = importlib.import_module("prompt_router.modules.library_routes")
+    except Exception:  # noqa: BLE001  absent (ImportError) or broken: no LIBRARY lines
+        return []
+    t0 = time.perf_counter()
+    try:
+        cwd = str((ctx.get("payload") or {}).get("cwd") or "")
+        raw = _lib.items(profile, cwd, set(ctx.get("emitted_ids") or set())) or []
+    except Exception:  # noqa: BLE001
+        return []
+    ms = (time.perf_counter() - t0) * 1000
+    if ms > _LIBRARY_BUDGET_MS and _tel is not None:  # soft budget: telemetered, never aborted
+        try:
+            _tel.record("UserPromptSubmit", "prompt_router.library_slow", ms=round(ms, 2))
+        except Exception:  # noqa: BLE001
+            pass
+    out: list[dict] = []
+    for it in list(raw)[:2]:
+        if isinstance(it, dict) and it.get("text") and it.get("id"):
+            out.append({"id": str(it["id"]), "tier": int(it.get("tier", 2)), "section": "ROUTING",
+                        "text": str(it["text"])})
+    return out
 
 
 def _routing_items(profile, ctx: dict) -> list[dict]:
     cfg = ctx.get("config", {})
     items: list[dict] = _model_mode_items(profile, ctx)  # first: never cut by the routing cap
+    items += _pointer_items(profile, ctx)
+    wf = _workflow_items(profile, ctx)
+    items += wf
+    covered: set[str] = set()   # acts a WORKFLOW line already runs: no per-act dispatch line
+    for it in wf:
+        covered |= set(str(it.get("id", "")).rsplit(":", 1)[-1].split("+"))
     if profile.is_ui:
         root = [getattr(ctx.get("repo"), "root", None), (ctx.get("payload") or {}).get("cwd")]
         items.append({"id": "route:ui", "tier": 2, "section": "ROUTING",  # unavailable asset servers unnamed (C-14)
@@ -307,7 +382,8 @@ def _routing_items(profile, ctx: dict) -> list[dict]:
         pass
     threshold = int(cfg.get("auto_dispatch_threshold", _select.DEFAULT_AUTO_DISPATCH_THRESHOLD))
     max_lines = int(cfg.get("max_route_lines", 3))
-    for d in _select.dispatch_tiers(profile, threshold=threshold)[:max_lines]:
+    tiers = [d for d in _select.dispatch_tiers(profile, threshold=threshold) if d["act"] not in covered]
+    for d in tiers[:max_lines]:
         who = d.get("agent")
         if d["kind"] == "agent" and who:
             txt = (f"Intent {d['category']} (score {d['score']}): dispatch {who} "
@@ -397,6 +473,7 @@ def _builtin_items(profile, ctx: dict) -> list[dict]:
     items += _intel_items(profile, ctx)
     items += _skill_items(profile, ctx)
     items += _routing_items(profile, ctx)
+    items += _library_items(profile, ctx)
     items += _model_items(profile, ctx)
     # one total cap on routing lines, code and docs agree (C-17)
     return _policy.cap_section(items, "ROUTING", int(ctx.get("config", {}).get("max_routing_lines", 5)))
@@ -484,13 +561,17 @@ def run(argv: list[str]) -> int:  # noqa: ARG001 - argv kept for the CLI shape
         "repo": _repo.active_repo(payload) if _repo is not None else None,
     }
 
+    # doctor dry-fire (D-05 extended): no manifest read or write, so it is repeatable
+    dry = bool(os.environ.get("CLAUDE_HOOK_DOCTOR")) and not os.environ.get("CLAUDE_HOOK_STATE_DIR")
+    emitted_ids = set() if dry else _manifest.load(sid)
+    ctx["emitted_ids"] = emitted_ids
     items = _gather_items(profile, ctx)
-    emitted_ids = _manifest.load(sid)
     kept, suppressed = _manifest.dedup(items, emitted_ids)
     included, _dropped = _budget.apply(kept)
     body = _render(included)
 
-    _manifest.commit(sid, emitted_ids, included)
+    if not dry:
+        _manifest.commit(sid, emitted_ids, included)
     _record_pushed_skills(sid, ctx, included, profile)
     if _tel is not None:
         _tel.record("UserPromptSubmit", "prompt_router.live", session=sid, chars_out=len(body),

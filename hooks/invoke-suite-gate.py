@@ -144,8 +144,9 @@ IMPLEMENT_AGENTS = {
 }
 
 
-def _safe_cid(cid: str) -> str:
-    return "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
+from lib import gate_state as _gs  # noqa: E402  (state helpers: safe_cid, locked writes)
+
+_safe_cid = _gs.safe_cid
 
 
 def _canon(name: str) -> str:
@@ -434,10 +435,7 @@ def main() -> int:
             pass
     state_p = TELEMETRY_DIR / f"{_safe_cid(cid)}.suite-gate.json"
     turn_key = turn_dt.isoformat() if turn_dt else "?"
-    try:
-        st = json.loads(state_p.read_text(encoding="utf-8"))
-    except Exception:
-        st = {}
+    st = _gs.load_json(state_p)
     if st.get("turn") != turn_key:
         st = {"turn": turn_key, "nags": 0}
 
@@ -462,17 +460,12 @@ def main() -> int:
         # keep the spent nag for this turn: deleting it re-armed the gate on the
         # next Stop of the same turn (audit B2-03)
         if turn_key != "?":
-            try: state_p.write_text(json.dumps({"turn": turn_key, "nags": nags}), encoding="utf-8")
-            except Exception: pass
+            _gs.save_json(state_p, {"turn": turn_key, "nags": nags})
         sys.stdout.write(json.dumps(advice) + "\n"); return 0
 
     st["nags"] = nags
-    try:
-        if turn_key != "?":
-            TELEMETRY_DIR.mkdir(parents=True, exist_ok=True)
-            state_p.write_text(json.dumps(st), encoding="utf-8")
-    except Exception:
-        pass
+    if turn_key != "?":
+        _gs.save_json(state_p, st)
 
     reason = (
         f"SUITE GATE ({nags}/{MAX_NAGS}): "

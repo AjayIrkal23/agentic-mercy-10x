@@ -30,6 +30,12 @@ Exports:
   append_line(path, data)       concurrent-safe append of one record (bytes)
   locked_update(path, fn)       read-modify-write a JSON dict under a file lock
   locked_update_ok(path, fn)    same, returns (data, written)
+  mem_probe(proc_root)          MemAvailable / swap / PSI dict (OOM guard); None on Windows
+  cgroup_of(pid) / scope_of     last segment of the pid's cgroup (its systemd unit); None on Windows
+  proc_chain(pid)               [pid, ppid, ...] ancestor chain; None on Windows
+  systemd_user_bus()            $XDG_RUNTIME_DIR/bus Path when a user manager runs; None otherwise
+  notify(title, body, urgency)  notify-send desktop toast (3 s cap); False on Windows / no notify-send
+  tmux_pane()                   $TMUX_PANE or None
 """
 
 from __future__ import annotations
@@ -647,6 +653,117 @@ def locked_update(path: str | os.PathLike, fn, *, default=None) -> dict:
     return locked_update_ok(path, fn, default=default)[0]
 
 
+# --------------------------------------------------------------------------- #
+# Memory and cgroup probes (OOM guard). Linux only: every one returns None / False
+# on Windows, so callers never branch on the OS themselves.
+# --------------------------------------------------------------------------- #
+def mem_probe(proc_root: str | os.PathLike = "/proc") -> dict | None:
+    """MemAvailable/Swap/PSI from a /proc tree; None on Windows or when meminfo is unreadable.
+    No swap at all reads as ``swap_free_pct`` 100.0 (no swap is not "swap full")."""
+    if IS_WINDOWS:
+        return None
+    root = Path(proc_root)
+    vals: dict[str, int] = {}
+    try:
+        with open(root / "meminfo", encoding="ascii") as fh:
+            for line in fh:
+                key, _, rest = line.partition(":")
+                if key in ("MemTotal", "MemAvailable", "SwapTotal", "SwapFree"):
+                    vals[key] = int(rest.split()[0])
+    except (OSError, ValueError, IndexError):
+        return None
+    if "MemAvailable" not in vals:
+        return None
+    psi = None
+    try:
+        with open(root / "pressure" / "memory", encoding="ascii") as fh:
+            for line in fh:
+                if line.startswith("some "):
+                    psi = float(line.split("avg10=")[1].split()[0])
+    except (OSError, ValueError, IndexError):
+        psi = None
+    swap_total = vals.get("SwapTotal", 0)
+    swap_free = vals.get("SwapFree", 0)
+    return {"mem_available_mb": vals["MemAvailable"] // 1024, "mem_total_mb": vals.get("MemTotal", 0) // 1024,
+            "swap_total_mb": swap_total // 1024, "swap_free_mb": swap_free // 1024,
+            "swap_free_pct": round(100.0 * swap_free / swap_total, 1) if swap_total else 100.0,
+            "psi_some_avg10": psi}
+
+
+def cgroup_of(pid: int, proc_root: str | os.PathLike = "/proc") -> str | None:
+    """Last segment of the pid's cgroup v2 path (``ptyxis-spawn-<uuid>.scope``); None when unknown."""
+    if IS_WINDOWS:
+        return None
+    try:
+        with open(Path(proc_root) / str(pid) / "cgroup", encoding="utf-8", errors="replace") as fh:
+            first = fh.readline().strip()
+    except OSError:
+        return None
+    seg = first.rsplit("/", 1)[-1] if "/" in first else ""
+    return seg or None
+
+
+def scope_of(pid: int, proc_root: str | os.PathLike = "/proc") -> str | None:
+    """The systemd unit holding ``pid`` (the plan's contract name for :func:`cgroup_of`)."""
+    return cgroup_of(pid, proc_root)
+
+
+def _ppid(pid: int, proc_root: str | os.PathLike) -> int | None:
+    try:
+        with open(Path(proc_root) / str(pid) / "status", encoding="utf-8", errors="replace") as fh:
+            for line in fh:
+                if line.startswith("PPid:"):
+                    return int(line.split()[1])
+    except (OSError, ValueError, IndexError):
+        return None
+    return None
+
+
+def proc_chain(pid: int, proc_root: str | os.PathLike = "/proc") -> list[int] | None:
+    """``[pid, ppid, ...]`` up to 64 hops; stops at 0/1, an unreadable status or a repeat. None on Windows."""
+    if IS_WINDOWS:
+        return None
+    chain = [int(pid)]
+    cur = int(pid)
+    for _ in range(64):
+        parent = _ppid(cur, proc_root)
+        if parent is None or parent <= 1 or parent in chain:
+            break
+        chain.append(parent)
+        cur = parent
+    return chain
+
+
+def systemd_user_bus() -> Path | None:
+    """``$XDG_RUNTIME_DIR/bus`` when it exists (a systemd user manager runs); None otherwise or on Windows."""
+    if IS_WINDOWS:
+        return None
+    base = os.environ.get("XDG_RUNTIME_DIR")
+    if not base:
+        return None
+    bus = Path(base) / "bus"
+    return bus if bus.exists() else None
+
+
+def notify(title: str, body: str, urgency: str = "normal", *, run=None, which=shutil.which) -> bool:
+    """Desktop notification through notify-send (3 s cap). False on Windows or without notify-send."""
+    if IS_WINDOWS:
+        return False
+    exe = which("notify-send")
+    if not exe:
+        return False
+    runner = run or globals()["run"]
+    cp = runner([exe, "-u", urgency, "-a", "claude-memwatch", str(title)[:80], str(body)[:200]], timeout=3)
+    return getattr(cp, "returncode", 1) == 0
+
+
+def tmux_pane() -> str | None:
+    """``$TMUX_PANE`` on Linux; None outside tmux and on Windows."""
+    if IS_WINDOWS:
+        return None
+    return os.environ.get("TMUX_PANE") or None
+
+
 __all__ = [
     "IS_WINDOWS",
     "claude_dir",
@@ -672,4 +789,11 @@ __all__ = [
     "append_line",
     "locked_update",
     "locked_update_ok",
+    "mem_probe",
+    "cgroup_of",
+    "scope_of",
+    "proc_chain",
+    "systemd_user_bus",
+    "notify",
+    "tmux_pane",
 ]

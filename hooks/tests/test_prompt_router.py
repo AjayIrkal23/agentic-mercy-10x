@@ -297,3 +297,53 @@ def test_listed_skill_push_still_uses_the_skill_tool():
     pushed = dict(_pushed_actions("the checkout total is wrong intermittently, find the root cause",
                                   "listed"))
     assert 'Skill("debug-investigation")' in pushed.get("debug-investigation", ""), pushed
+
+
+# --------------------------------------------------------------------------- #
+# H3: compaction reset marker (written by dispatch.py SessionStart compact|clear)
+# --------------------------------------------------------------------------- #
+def test_manifest_reset_marker_clears_dedup_once(tmp_path, monkeypatch):
+    from lib import platform as P
+    sid = _uid("reset")
+    M.commit(sid, set(), [{"id": "substrate:jcodemunch:CODE"}])
+    assert "substrate:jcodemunch:CODE" in M.load(sid)
+    (P.state_dir() / f"{sid}.router-reset").write_text("{}", encoding="utf-8")
+    assert M.load(sid) == set()                      # reset consumed
+    assert not (P.state_dir() / f"{sid}.router-reset").exists()
+    M.commit(sid, set(), [{"id": "x"}])
+    assert M.load(sid) == {"x"}                      # a fresh manifest from here on
+
+
+# --------------------------------------------------------------------------- #
+# library hook point (modules/library_routes.py belongs to package `library`)
+# --------------------------------------------------------------------------- #
+def _fake_library(monkeypatch, items_fn):
+    import types
+    mod = types.ModuleType("prompt_router.modules.library_routes")
+    mod.items = items_fn
+    monkeypatch.setitem(sys.modules, "prompt_router.modules.library_routes", mod)
+
+
+def test_library_lines_are_appended_as_routing_capped_at_two(monkeypatch):
+    seen = {}
+
+    def items(profile, cwd, manifest):
+        seen["args"] = (profile, cwd, manifest)
+        return [{"id": f"library:{i}", "text": f"LIBRARY: pack {i}"} for i in range(3)]
+    _fake_library(monkeypatch, items)
+    prof = C.classify({"prompt": "write a rust cli that parses a toml file", "cwd": "/nonexistent-dir"})
+    out = R._gather_items(prof, {"config": R._config(), "payload": {"cwd": "/nonexistent-dir"}, "repo": None,
+                                 "emitted_ids": {"already"}})
+    lib = [it for it in out if it["id"].startswith("library:")]
+    assert len(lib) == 2 and all(it["section"] == "ROUTING" and it["tier"] == 2 for it in lib)
+    assert seen["args"][1] == "/nonexistent-dir" and seen["args"][2] == {"already"}
+
+
+def test_library_module_missing_or_crashing_is_silent(monkeypatch):
+    prof = C.classify({"prompt": "write a rust cli", "cwd": "/nonexistent-dir"})
+    monkeypatch.setitem(sys.modules, "prompt_router.modules.library_routes", None)   # import -> ImportError
+    assert not [it for it in R._gather_items(prof, {"config": R._config(), "payload": {}, "repo": None})
+                if it["id"].startswith("library:")]
+    _fake_library(monkeypatch, lambda *a: (_ for _ in ()).throw(RuntimeError("boom")))
+    assert not [it for it in R._gather_items(prof, {"config": R._config(), "payload": {}, "repo": None})
+                if it["id"].startswith("library:")]

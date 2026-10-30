@@ -56,6 +56,17 @@ export function lastSessionLine(s: LastSession | undefined, now: number): string
   return `Previous session (${ago(now, s.at)}): ${s.minutes} min · ${s.turns} turns · ${s.files} files${s.unverified ? ` (${s.unverified} left unverified)` : ''} · ${s.commands} commands (${s.failed} failed) · ${usd(s.costUsd) || '$0.00'}`
 }
 
+/**
+ * The between-turns compaction threshold (context %), never later than the engine's own
+ * `autoCompactWindow` share of the context window (else the engine compacts mid-task
+ * first). Floor 50 %; no or invalid window → the user's %; 0 stays off.
+ */
+export function compactThreshold(userPct: number, autoCompactWindow: number | undefined, contextWindow: number | undefined): number {
+  if (!userPct) return 0
+  if (!autoCompactWindow || !contextWindow || autoCompactWindow <= 0 || contextWindow <= 0) return userPct
+  return Math.max(50, Math.min(userPct, Math.floor((100 * autoCompactWindow) / contextWindow)))
+}
+
 /** Compact between turns: interactive, past the threshold, not again within ten minutes. */
 export function shouldCompact(f: { threshold: number; contextPct: number; now: number; lastAt: number; interactive: boolean }): boolean {
   return f.interactive && f.threshold > 0 && f.contextPct >= f.threshold && f.now - f.lastAt > 600_000

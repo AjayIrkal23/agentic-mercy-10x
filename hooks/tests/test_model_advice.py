@@ -25,11 +25,26 @@ _HOOKS = pathlib.Path(__file__).resolve().parents[1]
 if str(_HOOKS) not in sys.path:
     sys.path.insert(0, str(_HOOKS))
 
+import time  # noqa: E402
+
+import pytest  # noqa: E402
+
 from prompt_router.classify import TaskProfile          # noqa: E402
 from prompt_router.modules import model_advice as MA    # noqa: E402
 
+sys.path.insert(0, str(_HOOKS.parent / "tests" / "fixtures" / "plan-tier"))
+import tier_fixture as TF  # noqa: E402
+
 _POLICY = json.loads((_HOOKS / "model-policy.json").read_text(encoding="utf-8"))
 _AGENTS = _POLICY["main_session_advice"]["agents"]
+
+
+@pytest.fixture(autouse=True)
+def _max20_default():
+    TF.set_tier("max20")
+    TF.set_usage(None)
+    yield
+    TF.clear()
 
 
 def _profile(**kw) -> TaskProfile:
@@ -93,6 +108,49 @@ def test_sonnet_override_phrase_suppresses():
 def test_fable_override_phrase_suppresses():
     p = _profile(intents={"IMPLEMENT": 1}, size="L", risk=2, text="implement it, use fable")
     assert MA.advise(p) is None
+
+
+def test_haiku_phrase_suppresses_too():
+    assert MA.advise(_profile(intents={"DESIGN": 1}, size="L", risk=2, text="design a big system, use haiku")) is None
+
+
+# --------------------------------------------------------------------------- #
+# plan tiers (R3.3 enforcement point 5)
+# --------------------------------------------------------------------------- #
+def test_pro_never_names_opus():
+    TF.set_tier("pro")
+    out = MA.advise(_profile(is_arch=True, size="L", risk=2, text="architect the platform"))
+    assert out and "Opus" not in out and "opus" not in out and "(sonnet" in out
+    assert _AGENTS["HEAVY_ARCHITECTURE"] in out
+
+
+def test_max5_says_how_to_lift_the_judge():
+    TF.set_tier("max5")
+    out = MA.advise(_profile(intents={"DEBUG": 1}, size="L", risk=2, text="debug the crash"))
+    assert out and "(sonnet" in out and "say 'use opus'" in out and "Opus" not in out.split("say")[0]
+
+
+def test_max20_wording_unchanged():
+    out = MA.advise(_profile(intents={"DESIGN": 1}, size="L", risk=2, text="design a system"))
+    assert out.endswith("(Opus, via the Agent tool) for the heavy part now.")
+
+
+def test_api_follows_max5():
+    TF.set_tier("api")
+    out = MA.advise(_profile(intents={"IMPLEMENT": 1}, size="L", risk=2, text="implement the suite"))
+    assert "say 'use opus'" in out
+
+
+def test_missing_tier_state_keeps_the_max20_wording():
+    TF.clear()
+    out = MA.advise(_profile(intents={"DESIGN": 1}, size="L", risk=2, text="design a system"))
+    assert "(Opus, via the Agent tool)" in out
+
+
+def test_usage_guard_mentioned_when_active():
+    TF.set_usage(90.0, time.time() + 3600)
+    out = MA.advise(_profile(intents={"DESIGN": 1}, size="L", risk=2, text="design a system"))
+    assert "usage-guard" in out and "(sonnet" in out
 
 
 # --------------------------------------------------------------------------- #

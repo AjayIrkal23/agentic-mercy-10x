@@ -137,3 +137,25 @@ def test_selfheal_resume_doctor_missing_and_corrupt_never_break(agg, monkeypatch
     monkeypatch.delenv("CLAUDE_HOOK_DOCTOR")
     p.write_text("{not json", encoding="utf-8")
     assert "self-heal" not in _run(agg, monkeypatch)
+
+
+# --------------------------------------------------------------------------- notice order
+def test_notice_order_is_mod_off_selfheal_oom_worktree_instincts(agg, monkeypatch, tmp_path):
+    from lib import session_notices
+    texts = ["NOTICE-modoff", "NOTICE-selfheal", "NOTICE-oom", "NOTICE-worktree", "NOTICE-instinct"]
+    monkeypatch.setattr(session_notices, "mod_off_notice", lambda: texts[0])
+    monkeypatch.setattr(session_notices, "selfheal_line", lambda: texts[1])
+    monkeypatch.setattr(session_notices, "memwatch_line", lambda: texts[2])
+    monkeypatch.setattr(session_notices, "worktree_line", lambda cwd=None: texts[3])
+    monkeypatch.setattr(session_notices, "instinct_lines", lambda cwd=None: [texts[4]])
+    ctx = _run(agg, monkeypatch)
+    idx = [ctx.index(t) for t in texts]
+    assert idx == sorted(idx), idx
+
+
+def test_memwatch_line_absent_when_the_module_lacks_it(agg, monkeypatch, tmp_path):
+    from lib import session_notices
+    monkeypatch.delattr(session_notices, "memwatch_line", raising=False)
+    ctx = _run(agg, monkeypatch)
+    assert "OOM guard" not in ctx
+    assert "ALWAYS-ON STYLE" in ctx

@@ -28,6 +28,7 @@ network-dependent registration. Pure stdlib.
 """
 from __future__ import annotations
 
+import json
 import os
 import sys
 from pathlib import Path
@@ -67,12 +68,29 @@ def _render_sources() -> list[Path]:
     return [Path(render._TEMPLATE), Path(render._USER), _ROOT / "installer" / "manifest.json"]
 
 
+def _tier_drift(st: Path) -> bool:
+    """The plan-tier keys differ from a fresh render: a tier change (state/plan-tier.json) touches
+    no render source, so the mtime check alone never sees it."""
+    try:
+        import render  # type: ignore
+        live = json.loads(st.read_text(encoding="utf-8"))
+        # subs=None: the tier keys hold no path token, so this machine's detection is not needed
+        want = json.loads(render.render(user_path=st.parent / "settings.user.json"))
+        if any(live.get(k) != want.get(k) for k in ("model", "fallbackModel")):
+            return True
+        key = "CLAUDE_CODE_SUBAGENT_MODEL"
+        return (live.get("env") or {}).get(key) != (want.get("env") or {}).get(key)
+    except Exception:  # noqa: BLE001 - a broken render or file is the doctor's row, not this check's
+        return False
+
+
 def _stale(st: Path) -> bool:
     """settings.json is older than any file it is rendered from (audit I-16: an
-    existing file used to be kept forever, so a pulled template never landed), or names an
-    interpreter that no longer exists."""
+    existing file used to be kept forever, so a pulled template never landed), names an
+    interpreter that no longer exists, or carries another plan tier's model keys."""
     mtime = st.stat().st_mtime
-    return any(p.is_file() and p.stat().st_mtime > mtime for p in _render_sources()) or interpreter_gone(st)
+    return (any(p.is_file() and p.stat().st_mtime > mtime for p in _render_sources())
+            or interpreter_gone(st) or _tier_drift(st))
 
 
 def _ensure_settings(target: Path, env, emit, *, force: bool = False, preserved: bool = False) -> None:
@@ -118,6 +136,14 @@ def _repair(target: Path, failed: set, env, emit) -> None:
         import deps as _deps  # type: ignore
         for name, s in _deps.reconcile_mcp_pins():
             emit("repair", name, s)
+    if {"oom-policy", "memwatch-unit", "restore-unit", "claude-launcher"} & {f.lower() for f in failed}:
+        # the sandboxed tests must never attach live sessions on this machine's user bus
+        if os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("OOMGUARD_REPAIR_ALLOW_TEST"):
+            emit("repair", "oomguard", "SKIP(pytest)")
+        else:
+            import oomguard_setup  # type: ignore
+            for r in oomguard_setup.ensure(False):
+                emit("repair", "oomguard", r)
     if "validator" in names or "r9" in names or "r10" in names:
         _heal_line_endings(target, emit)
         _run_script(target, "hooks/build-skills-index.py", emit)

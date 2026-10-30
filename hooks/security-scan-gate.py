@@ -57,15 +57,20 @@ SECURITY_PATH_SEGMENTS = [
     "/rbac/", "/role/", "/secret/",
 ]
 
-SKIP_PATTERNS = [
-    ".claude/", "node_modules/", ".git/", "dist/", "build/",
-    "__pycache__", ".state/", "graphify-out/", "_test.go",
-    ".test.ts", ".test.tsx", ".spec.ts", "docs/", "_docs/",
-]
+# Skips beyond lib.code_files' anchored list: test files and generated graph output.
+# A non-code file (markdown, json, any *_docs tree) is never flagged: is_code_file is required.
+_EXTRA_DIRS = ("graphify-out",)
+_EXTRA_NAMES = ("_test.go", ".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx")
 
 STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or Path(__file__).resolve().parent / ".state")
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from lib.platform import locked_update  # noqa: E402
+try:
+    from lib import code_files as _cf  # noqa: E402
+except Exception:  # noqa: BLE001
+    _cf = None
+_FALLBACK_SKIP = (".claude/", "node_modules/", ".git/", "dist/", "build/", "__pycache__", ".state/",
+                  "graphify-out/", "_test.go", ".test.ts", ".test.tsx", ".spec.ts", "docs/", "_docs/")
 
 
 def _is_security_sensitive(fp: str) -> bool:
@@ -77,8 +82,11 @@ def _is_security_sensitive(fp: str) -> bool:
 
 
 def _should_skip(fp: str) -> bool:
+    if _cf is not None:
+        return (not _cf.is_code_file(fp)
+                or _cf.is_skipped(fp, extra_dirs=_EXTRA_DIRS, extra_names=_EXTRA_NAMES))
     norm = fp.replace("\\", "/")  # Windows sends `a\b`
-    return any(skip in norm for skip in SKIP_PATTERNS)
+    return any(skip in norm for skip in _FALLBACK_SKIP)
 
 
 def _state_path(cid: str) -> Path:

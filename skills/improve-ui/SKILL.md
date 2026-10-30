@@ -23,6 +23,8 @@ metadata:
     - AUDIT
 ---
 
+> **ECC graft (ecc:skills/make-interfaces-feel-better@25278e7d):** polish checklist, one pass per screen with a before/after record: spacing rhythm; optical alignment; hover, pressed and disabled states; loading and empty states; motion 150–250 ms; copy casing.
+
 # Improve UI
 
 Audit one coherent product surface against the system that actually governs it. Preserve the product's identity, reuse existing owners, and prefer no finding to an unsupported one. Write plans only for changes the user selects; another agent executes them.

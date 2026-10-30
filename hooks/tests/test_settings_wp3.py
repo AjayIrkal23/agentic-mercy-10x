@@ -40,6 +40,8 @@ PRE_SAMPLES = {
     "mcp__lean-ctx__ctx_shell": {"command": "ls"}, "mcp__lean-ctx__shell": {"command": "ls"},
     "mcp__lean-ctx__ctx_patch": {"path": "/r/a.py", "old_text": "a", "new_text": "b"},
     "mcp__claude_ai_Zoho_Books__delete_invoice": None, "mcp__plugin_small-business_shopify__graphql_mutation": None,
+    "mcp__github__merge_pull_request": None,                                   # connector-ask-gate
+    "mcp__playwright__browser_navigate": {"url": "http://localhost:3000"},     # memwatch-brake
 }
 
 
@@ -72,6 +74,13 @@ def test_powershell_reaches_every_shell_event():
                         ("PostToolUseFailure", "post-tool-use-failure")):
         assert re.fullmatch(_matcher(event), "PowerShell"), event
         assert _handled(name, "PowerShell", {"command": "ls"}), name
+
+
+def test_post_tool_use_failure_reaches_mcp_tools():
+    m = _matcher("PostToolUseFailure")
+    for tool in ("mcp__jcodemunch__search_symbols", "mcp__lean-ctx__ctx_patch"):
+        assert re.fullmatch(m, tool), tool
+    assert _handled("post-tool-use-failure", "mcp__jcodemunch__search_symbols")
 
 
 def test_template_stays_lean_ctx_literal_free():

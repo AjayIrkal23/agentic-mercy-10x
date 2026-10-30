@@ -4,10 +4,14 @@
 Detached (``async: true``): a session never waits. Once per 24 h (``at`` in
 ``state/selfheal-daily.json``), one copy at a time (non-blocking ``selfheal-daily.lock``).
 Independent steps, one failing never stops the others: ``mcp`` (re-add a missing manifest
-server, pin + env reconcile), ``deps`` (base tools node/claude/uv/gh in ~/.local, then absent
-CLIs, never upgrade), ``settings`` (re-render when the template/manifest is newer or a pinned interpreter path is gone),
-``vendor`` (``vendor_skill.py --all`` only on DRIFT), ``ponytail-board`` (the ponytail band
-import of past sessions). Summary {"at","changed","errors",
+server, pin + env + alwaysLoad reconcile), ``deps`` (base tools node/claude/uv/gh in ~/.local, then absent
+CLIs, never upgrade), ``plan-tier`` (re-detect the plan tier), ``settings`` (re-render when the
+template/manifest is newer, a pinned interpreter path is gone or the tier's model keys changed),
+``oomguard`` (``oomguard_setup.ensure``), ``machines-split`` (keep the imported machines file small),
+``vendor`` (``vendor_skill.py --all`` only on DRIFT),
+``workflows`` (render on drift), ``library`` (rebuild library/INDEX.json on drift), ``mcp-inventory``
+(regenerate the inventory reference when registrations changed; POSIX only), ``ponytail-board`` (the ponytail band
+import of past sessions), ``learning-evolve`` (``instincts.py evolve``, last: it may use 660 s). Summary {"at","changed","errors",
 "reported"} for the aggregator; names / specs / return codes to ``state/selfheal-daily.log``:
 no env, no tokens. ``--dry-run`` prints the plan and writes nothing. No-op for
 CLAUDE_HOOK_DOCTOR, link-doctor's probe payload and pytest (``PYTEST_CURRENT_TEST`` unless
@@ -20,6 +24,7 @@ import argparse
 import datetime as dt
 import json
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -34,10 +39,18 @@ from daily_lock import try_lock as _try_lock  # noqa: E402
 from lib import platform as plat  # noqa: E402
 
 VENDOR = _ROOT / "scripts" / "vendor_skill.py"
+WORKFLOWS = _ROOT / "scripts" / "build_workflows.py"
+LIB_INDEX = _ROOT / "scripts" / "build_library_index.py"
+SPLIT = _ROOT / "scripts" / "split_machines_file.py"
+PLAN_TIER = _ROOT / "hooks" / "plan-tier-detect.py"
+INSTINCTS = Path(__file__).resolve().parent / "instincts.py"
+INVENTORY = _ROOT / "scripts" / "mcp_inventory.py"
+INVENTORY_MD = _ROOT / "skills" / "mcp-usage-standards" / "references" / "mcp-inventory.md"
 INTERVAL_S = 24 * 3600
 BUDGET_S = 1800.0
 _LOG_MAX = 200_000
-_CHANGED = ("PINNED", "ENV-SET", "INSTALLED", "ADDED", "OK(rendered", "VENDORED")
+_CHANGED = ("PINNED", "ENV-SET", "INSTALLED", "ADDED", "OK(rendered", "VENDORED", "CREATED", "UPDATED",
+            "APPENDED", "ENABLED", "MOVED", "REBUILT", "EVOLVED", "ALWAYS-LOAD")
 _ERRORS = ("WARN", "FAIL", "MISSING")
 
 
@@ -64,7 +77,8 @@ def _mcp(ctx: Ctx):
     return ([("mcp", n, s) for n, s in deps.register_mcps(ctx.env(), ci=False, dry_run=ctx.dry)
              if not s.startswith(("PRESENT", "SKIP"))]
             + [("mcp-pin", n, s) for n, s in deps.reconcile_mcp_pins(dry_run=ctx.dry)]
-            + [("mcp-env", n, s) for n, s in deps.reconcile_mcp_env(dry_run=ctx.dry)])
+            + [("mcp-env", n, s) for n, s in deps.reconcile_mcp_env(dry_run=ctx.dry)]
+            + [("mcp-load", n, s) for n, s in deps.reconcile_mcp_always_load(dry_run=ctx.dry)])
 
 
 def _deps(ctx: Ctx):
@@ -88,6 +102,131 @@ def _settings(ctx: Ctx):
     out: list = []
     selfheal._ensure_settings(ctx.target, ctx.env(), lambda k, n, s: out.append((k, n, s)))
     return out
+
+
+def _tail(cp, n: int = 80) -> str:
+    return ((cp.stdout or cp.stderr or "").strip().splitlines() or ["no output"])[-1][:n]
+
+
+def _oomguard(ctx: Ctx):
+    import oomguard_setup  # type: ignore
+    out = []
+    for r in oomguard_setup.ensure(dry=ctx.dry):
+        name, _, status = r.partition(":")
+        out.append(("oomguard", name.strip(), status.strip() or name.strip()))
+    return out
+
+
+def _machines_split(ctx: Ctx):
+    if not SPLIT.is_file():
+        return []
+    cmd = [plat.python_exe(), str(SPLIT), "--apply"] + (["--dry-run"] if ctx.dry else [])
+    r = plat.run(cmd, timeout=20)
+    last = _tail(r)
+    if r.returncode != 0:  # rc 2 = REFUSED until .gitignore has the journal lines
+        return [("machines-split", "apply", f"WARN(rc={r.returncode}: {last})")]
+    if "unchanged" in last or "SKIP" in last:
+        return []
+    return [("machines-split", "apply", f"WOULD-SPLIT({last})" if ctx.dry else f"MOVED({last})")]
+
+
+def _plan_tier(ctx: Ctx):
+    if not PLAN_TIER.is_file():
+        return []
+    if ctx.dry:
+        return [("plan-tier", "detect", "WOULD-DETECT")]
+    r = plat.run([plat.python_exe(), str(PLAN_TIER)], timeout=10)  # no --quiet: read the JSON
+    try:
+        d = json.loads((r.stdout or "{}").strip().splitlines()[-1])
+    except (ValueError, IndexError):
+        return [("plan-tier", "detect", f"WARN(rc={r.returncode})")]
+    return [("plan-tier", "detect", f"UPDATED tier={d.get('tier')}")] if d.get("changed") else []
+
+
+def _workflows(ctx: Ctx):
+    cmd = [plat.python_exe(), str(WORKFLOWS)]
+    check = plat.run([*cmd, "--check"], timeout=60)
+    if check.returncode == 0:
+        return []
+    if ctx.dry:
+        return [("workflows", "render", "WOULD-RENDER (drift or not rendered)")]
+    rc = plat.run(cmd, timeout=120).returncode
+    return [("workflows", "render", "OK(rendered)" if rc == 0 else f"WARN(rc={rc})")]
+
+
+def _library(ctx: Ctx):
+    if not LIB_INDEX.exists() or not (_ROOT / "library" / "ecc").exists():
+        return [("library", "index", "SKIP(absent)")]
+    check = plat.run([plat.python_exe(), str(LIB_INDEX), "--check"], timeout=120)
+    if check.returncode == 0:
+        return []
+    if ctx.dry:
+        return [("library", "index", "WOULD-REBUILD")]
+    rc = plat.run([plat.python_exe(), str(LIB_INDEX)], timeout=300).returncode
+    return [("library", "index", "REBUILT" if rc == 0 else f"WARN(rc={rc})")]
+
+
+def _public(md: str) -> str:
+    """The inventory is tracked in a public repo: home paths become ``~`` and project-scope rows
+    (another repo's path on this machine) are dropped (G6, machine data). Every spelling of home
+    is scrubbed (render tokens use forward slashes on Windows), and the summary is recounted."""
+    home = str(Path.home())
+    forms = sorted({home, home.replace("\\", "/"), home.replace("/", "\\")}, key=len, reverse=True)
+    lines = []
+    for ln in md.splitlines(keepends=True):
+        for h in forms:
+            ln = ln.replace(h, "~")
+        if " | project:" not in ln:
+            lines.append(ln)
+    rows = [ln.split("|")[2].strip() for ln in lines if ln.startswith("| `") and ln.count("|") > 2]
+    n_user = rows.count("user")
+    return "".join(re.sub(r"^\d+ user-scope, \d+ project/plugin-scope servers\.",
+                          f"{n_user} user-scope, {len(rows) - n_user} project/plugin-scope servers.", ln)
+                   for ln in lines)
+
+
+def _mcp_inventory(ctx: Ctx):
+    """Regenerates the inventory reference from the live ~/.claude.json (the only writer of that file);
+    the hand-written preamble (everything before the first table header) is kept. Skipped on Windows:
+    the tracked file is written on the committing machine only, or the replica's pull would abort."""
+    if plat.IS_WINDOWS:
+        return [("mcp-inventory", "mcp-inventory.md", "SKIP(replica)")]
+    if not INVENTORY.is_file() or ctx.dry:
+        return []
+    r = plat.run([plat.python_exe(), str(INVENTORY), "--md"], timeout=30)
+    out = _public(r.stdout or "")
+    if r.returncode != 0 or not out.strip():
+        return [("mcp-inventory", "mcp-inventory.md", f"WARN(rc={r.returncode})")]
+    try:
+        cur = INVENTORY_MD.read_text(encoding="utf-8")
+    except OSError:
+        cur = ""
+    head = cur.split("| Server |", 1)[0] if "| Server |" in cur else ""
+    new = head + (out[out.index("| Server |"):] if "| Server |" in out else out)
+    if new == cur:
+        return []
+    if not plat.atomic_write(INVENTORY_MD, new):
+        return [("mcp-inventory", "mcp-inventory.md", "WARN(write failed)")]
+    return [("mcp-inventory", "mcp-inventory.md", "UPDATED")]
+
+
+def _learning_evolve(ctx: Ctx):
+    """Daily instincts evolve (docs/LEARNING.md): ollama only; DEFERRED when the box is down (quiet, retried tomorrow)."""
+    if not INSTINCTS.is_file():
+        return []
+    if ctx.dry:
+        return [("learning", "evolve", "WOULD-EVOLVE every project with >= 20 new observations")]
+    cp = plat.run([plat.python_exe(), str(INSTINCTS), "evolve", "--budget", "600"], timeout=660)
+    if cp.returncode != 0:
+        return [("learning", "evolve", f"WARN(rc={cp.returncode})")]
+    rows = []
+    for ln in (cp.stdout or "").splitlines():
+        if ln.startswith("evolved "):
+            key, _, rest = ln[len("evolved "):].partition(":")
+            rows.append(("learning", key.strip(), "EVOLVED " + rest.strip()))
+        elif ln.endswith(" promoted"):
+            rows.append(("learning", "global", "EVOLVED " + ln.strip()))
+    return rows  # SKIP / DEFERRED / busy lines are not reported (nothing changed)
 
 
 def _vendor(ctx: Ctx):
@@ -135,8 +274,12 @@ def _ponytail_board(ctx: Ctx):
     return [("ponytail-board", "import", "OK" if cp.returncode == 0 else f"WARN(rc={cp.returncode})")]
 
 
-STEPS = [("mcp", _mcp), ("deps", _deps), ("settings", _settings), ("vendor", _vendor),
-         ("ponytail-board", _ponytail_board)]
+# plan-tier before settings: a tier change makes settings.json stale (selfheal._tier_drift), and the
+# same run's settings step then renders the new tier's model keys
+STEPS = [("mcp", _mcp), ("deps", _deps), ("plan-tier", _plan_tier), ("settings", _settings),
+         ("oomguard", _oomguard), ("machines-split", _machines_split), ("vendor", _vendor),
+         ("workflows", _workflows), ("library", _library), ("mcp-inventory", _mcp_inventory),
+         ("ponytail-board", _ponytail_board), ("learning-evolve", _learning_evolve)]
 
 
 # --- plumbing ---------------------------------------------------------------- #

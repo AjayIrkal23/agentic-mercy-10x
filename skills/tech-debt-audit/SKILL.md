@@ -1,7 +1,7 @@
 ---
 name: tech-debt-audit
-description: Whole-repo tech debt and architecture audit producing TECH_DEBT_AUDIT.md with file-cited findings, severity, effort, and a 'looks bad but is fine' section. User-invoked; does not auto-fire.
-when_to_use: Use only when the user asks for a debt audit, codebase health check, or architecture review of an entire repo.
+description: Whole-repo tech debt and architecture audit producing TECH_DEBT_AUDIT.md with file-cited findings, severity, effort, and a 'looks bad but is fine' section.
+when_to_use: Use when the user asks for a debt audit, codebase health check or architecture review of an entire repo; the prompt router may also surface it on refactor, cleanup and tech-debt prompts.
 metadata:
   schema: 1
   category: review

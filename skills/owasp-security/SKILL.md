@@ -663,3 +663,5 @@ Use this skill when:
 - Handling errors and exceptions
 - Working with third-party dependencies
 - **Working in any language** - apply the deep analysis mindset above
+
+ECC graft: `references/ecc-minimum-bar.md` — the six-item minimum bar every request-path change meets.

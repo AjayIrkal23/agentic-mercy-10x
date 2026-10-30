@@ -1,0 +1,6 @@
+{
+  "args": {"acts": ["impl", "plan", "bogus"], "task": "t", "run": "/tmp/r/20261029T1200-x", "slug": "x", "surface": "general"},
+  "default": {"path": "p", "summary": "s", "verdict": "PASS", "touched_security": false},
+  "replies": [{"label": "^docs$", "value": null}],
+  "workflow": {"review": {"verdict": "APPROVE", "incomplete": false, "blocking": [], "advisory": [], "stats": {}}}
+}

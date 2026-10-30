@@ -16,8 +16,8 @@ metadata:
 
 > **Assets: Higgsfield MCP (`higgsfield-generate`) is configured and mandatory.** Every raster,
 > video, 3D, or audio asset is generated through `mcp__higgsfield__generate_image` /
-> `generate_video` / `generate_3d` / `generate_audio`. The Gemini scripts under `scripts/`
-> (`logo/generate.py`, `cip/generate.py`, `icon/generate.py`) are legacy and must not be run —
+> `generate_video` / `generate_3d` / `generate_audio`. The legacy Gemini generators were
+> removed on 2026-10-29; only the `search.py` helpers remain under `scripts/` —
 > use this skill for its *art direction, specs, styles, and layout reasoning* (the `search.py`
 > helpers are fine), then hand pixel generation to Higgsfield. SVG icons are text: write them
 > directly, no image API. See the Assets section of `~/.claude/rules/frontend.md`.
@@ -74,8 +74,7 @@ python3 ~/.claude/skills/design/scripts/logo/search.py "healthcare medical" --do
 **ALWAYS** generate output logo images with white background.
 
 Take the brief from `search.py --design-brief` and call `mcp__higgsfield__generate_image`
-(GPT Image 2 for wordmarks/text, Nano Banana 2 for marks). `scripts/logo/generate.py` is a
-legacy Gemini path — do not run it.
+(GPT Image 2 for wordmarks/text, Nano Banana 2 for marks).
 
 After generation, **ALWAYS** ask the user about an HTML preview via `AskUserQuestion`. If yes, build a simple HTML gallery page of the variants.
 
@@ -103,8 +102,7 @@ python3 ~/.claude/skills/design/scripts/cip/search.py "office reception" --domai
 Compose each deliverable prompt from `search.py --cip-brief` plus the logo, then call
 `mcp__higgsfield__generate_image` with the logo as a reference image (upload it via
 `media_upload_widget` first). One call per deliverable; a full set = business card, letterhead,
-envelope, signage, and two office mockups. `scripts/cip/generate.py` is a legacy Gemini path —
-do not run it.
+envelope, signage, and two office mockups.
 
 Models: Higgsfield `generate_image` — `nano_banana_2` (default, fast) or `gpt_image_2` / Nano Banana Pro (higher text fidelity, 4K)
 
@@ -183,7 +181,7 @@ Load `references/banner-sizes-and-styles.md` for complete sizes and styles refer
 
 15 styles, 12 categories. Icons are SVG **text**: write them directly (24×24 viewBox, `currentColor`,
 1.5–2 px stroke for outlined, one `<path>` per icon where possible) and export sizes with
-`width`/`height` attributes. `scripts/icon/generate.py` is a legacy Gemini path — do not run it.
+`width`/`height` attributes.
 Load `references/icon-design.md` for style rules per category.
 
 ### Icon: Top Styles
@@ -267,13 +265,10 @@ Load `references/social-photos-design.md` for sizes, templates, best practices.
 | Script | Purpose |
 |--------|---------|
 | `scripts/logo/search.py` | Search logo styles, colors, industries |
-| `scripts/logo/generate.py` | LEGACY (Gemini) — do not run; use Higgsfield `generate_image` |
 | `scripts/logo/core.py` | BM25 search engine for logo data |
 | `scripts/cip/search.py` | Search CIP deliverables, styles, industries |
-| `scripts/cip/generate.py` | LEGACY (Gemini) — do not run; use Higgsfield `generate_image` |
 | `scripts/cip/render-html.py` | Render HTML presentation from CIP mockups |
 | `scripts/cip/core.py` | BM25 search engine for CIP data |
-| `scripts/icon/generate.py` | LEGACY (Gemini) — do not run; write SVG directly |
 
 ## Prerequisites
 

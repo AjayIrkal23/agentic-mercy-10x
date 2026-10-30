@@ -108,6 +108,26 @@ def test_seed_keeps_provider_keys_helper_model_mode_and_own_hooks(r):
     assert seed["hooks"]["Stop"] == USER["hooks"]["Stop"]
 
 
+def test_seed_keeps_a_model_pin_that_equals_todays_tier_render(r, tmp_path, monkeypatch):
+    """R3.3: render() merges tier-derived `model`/`fallbackModel` under the user overlay. A user pin
+    equal to today's tier is a coincidence, not redundancy: it must reach settings.user.json, or the
+    next tier change silently rewrites it (the seed used to compare against a template that had no
+    `model` at all)."""
+    tier = {"model": "opus", "env": {"CLAUDE_CODE_SUBAGENT_MODEL": "sonnet"}, "fallbackModel": ["sonnet", "haiku"]}
+    monkeypatch.setattr(r, "_tier_overrides", lambda: tier)
+    rendered = json.loads(r.render(user_path=None))
+    assert rendered["model"] == "opus" and rendered["fallbackModel"] == ["sonnet", "haiku"]
+    user = {**USER, "fallbackModel": ["sonnet", "haiku"]}
+    seed = settings_seed.seed_overlay(user, rendered, r.CLAUDE_MANAGED_KEYS)
+    assert seed["model"] == "opus" and seed["fallbackModel"] == ["sonnet", "haiku"]
+    assert "outputStyle" not in seed  # an ordinary key the template already has still template-wins
+    overlay = tmp_path / "settings.user.json"
+    overlay.write_text(json.dumps(seed), encoding="utf-8")
+    monkeypatch.setattr(r, "_tier_overrides", lambda: {**tier, "model": "sonnet", "fallbackModel": ["haiku"]})
+    out = json.loads(r.render(user_path=overlay))
+    assert out["model"] == "opus" and out["fallbackModel"] == ["sonnet", "haiku"]  # the pin survives pro
+
+
 def test_seed_env_clash_user_wins_for_provider_keys_template_wins_otherwise(r):
     rendered = json.loads(r.render(user_path=None))
     plain = next(k for k, v in rendered["env"].items() if isinstance(v, str) and "PROXY" not in k

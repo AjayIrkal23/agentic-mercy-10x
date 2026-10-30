@@ -201,7 +201,7 @@ def test_needs_auth_higgsfield_gets_one_login_line_for_asset_prompts(monkeypatch
     txt = items[0]["text"]
     assert "Higgsfield needs a one-time login" in txt
     assert "ask the user once (batched with any other login)" in txt
-    assert "mcp__higgsfield__authenticate" in txt
+    assert "Higgsfield connector in claude.ai" in txt   # the user-scope authenticate tool retires (A6)
     assert "assets are pending" in txt and "no placeholders" in txt
     assert "mcp__openart__authenticate" not in txt  # openart is not waiting on auth
 
@@ -234,5 +234,22 @@ def test_design_template_and_frontend_rule_are_conditional_on_login():
                          globs="g", mutating="m", closer_block="b")
     rule = (_HOOKS.parent / "rules" / "frontend.md").read_text(encoding="utf-8")
     for txt in (note, body[body.index("**`design`**"):][:700], rule):
-        assert "mcp__higgsfield__authenticate" in txt and "pending" in txt, txt[:120]
+        # the rule names the claude.ai connector's tool (mcp__claude_ai_higgsfield__authenticate) since 2026-10
+        assert "higgsfield__authenticate" in txt and "pending" in txt, txt[:120]
     assert "Placeholder boxes" in note and "never acceptable" in note  # pending, not a fallback to boxes
+
+
+def test_code_intel_tail_never_tells_anyone_to_run_a_command():
+    from prompt_router.modules import code_intel as CI
+    import inspect
+    src = inspect.getsource(CI)
+    assert "jcodemunch-mcp index" not in src and "run `" not in src
+    assert "index-lifecycle" in src   # the autonomous builder is named instead
+    assert not hasattr(CI, "build_playbook_item") and not hasattr(CI, "_load_toolmap")
+
+
+def test_login_line_names_the_connector_not_the_dead_user_scope_tool(monkeypatch):
+    _auth(monkeypatch)
+    [it] = _asset_items("generate a hero image for the landing page")
+    assert "mcp__higgsfield__authenticate" not in it["text"] and "claude.ai" in it["text"]
+    assert "mcp__claude_ai_higgsfield__" in it["text"]

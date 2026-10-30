@@ -1,0 +1,14 @@
+{
+  "args": {"run": "/tmp/r/20261029T1200-x", "paths": ["src/auth/login.ts", "src/a.ts", "src/b.ts"], "language": "typescript"},
+  "default": {"verdict": "APPROVE", "findings": []},
+  "replies": [
+    {"label": "^review:breaker:1$", "value": {"verdict": "CHANGES_REQUESTED", "findings": [
+      {"title": "off by one", "severity": "HIGH", "file": "src/a.ts", "line": 10, "evidence": "x", "proof": "i <= n reads past the end"},
+      {"title": "loose compare", "severity": "MEDIUM", "file": "src/b.ts", "line": 3, "evidence": "a == b"}]}},
+    {"label": "^review:lang:typescript:1$", "value": {"verdict": "CHANGES_REQUESTED", "findings": [
+      {"title": "index overflow", "severity": "HIGH", "file": "src/a.ts", "line": 11, "evidence": "y", "proof": "arr[n] is undefined"}]}},
+    {"label": "^review:security:1", "value": null},
+    {"label": "^verify:src/a.ts", "value": {"isReal": false, "confidence": 0.5, "evidence": "unsure"}},
+    {"label": "^report$", "value": {"path": "/tmp/r/20261029T1200-x/SANTA-REVIEW.md", "json_path": "/tmp/r/20261029T1200-x/SANTA-REVIEW.json"}}
+  ]
+}

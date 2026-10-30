@@ -260,3 +260,50 @@ def test_non_git_cwd_spawns_nothing(launcher, tmp_path, monkeypatch):
 def test_foreign_graph_message_no_longer_tells_anyone_to_run_graphify_update(launcher):
     gl, _ = launcher
     assert "graphify update" not in Path(gl.__file__).read_text(encoding="utf-8")
+
+
+def test_one_resolver_builds_the_repo_the_graph_lookup_used(launcher, tmp_path, monkeypatch):
+    """PKG hooks-hygiene-mod step 7: lookup and build name the same repo (audit 09 item 21)."""
+    gl, spawned = launcher
+    repo = _mkrepo(tmp_path / "repo")
+    other = _mkrepo(tmp_path / "other")
+    monkeypatch.delenv("GRAPHIFY_GRAPH", raising=False)
+    monkeypatch.delenv("WORKSPACE_FOLDER_PATHS", raising=False)
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(other))
+    monkeypatch.chdir(repo)
+    assert gl._open_root() == other.resolve()     # env wins over cwd, same answer for both callers
+    assert gl._resolve_graph([]) is None          # neither has a graph
+    gl._kick_graph_build()
+    assert spawned[-1][-1] == str(other.resolve())
+
+
+def test_open_root_skips_home_and_infra_roots(launcher, monkeypatch, tmp_path):
+    gl, _ = launcher
+    monkeypatch.delenv("CLAUDE_PROJECT_DIR", raising=False)
+    monkeypatch.setenv("WORKSPACE_FOLDER_PATHS", json.dumps([str(Path.home())]))
+    monkeypatch.chdir(tmp_path)   # not a repo
+    assert gl._open_root() is None
+
+
+# --------------------------------------------------------------------------- #
+# graphify-enforce: one mode, locked state (step 6)
+# --------------------------------------------------------------------------- #
+def test_prompt_submit_mode_is_gone_and_argv_is_a_noop(genf):
+    ge, _repo, _graph = genf
+    assert not hasattr(ge, "handle_prompt_submit")
+    cp = subprocess.run([sys.executable, str(_HOOKS / "graphify-enforce.py"), "prompt-submit"],
+                        input="{}", text=True, capture_output=True, timeout=20)
+    assert cp.returncode == 0 and json.loads(cp.stdout) == {"continue": True}
+
+
+def test_graphify_state_save_leaves_a_lock_sidecar(genf, monkeypatch, tmp_path):
+    ge, repo, _graph = genf
+    monkeypatch.setattr(ge, "_reprobe_graphify", lambda root: "FRESH")
+    payload = {"session_id": "cg1", "cwd": str(repo), "tool_name": "Agent",
+               "tool_input": {"subagent_type": "Explore", "prompt": "map the code"}}
+    monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
+    buf = io.StringIO()
+    monkeypatch.setattr(sys, "stdout", buf)
+    ge.handle_pre_tool_use()
+    assert "additionalContext" in json.loads(buf.getvalue())
+    assert (tmp_path / "gstate" / "cg1.graphify-enforce.json.lock").exists()

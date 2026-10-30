@@ -20,6 +20,9 @@ Gates (Charter §7 portability; Spec C §3):
       cp1252 and crashes on bytes like 0x9D (a ``”``), unless PYTHONUTF8 is set.
   G6  no ``/home/<user>/`` or ``/Users/<user>/`` in any git-TRACKED ``*.md`` (docs,
       archive included; the repo is public — write ``~``).
+  G7  import hygiene via ``scripts/validate_imports.py`` over the imported trees library/ and
+      agents/ (unicode tricks, personal paths, unpinned npx, workflow injection, secrets, machine
+      data terms from ``scripts/grep_gates.machine_terms.json`` when present).
 
 Scan scope = the code THIS overhaul owns and ships: ``hooks/`` (py+js),
 ``scripts/``, ``installer/``, ``install.py``, ``tests/`` (py). Excluded:
@@ -220,6 +223,24 @@ def run_gates() -> tuple[list[str], list[str]]:
         failures.append("G6 home literals in tracked Markdown (use ~):\n    " + "\n    ".join(g6))
     else:
         passes.append("G6 no home literals in tracked Markdown")
+
+    # G7: import hygiene (unicode tricks, personal paths, unpinned npx, workflow injection, secrets, machine data)
+    try:
+        import importlib.util as _ilu
+        _spec = _ilu.spec_from_file_location("validate_imports", ROOT / "scripts" / "validate_imports.py")
+        _vi = _ilu.module_from_spec(_spec)
+        _spec.loader.exec_module(_vi)  # type: ignore[union-attr]
+        # shortcut: library + agents only. skills/ hooks/ docs/ carry 227 findings today (upstream-locked
+        # skills' @latest, OOM-guard fixtures naming ptyxis-spawn, scrubber test strings): widen to the five
+        # dirs once validate_imports.py gains a fixture/upstream allowlist (handed back to `library`).
+        g7 = _vi.scan([p for p in (ROOT / "library", ROOT / "agents") if p.exists()])
+    except Exception as exc:  # noqa: BLE001
+        g7 = [{"cls": "E", "file": "scripts/validate_imports.py", "line": 0, "rule": f"gate error: {exc}", "excerpt": ""}]
+    if g7:
+        failures.append("G7 import hygiene (validate_imports.py):\n    "
+                        + "\n    ".join(f"{f['cls']} {f['file']}:{f['line']} {f['rule']}" for f in g7[:50]))
+    else:
+        passes.append("G7 import hygiene clean (library, agents)")
 
     return failures, passes
 

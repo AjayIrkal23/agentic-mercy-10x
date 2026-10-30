@@ -108,3 +108,5 @@ node scripts/inject-brand-context.cjs --json | head -20
 1. Parse subcommand from `$ARGUMENTS` (first word)
 2. Load corresponding `references/{subcommand}.md`
 3. Execute with remaining arguments
+
+ECC graft: `references/ecc-voice-bans.md` — voice profile fields and the hard-ban list.

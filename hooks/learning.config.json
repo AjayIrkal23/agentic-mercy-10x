@@ -1,0 +1,18 @@
+{
+  "_about": "Continuous learning (docs/LEARNING.md). Read by hooks/observe-log.py and hooks/tools/instincts.py; every key has a built-in default so a missing or broken file never stops a hook. Model backend is the ollama at OLLAMA_HOST (settings.user.json env), never the Claude quota.",
+  "enabled": true,
+  "model": "qwen2.5-coder:3b",
+  "alive_timeout_s": 1.5,
+  "chat_timeout_s": 120,
+  "min_new_observations": 20,
+  "max_row_bytes": 2048,
+  "max_rows_per_project": 5000,
+  "max_digest_chars": 6000,
+  "max_instincts_per_run": 8,
+  "skip_tools": ["Read", "Glob", "Grep", "LS", "TodoWrite", "TodoRead", "NotebookRead", "ListMcpResourcesTool", "ReadMcpResourceTool"],
+  "observe_infra": false,
+  "surface": {"limit": 3, "min_confidence": 0.7, "project_boost": 0.25, "line_chars": 110},
+  "confidence": {"start": 0.3, "reaffirm": 0.1, "cap": 0.95, "decay_per_week": 0.05, "prune_below": 0.2, "promote_at": 0.8, "promote_projects": 2},
+  "domains": ["workflow", "testing", "tooling", "git", "code-style", "debugging", "docs", "infra"],
+  "import": {"max_bytes": 1048576, "timeout_s": 15}
+}

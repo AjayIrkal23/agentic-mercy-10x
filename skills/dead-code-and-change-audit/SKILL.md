@@ -98,3 +98,5 @@ DEAD-CODE AUDIT (scope: <files in the diff>)
 
 A change is done when it works, its linkage is intact, and nothing it orphaned is left
 behind. Leaving the rest of the codebase cleaner is a report, not a license.
+
+ECC graft: `references/ecc-change-impact.md` — pre-change impact list: callers, config, docs, tests.

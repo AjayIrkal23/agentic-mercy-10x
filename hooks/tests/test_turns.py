@@ -70,6 +70,20 @@ def test_turn_bash_commands_since_the_human_prompt(tmp_path):
     assert turns.turn_bash_commands(tr) == ["sed -n 1,80p ~/.claude/skills/x/SKILL.md", "npm test"]
 
 
+def test_turn_bash_results_pairs_evidence_with_its_tool_result(tmp_path):
+    use = lambda tid, cmd: {"type": "assistant", "message": {"role": "assistant", "content": [
+        {"type": "tool_use", "id": tid, "name": "Bash", "input": {"command": cmd}}]}}
+    res = lambda tid, err: {"type": "user", "message": {"role": "user", "content": [
+        {"type": "tool_result", "tool_use_id": tid, "is_error": err, "content": "x"}]}}
+    tr = _transcript(tmp_path, [
+        _user(T0, "first"), use("a", "ls old"), res("a", True),
+        _user(T1, "second"), use("b", "pytest -q"), res("b", True),
+        use("c", "npm test"), res("c", False), use("d", "ruff check ."),
+    ])
+    assert turns.turn_bash_results(tr) == [("pytest -q", True), ("npm test", False), ("ruff check .", False)]
+    assert turns.turn_bash_results(str(tmp_path / "missing.jsonl")) == []
+
+
 def test_human_origin_is_a_turn(tmp_path):
     tr = _transcript(tmp_path, [_user(T0, "a"), _user(T1, "b", origin={"kind": "human"})])
     assert turns.last_user_turn(tr)[1] == "b"
@@ -80,3 +94,38 @@ def test_other_relayed_origins_still_count(tmp_path):
     by another channel keeps anchoring the turn."""
     tr = _transcript(tmp_path, [_user(T0, "a"), _user(T1, "b", origin={"kind": "channel"})])
     assert turns.last_user_turn(tr)[1] == "b"
+
+
+def test_tail_entries_keeps_the_last_n_dict_rows(tmp_path):
+    rows = [_user(T0, f"p{i}") for i in range(6)]
+    p = tmp_path / "t.jsonl"
+    lines = [json.dumps(r) for r in rows] + ["", "not json", "[1,2]"]
+    p.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    got = turns.tail_entries(str(p), n=5)
+    assert all(isinstance(e, dict) for e in got)
+    # last 5 physical lines: rows 4, 5, blank, "not json", [1,2] -> two dicts, oldest first
+    assert [e["message"]["content"] for e in got] == ["p4", "p5"]
+    assert len(list(turns.iter_tail(str(p), 5))) == len(turns.tail_entries(str(p), 5))
+
+
+def test_tail_entries_none_on_missing_and_empty_list_on_blank(tmp_path):
+    assert turns.tail_entries(str(tmp_path / "missing.jsonl")) is None
+    assert turns.tail_entries(None) is None
+    empty = tmp_path / "empty.jsonl"
+    empty.write_text("", encoding="utf-8")
+    assert turns.tail_entries(str(empty)) == []
+    assert list(turns.iter_tail(tmp_path / "none.jsonl")) == []
+
+
+def test_scanners_share_one_reader(monkeypatch):
+    import inspect
+    assert inspect.getsource(turns).count("deque(") == 1
+    monkeypatch.setattr(turns, "tail_entries", lambda *a, **k: [_user(T0, "x"), _write(T0, "/r/a.ts")])
+    assert turns.turn_written_files("whatever") == ["/r/a.ts"]
+    assert turns.last_user_turn("whatever")[1] == "x"
+
+
+def test_turn_written_files_distinguishes_missing_from_empty(tmp_path):
+    assert turns.turn_written_files(str(tmp_path / "missing.jsonl")) is None
+    tr = _transcript(tmp_path, [_user(T0, "just a question")])
+    assert turns.turn_written_files(tr) == []

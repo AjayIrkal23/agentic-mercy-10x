@@ -5,14 +5,11 @@ Mirrors the jcodemunch / graphify index guards: the user never hand-creates a
 tdd-guard config. Detects the project's stack(s), writes a scoped config.json,
 and keeps its ignorePatterns in sync as the repo's files/folders change.
 
-Modes (argv[1]):
+One mode (argv is ignored):
   session  Full pass (SessionStart, via session-start-aggregator). Detects stacks,
            (re)generates config when the structure FINGERPRINT changed, else skips.
-           -> "keep updating based on new files/folders, or ignore if no changes".
-  prompt   Cheap pass (UserPromptSubmit, via token-stack-prompt-reminder). If a
-           config already exists -> do nothing. If missing and the repo is a real
-           code project -> initialize it.
-           -> "auto-run on my prompt; if tdd exists ignore, else init properly".
+           The sidecar's ``runners`` list is what tdd_guard_launcher.stack_detected
+           reads: an auto-managed repo with no runner never pays a validator call.
 
 Ownership model (so manual configs are never clobbered):
   A config is AUTO-MANAGED iff the sidecar  <data>/.autoinit.json  exists with
@@ -273,30 +270,10 @@ def run_session() -> int:
     return _emit(_status("updated (structure changed)", root, runners, enabled)) or 0
 
 
-def run_prompt() -> int:
-    payload = _read_payload()
-    root = _find_root(payload)
-    if root is None or not (root / ".git").exists():
-        return _emit("") or 0
-
-    data, config_path, sidecar_path = _paths(root)
-    if config_path.exists():
-        return _emit("") or 0  # already initialized — ignore (cheap path)
-
-    scan = _scan(root)
-    if not scan["has_stack"]:
-        return _emit("") or 0  # not a code project — don't init / don't pollute
-
-    fp = _fingerprint(scan)
-    config, runners, enabled = _generate(scan)
-    _write(data, config_path, sidecar_path, config, runners, fp)
-    return _emit(_status("initialized", root, runners, enabled)) or 0
-
-
 def main() -> int:
-    mode = sys.argv[1] if len(sys.argv) > 1 else "session"
+    # One mode. An argv from a stale caller (the old `prompt`) is ignored.
     try:
-        return run_prompt() if mode == "prompt" else run_session()
+        return run_session()
     except Exception:
         return _emit("") or 0
 

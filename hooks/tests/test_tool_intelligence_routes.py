@@ -72,3 +72,13 @@ def test_long_single_line_stays_linear():
 ])
 def test_stack_nouns_and_go_do_not_route(prompt):
     assert not _route("context7").search(prompt)
+
+
+def test_dead_sections_are_gone_and_higgsfield_names_the_connector():
+    data = json.loads((HOOKS / "tool-intelligence.json").read_text(encoding="utf-8"))
+    assert not ({"engines", "cross_cutting", "handoff_pipeline"} & set(data))
+    assert "mirror" not in data["_meta"] and "rules/references/tool-intelligence.md" not in json.dumps(data)
+    hf = next(r for r in data["mcp_routes"] if r["id"] == "higgsfield")
+    assert hf["server"] == ["claude_ai_higgsfield", "higgsfield"]
+    assert "mcp__claude_ai_higgsfield__" in hf["text_by_server"]["claude_ai_higgsfield"]
+    assert data.get("connectors") == ["claude_ai_higgsfield"]
