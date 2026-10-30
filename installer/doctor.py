@@ -12,10 +12,11 @@ Rows (PASS / WARN / FAIL / SKIP; non-zero exit on any FAIL):
   settings-safety     0 "lean-ctx" substrings in settings.json AND the template; deny == []
   lean-ctx-config      config.toml carries the manifest keys + the zero-injection floor
                        (doctor_host.ZERO_INJECTION) and lean-ctx >= min_version
+  lean-ctx-runtime     no `lean-ctx serve` daemon, lean-ctx == the manifest pin (WARN; doctor_host.py)
   jcodemunch-config    ~/.code-index/config.jsonc carries the manifest keys
   plugins-contract     template enabledPlugins == manifest plugins.install
   plugins-installed    every manifest plugin installed + enabled (`claude plugin list`)
-  generated-in-sync    generators --check: rc != 0 FAIL, `drift:` lines WARN
+  generated-in-sync    generators --check: rc != 0 FAIL, `drift:` lines WARN, PyYAML missing SKIP
   workflows-rendered   the per-machine workflows/*.js + index.json render exists and
                        build_workflows.py --check is OK (FAIL -> self-heal re-renders; SKIP --ci)
   palette-skills       SKILL.md / agent counts from disk; FAIL when either is 0
@@ -25,6 +26,8 @@ Rows (PASS / WARN / FAIL / SKIP; non-zero exit on any FAIL):
                        --ci or AGENTIC_MERCY_SKIP_BASE_TOOLS; doctor_basetools.py)
   mcp-roster           registrations vs manifest: missing, extras, npx pin drift,
                        deprecated packages, /mcp auth (WARN only; doctor_mcp.py)
+  cli-on-path          every stdio MCP command and linked npm CLI (pyright-langserver …) resolves on the
+                       `$SHELL -lic` PATH (FAIL; WARN for undeclared servers and on Windows; doctor_paths.py)
   secret-perms         .env*, CLAUDE.machines.local.md, .credentials.json,
                        settings.user.json, ~/.claude.json not group/world readable
                        (WARN + chmod hint; Windows: SDDL from icacls, SIDs, WARN + icacls hint)
@@ -34,7 +37,9 @@ Rows (PASS / WARN / FAIL / SKIP; non-zero exit on any FAIL):
 ``--ci``: machine-dependent rows (mcp-roster, lean-ctx, jcodemunch, ollama,
 plugins-installed, mods-runtime, and the OOM guard's oom-policy, memwatch-unit, memwatch-code, restore-unit,
 claude-launcher, launcher-model, launch-caps, attach-live; those eight also SKIP in doctor mode, a sandbox HOME and under pytest) → SKIP; hook-command and statusline run under it when a rendered
-settings.json exists. Pure stdlib; importable and CLI.
+settings.json exists. lean-ctx-runtime and cli-on-path SKIP like the OOM rows (--ci, doctor mode, pytest).
+mods and mods-runtime run the real CLI (``doctor_mods.real_claude()``), never bin/claude (F3).
+Pure stdlib; importable and CLI.
 """
 
 from __future__ import annotations
@@ -59,6 +64,7 @@ import doctor_host  # noqa: E402
 import doctor_mcp  # noqa: E402
 import doctor_mods  # noqa: E402
 import doctor_oomguard  # noqa: E402
+import doctor_paths  # noqa: E402
 
 PASS, WARN, FAIL, SKIP = "PASS", "WARN", "FAIL", "SKIP"
 
@@ -174,9 +180,10 @@ def _run_with_stdin(cmd, stdin_data: str):
 
 
 def _claude_version() -> str:
-    if not shutil.which("claude"):
+    real = doctor_mods.real_claude()  # not bin/claude: its launch would write a launch-caps file (F3)
+    if not real:
         return ""
-    return (plat.run(["claude", "--version"], timeout=30).stdout or "").strip().split(" ")[0]
+    return (plat.run([real, "--version"], timeout=30).stdout or "").strip().split(" ")[0]
 
 
 def _check_validator(rows):
@@ -203,6 +210,10 @@ def run_doctor(*, ci: bool = False) -> list[tuple[str, str, str]]:
     rows: list[tuple[str, str, str]] = []
     m = _manifest()
     mods = m.get("mods") or {}
+    # machine probes (OOM rows, lean-ctx-runtime, cli-on-path) only outside --ci, doctor mode and pytest:
+    # the sandboxed tests must never read this machine's user manager, processes or shell (plan 0.11)
+    quiet = ci or bool(os.environ.get("CLAUDE_HOOK_DOCTOR")) or (
+        bool(os.environ.get("PYTEST_CURRENT_TEST")) and not os.environ.get("OOMGUARD_DOCTOR_ALLOW_TEST"))
     _check_link_doctor(rows)
     _row(rows, "interpreters", *doctor_checks.interpreters_status(_ROOT))
     _check_render_equivalence(rows)
@@ -210,6 +221,7 @@ def run_doctor(*, ci: bool = False) -> list[tuple[str, str, str]]:
     _row(rows, "statusline", *doctor_hook.check_statusline(_ROOT, ci))
     _row(rows, "settings-safety", *doctor_checks.settings_safety_status(_ROOT))
     _check_lean_ctx(rows, ci)
+    _row(rows, "lean-ctx-runtime", *doctor_host.check_leanctx_runtime(m, quiet))
     _check_jcodemunch(rows, ci)
     _check_plugins_contract(rows)
     _row(rows, "plugins-installed", *doctor_host.check_plugins_installed(m, ci))
@@ -222,15 +234,12 @@ def run_doctor(*, ci: bool = False) -> list[tuple[str, str, str]]:
     _row(rows, "base-tools", *doctor_basetools.check_base_tools(ci))
     _row(rows, "mcp-roster", *doctor_mcp.check_mcp_roster(
         ci, m, deps.user_config_file(), plat.claude_dir() / "mcp-needs-auth-cache.json"))
+    _row(rows, "cli-on-path", *doctor_paths.check(quiet, m, deps.user_config_file()))
     _row(rows, "ollama-embeddings", *doctor_host.check_ollama(m, ci))
     doctor_checks.check_model_routing(rows, _ROOT, _HOOKS, _row, _run_with_stdin,
                                       plat.python_exe(), PASS, FAIL, WARN)
     doctor_checks.check_fixtures(rows, _ROOT, _row, PASS, FAIL, WARN)
-    # OOM guard rows (oom-sentinel): real probes only outside --ci, doctor mode and pytest; the
-    # sandboxed tests must never read this machine's user manager (plan 0.11, 8.3.2)
-    quiet = ci or bool(os.environ.get("CLAUDE_HOOK_DOCTOR")) or (
-        bool(os.environ.get("PYTEST_CURRENT_TEST")) and not os.environ.get("OOMGUARD_DOCTOR_ALLOW_TEST"))
-    rows.extend(doctor_oomguard.rows(_ROOT, ci=quiet))
+    rows.extend(doctor_oomguard.rows(_ROOT, ci=quiet))  # OOM guard rows (oom-sentinel, plan 8.3.2)
     _row(rows, "secret-perms", *doctor_host.check_secret_perms(plat.claude_dir()))
     _row(rows, "mods", *doctor_mods.check_mods(_ROOT, mods, ci, _claude_version))
     enabled = [x for x in mods.get("enabled") or [] if isinstance(x, str)]
@@ -243,7 +252,17 @@ def main(argv: list[str]) -> int:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
     except (AttributeError, ValueError, OSError):
         pass
-    ci = "--ci" in argv
+    import argparse  # noqa: PLC0415
+    ap = argparse.ArgumentParser(prog="doctor.py", description="Read-only health check of this ~/.claude "
+                                 "(one row per check; exit 1 on any FAIL).")
+    ap.add_argument("--ci", action="store_true", help="plan mode: machine rows SKIP (no network, no units)")
+    ap.add_argument("--list", action="store_true", help="print the row names (a --ci pass) and exit 0")
+    args = ap.parse_args(argv)
+    if args.list:
+        for name, _s, _d in run_doctor(ci=True):
+            print(name)
+        return 0
+    ci = args.ci
     rows = run_doctor(ci=ci)
     print(f"=== doctor: {_ROOT} ===")
     for name, status, detail in rows:

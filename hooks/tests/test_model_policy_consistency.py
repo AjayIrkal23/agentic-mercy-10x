@@ -64,7 +64,10 @@ def test_ceilings_monotone_and_fable_only_in_max20():
     assert rank(TIERS["pro"]["ceiling"]) <= rank(TIERS["max5"]["ceiling"]) <= rank(TIERS["max20"]["ceiling"])
     assert "fable" not in json.dumps({k: v for k, v in TIERS.items() if k != "max20"})
     assert "fable" not in json.dumps(TIERS["max20"]["roles"]) and "fable" not in json.dumps(TIERS["max20"]["escalate"])
-    assert TIERS["pro"]["ceiling"] == "sonnet" and "opus" not in json.dumps(TIERS["pro"])
+    # ask_only lists models a Pro call may NOT use without the user's phrase (D6): naming opus there is the guard
+    pro_routes = {k: v for k, v in TIERS["pro"].items() if k != "ask_only"}
+    assert TIERS["pro"]["ceiling"] == "sonnet" and "opus" not in json.dumps(pro_routes)
+    assert set(TIERS["pro"]["ask_only"]) == {"sonnet", "opus"}
 
 
 def test_api_is_a_copy_of_max5():

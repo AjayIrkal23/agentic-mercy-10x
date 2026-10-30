@@ -1,3 +1,5 @@
+> APPLIED 2026-10 by the integrate package; history only, not instructions.
+
 # dox trim (package doctrine-tokens; integrate applies)
 
 dox `CLAUDE.md` files load whenever Claude reads in their directory, so a table cell that

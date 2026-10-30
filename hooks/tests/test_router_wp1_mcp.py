@@ -45,7 +45,7 @@ def test_reticle_instrumentation_is_detected(tmp_path):
 def _browser(monkeypatch, root) -> str:
     monkeypatch.setattr(MR, "available_servers", lambda: {"reticle", "playwright"})
     monkeypatch.setattr(MR, "needs_auth", lambda: set())
-    monkeypatch.setattr(MR, "dev_server_port", lambda: 5173)
+    monkeypatch.setattr(MR, "dev_server_port", lambda *a: 5173)
     prof = C.TaskProfile(text="take a screenshot, it looks wrong in the browser", intents={"QA": 2})
     ctx = {"repo": type("R", (), {"root": str(root)})()}
     return next(it["text"] for it in MR.items(prof, ctx) if it["id"] == "mcp:browser")
@@ -79,7 +79,7 @@ def test_post_hint_names_playwright_in_a_repo_without_reticle(tmp_path, monkeypa
     monkeypatch.setattr(code_files, "is_code_file",
                         lambda p: pathlib.Path(str(p)).suffix in code_files.CODE_EXTENSIONS)
     monkeypatch.setattr(H, "_server", lambda name: name in {"reticle", "playwright"})
-    monkeypatch.setattr(H, "_dev_port", lambda: 5173)
+    monkeypatch.setattr(H, "_dev_port", lambda *a: 5173)
     fp = _root(tmp_path) / "src" / "components" / "Card.tsx"
     payload = {"tool_name": "Edit", "tool_input": {"file_path": str(fp), "old_string": "", "new_string": "x"}}
     hint = next(h for h in H.hints(payload, {}) if ":5173" in h)

@@ -129,6 +129,31 @@ def test_new_safe_forms_pass(gate, cmd):
     assert gate(cmd) == "allow", cmd
 
 
+@pytest.mark.parametrize("cmd", [
+    # SP-6: persistent bypasses and hook-runner switches
+    "git config core.hooksPath /dev/null && git commit -m x",
+    "git config --local core.hooksPath /tmp/none-such-hooks-dir-x9",
+    'git config core.hooksPath ""',
+    "HUSKY=0 git commit -m x", "SKIP=gitleaks git commit -m x", "env HUSKY=0 git push",
+    # FIX2 item 5 (REVERIFY R4): the switch set earlier in the same command line, or quoted
+    "export HUSKY=0; git commit -m x", "export HUSKY=0 && git push", "HUSKY=0; git commit -m x",
+    "export SKIP=gitleaks\ngit commit -m x", "declare -x HUSKY=0; git commit -m x",
+    'HUSKY="0" git commit -m x', "export HUSKY='0'; git commit -m x",
+])
+def test_persistent_hook_bypasses_are_denied(gate, cmd):
+    assert gate(cmd) == "deny", cmd
+
+
+@pytest.mark.parametrize("cmd", [
+    "git config core.hooksPath .githooks", "git config --unset core.hooksPath",
+    "HUSKY=0 npm install", "SKIP=1 make", "git -c user.name=x commit -m y",
+    "HUSKY=0 npm install; git commit -m x", "export SKIP_TESTS=1; git commit -m x",
+    "export HUSKY=1; git commit -m x", "export HUSKY=0; npm install",
+])
+def test_ordinary_hook_config_and_env_pass(gate, cmd):
+    assert gate(cmd) == "allow", cmd
+
+
 def test_git_bypass_is_denied_on_every_attempt(gate_full, tmp_path):
     """The retry override of the legacy groups never applies: the acceptance smoke runs with the
     same session id twice and must deny both times."""

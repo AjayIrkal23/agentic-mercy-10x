@@ -68,6 +68,10 @@ try:
     _LIBS_OK = True
 except Exception:  # pragma: no cover - defensive; hook must never hard-crash
     _LIBS_OK = False
+try:
+    from lib import oomguard_config as ogc  # RAM-relative graphify floor (FI-3)
+except Exception:  # pragma: no cover - fail-open: the raw number
+    ogc = None
 
 
 # --------------------------------------------------------------------------- #
@@ -100,8 +104,10 @@ _DEFAULT_CONFIG = {
     "debounce": {"writes_threshold": 5, "seconds_threshold": 45},
     "probe_timeouts_ms": {"jcodemunch": 500, "jdocmunch": 800, "graphify": 3000, "dox": 300},
     # jdocmunch_embed: a doc index with vectors; a provider change re-embeds the whole corpus
+    # graphify_first: no graph.json yet (a first build of a large repo needs minutes, RT-7)
     "build_timeouts_s": {"jcodemunch": 300, "jdocmunch": 120, "jdocmunch_embed": 900,
-                         "graphify": 300, "dox": 60},
+                         "graphify": 300, "graphify_first": 1200, "dox": 60},
+    "graphify_max_workers": 0,  # 0 = auto: max(2, min(8, cpu_count // 3))
     "max_build_failures": 3,
     "lock_ttl_minutes": 30,  # must outlive the longest build cap + summarizer wait
     "max_doc_stats": 5000,
@@ -112,6 +118,7 @@ _DEFAULT_CONFIG = {
     "summarizer_healthcheck": {"enabled": True, "timeout_ms": 800, "wait_s": 90},
     # L6 OOM guard: tier from state/mem-pressure.json (memwatch); missing/stale = ok
     "memory": {"tier_stale_s": 30, "defer_at": "warn", "fallback_min_avail_mb": 12288,
+               "fallback_floor_mb": 6000,  # scaled floor never below graphify's ~4.4 GB peak + crit
                "memory_high": "3G", "memory_max": "5G", "swap_max": "0", "cpu_weight": 20,
                "io_weight": 20, "nice": 19, "ionice_class": 3,
                "defer_surfaces": ["jcodemunch", "jdocmunch", "graphify"]},
@@ -193,7 +200,8 @@ def _ok(cp) -> bool:
                     if not ln.startswith("Deprecated:"))
     body = err.strip() or (cp.stdout or "").strip()
     head = "timeout; " if cp.returncode == 124 else ""
-    _LAST_ERR[0] = _scrub(f"{head}rc={cp.returncode} {body}")[-400:]
+    # the head ("timeout; rc=124") survives a long body: only the body is tail-cut (RT-7)
+    _LAST_ERR[0] = _scrub(f"{head}rc={cp.returncode} ") + _scrub(body)[-360:]
     return False
 
 
@@ -573,9 +581,30 @@ def _index_db_for(root: Path):
     return legacy[0] if legacy else None
 
 
+def _jcm_trusted(root: Path) -> bool:
+    """jcodemunch refuses to index outside ``trusted_folders`` (``<CODE_INDEX_PATH>/config.jsonc``,
+    default ``[HOME]``): a build there fails every time, so the probe says UNAVAILABLE (RT-4)."""
+    cfg = Path(os.environ.get("CODE_INDEX_PATH") or Path.home() / ".code-index") / "config.jsonc"
+    folders = [str(Path.home())]
+    try:
+        m = re.search(r'"trusted_folders"\s*:\s*\[(.*?)\]', cfg.read_text(encoding="utf-8"), re.S)
+        if m:
+            folders = re.findall(r'"((?:[^"\\]|\\.)*)"', m.group(1)) or folders
+    except OSError:
+        pass
+    r = os.path.normcase(os.path.realpath(root))
+    for f in folders:
+        f = os.path.normcase(os.path.realpath(os.path.expanduser(f.replace("\\\\", "\\"))))
+        if r == f or r.startswith(f.rstrip(os.sep) + os.sep):
+            return True
+    return False
+
+
 def _probe_jcodemunch(root: Path, prior: dict) -> tuple:
     if not _which("jcodemunch-mcp"):
         return (UNAVAILABLE, {}, "jcodemunch-mcp not installed")
+    if not _jcm_trusted(root):
+        return (UNAVAILABLE, {}, "outside jcodemunch trusted_folders")
     db = _index_db_for(root)
     head_cp = _git(root, ["rev-parse", "HEAD"], timeout=5)
     head = head_cp.stdout.strip() if head_cp.returncode == 0 else None
@@ -956,7 +985,10 @@ def _memory_defer_reason(surface: str, cfg: dict, *, embed: bool | None = None) 
         return f"tier {fresh}"
     if surface == "graphify" and fresh is None:
         avail = _mem_available_mb()  # graphify peaks ~4.4 GB on a large repo
-        if avail is not None and avail < int(mem.get("fallback_min_avail_mb", 12288)):
+        floor = int(mem.get("fallback_min_avail_mb", 12288))
+        if ogc is not None:  # tuned for ~30 GB; a smaller box scales it, never below fallback_floor_mb
+            floor = ogc.scale_mb(floor, int(mem.get("fallback_floor_mb", 6000)))
+        if avail is not None and avail < floor:
             return f"mem_available {avail}"
     return ""
 
@@ -1016,8 +1048,12 @@ def _build_graphify(root: Path, incremental: bool, paths, cfg: dict):
     reason = _memory_defer_reason("graphify", cfg)
     if reason:
         return _defer(reason)
-    ok = _ok(_run_build("graphify", root, ["graphify", "update", str(root)], cfg,
-                        timeout=cfg["build_timeouts_s"]["graphify"]))
+    bt = cfg["build_timeouts_s"]
+    first = not (root / "graphify-out" / "graph.json").is_file()
+    timeout = bt.get("graphify_first", 1200) if first else bt["graphify"]
+    workers = int(cfg.get("graphify_max_workers") or 0) or max(2, min(8, (os.cpu_count() or 6) // 3))
+    ok = _ok(_run_build("graphify", root, ["graphify", "update", str(root), "--max-workers", str(workers)],
+                        cfg, timeout=timeout))
     if ok:
         _prune_graph_backups(root)
     return ok

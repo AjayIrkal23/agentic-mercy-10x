@@ -65,6 +65,29 @@ def relocate(clone, target, failed=None):
     return n, lines
 
 
+@pytest.mark.skipif(shutil.which("git") is None, reason="needs git")
+def test_relocation_keeps_git_so_pull_works(clone, target):
+    """FI-9: ~/.claude installed from a clone stays a git checkout (git pull --ff-only updates it)."""
+    import subprocess  # noqa: PLC0415
+    g = ["git", "-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false"]
+    subprocess.run([*g, "init", "-q", str(clone)], check=True)
+    subprocess.run([*g, "-C", str(clone), "add", "-A"], check=True)
+    subprocess.run([*g, "-C", str(clone), "commit", "-qm", "x"], check=True)
+    n, lines = relocate(clone, target)
+    assert (target / ".git").is_dir() and ("relocate", ".git", "OK(copied: git pull works in ~/.claude)") in lines
+    st = subprocess.run(["git", "-C", str(target), "status", "--porcelain"], capture_output=True, text=True)
+    assert st.returncode == 0 and st.stdout == ""
+
+
+def test_relocation_never_overwrites_an_existing_git_dir(clone, target):
+    (clone / ".git").mkdir()
+    (clone / ".git" / "HEAD").write_text("ref: refs/heads/clone\n", encoding="utf-8")
+    (target / ".git").mkdir(parents=True)
+    (target / ".git" / "HEAD").write_text("ref: refs/heads/mine\n", encoding="utf-8")
+    relocate(clone, target)
+    assert (target / ".git" / "HEAD").read_text(encoding="utf-8") == "ref: refs/heads/mine\n"
+
+
 def test_a_read_only_target_file_is_replaced(clone, target):
     old = _tree(target, {"hooks/a.py": "old a"})
     os.chmod(old / "hooks" / "a.py", stat.S_IREAD)

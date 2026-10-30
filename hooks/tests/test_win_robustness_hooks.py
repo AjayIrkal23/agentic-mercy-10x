@@ -146,7 +146,9 @@ def sd(monkeypatch, tmp_path):
     monkeypatch.setenv("SELFHEAL_DAILY_ALLOW_TEST", "1")
     monkeypatch.delenv("CLAUDE_HOOK_DOCTOR", raising=False)  # CI exports it for the whole run
     monkeypatch.setattr(mod.plat, "claude_dir", lambda: tmp_path / "claude")
-    monkeypatch.setitem(sys.modules, "selfheal", types.SimpleNamespace(pin_config_dir=lambda t: None))
+    # _configure_lean_ctx: the daily deps step merges the lean-ctx config after the deps (F2)
+    monkeypatch.setitem(sys.modules, "selfheal", types.SimpleNamespace(
+        pin_config_dir=lambda t: None, _configure_lean_ctx=lambda deps, ci: ("lean-ctx-config", "PRESENT (compliant)")))
     mod.state = state
     return mod
 

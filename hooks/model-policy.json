@@ -32,7 +32,7 @@
                       "integrate": "haiku", "security": "haiku", "judge": "sonnet", "default": "haiku"},
             "escalate": {"test": "sonnet", "impl": "sonnet", "integrate": "sonnet", "security": "sonnet"},
             "usage_guard": {"ceiling": "haiku", "judge": "haiku"},
-            "judge_phrase_lift": null, "impl_planned_small": null, "size_bumps": {}, "ask_only": []},
+            "judge_phrase_lift": null, "impl_planned_small": null, "size_bumps": {}, "ask_only": ["sonnet", "opus"]},
     "max5": {"ceiling": "opus", "main": "sonnet", "subagent_env": "sonnet", "fallback": ["haiku"],
              "roles": {"explore": "haiku", "docs": "haiku", "verify": "haiku", "test": "sonnet", "impl": "sonnet",
                        "integrate": "sonnet", "security": "sonnet", "judge": "sonnet", "default": "sonnet"},

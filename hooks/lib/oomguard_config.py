@@ -14,8 +14,12 @@ try:
 except Exception:  # noqa: BLE001 - fail-open: the plain ~/.claude path below
     _plat = None
 
-DEFAULTS = {"restore_enabled": True, "shed_mode": "own-builders", "memory_high": "12G",
-            "kill_policy": {"enabled": True}, "protected_extra": [], "victims_extra": []}
+# memory_high "" = unset: bin/claude and bin/claude-tmux derive the scope cap, memory_cap_mb()
+DEFAULTS = {"restore_enabled": True, "shed_mode": "own-builders", "memory_high": "",
+            "kill_policy": {"enabled": True}, "protected_extra": [], "victims_extra": [], "linger": True}
+# index-lifecycle's MB floor is tuned for a ~30 GB box and scales by ram_factor() (FI-3); memwatch's tiers
+# are percent of MemTotal (F7). Bigger boxes keep the shipped numbers (factor capped at 1).
+REF_MEM_TOTAL_MB = 30000
 _MODES = {"none", "own-builders", "known-heavy"}
 _SIZE_RE = re.compile(r"^\d+[KMGT]?$")
 _KP_KEYS = ("enabled", "stage_holdoff_s", "emergency_mb", "idle_min")
@@ -45,6 +49,7 @@ def shed_mode(p=None) -> str:
 
 
 def memory_high(p=None) -> str:
+    """The local ``memory_high`` (``8G``, ``16384M``); "" when unset or malformed (RAM-derived)."""
     v = str(load(p).get("memory_high") or "")
     return v if _SIZE_RE.match(v) else DEFAULTS["memory_high"]
 
@@ -73,5 +78,55 @@ def victims_extra(p=None) -> list[str]:
     return _strs(p, "victims_extra")
 
 
-__all__ = ["DEFAULTS", "path", "load", "restore_enabled", "shed_mode", "memory_high", "kill_policy",
-           "protected_extra", "victims_extra"]
+def linger_wanted(p=None) -> bool:
+    """Only a literal ``false`` opts out of ``loginctl enable-linger`` at install."""
+    return load(p).get("linger") is not False
+
+
+def mem_total_mb() -> int:
+    """MemTotal in MB from /proc/meminfo; 0 when unknown (Windows, no /proc)."""
+    try:
+        return int((_plat.mem_probe() or {}).get("mem_total_mb") or 0) if _plat is not None else 0
+    except Exception:  # noqa: BLE001
+        return 0
+
+
+def ram_factor(total_mb: int | None = None) -> float:
+    """min(1, MemTotal / REF_MEM_TOTAL_MB); 1.0 when MemTotal is unknown."""
+    t = mem_total_mb() if total_mb is None else int(total_mb or 0)
+    return 1.0 if t <= 0 else min(1.0, t / REF_MEM_TOTAL_MB)
+
+
+DESKTOP_RESERVE_MB = 4096  # F7 (user, 2026-10-30): what the desktop apps keep on any box
+
+
+def memory_cap_mb(total_mb: int | None = None) -> int:
+    """The one memory cap rule (F7): MemTotal minus 4 GiB, never below half of MemTotal; 0 when unknown.
+    Scope MemoryHigh (bin/claude, bin/claude-tmux repeat it in bash) and the machine-wide
+    CLAUDE_CODE_TOOL_MEMORY_LIMIT (settings_install.machine_sizes): 15650 MB -> 11554, 30669 MB -> 26573."""
+    t = mem_total_mb() if total_mb is None else int(total_mb or 0)
+    return 0 if t <= 0 else max(t - DESKTOP_RESERVE_MB, t // 2)
+
+
+def scale_mb(value, floor=0, factor=None) -> int:
+    """A shipped MB threshold scaled to this machine's RAM, never below ``floor``."""
+    f = ram_factor() if factor is None else factor
+    return max(int(floor), int(round(float(value) * f)))
+
+
+def tiers_override(p=None) -> dict:
+    """``tiers.warn`` / ``tiers.crit`` numbers from the local file (absolute, never scaled)."""
+    t = load(p).get("tiers")
+    out: dict = {}
+    if isinstance(t, dict):
+        for lvl in ("warn", "crit"):
+            v = t.get(lvl)
+            if isinstance(v, dict):
+                out[lvl] = {k: int(x) for k, x in v.items()
+                            if isinstance(x, (int, float)) and not isinstance(x, bool)}
+    return out
+
+
+__all__ = ["DEFAULTS", "REF_MEM_TOTAL_MB", "path", "load", "restore_enabled", "shed_mode", "memory_high",
+           "kill_policy", "protected_extra", "victims_extra", "linger_wanted", "mem_total_mb",
+           "ram_factor", "scale_mb", "tiers_override", "DESKTOP_RESERVE_MB", "memory_cap_mb"]

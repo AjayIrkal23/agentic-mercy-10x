@@ -111,9 +111,11 @@ shows which rule applied. The Windows replica has no launcher yet: its main sess
 default.
 
 - **This turn:** say "use opus", "use haiku", "use sonnet" or "use fable". An explicit `model` on a
-  call (or a `[model]` label) moves any agent to a tier's ask-only model (Opus on max5/api, Fable on
-  max20) or moves a judge, executor or pin only when your turn carries that phrase; otherwise it is
-  honoured within the ceiling and the usage guard still applies.
+  call (or a `[model]` label) moves any agent to a tier's ask-only model (Sonnet and Opus on pro, Opus
+  on max5/api, Fable on max20) or moves a judge, executor or pin only when your turn carries that
+  phrase; otherwise it is honoured within the ceiling and the usage guard still applies. On pro a
+  `[opus]` or `[sonnet]` label alone keeps the Haiku worker (RT-10); a `[fable]` label lands on Sonnet
+  on max5/max20 (the "fable floor", named in the routing log) and stays on the role model on pro.
 - **This project:** "use opus for this project" or `scripts/model-mode.py opus|haiku|sonnet|fable|clear`.
   A pin above the ceiling is stored capped (`opus` on pro is stored as `sonnet`, with a one-line
   reason) and capped again on read if the tier drops later.
@@ -132,7 +134,7 @@ model with the usage step-down and ceiling already computed. Escalation lifts ex
 a retry marker in `args.task`/`args.brief` lifts every call; a retry marker in one call's prompt
 lifts that call at run time (a fix-loop template in the script does not lift its first call); the
 size/risk rule reads the script text plus task and brief once. An explicit `opts.model` is honoured
-within the ceiling except a tier's ask-only model (Opus on max5/api, Fable on max20), which needs your
+within the ceiling except a tier's ask-only model (Sonnet/Opus on pro, Opus on max5/api, Fable on max20), which needs your
 phrase this turn; fable always needs it, and the usage guard steps a bare literal down.
 
 Saved scripts (`scriptPath`, `name`) are never rewritten. They were rendered per tier by

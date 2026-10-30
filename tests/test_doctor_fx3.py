@@ -143,6 +143,33 @@ def test_secret_perms_skips_when_there_is_nothing_to_check(tmp_path, windows):
     assert st == "SKIP" and "no secret files found" in det
 
 
+# --- SP-5: the four secret-adjacent files the globs missed; a world-traversable home ---------------- #
+_SP5 = ("CLAUDE.machines.journal.local.md", "settings.local.json", "scripts/grep_gates.machine_terms.json",
+        "scripts/sudo-askpass.sh")
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX modes")
+def test_secret_perms_cover_journal_local_settings_terms_and_askpass(tmp_path):
+    root, home = tmp_path / "claude", tmp_path / "home"
+    (root / "scripts").mkdir(parents=True)
+    home.mkdir(mode=0o750)
+    home.chmod(0o750)
+    for rel in _SP5:
+        (root / rel).write_text("x", encoding="utf-8")
+        (root / rel).chmod(0o755 if rel.endswith(".sh") else 0o644)
+    st, det = doctor_host.check_secret_perms(root, is_windows=False, home=home)
+    assert st == "WARN" and all(Path(rel).name in det for rel in _SP5), det
+    assert "world-traversable" not in det
+    for rel in _SP5:
+        (root / rel).chmod(0o700 if rel.endswith(".sh") else 0o600)
+    st, det = doctor_host.check_secret_perms(root, is_windows=False, home=home)
+    assert st == "PASS", det
+    home.chmod(0o751)
+    st, det = doctor_host.check_secret_perms(root, is_windows=False, home=home)
+    assert st == "WARN" and "home is world-traversable (chmod o-rx ~)" in det
+    home.chmod(0o750)
+
+
 # --- A6v2-02: a piped cp1252 stdout with a non-ANSI path ------------------------------------------ #
 def test_doctor_main_survives_a_cp1252_pipe_with_a_non_ansi_path():
     code = (f"import sys, pathlib; sys.path[:0] = {[str(_ROOT / 'installer'), str(_ROOT / 'hooks')]!r}\n"

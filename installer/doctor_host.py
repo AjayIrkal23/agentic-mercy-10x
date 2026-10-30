@@ -9,6 +9,7 @@
                      user, SYSTEM and Administrators. The doctor never chmods or changes ACLs.
   lean-ctx floor     ZERO_INJECTION: the keys that keep lean-ctx from injecting into
                      ~/.claude are asserted even if the manifest ever drops one (G-13).
+  lean-ctx-runtime   a running `lean-ctx serve` daemon or a lean-ctx other than the pin -> WARN (F2).
 Pure stdlib; all external calls injectable.
 """
 from __future__ import annotations
@@ -35,7 +36,10 @@ PASS, WARN, FAIL, SKIP = "PASS", "WARN", "FAIL", "SKIP"
 # settings.json and its copies can hold provider keys (env, apiKeyHelper): the live file, the permanent
 # first-install copy, the rotating backups and the user overlay.
 SECRET_GLOBS = (".env", ".env.*", "CLAUDE.machines.local.md", ".credentials.json", "settings.json",
-                "settings.json.pre-install", "settings.json.bak-*", "settings.user.json")
+                "settings.json.pre-install", "settings.json.bak-*", "settings.user.json",
+                # SP-5: the machines journal, local settings, the private grep terms and the askpass
+                "CLAUDE.machines.journal.local.md", "settings.local.json",
+                "scripts/grep_gates.machine_terms.json", "scripts/sudo-askpass.sh")
 
 ZERO_INJECTION = {
     "top": {"shadow_mode": False, "rules_injection": "off", "shell_hook_disabled": True,
@@ -66,6 +70,53 @@ def leanctx_unmanaged_note(path: Path, required: dict) -> str:
             continue
         out.append(f"{k}({len(v)})" if isinstance(v, list) else f"{k}={v}")
     return ", ".join(out)
+
+
+def leanctx_daemons(proc_root="/proc") -> list[int]:
+    """pids whose argv is `<…/>lean-ctx serve …`: the daemon `lean-ctx onboard` starts; [] without /proc.
+    argv[0] must be lean-ctx itself, so `bash -c "lean-ctx serve"` (or a grep for it) never counts."""
+    pids: list[int] = []
+    try:
+        names = [n for n in os.listdir(proc_root) if n.isdigit()]
+    except OSError:
+        return pids
+    for n in names:
+        try:
+            with open(os.path.join(proc_root, n, "cmdline"), "rb") as fh:
+                argv = fh.read(1024).split(b"\0")
+        except OSError:
+            continue
+        if len(argv) > 1 and os.path.basename(argv[0]) == b"lean-ctx" and argv[1] == b"serve":
+            pids.append(int(n))
+    return sorted(pids)
+
+
+def _leanctx_version() -> str:
+    exe = shutil.which("lean-ctx")
+    if not exe:
+        return ""
+    m = re.search(r"\d+\.\d+\.\d+", plat.run([exe, "--version"], timeout=15).stdout or "")
+    return m.group(0) if m else ""
+
+
+def check_leanctx_runtime(manifest: dict, ci: bool, *, proc_root="/proc",
+                          version: Callable[[], str] = _leanctx_version) -> tuple[str, str]:
+    """Row ``lean-ctx-runtime`` (F2): WARN on a running `lean-ctx serve` daemon (only the npm postinstall's
+    `onboard` starts one; the workbench runs lean-ctx as a stdio MCP) and on a lean-ctx other than the
+    manifest pin. Telemetry / cloud keys stay the lean-ctx-config row's FAIL, which the self-heal repairs."""
+    if ci:
+        return SKIP, "ci"
+    pinned = str(((manifest.get("user_space") or {}).get("lean_ctx") or {}).get("version") or "")
+    notes = []
+    pids = [] if plat.IS_WINDOWS else leanctx_daemons(proc_root)
+    if pids:
+        notes.append(f"`lean-ctx serve` daemon running (pid {', '.join(map(str, pids))}): `lean-ctx stop`")
+    have = version()
+    if pinned and have and have != pinned:
+        notes.append(f"lean-ctx {have} is not the pinned {pinned}")
+    if notes:
+        return WARN, "; ".join(notes)
+    return PASS, f"no lean-ctx daemon; lean-ctx {have or 'not on PATH'}"
 
 
 def plugins_status(declared: list[dict], listed: list[dict] | None) -> tuple[str, str]:
@@ -245,7 +296,14 @@ def check_secret_perms(root: Path, *, is_windows: bool | None = None, icacls_sav
     if plat.IS_WINDOWS if is_windows is None else is_windows:
         return _secret_acls(seen, icacls_save, user_sid)
     loose = [p for p in seen if p.stat().st_mode & 0o077]
+    try:  # o+x / o+r on HOME lets other users reach ~/.claude (g+rx is fine: per-user private groups)
+        traversable = bool((Path(home) if home else Path.home()).stat().st_mode & 0o005)
+    except OSError:
+        traversable = False
+    note = "; home is world-traversable (chmod o-rx ~)" if traversable else ""
     if not loose:
+        if note:
+            return WARN, f"{len(seen)} secret-adjacent file(s), none group/world readable{note}"
         return PASS, f"{len(seen)} secret-adjacent file(s), none group/world readable"
     names = " ".join(str(p) for p in loose)
-    return WARN, f"group/world readable: {[p.name for p in loose]} -> chmod 600 {names}"
+    return WARN, f"group/world readable: {[p.name for p in loose]} -> chmod 600 {names}{note}"

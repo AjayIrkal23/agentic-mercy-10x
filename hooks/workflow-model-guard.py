@@ -220,6 +220,9 @@ def _wrapper_cfg(policy: dict, tier: str, usage: bool, forced: str | None, escal
     for m in policy.get("model_order") or _ORDER:
         target = m
         if m == "fable" and (usage or not phrase_for("fable")):
+            if tier == "pro":  # D6: on Pro no fable floor lifts the role route (model_mode does the same)
+                explicit[m] = None
+                continue
             target = "sonnet"  # fable needs the user's own words this turn and pauses under the guard
         elif m in ask_only and not phrase_for(m):
             explicit[m] = None  # the wrapper falls back to the call's role route (the literal is advice)

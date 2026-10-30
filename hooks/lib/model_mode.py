@@ -1,6 +1,6 @@
 """model_mode.py — per-project subagent model mode (D4) and the shared model resolver (R3.3).
 
-State file: ``<claude_dir>/state/model-modes/<repo_key>`` containing ``haiku`` | ``sonnet`` |
+State file: ``<state_dir>/model-modes/<repo_key>`` (default ``<claude_dir>/state/``) containing ``haiku`` | ``sonnet`` |
 ``opus`` | ``fable``. A pin above the plan tier's ceiling is capped on write (``set_mode``) and on
 read (``forced_mode``); the file itself is never rewritten on read. Consumers: opus-guard (Agent),
 workflow-model-guard (Workflow), the prompt router (``set_mode`` from override phrases) and
@@ -47,6 +47,11 @@ def _claude_dir() -> Path:
 
 
 def modes_dir() -> Path:
+    """``<state_dir>/model-modes``: honours CLAUDE_HOOK_STATE_DIR (test and replay isolation, RQ-9);
+    the default stays ``<claude_dir>/state/model-modes``."""
+    env = os.environ.get("CLAUDE_HOOK_STATE_DIR")  # plat.state_dir() would mkdir it on a read
+    if env:
+        return Path(env).expanduser() / "model-modes"
     return _claude_dir() / "state" / "model-modes"
 
 
@@ -360,8 +365,9 @@ def resolve(policy: dict, subagent_type: str, *, asked: str | None, phrase_for, 
                     reason += f"; user said '{p}'" + (f" -> {cand}" if cand != model else "")
                 model, said = cand, True
                 break
-        if asked == "fable" and order.index(model) < order.index("sonnet"):
-            model = "sonnet"  # an unauthorised fable request still lands on sonnet, never below
+        if asked == "fable" and tier != "pro" and order.index(model) < order.index("sonnet"):
+            model = "sonnet"  # an unauthorised fable request still lands on sonnet, never below (not on Pro)
+            reason += "; fable floor -> sonnet"
         if asked and asked != model:
             why = (f"over the {tier} ceiling" if phrase_for(asked)
                    else f"no '{asked}' override phrase in the user's turn")

@@ -61,6 +61,12 @@ def _append(kind: str, name: str, status_str: str) -> None:
         })
 
 
+def _path_hint() -> str:
+    """The end-of-run PATH line (same text as the headless installer, bootstrap._run_headless)."""
+    import ostools  # type: ignore  # noqa: PLC0415
+    return ostools.path_hint()
+
+
 def _run_install() -> None:
     """Run the fully-automatic self-heal loop (install -> repair -> re-check until
     0 doctor FAILs). Streams every step into _JOB for the live UI."""
@@ -72,8 +78,15 @@ def _run_install() -> None:
         _selfheal.pin_config_dir(_STATE["target"])
         res = _selfheal.self_heal(Path(_STATE["target"]),
                                   emit=lambda k, n, s: _append(k, n, s))
-        for line in res.get("todo") or []:  # the one batched sudo line + human-only steps
+        todo = res.get("todo") or []
+        for line in todo:  # the one batched sudo line + human-only steps
             _append("todo", line.strip(), "TODO")
+        if todo:  # the console too: a closed tab or a tunnelled browser must not hide it (DU-9)
+            text = "\n".join(todo)
+            print("\n" + "\n".join("  " + ln for ln in todo), flush=True)
+            hint = _path_hint()
+            if hint not in text:
+                print("  " + hint, flush=True)
         with _LOCK:
             _JOB["ok"] = True
             _JOB["success"] = bool(res.get("success"))

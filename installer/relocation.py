@@ -149,6 +149,14 @@ def relocate(src: Path, target: Path, emit=None, failed: list | None = None) -> 
                 total += 1
             except OSError as exc:
                 _fail(failed, target, dest, exc)
+    # the clone's .git comes along once (never over an existing one), so `git pull --ff-only`
+    # updates ~/.claude later (FI-9); the copy loop above skips it like every _SKIP_COPY_DIRS entry
+    if (src / ".git").is_dir() and not (target / ".git").exists():
+        try:
+            shutil.copytree(src / ".git", target / ".git", symlinks=True)
+            emit("relocate", ".git", "OK(copied: git pull works in ~/.claude)")
+        except (OSError, shutil.Error) as exc:
+            emit("relocate", ".git", f"WARN(not copied: {exc})")
     if failed:
         emit("relocate", str(target), f"PARTIAL — {total} files replaced, {len(failed)} failed")
         for rel, err in failed[:5]:

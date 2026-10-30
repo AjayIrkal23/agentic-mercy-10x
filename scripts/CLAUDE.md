@@ -21,10 +21,12 @@ nothing here is registered in `dispatch.config.json`.
 
 | File | Role |
 |------|------|
-| `vendor_skill.py` | vendor third-party skills from `hooks/skills-sources.json` (`<name> [--ref]`, `--all`, `--check`); backs `/invoke-update` |
+| `vendor_skill.py` | vendor third-party skills from `hooks/skills-sources.json` (`<name> [--ref]`, `--all`, `--check`); backs `/invoke-update`. A pinned ref that now resolves to another sha than the marker raises `RefMoved` and changes nothing (exit 1, `WARN …` line; selfheal-daily reports it); `<name> --ref <tag>` takes it after review (SP-7) |
 | `build_provenance.py` | R10 provenance registry → `hooks/skills-provenance.json` |
-| `build_skills_index.py` | the one skills-index generator (shim `hooks/build-skills-index.py`); skips skills of plugins the template sets to `false` in `enabledPlugins` (NEW-08) |
-| `validate_skills.py` | skill validator R1..R13 (installer post-step; fails the install on a broken catalog); R13 only WARNs on inert lowercase `intents` (C-03) |
+| `build_skills_index.py` | the one skills-index generator (shim `hooks/build-skills-index.py`); skips skills of plugins the template sets to `false` in `enabledPlugins` (NEW-08); a plugin skill whose keywords came from its description is `source: "plugin-description"` (half weight in the router, still in the gitignored sidecar); `_STOP` drops generic task words (`plan`, `implementation`, `report`, `changes`, …) |
+| `validate_skills.py` | skill validator R1..R13 (installer post-step; fails the install on a broken catalog); R13 only WARNs on inert lowercase `intents` (C-03); without PyYAML: one line `PyYAML missing (pip install pyyaml==6.0.3)`, exit 2 |
+| `router_replay.py` | replays the last `window_days` of real prompts (`projects/*/*.jsonl`) in-process through `prompt_router.router.route_payload` (fresh tmp state per prompt, `CLAUDE_HOOK_DOCTOR=1`); counts misroute signals (`threejs_no_3d`, `debug_no_bug`, `fe_skill_no_ui`, `app_line_no_repo`, `machine_routed`, `backend_git_oneliner`, `union`); report (counts and rates only, never prompt text) at `<state_dir>/router-replay/<date>.json`; `--check` exits 1 over `hooks/router-budget.json`; no transcripts = `SKIP` |
+| `sudo-askpass.example.sh` | tracked template for a machine's gitignored `scripts/sudo-askpass.sh`: prints `LOCAL_SUDO_PASS` from `~/.claude/.env`, else a refusal and exit 2; the installer copies it (mode 700) when `.env` holds `LOCAL_SUDO_PASS`; a caller's `LOCAL_SUDO_PASS` is ignored |
 | `validate_mods.py` | mods contract M1–M6 for `manifest.mods.enabled`, then `claude plugin validate --strict` + `claude plugin test` (`--static`, `--no-tests`; tests only WARN while Claude Code's rollout switch has mods off); installer post-step `validate-mods`, doctor row `mods` |
 | `skills_lib.py` | shared front-matter / trigger-token / hashing primitives |
 | `model-mode.py` | per-repo subagent model mode: `opus|sonnet|fable|clear|status`; `show` reads the global flags through `lib/model_mode.global_flags` (the files the guards read) |
@@ -35,8 +37,8 @@ nothing here is registered in `dispatch.config.json`.
 | `vendor_library.py` (+ `catalogue.json`) | vendor the ECC library (`--source --sha --out`; `VENDOR.json`; sanitizer; self-validates) |
 | `build_library_index.py` | `library/INDEX.json` from `library/ecc` (`--check`, `--ecc`) |
 | `secrets_scan.py` | layer 2 of the go-live secrets scan: known values from the env files, never prints a value |
-| `replica_sync.py` | Windows replica sync over key-only SSH; PASS/WARN/SKIP rows |
-| `golive.py` | the go-live runner: `--plan`, `--yes-automatic`; secrets (gitleaks `dir` + `stdin`, then `secrets_scan.py`) before any git step |
+| `replica_sync.py` | Windows replica sync over key-only SSH; PASS/WARN/SKIP rows. `--posix --host user@host`: another Linux box (plain ssh: `git -C ~/.claude pull --ff-only && python3 ~/.claude/installer/render.py`, then the doctor's summary line) |
+| `golive.py` | the go-live runner: `--plan`, `--yes-automatic`; secrets (gitleaks `dir` + `stdin`, then `secrets_scan.py`) before any git step; `_crit_mb()` reads the raw shipped crit line (owner box, RAM factor 1.0) |
 | `build_workflows.py` | renders `workflows/src/*.js.tpl` (`{{model:<role>}}`, `{{model:<role>:up}}`) into `workflows/*.js` + `index.json` + `.rendered.json` for the tier in `state/plan-tier.json` (usage guard applied); `--tier`, `--usage`, `--out`, `--check` (re-renders from the RECORDED tier, exit 1 on drift); never spawns |
 | `skill_health.py` | pushed-vs-invoked skill report and the `skillOverrides` map (superset of the deleted weights loop) |
 | `measure_context_cost.py` | measured always-on context cost (`docs/TOKEN-BUDGET.md`; `--write`, `--counts`, `--observed`, `--mcp-eager --record N`) |

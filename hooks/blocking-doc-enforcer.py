@@ -33,7 +33,7 @@ import re
 import sys
 from pathlib import Path
 
-from commit_docs_check import _all_flag, _git, git_commits, missing_docs, repo_root
+from commit_docs_check import _all_flag, _git, git_adds, git_commits, missing_docs, repo_root
 from tool_compat import is_shell_tool, tool_name
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -148,15 +148,57 @@ _MAX_LINES = 20000  # beyond this the diff is judged on its first 20k lines (fai
 _MAX_HITS = 10
 
 
-def _staged_secret_hits(root: str, commit_args: list, add_seen: bool) -> list:
+_INTERACTIVE_ADD = {"-p", "--patch", "-i", "--interactive", "-e", "--edit"}
+
+
+def _added_untracked(root: str, add_argvs: list) -> list:
+    """Root-relative paths a same-command `git add` would add that are untracked now (SP-3). git does
+    the pathspec logic: `add --dry-run` never touches the index. [] on any git error (fail-open)."""
+    files: list = []
+    for argv, directory in add_argvs[:5]:
+        argv = [a for a in argv if a not in _INTERACTIVE_ADD]
+        try:
+            out = _git(directory or root, "add", "--dry-run", "--ignore-missing", *argv)
+        except Exception:  # noqa: BLE001 - fail-open like the rest of the scan
+            continue
+        files += [ln[5:-1] for ln in out if ln.startswith("add '") and ln.endswith("'")]
+    if not files:
+        return []
+    try:
+        untracked = set(_git(root, "ls-files", "--others", "--exclude-standard"))
+    except Exception:  # noqa: BLE001
+        return []
+    return [f for f in dict.fromkeys(files) if f in untracked][:200]
+
+
+def _as_diff(root: str, rels: list) -> list:
+    """Untracked files as added-only diff text (first 256 KB; binaries skipped)."""
+    out: list = []
+    for rel in rels:
+        try:
+            with open(Path(root) / rel, "rb") as fh:
+                data = fh.read(262144)
+        except OSError:
+            continue
+        if b"\0" in data[:8192]:
+            continue
+        out += [f"+++ b/{rel}", "@@ -0,0 +1 @@"]
+        out += ["+" + ln for ln in data.decode("utf-8", "replace").splitlines() if ln.strip()]
+    return out
+
+
+def _staged_secret_hits(root: str, commit_args: list, add_seen: bool, add_argvs: list | None = None) -> list:
     """[('file:line', kind), ...] for secrets ADDED by this commit (staged; plus tracked working-tree changes
-    for `-a` or a same-line `git add`). Never the value. [] on any git error (fail-open)."""
+    for `-a` or a same-line `git add`, plus the untracked files that `git add` would add). Never the value.
+    [] on any git error (fail-open)."""
     try:
         diff = _git(root, "diff", "--cached", "-U0", "--no-color", "--diff-filter=ACMR")
         if add_seen or _all_flag(commit_args):
             diff += _git(root, "diff", "-U0", "--no-color", "--diff-filter=ACMR")
     except Exception:  # noqa: BLE001 - OSError, timeout, undecodable output: nothing to check
         return []
+    if add_seen and add_argvs:
+        diff += _as_diff(root, _added_untracked(root, add_argvs))
     hits: list = []
     file, line_no, skip = "", 0, False
     for raw in diff[:_MAX_LINES]:
@@ -208,13 +250,14 @@ def main() -> int:
     global _PENDING_ASK
     base = str(payload.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
     commits, add_seen = git_commits(command, base)
+    adds = git_adds(command, base) if add_seen else []
     # Staged-secret scan first, amends included: newly staged content is new content.
     soft: list = []
     for args, directory in commits:
         root = repo_root(directory)
         if not root:
             continue
-        hits = _staged_secret_hits(root, args, add_seen)
+        hits = _staged_secret_hits(root, args, add_seen, adds)
         listing = "\n".join(f"  - {where} ({kind})" for where, kind in hits)
         if any(kind not in _SOFT_KINDS for _, kind in hits):
             _deny("BLOCKED: this commit would add secret material (about line):\n\n" + listing

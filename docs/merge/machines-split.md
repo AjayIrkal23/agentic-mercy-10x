@@ -1,3 +1,5 @@
+> APPLIED 2026-10 by the integrate package; history only, not instructions.
+
 # Machines-file split (`scripts/split_machines_file.py`)
 
 `CLAUDE.md` §10 imports `~/.claude/CLAUDE.machines.local.md` into every session and every

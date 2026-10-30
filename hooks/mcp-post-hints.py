@@ -111,10 +111,11 @@ def _browser_verifier(root) -> str:
     return "playwright (browser_navigate → browser_snapshot)" if _server("playwright") else ""
 
 
-def _dev_port():
+def _dev_port(root=None):
+    """A dev-server port whose process runs inside ``root`` (never machine-wide)."""
     try:
         from prompt_router.modules import mcp_routes as _mcp  # noqa: PLC0415
-        return _mcp.dev_server_port()
+        return _mcp.dev_server_port(str(root) if root else None)
     except Exception:  # noqa: BLE001
         return None
 
@@ -216,7 +217,7 @@ def hints(payload: dict, state: dict) -> list[str]:
 
     if low.endswith(_FE_EXT) and root is not None:
         how = _browser_verifier(root)
-        port = _dev_port() if how and once(f"fe:{fp}") else None
+        port = _dev_port(root) if how and once(f"fe:{fp}") else None
         if port:
             out.append(f"FE component edited and your app is running on :{port} → verify with {how}. "
                        "Never start a server.")

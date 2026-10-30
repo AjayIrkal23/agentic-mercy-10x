@@ -78,10 +78,14 @@ def check_palette(rows: list, root: Path, row: RowWriter, passed: str, failed: s
 def generated_status(results: list) -> tuple[str, str]:
     """[(script name, CompletedProcess)] of the generators' --check runs. Non-zero ->
     FAIL; exit 0 but `drift:` lines on stdout -> WARN (gen-agent-skill-blocks exits 0
-    on drift it cannot fix itself)."""
-    failed = [name for name, cp in results if cp.returncode != 0]
+    on drift it cannot fix itself). Exit 2 with `PyYAML missing` is not drift: SKIP naming the
+    cause, the R9/R10-validator row carries the one FAIL (REVERIFY R2)."""
+    nomod = [name for name, cp in results if cp.returncode == 2 and "PyYAML missing" in (cp.stderr or "")]
+    failed = [name for name, cp in results if cp.returncode != 0 and name not in nomod]
     if failed:
         return "FAIL", f"drift: {failed} (re-run the generator)"
+    if nomod:
+        return "SKIP", f"PyYAML missing (pip install pyyaml==6.0.3): {nomod} not checked"
     drift = [ln for _, cp in results for ln in (cp.stdout or "").splitlines() if ln.startswith("drift:")]
     if drift:
         return "WARN", f"{len(drift)} drift line(s), e.g. {drift[0][:120]}"

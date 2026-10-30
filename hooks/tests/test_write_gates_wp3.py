@@ -247,6 +247,19 @@ def test_dox_denies_once_per_repo(tmp_path, monkeypatch):
     assert write("c.py") == "allow"
 
 
+def test_dox_deny_names_the_skill_file_to_read(tmp_path, monkeypatch):
+    """RT-2: dox-doc-tree is a `paths:` skill, unknown to the Skill tool until a CLAUDE.md exists."""
+    repo = tmp_path / "nodoc2"
+    (repo / ".git").mkdir(parents=True)
+    mod = _load("dox-write-gate.py")
+    monkeypatch.setattr(mod, "STATE_DIR", tmp_path / "state")
+    out = _main(mod, {"session_id": f"dox-{uuid.uuid4().hex}", "tool_name": "Write",
+                      "tool_input": {"file_path": str(repo / "a.ts"), "content": "x"}}, monkeypatch)
+    reason = out["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "Read " in reason and "skills/dox-doc-tree/SKILL.md" in reason
+    assert "invoke the `dox-doc-tree` skill" not in reason
+
+
 # ---- dangerous-bash-gate: --force-with-lease ------------------------------ #
 @pytest.mark.parametrize("cmd,want", [
     ("git push --force-with-lease origin feat", "allow"),

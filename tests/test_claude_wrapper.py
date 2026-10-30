@@ -15,6 +15,7 @@ WRAPPER = ROOT / "bin" / "claude"
 TMUXW = ROOT / "bin" / "claude-tmux"
 sys.path.insert(0, str(ROOT / "hooks"))
 from lib import platform as plat  # noqa: E402
+from lib import oomguard_config as ogc  # noqa: E402
 
 pytestmark = pytest.mark.skipif(plat.IS_WINDOWS or not shutil.which("bash"), reason="bash launcher, Linux only")
 
@@ -40,8 +41,16 @@ def box(tmp_path):
     _exe(fb / "tmux", FAKE_TMUX)
     (tmp_path / "run").mkdir()
     (tmp_path / "run" / "bus").write_text("", encoding="utf-8")
-    env = {"PATH": f"{ROOT / 'bin'}:{fb}:/usr/bin:/bin", "HOME": str(tmp_path), "XDG_RUNTIME_DIR": str(tmp_path / "run")}
+    meminfo = _meminfo(tmp_path / "meminfo", 31405920, 20971520)  # a 30 GB box, 20 GiB free
+    env = {"PATH": f"{ROOT / 'bin'}:{fb}:/usr/bin:/bin", "HOME": str(tmp_path), "XDG_RUNTIME_DIR": str(tmp_path / "run"),
+           "CLAUDE_LAUNCHER_MEMINFO": str(meminfo)}
     return tmp_path, env
+
+
+def _meminfo(path: Path, total_kb: int, avail_kb: int) -> Path:
+    path.write_text(f"MemTotal:       {total_kb} kB\nMemFree:          100000 kB\n"
+                    f"MemAvailable:   {avail_kb} kB\n", encoding="ascii")
+    return path
 
 
 def _run(env, *argv, exe=WRAPPER, **extra):
@@ -49,8 +58,8 @@ def _run(env, *argv, exe=WRAPPER, **extra):
     return subprocess.run([str(exe), *argv], capture_output=True, text=True, env=e, timeout=20)
 
 
-def _meminfo_size() -> str:
-    kb = next(int(line.split()[1]) for line in open("/proc/meminfo", encoding="ascii") if line.startswith("MemAvailable"))
+def _meminfo_size(path) -> str:
+    kb = next(int(line.split()[1]) for line in open(path, encoding="ascii") if line.startswith("MemAvailable"))
     gib = kb // 1048576
     return "small" if gib < 8 else "medium" if gib < 16 else "large"
 
@@ -59,7 +68,7 @@ def test_interactive_runs_in_a_scope_with_caps(box):
     tmp, env = box
     out = _run(env, "--resume", "abc").stdout
     m = re.search(r"SYSTEMD-RUN --user --scope --quiet --collect --unit claude-(\d+) -p OOMPolicy=continue "
-                  r"-p ManagedOOMPreference=avoid -p MemoryHigh=12G -- ", out)
+                  r"-p ManagedOOMPreference=avoid -p MemoryHigh=26573M -- ", out)
     assert m, out
     pid = m[1]
     sfile = tmp / ".claude" / "state" / f"launch-settings-{pid}.json"
@@ -69,7 +78,7 @@ def test_interactive_runs_in_a_scope_with_caps(box):
     assert 1 <= wf <= 8 and 2 <= sub <= 6
     launch = json.loads(sfile.read_text(encoding="utf-8"))
     size = launch["workflowSizeGuideline"]
-    assert size == _meminfo_size()
+    assert size == _meminfo_size(env["CLAUDE_LAUNCHER_MEMINFO"])
     # the launch-settings env block carries both caps (it beats the user settings file's env)
     assert launch["env"] == {"CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS": str(wf),
                              "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": str(sub)}
@@ -78,6 +87,20 @@ def test_interactive_runs_in_a_scope_with_caps(box):
     gib = caps["mem_available_mb"] // 1024  # the wrapper's own reading: the formula, race-free
     assert (caps["workflow_agents"], caps["subagents"], caps["size_guideline"]) == \
         (wf, sub, size) == (min(8, max(1, gib // 3)), min(6, max(2, gib // 2)), size)
+
+
+def test_memory_high_scales_with_ram_and_local_file(box):
+    """F7: env > oomguard.local.json memory_high > MemTotal minus 4 GiB, never below half (bin/claude and
+    bin/claude-tmux)."""
+    tmp, env = box
+    small = _meminfo(tmp / "meminfo-small", 16281600, 7340032)        # 15.9 GB box
+    assert "MemoryHigh=11804M" in _run(env, CLAUDE_LAUNCHER_MEMINFO=str(small)).stdout
+    (tmp / ".claude").mkdir(exist_ok=True)
+    (tmp / ".claude" / "oomguard.local.json").write_text('{"memory_high": "8G"}', encoding="utf-8")
+    assert "MemoryHigh=8G" in _run(env, CLAUDE_LAUNCHER_MEMINFO=str(small)).stdout
+    assert "MemoryHigh=8G" in _run(env, "ls", exe=TMUXW, CLAUDE_LAUNCHER_MEMINFO=str(small)).stdout
+    assert "MemoryHigh=5G" in _run(env, CLAUDE_SCOPE_MEMORY_HIGH="5G").stdout
+    assert "MemoryHigh=5G" in _run(env, "ls", exe=TMUXW, CLAUDE_SCOPE_MEMORY_HIGH="5G").stdout
 
 
 def test_memory_high_override_and_existing_settings_and_caps(box):
@@ -172,6 +195,21 @@ def test_print_bare_nested_and_subcommands_get_no_model(box):
     for argv in (["logs", "abc"], ["stop", "x"], ["rm", "x"], ["attach", "x"], ["respawn", "x"],
                  ["purge", "."], ["agents"], ["kill", "x"]):
         assert "--model" not in _real(_run(env, *argv).stdout), argv
+
+
+@pytest.mark.parametrize("argv", [["plugin", "test", "mods/mercy"], ["plugins", "list"], ["mcp", "list"],
+                                  ["update"]])
+def test_subcommands_run_the_real_binary_untouched(box, argv):
+    """F3 (a 16 GB laptop, 2026-10-30): `--settings <file>` in front of a subcommand makes `claude plugin
+    test` refuse, so the doctor's mods-runtime row FAILed from a terminal. A subcommand is not a session:
+    no scope, no caps, no launch files."""
+    tmp, env = box
+    _tier(tmp)
+    out = _run(env, *argv).stdout
+    assert _real(out) == "REAL " + " ".join(argv), out
+    assert "SYSTEMD-RUN" not in out and "MAX_CONCURRENT" not in out and "CLAUDE_WORKBENCH_SCOPE" not in out
+    state = tmp / ".claude" / "state"
+    assert not (state / "launch-caps").exists() and not list(state.glob("launch-settings-*"))
 
 
 def _real_claude() -> str | None:
@@ -269,10 +307,21 @@ def test_claude_tmux(box):
     tmp, env = box
     out = _run(env, "new", "-s", "w", exe=TMUXW).stdout
     assert re.search(r"SYSTEMD-RUN --user --scope --quiet --collect --unit tmux-claude-\d+ -p OOMPolicy=continue "
-                     r"-p ManagedOOMPreference=omit -- tmux new -s w", out) and "TMUX new -s w" in out
+                     r"-p ManagedOOMPreference=omit -p MemoryHigh=26573M -- tmux new -s w", out) and "TMUX new -s w" in out
     for extra in ({"CLAUDE_WORKBENCH_SCOPE": "1"}, {"XDG_RUNTIME_DIR": str(tmp / "nobus")}):
         out = _run(env, "ls", exe=TMUXW, **extra).stdout
         assert out == "TMUX ls\n"
+
+
+@pytest.mark.parametrize("total_kb,want", [(16026368, "11554M"), (31405920, "26573M"), (6291456, "3072M")])
+def test_both_launchers_cap_at_memtotal_minus_4g(box, total_kb, want):
+    """F7 (user, 2026-10-30): MemTotal minus 4 GiB for the desktop, never below half; bin/claude and
+    bin/claude-tmux agree with hooks/lib/oomguard_config.memory_cap_mb."""
+    tmp, env = box
+    mi = str(_meminfo(tmp / f"mi-{total_kb}", total_kb, total_kb // 2))
+    assert f"MemoryHigh={want} " in _run(env, CLAUDE_LAUNCHER_MEMINFO=mi).stdout
+    assert f"MemoryHigh={want} " in _run(env, "ls", exe=TMUXW, CLAUDE_LAUNCHER_MEMINFO=mi).stdout
+    assert want == f"{ogc.memory_cap_mb(total_kb // 1024)}M"
 
 
 @pytest.mark.parametrize("shell,rc,which,flag", [("zsh", ".zshrc", "whence -p claude", "-ic"),

@@ -159,3 +159,27 @@ def test_windows_host_side_refuses(monkeypatch, capsys):
     monkeypatch.setattr(R.plat, "IS_WINDOWS", True)
     assert R.main([]) == 2
     assert "run replica_sync from the Linux workstation" in capsys.readouterr().out
+
+
+# ---- FI-9: a POSIX replica (another Ubuntu box) ----------------------------------------------------------
+def test_posix_dry_run_prints_the_pull_and_render(_env, capsys):
+    assert R.main(["--posix", "--host", "u@h", "--dry-run"]) == 0
+    out = capsys.readouterr().out
+    assert ("ssh -o BatchMode=yes u@h 'git -C ~/.claude pull --ff-only && "
+            "python3 ~/.claude/installer/render.py'") in out
+    assert _calls(_env) == []
+
+
+@posix_only
+def test_posix_run_uses_plain_ssh_and_the_doctor(_env, capsys):
+    assert R.main(["--posix", "--host", "u@h"]) == 0
+    calls = _calls(_env)
+    assert calls[0][-1] == "git -C ~/.claude pull --ff-only && python3 ~/.claude/installer/render.py"
+    assert calls[1][-1] == "python3 ~/.claude/installer/doctor.py | tail -1"
+    assert all("USERPROFILE" not in c[-1] for c in calls)
+    assert "replica_sync: PASS" in capsys.readouterr().out
+
+
+def test_posix_without_a_host_is_a_skip(_env, capsys):
+    assert R.main(["--posix"]) == 0
+    assert "SKIP" in capsys.readouterr().out and _calls(_env) == []

@@ -263,6 +263,9 @@ def _intel_items(profile, ctx: dict) -> list[dict]:
 
 
 def _skill_items(profile, ctx: dict) -> list[dict]:
+    if _policy.infra_routing(profile):  # the model-policy.json pointer is the answer (RQ-6)
+        ctx["_ranked"] = []
+        return []
     cfg = ctx.get("config", {})
     threshold = int(cfg.get("auto_dispatch_threshold", _select.DEFAULT_AUTO_DISPATCH_THRESHOLD))
     top_n = int(cfg.get("max_skill_pushes", _select.DEFAULT_TOP_N))
@@ -330,6 +333,8 @@ def _pointer_items(profile, ctx: dict) -> list[dict]:
 
 
 def _workflow_items(profile, ctx: dict) -> list[dict]:
+    if _policy.infra_routing(profile):
+        return []
     try:
         from prompt_router.modules import workflow_routes as _wf  # noqa: PLC0415
         return list(_wf.items(profile, ctx) or [])
@@ -395,7 +400,8 @@ def _routing_items(profile, ctx: dict) -> list[dict]:
         pass
     threshold = int(cfg.get("auto_dispatch_threshold", _select.DEFAULT_AUTO_DISPATCH_THRESHOLD))
     max_lines = int(cfg.get("max_route_lines", 3))
-    tiers = [d for d in _select.dispatch_tiers(profile, threshold=threshold) if d["act"] not in covered]
+    tiers = [] if _policy.infra_routing(profile) else \
+        [d for d in _select.dispatch_tiers(profile, threshold=threshold) if d["act"] not in covered]
     for d in tiers[:max_lines]:
         who = d.get("agent")
         if d["kind"] == "agent" and who:
@@ -553,16 +559,19 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def run(argv: list[str]) -> int:  # noqa: ARG001 - argv kept for the CLI shape
+def route_payload(payload: dict) -> str:
+    """The ``additionalContext`` text for one UserPromptSubmit payload ("" = no injection).
+
+    In-process seam for the replay corpus (tests/test_router_corpus.py) and
+    scripts/router_replay.py; ``run()`` prints its result. Telemetry and the manifest
+    commit happen here, in the same order as before the split."""
     t0 = time.perf_counter()
-    payload = _read_payload()
     sid = _sid(payload)
     cfg = _config()
 
     profile = _classify.classify(payload)
     if profile.trivial_ack:
-        _emit_empty()
-        return 0
+        return ""
 
     ctx = {
         "sid": sid,
@@ -592,10 +601,15 @@ def run(argv: list[str]) -> int:  # noqa: ARG001 - argv kept for the CLI shape
                     emitted_ids=[it.get("id") for it in included],
                     skills=[n for n, _ in (ctx.get("_ranked") or [])],
                     ms=round((time.perf_counter() - t0) * 1000, 2))
-    if body:
+    return (MARKER + "\n" + body) if body else ""
+
+
+def run(argv: list[str]) -> int:  # noqa: ARG001 - argv kept for the CLI shape
+    text = route_payload(_read_payload())
+    if text:
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "UserPromptSubmit",
-            "additionalContext": MARKER + "\n" + body,
+            "additionalContext": text,
         }}))
     else:
         _emit_empty()

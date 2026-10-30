@@ -1,3 +1,5 @@
+> APPLIED 2026-10 by the integrate package; history only, not instructions.
+
 # Tool precedence — MCP-first (standing user directive: MUST)
 
 The connected MCP servers are how work gets done here, not optional extras. Hooks push

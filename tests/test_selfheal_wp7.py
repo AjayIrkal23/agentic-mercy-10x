@@ -63,14 +63,14 @@ def test_ci_rehearsal_writes_nothing_outside_the_checkout(box):
     assert any(k == "config" and n == "lean-ctx-config" and s.startswith("WOULD") for k, n, s in seen)
 
 
-def test_lean_ctx_config_is_written_before_lean_ctx_is_installed(box, monkeypatch):
+def test_lean_ctx_config_is_written_before_and_after_lean_ctx_is_installed(box, monkeypatch):
     order: list[str] = []
     for name in ("configure_lean_ctx", "install_deps", "register_mcps"):
         real = getattr(deps, name)
         monkeypatch.setattr(deps, name, lambda *a, _r=real, _n=name, **k: order.append(_n) or _r(*a, **k))
     _, emit = _emits()
     selfheal.self_heal(box["target"], emit, ci=False)
-    assert order == ["configure_lean_ctx", "install_deps", "register_mcps"]
+    assert order == ["configure_lean_ctx", "install_deps", "configure_lean_ctx", "register_mcps"]
     assert (box["home"] / ".config" / "lean-ctx" / "config.toml").is_file()
 
 
@@ -218,9 +218,11 @@ def test_relocate_merges_and_skips_vcs_dirs(tmp_path):
     (target / "projects").mkdir(parents=True)
     (target / "projects" / "keep.jsonl").write_text("mine", encoding="utf-8")
     n = bootstrap.relocate(src, target, emit=lambda *a: None)
-    assert n == 2
+    assert n == 2  # .git is not merged file by file
     assert (target / "skills" / "a" / "SKILL.md").is_file() and (target / "install-ui.py").is_file()
-    assert not (target / ".git").exists() and not (target / "hooks" / "node_modules").exists()
+    assert not (target / "hooks" / "node_modules").exists()
+    # FI-9: the clone's .git comes along once, so `git pull --ff-only` works in ~/.claude
+    assert (target / ".git" / "HEAD").read_text(encoding="utf-8") == "x"
     assert (target / "projects" / "keep.jsonl").read_text(encoding="utf-8") == "mine"
 
 

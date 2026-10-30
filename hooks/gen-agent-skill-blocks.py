@@ -24,7 +24,11 @@ import re
 import sys
 from pathlib import Path
 
-import yaml
+try:
+    import yaml
+except ModuleNotFoundError:  # one clear failure instead of a traceback (FI-7)
+    print("PyYAML missing (pip install pyyaml==6.0.3)", file=sys.stderr)
+    raise SystemExit(2)
 
 HOOKS = Path(__file__).resolve().parent
 ROOT = HOOKS.parent

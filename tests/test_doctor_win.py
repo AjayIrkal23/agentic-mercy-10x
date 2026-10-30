@@ -158,6 +158,7 @@ def test_the_branch_follows_platform_is_windows(tmp_path, monkeypatch):
 @pytest.mark.skipif(os.name == "nt", reason="POSIX modes")
 def test_dot_claude_json_is_checked_on_posix_too(tmp_path):
     root, home = _tree(tmp_path, names=())
+    home.chmod(0o750)  # a 0755 tmp home is world-traversable: its own WARN (SP-5)
     (home / ".claude.json").chmod(0o600)
     assert doctor_host.check_secret_perms(root, is_windows=False, home=home)[0] == "PASS"
     (home / ".claude.json").chmod(0o644)

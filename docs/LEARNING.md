@@ -2,6 +2,8 @@
 
 The workbench learns per-project working habits from tool use, scores them, and shows the strong ones at session start. The model is the ollama that `OLLAMA_HOST` in `settings.user.json` names. Learning never spends Claude quota.
 
+With a remote `OLLAMA_HOST`, jcodemunch AI summaries send source snippets and the learning step sends scrubbed command digests and file paths to that host over plain HTTP; use a host you trust, or leave it unset.
+
 ## Why
 
 ECC's continuous-learning-v2 observes tool calls, distils habits ("instincts") and surfaces them. We keep that idea and drop its daemon, its Haiku observer and its Claude-quota cost. What is left: three Python files, two async exec links (PostToolUse and PostToolUseFailure) and one daily step, with ollama as the only model.

@@ -20,7 +20,7 @@ what does NOT belong here.>
 |------|------|
 | `alerts.tsx` | <what it does> |
 | `auto.tsx` | <what it does> |
-| `bridge.ts` | <what it does> |
+| `bridge.ts` | runs the owned dispatch links in two lanes (`--only`); `drain()` waits for the fast lane at most 4 s and, before a write, for the slow lane (tdd-guard) at most 300 ms: a later tdd-guard advisory rides the next tool event (B1-22, RT-6) |
 | `cmds.tsx` | <what it does> |
 | `deck.tsx` | <what it does> |
 | `lifecycle.ts` | session start/end, ledger and deck state, auto-resume after a usage limit (shared `state/resume-lock/<sid>`), and the per-session flag `state/mercy-mod.active.d/<sid>.json` (every 30 s; `ts 0` at a real end and for the old id on `/clear` or an in-process resume) |
@@ -39,6 +39,6 @@ what does NOT belong here.>
 
 ## Up / down
 
-- Parent: [`../CLAUDE.md`](../CLAUDE.md)
+- Parent: [`../../../CLAUDE.md`](../../../CLAUDE.md)
 - Children: <links to deeper `*/CLAUDE.md`, or "none">
 - Related repo docs: <link to the numbered doc / CODEX.md section — link, don't restate>

@@ -28,6 +28,7 @@ from lib import platform as plat  # noqa: E402
 import mcp_restore  # noqa: E402
 import npm_pack  # noqa: E402
 import npx_cache  # noqa: E402
+import release_bin  # noqa: E402
 import winpath  # noqa: E402
 import winutil  # noqa: E402
 from npx_cache import prune_npx_cache, warm_npx  # noqa: E402,F401 (the npx-cache helpers, importable here)
@@ -99,23 +100,38 @@ def _importable(module: str, env) -> bool:
     return cp.returncode == 0
 
 
+def _bins_for(dep: dict) -> list[str]:
+    """The CLIs an npm-global dep puts in npm's bin dir: its ``link_bins``, else its ``which`` when it
+    installs with ``npm install -g`` (lean-ctx, tdd-guard and mmx-cli had no link_bins: F1)."""
+    if "link_bins" in dep:
+        return [str(n) for n in dep["link_bins"]]
+    argv = [str(a) for a in (dep.get("install") or [])]
+    return [dep["which"]] if dep.get("which") and argv[:3] == ["npm", "install", "-g"] else []
+
+
 def _link_bins(names: list, env, dry_run: bool) -> str:
-    """POSIX: symlink npm -g binaries (nvm prefix) into ~/.local/bin so shells that
-    don't source nvm (Claude Code launched from a GUI) still find them."""
+    """POSIX: symlink npm -g CLIs into ~/.local/bin (on every shell's PATH through the claude-workbench
+    block) so a shell or a GUI-launched Claude Code without npm's bin dir still finds them. The source is
+    npm's own prefix bin first (F1: node unpacked under ~/.local/opt with only node/npm/npx linked leaves
+    it off PATH, so `which` found nothing), else `which`. A dangling link of that name (a removed node
+    version) is replaced; a real file or a working link is left alone."""
     if env.os_name != "posix":
         return ""
     local_bin = Path.home() / ".local" / "bin"
     done = []
     for n in names:
-        src = winutil.which(n)
+        found = npm_bin(n)
+        src = str(found) if found else winutil.which(n)
         dst = local_bin / n
-        if not src or dst.exists() or dst.is_symlink() or Path(src).parent == local_bin:
+        if not src or dst.exists() or Path(src).parent == local_bin:
             continue
         if dry_run:
             done.append(f"would-link {n}")
             continue
         try:
             local_bin.mkdir(parents=True, exist_ok=True)
+            if dst.is_symlink():  # dangling (exists() is False for a broken link)
+                dst.unlink()
             dst.symlink_to(src)
             done.append(f"linked {n}")
         except OSError:
@@ -135,17 +151,48 @@ def _npm_prefix_args() -> list[str]:
 
 
 def npm_root_g() -> Path | None:
-    """`npm root -g` (with the sandbox prefix when set); None when npm is absent or fails. Memoised."""
-    if not _NPM_ROOT_G:
+    """`npm root -g` (with the sandbox prefix when set); None when npm is absent or fails. A found root is
+    memoised; a miss is not (node can land later in the same install pass, and a test's failing fake
+    npm must not stick for the rest of the process)."""
+    if _NPM_ROOT_G:
+        return _NPM_ROOT_G[0]
+    root = None
+    try:
+        cp = plat.run(["npm", "root", "-g", *_npm_prefix_args()], timeout=15)
+        out = (cp.stdout or "").strip() if cp.returncode == 0 else ""
+        root = Path(out.splitlines()[-1]) if out else None
+    except Exception:  # noqa: BLE001
         root = None
-        try:
-            cp = plat.run(["npm", "root", "-g", *_npm_prefix_args()], timeout=15)
-            out = (cp.stdout or "").strip() if cp.returncode == 0 else ""
-            root = Path(out.splitlines()[-1]) if out else None
-        except Exception:  # noqa: BLE001
-            root = None
+    if root is not None:
         _NPM_ROOT_G.append(root)
-    return _NPM_ROOT_G[0]
+    return root
+
+
+def npm_bin_dir() -> Path | None:
+    """Where `npm install -g` puts CLIs: <prefix>/bin on POSIX (`npm root -g` is <prefix>/lib/node_modules),
+    the prefix itself on Windows (`npm root -g` is <prefix>\\node_modules)."""
+    root = npm_root_g()
+    if root is None:
+        return None
+    return root.parent if plat.IS_WINDOWS else root.parent.parent / "bin"
+
+
+def npm_bin(name: str) -> Path | None:
+    """``name`` in npm's global bin dir (the ``.cmd`` / ``.exe`` shim on Windows), or None."""
+    d = npm_bin_dir()
+    if d is None:
+        return None
+    for ext in (".cmd", ".exe", "") if plat.IS_WINDOWS else ("",):
+        p = d / (name + ext)
+        if p.is_file():
+            return p
+    return None
+
+
+def npm_installed_bins(manifest: dict | None = None) -> list[str]:
+    """The linked CLIs npm actually installed: the doctor row cli-on-path checks each on the shell PATH."""
+    m = manifest if manifest is not None else _load_manifest()
+    return [n for d in m.get("deps", []) for n in _bins_for(d) if npm_bin(n)]
 
 
 def npm_pkg_present(pkg: str | None) -> bool:
@@ -169,6 +216,21 @@ def _run_install(argv: list):
     return cp
 
 
+def _finish(dep: dict, status: str, env, dry_run: bool) -> str:
+    """After PRESENT / INSTALLED: the pinned release binary of a script-less npm package (lean-ctx, F2),
+    then the ~/.local/bin links (F1). A binary that could not be placed is the row's WARN."""
+    key = dep.get("release_binary")
+    if key:
+        cfg = (_load_manifest().get("user_space") or {}).get(key) or {}
+        root = npm_root_g()
+        pkg_dir = root / cfg["npm_pkg"] if root is not None and cfg.get("npm_pkg") else None
+        ok, note = release_bin.ensure(cfg, pkg_dir, dry_run=dry_run)
+        if not ok:
+            return f"WARN({dep['id']} binary: {note})"
+        status += note
+    return status + _link_bins(_bins_for(dep), env, dry_run)
+
+
 def install_deps(env, *, ci: bool = False, dry_run: bool = False,
                  skip_optional: bool = False) -> list[tuple[str, str]]:
     """Install what is missing; ``skip_optional`` leaves the manifest's optional deps alone (the
@@ -182,9 +244,11 @@ def install_deps(env, *, ci: bool = False, dry_run: bool = False,
         which = dep.get("which")
         imp = dep.get("import")
         exists = dep.get(f"exists_{env.os_name}") or dep.get("exists")
-        if ((which and winutil.which(which)) or (imp and _importable(imp, env))
+        bins = _bins_for(dep)
+        if ((which and (winutil.which(which) or (which in bins and npm_bin(which))))
+                or (imp and _importable(imp, env))
                 or (exists and Path(exists).expanduser().exists()) or npm_pkg_present(dep.get("npm_pkg"))):
-            results.append((did, "PRESENT" + _link_bins(dep.get("link_bins", []), env, dry_run)))
+            results.append((did, _finish(dep, "PRESENT", env, dry_run)))
             continue
         install_cmd = dep.get(f"install_{env.os_name}") or dep.get("install")
         argv = _sub(install_cmd, _exec_tokens(env)) if install_cmd else []  # real paths, not {HOME} / {PYTHON}
@@ -200,8 +264,7 @@ def install_deps(env, *, ci: bool = False, dry_run: bool = False,
             continue
         cp = _run_install(argv)
         ok = cp.returncode == 0
-        results.append((did, ("INSTALLED" + _link_bins(dep.get("link_bins", []), env, False))
-                        if ok else f"WARN(rc={cp.returncode})"))
+        results.append((did, _finish(dep, "INSTALLED", env, False) if ok else f"WARN(rc={cp.returncode})"))
     return results
 
 
@@ -484,6 +547,10 @@ def run_post_steps(env, *, ci: bool = False, dry_run: bool = False) -> list[tupl
             results.append((sid, f"WOULD-RUN: {' '.join(cmd)}"))
             continue
         cp = plat.run(cmd, timeout=300)
+        if cp.returncode == 3:  # a step that cannot apply here (no user manager): SKIP, never FAIL (FI-6)
+            last = next((ln.strip() for ln in reversed((cp.stdout or "").splitlines()) if ln.strip()), "")
+            results.append((sid, f"SKIP({last or 'rc=3'})"))
+            continue
         ok = cp.returncode == 0
         results.append((sid, "OK" if ok else (f"WARN(rc={cp.returncode})" if step.get("optional") else f"FAIL(rc={cp.returncode})")))
     return results

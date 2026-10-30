@@ -273,6 +273,9 @@ def _tracked_skills() -> set[str]:
 
 
 def main() -> int:
+    if sl.yaml is None:  # the stdlib fallback has no block lists: every R12 would be noise (FI-7)
+        print("PyYAML missing (pip install pyyaml==6.0.3)")
+        return 2
     ap = argparse.ArgumentParser()
     ap.add_argument("--fix", action="store_true", help="apply R1/R4 fixes")
     ap.add_argument("--fix-untracked", action="store_true",

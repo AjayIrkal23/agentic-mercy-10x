@@ -70,6 +70,23 @@ def test_python_tool_installs_are_pinned():
     assert not loose, loose
 
 
+def test_npm_and_pip_installs_are_pinned():
+    """FI-12: a second box gets the versions this one runs (npm `@x.y.z`, pip/uv `==x.y.z`)."""
+    loose = []
+    for d in M["deps"]:
+        for key in ("install", "install_posix", "install_windows"):
+            argv = [str(a) for a in (d.get(key) or [])]
+            if argv[:3] == ["npm", "install", "-g"]:
+                loose += [f"{d['id']}:{key}:{a}" for a in argv[3:]
+                          if not a.startswith("-") and not re.search(r".@\d+\.\d+\.\d+$", a)]
+            elif "pip" in argv and "install" in argv:
+                pkgs = argv[argv.index("install") + 1:]
+                skip = {"--python", "--target"}
+                vals = [a for i, a in enumerate(pkgs) if not a.startswith("-") and (i == 0 or pkgs[i - 1] not in skip)]
+                loose += [f"{d['id']}:{key}:{a}" for a in vals if "==" not in a]
+    assert not loose, loose
+
+
 def test_ponytail_is_the_mandatory_plugin():
     mandatory = [p["id"] for p in M["plugins"]["install"] if p.get("mandatory")]
     assert mandatory == ["ponytail@ponytail"]

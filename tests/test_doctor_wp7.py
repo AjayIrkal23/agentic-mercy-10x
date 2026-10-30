@@ -72,6 +72,21 @@ def test_mods_runtime_fails_on_a_failing_test(tmp_path):
     assert doctor_mods.check_mods_runtime(_mod_root(tmp_path), ["m"], False, _which("tsc", "claude"), run)[0] == "FAIL"
 
 
+@pytest.mark.parametrize("rc", [137, -9])
+@pytest.mark.parametrize("killed", ["tsc", "test"])
+def test_a_sigkilled_run_is_a_memory_cap_warn(tmp_path, rc, killed):
+    """FIX2 item 3 (REVERIFY R5): the shared tool cgroup OOM-killed tsc and the row said `FAIL mercy tsc: `
+    (empty reason). A SIGKILL is the box, not the mod: WARN naming the memory cap."""
+    run = _runner({"tsc": (0, ""), "test": (0, "68 pass"), killed: (rc, "")})
+    st, det = doctor_mods.check_mods_runtime(_mod_root(tmp_path), ["m"], False, _which("tsc", "claude"), run)
+    assert st == "WARN" and det.startswith("killed: memory cap") and f"m {'tsc' if killed == 'tsc' else 'plugin test'}" in det
+
+
+def test_a_real_failure_still_fails_next_to_a_kill(tmp_path):
+    run = _runner({"tsc": (-9, ""), "test": (1, "1 fail")})
+    assert doctor_mods.check_mods_runtime(_mod_root(tmp_path), ["m"], False, _which("tsc", "claude"), run)[0] == "FAIL"
+
+
 def test_mods_runtime_warns_when_the_rollout_switch_is_off(tmp_path):
     run = _runner({"tsc": (2, "error TS"), "test": (1, "hooks modules are turned off")})
     assert doctor_mods.check_mods_runtime(_mod_root(tmp_path), ["m"], False, _which("tsc", "claude"), run)[0] == "WARN"
@@ -158,7 +173,8 @@ def test_plugins_installed_pass_warn_fail():
 @pytest.mark.skipif(os.name == "nt", reason="POSIX modes")
 def test_secret_perms_warns_with_the_fix_command(tmp_path):
     home = tmp_path / "home"  # ~/.claude.json is checked too: never the live one
-    home.mkdir()
+    home.mkdir(mode=0o750)
+    home.chmod(0o750)  # a 0755 tmp home is world-traversable: its own WARN (SP-5)
     for name in (".env", ".env.devpc", "CLAUDE.machines.local.md", "settings.user.json", "notes.md"):
         (tmp_path / name).write_text("x", encoding="utf-8")
         (tmp_path / name).chmod(0o600)
@@ -208,6 +224,18 @@ def test_generated_drift_lines_become_a_warn():
     assert doctor_checks.generated_status([("gen.py", clean)])[0] == "PASS"
     bad = subprocess.CompletedProcess([], 1, "", "")
     assert doctor_checks.generated_status([("gen.py", bad)])[0] == "FAIL"
+
+
+def test_a_generator_without_pyyaml_is_not_drift():
+    """FIX2 item 4 (REVERIFY R2): gen-agent-skill-blocks exits 2 with `PyYAML missing` on stderr. The plan
+    showed that as a second FAIL `drift: [...]`; the R9/R10-validator row already FAILs with the real cause."""
+    nomod = subprocess.CompletedProcess([], 2, "", "PyYAML missing (pip install pyyaml==6.0.3)\n")
+    ok = subprocess.CompletedProcess([], 0, "OK (18 files in sync)\n", "")
+    st, det = doctor_checks.generated_status([("gen-invoke-skills.py", ok), ("gen-agent-skill-blocks.py", nomod)])
+    assert st == "SKIP" and "PyYAML missing" in det and "drift" not in det
+    real = subprocess.CompletedProcess([], 1, "", "")
+    st, det = doctor_checks.generated_status([("gen-invoke-skills.py", real), ("gen-agent-skill-blocks.py", nomod)])
+    assert st == "FAIL" and det.startswith("drift: ['gen-invoke-skills.py']")
 
 
 def _tokenized_root(tmp_path, script="hooks/dispatch.py"):

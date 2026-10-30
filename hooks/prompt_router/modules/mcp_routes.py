@@ -14,7 +14,8 @@ NOT listed in ``~/.claude/mcp-needs-auth-cache.json`` nor in the repo's
 ``projects[root].disabledMcpServers``; ``reticle`` only where the repo carries its
 instrumentation (``reticle_instrumented``). One line per route, at
 most ``max_mcp_routes`` per prompt. Never starts anything: the browser guard
-only PROBES for a listening dev-server port (``ss -ltn``).
+only PROBES for a listening dev-server port (``ss -ltnp``) whose process runs inside
+the active repo; no repo, or a listener owned by another project, gives no line.
 
 Pure stdlib; fail-open to no items.
 """
@@ -22,6 +23,7 @@ Pure stdlib; fail-open to no items.
 from __future__ import annotations
 
 import json
+import os
 import re
 import subprocess
 import sys
@@ -31,6 +33,11 @@ from pathlib import Path
 _HOOKS = Path(__file__).resolve().parents[2]
 if str(_HOOKS) not in sys.path:
     sys.path.insert(0, str(_HOOKS))
+
+try:
+    from lib import platform as _plat
+except Exception:  # noqa: BLE001
+    _plat = None  # type: ignore
 
 _TOOLMAP = _HOOKS / "tool-intelligence.json"
 _CLAUDE = _HOOKS.parent
@@ -119,26 +126,44 @@ def server_available(servers, root=None) -> str | None:
     return None
 
 
-@lru_cache(maxsize=1)
-def dev_server_port() -> int | None:
-    """A listening dev-server port, or None. Probes only — never starts one."""
+def _listeners() -> list[tuple[int, int | None]]:
+    """(port, pid) for listening TCP sockets; pid only for this user's processes
+    (``ss -p`` hides others'). [] without ``ss`` (Windows, minimal boxes)."""
     try:
-        cp = subprocess.run(["ss", "-ltn"], capture_output=True, text=True, timeout=1.0, check=False)
+        cp = subprocess.run(["ss", "-ltnp"], capture_output=True, text=True, timeout=1.0, check=False)
     except (OSError, subprocess.SubprocessError):
-        return None
-    ports: set[int] = set()
-    for line in cp.stdout.splitlines():
+        return []
+    out: list[tuple[int, int | None]] = []
+    for line in (cp.stdout or "").splitlines():
         m = re.search(r":(\d+)\s+\S+:\*", line)
         if m:
-            try:
-                ports.add(int(m.group(1)))
-            except ValueError:
-                pass
-    for p in sorted(ports):
-        if p in _NOT_DEV_PORTS:
+            pid = re.search(r"pid=(\d+)", line)
+            out.append((int(m.group(1)), int(pid.group(1)) if pid else None))
+    return out
+
+
+def _pid_cwd(pid: int | None) -> str | None:
+    if pid is None or (_plat is not None and _plat.IS_WINDOWS):
+        return None
+    try:
+        return os.path.realpath(f"/proc/{pid}/cwd")
+    except OSError:
+        return None
+
+
+@lru_cache(maxsize=8)
+def dev_server_port(root: str | None = None) -> int | None:
+    """A dev-server port whose process runs inside ``root``, or None. No root, no port
+    (never machine-wide: another project's server is not "your app"). Probes only."""
+    if not root:
+        return None
+    base = Path(os.path.realpath(root))
+    for port, pid in sorted(_listeners(), key=lambda x: x[0]):
+        if port in _NOT_DEV_PORTS or not any(lo <= port <= hi for lo, hi in _DEV_PORT_RANGES):
             continue
-        if any(lo <= p <= hi for lo, hi in _DEV_PORT_RANGES):
-            return p
+        cwd = _pid_cwd(pid)
+        if cwd and (Path(cwd) == base or base in Path(cwd).parents):
+            return port
     return None
 
 
@@ -191,12 +216,18 @@ def _guard_ok(route: dict, token: str, ctx: dict) -> dict:
     guard = route.get("guard") or ""
     if not guard:
         return {"ok": True}
+    repo = ctx.get("repo")
+    root = getattr(repo, "root", None) if repo is not None else None
     if guard == "dev_server_listening":
-        port = dev_server_port()
+        port = dev_server_port(str(root) if root else None)
         return {"ok": True, "port": port} if port else {}
     if guard == "not_in_repo_symbol":
-        repo = ctx.get("repo")
-        root = getattr(repo, "root", None) if repo is not None else None
+        # a local package dir / module or a stdlib module is not a third-party import
+        base = str(root or (ctx.get("payload") or {}).get("cwd") or "")
+        if token and base and ((Path(base) / token).is_dir() or (Path(base) / f"{token}.py").is_file()):
+            return {}
+        if token in getattr(sys, "stdlib_module_names", ()):
+            return {}
         if root and token:
             try:
                 from prompt_router.modules import code_intel as _ci  # noqa: PLC0415
@@ -206,6 +237,14 @@ def _guard_ok(route: dict, token: str, ctx: dict) -> dict:
                 pass
         return {"ok": True}
     return {"ok": True}
+
+
+def _infra_routing(profile) -> bool:
+    try:
+        from prompt_router import policy as _policy  # noqa: PLC0415
+        return _policy.infra_routing(profile)
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def items(profile, ctx: dict, *, max_routes: int = MAX_ROUTES) -> list[dict]:
@@ -219,8 +258,10 @@ def items(profile, ctx: dict, *, max_routes: int = MAX_ROUTES) -> list[dict]:
             fires, token = _match(route, profile)
             if not fires:
                 continue
+            if route.get("id") == "browser" and _infra_routing(profile):
+                continue   # model-routing talk about the workbench is not a UI check (RQ-6)
             names = list(route.get("server") or [])
-            if root and "reticle" in names and not reticle_instrumented(str(root)):
+            if "reticle" in names and (not root or not reticle_instrumented(str(root))):
                 names.remove("reticle")
             server = server_available(names, [root, (ctx.get("payload") or {}).get("cwd")])
             if not server:

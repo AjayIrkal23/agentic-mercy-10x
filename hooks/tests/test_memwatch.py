@@ -16,7 +16,7 @@ FIX = HOOKS / "tests" / "fixtures"
 _spec = importlib.util.spec_from_file_location("memwatch", HOOKS / "tools" / "memwatch.py")
 mw = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(mw)
-CFG = mw.load_config()
+CFG = mw.load_config(total_mb=30669, local_path=Path("/nonexistent/oomguard.local.json"))
 NOW = 1_800_000_000.0
 
 
@@ -58,7 +58,7 @@ def test_level_per_fixture(tree, want):
 
 
 def test_level_hysteresis():
-    assert mw.decide_level({"mem_available_mb": 3500, "psi_some_avg10": 10}, "crit", 0, CFG, NOW) == "crit"
+    assert mw.decide_level({"mem_available_mb": 3400, "psi_some_avg10": 10}, "crit", 0, CFG, NOW) == "crit"
     ok = mw.sample(FIX / "proc-ok")
     assert mw.decide_level(ok, "warn", NOW - 30, CFG, NOW) == "warn"
     assert mw.decide_level(ok, "warn", NOW - 61, CFG, NOW) == "ok"
@@ -333,7 +333,7 @@ def test_restore_pending_held_until_restore_row_or_timeout(env):
 
 
 def test_storm_held_crit_kills_once_never_stops_session(env):
-    """One dip below the crit line, then 3.5 GB free: hysteresis keeps 'crit', kills must not."""
+    """One dip below the crit line, then 3.0 GB free: hysteresis keeps 'crit', kills must not."""
     lad = mw.Ladder(CFG, "/nonexistent", env / "absent.json")
     lad.uid = 1000
     lad.cmd = lambda pid: "/usr/lib/firefox/firefox" if pid == 500 else "/usr/lib/firefox/firefox -contentproc"
@@ -347,7 +347,7 @@ def test_storm_held_crit_kills_once_never_stops_session(env):
               {"sid": "s-busy", "pid": 901, "transcript": None, "seen": 1e12, "scope": "claude-901.scope"}]
     level, lts, kp, t0, acts_all = "ok", 0.0, {}, 1_000_000.0, []
     for t in range(0, 95, 5):
-        s = {"mem_available_mb": 2500 if t <= 20 else 3500, "psi_some_avg10": 2.0, "swap_free_pct": 100.0}
+        s = {"mem_available_mb": 2000 if t <= 20 else 3000, "psi_some_avg10": 2.0, "swap_free_pct": 100.0}
         new = mw.decide_level(s, level, lts, CFG, t0 + t)
         if new != level:
             level, lts = new, t0 + t
@@ -517,3 +517,61 @@ def test_stale_state_kill_timers_ignored(env):
                                                             "stage2_since": t - 86400}}), encoding="utf-8")
     _, st, ev = _run(env, FIX / "proc-crit", "--dry-run")
     assert st["kill_policy"]["stage"] == 1 and not [e for e in ev if e["kind"] == "kill"]
+
+
+# --------------------------------------------------------------------------- #
+# F7: tiers are percent of MemTotal
+def test_tiers_are_percent_of_memtotal(env):
+    absent = env / "absent.json"
+
+    def lines(c):
+        t = c["tiers"]
+        return (t["warn"]["mem_available_mb"], t["warn"]["swap_mem_available_mb"], t["crit"]["mem_available_mb"],
+                c["kill_policy"]["emergency_mb"])
+    assert lines(mw.load_config(total_mb=15650, local_path=absent)) == (2347, 3521, 1252, 626)
+    assert lines(mw.load_config(total_mb=30669, local_path=absent)) == (4600, 6900, 2453, 1226)
+    assert lines(mw.load_config(total_mb=0, local_path=absent)) == (8192, 12288, 3072, 1500)  # MemTotal unknown
+
+
+def test_shipped_config_holds_the_percents_only():
+    raw = json.loads((HOOKS / "memwatch.config.json").read_text(encoding="utf-8"))
+    assert (raw["tiers"]["warn"]["mem_available_pct"], raw["tiers"]["warn"]["swap_mem_available_pct"],
+            raw["tiers"]["crit"]["mem_available_pct"], raw["kill_policy"]["emergency_pct"]) == (15, 22.5, 8, 4)
+    # an MB line in the file pins it (absolute), so the shipped file must not carry one
+    assert "mem_available_mb" not in raw["tiers"]["warn"] and "mem_available_mb" not in raw["tiers"]["crit"]
+    assert "emergency_mb" not in raw["kill_policy"] and "scale" not in raw
+
+
+def test_local_tiers_override_beats_the_percent(env):
+    loc = env / "oomguard.local.json"
+    loc.write_text(json.dumps({"tiers": {"warn": {"mem_available_mb": 3900}}}), encoding="utf-8")
+    cfg = mw.load_config(total_mb=15650, local_path=loc)
+    assert cfg["tiers"]["warn"]["mem_available_mb"] == 3900 and cfg["tiers"]["crit"]["mem_available_mb"] == 1252
+
+
+def test_a_16gb_box_is_ok_at_idle(env):
+    """The laptop idles at 5.7 GB free: v4.3.0 sat at warn there for good (F4); 15 % is 2347 MB."""
+    cfg = mw.load_config(total_mb=15650, local_path=env / "absent.json")
+    calm = {"psi_some_avg10": 0.0, "swap_free_pct": 100.0}
+    assert mw._enter_level({"mem_available_mb": 5700, **calm}, cfg) == "ok"
+    assert mw._enter_level({"mem_available_mb": 2300, **calm}, cfg) == "warn"
+    assert mw._enter_level({"mem_available_mb": 1200, **calm}, cfg) == "crit"
+    assert mw._enter_level({"mem_available_mb": 3400, "psi_some_avg10": 0.0, "swap_free_pct": 2.0}, cfg) == "warn"
+
+
+def test_hysteresis_keeps_its_1024_mb_margin_on_a_small_box(env):
+    cfg = mw.load_config(total_mb=15650, local_path=env / "absent.json")
+
+    def s(mb):
+        return {"mem_available_mb": mb, "psi_some_avg10": 0.0, "swap_free_pct": 100.0}
+    assert mw.decide_level(s(1252 + 1023), "crit", 0, cfg, NOW) == "crit"
+    assert mw.decide_level(s(1252 + 1024), "crit", 0, cfg, NOW) == "warn"
+
+
+# FI-5: stage 3 promises a restore only when one can run
+def test_stage3_suffix_names_the_restore_path(env):
+    loc = env / "oomguard.local.json"
+    assert mw._stage3_suffix(env / "absent.json", which=lambda b: "/usr/bin/tmux") == "(restored later)"
+    assert mw._stage3_suffix(env / "absent.json", which=lambda b: None) == "(not restorable: tmux missing)"
+    loc.write_text(json.dumps({"restore_enabled": False}), encoding="utf-8")
+    assert mw._stage3_suffix(loc, which=lambda b: "/usr/bin/tmux") == "(restore off)"

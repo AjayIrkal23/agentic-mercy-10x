@@ -14,8 +14,11 @@ process-level side effects beyond the stack-fingerprint cache
 
 - Import `lib.*` inside `try/except` and degrade (the package must import even when
   `lib` is unavailable, e.g. in a foreign checkout).
-- Never start a process that outlives the hook; `mcp_routes.dev_server_port` only
-  PROBES `ss -ltn` (1 s timeout), `workflow_routes._changed_files` only runs
+- Never start a process that outlives the hook; `mcp_routes.dev_server_port(root)` only
+  PROBES `ss -ltnp` (1 s timeout) and returns a port only when the listener's process cwd
+  (`/proc/<pid>/cwd`) is inside `root` (no root, Windows, or another user's/Docker's listener:
+  no port; seams `_listeners` / `_pid_cwd`). The context7-import guard skips a local package
+  dir / module and stdlib modules. `workflow_routes._changed_files` only runs
   `git diff --name-only HEAD` (0.4 s cap, skipped under `CLAUDE_HOOK_DOCTOR`). Never start
   a dev server.
 - Vocabulary regexes are lookaround-bounded (`(?<!\w)…(?!\w)`), never bare substrings.
@@ -25,7 +28,7 @@ process-level side effects beyond the stack-fingerprint cache
 | File | Role |
 |------|------|
 | `surface.py` | `detect(payload, text) -> (surfaces∪tags, source, weak)`: prompt paths → prompt vocab → cwd → repo stack fingerprint (react/vite/next/vue/svelte/three/motion vs go.mod/express/prisma/migrations/*.sql/clickhouse), plus the ECC stack indicators of `router.config.json` `additions.stack_indicators` (`rust`, `python`, `docker`, `java`, … ; `file` glob on the marker name, optional `contains` body substring) and the package manager (`pm`: `packageManager` field, else the first lockfile; tag `pm:<name>`); cached on marker mtimes, `sig["_v"]` 4; `stack_fingerprint` returns `{surfaces, tags, pm}` |
-| `mcp_routes.py` | `items(profile, ctx)`: availability-aware "call X now" lines from `tool-intelligence.json.mcp_routes` (memory, sequential-thinking, semgrep, context7 + context7-import, browser = reticle/playwright only with a listening dev port, higgsfield, github, clickhouse, db-supabase/db-mongodb); list order = priority; skips servers absent from `~/.claude.json` user scope AND the active repo's project scope (`.mcp.json`, `projects[root].mcpServers` — `project_servers(root)`), or in `mcp-needs-auth-cache.json`; ≤4 lines. claude.ai connectors listed in `tool-intelligence.json` `connectors` (`claude_ai_higgsfield`) count as available. `server_available` is also used by `router._substrate_items` and `hooks/mcp-post-hints.py` |
+| `mcp_routes.py` | `items(profile, ctx)`: availability-aware "call X now" lines from `tool-intelligence.json.mcp_routes` (memory, sequential-thinking, semgrep, context7 + context7-import, browser = reticle/playwright only with a dev port owned by the active repo (reticle only where the repo is instrumented; skipped on `policy.infra_routing`), higgsfield, github, clickhouse, db-supabase/db-mongodb); list order = priority; skips servers absent from `~/.claude.json` user scope AND the active repo's project scope (`.mcp.json`, `projects[root].mcpServers` — `project_servers(root)`), or in `mcp-needs-auth-cache.json`; ≤4 lines. claude.ai connectors listed in `tool-intelligence.json` `connectors` (`claude_ai_higgsfield`) count as available. `server_available` is also used by `router._substrate_items` and `hooks/mcp-post-hints.py` |
 | `code_intel.py` | indexed-symbol lookup in the repo's jcodemunch sqlite index (≤5 symbols, 150 ms budget); `is_repo_symbol` guards the context7 route; with unpopulated summaries the tail says index-lifecycle fills them in the background |
 | `model_advice.py` | (owned by package model-routing) heavy-task line for the MODEL (never a `/model` the user types): "dispatch the `<agent>` agent (Opus, via the Agent tool) for the heavy part now", only when task_matrix + heavy_qualifiers hit; the agent per row is `model-policy.json` `main_session_advice.agents` (all Opus-pinned) |
 | `asset_auth.py` | `item(profile, ctx)`: for an asset-looking prompt (image/logo/video/3D/audio/hero …) when the user-scope Higgsfield is registered but listed in `mcp-needs-auth-cache.json` (key names only, via `mcp_routes`), ONE ROUTING line `route:higgsfield-auth`: ask the user once (batched with any other login, OpenArt joins the line with `mcp__openart__authenticate` when it waits too) to connect the Higgsfield connector in claude.ai (`mcp__claude_ai_higgsfield__*`), say assets are pending, no placeholders. The manifest dedup makes it once per session; once the user-scope entry is gone the line retires itself |

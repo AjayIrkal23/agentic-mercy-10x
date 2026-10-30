@@ -23,6 +23,7 @@ def test_only_packages_whose_scripts_pkill_themselves_are_packed():
     assert npm_pack.needs_pack(["npm", "install", "-g", "lean-ctx-bin@3.10.5"])
     assert not npm_pack.needs_pack(["npm", "install", "-g", "tdd-guard"])
     assert not npm_pack.needs_pack(["uv", "tool", "install", "semgrep==1.178.0"])
+    assert not npm_pack.needs_pack(["npm", "install", "-g", "--ignore-scripts", "lean-ctx-bin@3.10.5"])
 
 
 def _fake(calls, pack_rc=0, install_rc=0):

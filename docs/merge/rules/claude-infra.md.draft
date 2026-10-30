@@ -12,6 +12,8 @@ paths:
   - "**/settings.template.json"
   - "**/model-policy.json"
 ---
+> APPLIED 2026-10 by the integrate package; history only, not instructions.
+
 # ~/.claude infrastructure (loads on hook / rule / agent / skill / installer files)
 
 **Editing order:** FIND (jcodemunch) → READ → EDIT. `Edit` needs a prior `Read` of that

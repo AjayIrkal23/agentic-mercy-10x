@@ -117,7 +117,7 @@ def test_escalation_reason_keeps_its_signature_and_membership():
     ("max20", "qa-verifier", None, None, HEAVY, False, "sonnet", "size bump"),
     ("max20", "qa-verifier", None, None, "check it", False, "haiku", "role verify"),
     ("max20", "general-purpose", "opus", None, "research", False, "opus", "explicit model param"),
-    ("pro", "general-purpose", "opus", None, "research", False, "sonnet", "tier-cap"),
+    ("pro", "general-purpose", "opus", None, "research", False, "haiku", "explicit 'opus' ignored"),  # D6 ask_only
     ("max20", "general-purpose", "fable", None, "x", False, "sonnet", "ignored"),
     ("max20", "general-purpose", "fable", "use fable", "x", False, "fable", "user said"),
     ("max20", "general-purpose", "fable", "use fable", "x", True, "sonnet", "usage-guard"),

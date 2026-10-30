@@ -5,7 +5,7 @@
     "skill_count": 132,
     "plugin_count": 0,
     "alias_count": 83,
-    "checksum": "00b83e103ff2183ac45d9e9ba3e47801a968f07202f63796c890f077c0b466e3",
+    "checksum": "a71972f9cb9c91944806bf67e87b5d04a9bb3b7d7a72c311fb5adf5ccd989a66",
     "plugin_sidecar": "state/skills-index.plugins.json (gitignored, per machine)"
   },
   "aliases": {
@@ -605,7 +605,6 @@
         "interface",
         "issues",
         "layout",
-        "needs",
         "pass",
         "polish",
         "quickly",
@@ -860,7 +859,6 @@
         "module",
         "modules",
         "more",
-        "needs",
         "opportunities",
         "seam",
         "shared",
@@ -1014,7 +1012,6 @@
       "keywords": [
         "context7",
         "context7-mcp",
-        "current",
         "docs",
         "fetch",
         "framework",
@@ -1380,7 +1377,6 @@
         "language",
         "maintain",
         "model",
-        "needs",
         "pin",
         "project",
         "record",
@@ -2384,7 +2380,6 @@
         "queries",
         "query",
         "questions",
-        "tools",
         "video"
       ],
       "surfaces": [],
@@ -3004,7 +2999,6 @@
         "invoke-plan",
         "opus",
         "opus-guard",
-        "plan",
         "plan-",
         "planning-director",
         "routes",
@@ -3117,9 +3111,7 @@
         "memory",
         "orientation",
         "ready",
-        "repo",
-        "report",
-        "session"
+        "repo"
       ],
       "surfaces": [],
       "intents": [],
@@ -3348,7 +3340,6 @@
         "servers",
         "services",
         "through",
-        "tools",
         "typescript",
         "well-designed",
         "whether"
@@ -4588,16 +4579,13 @@
         "3d hero",
         "3d model",
         "@react-three/fiber",
-        "canvas",
         "drei",
-        "environment",
         "glb",
         "gltf",
         "orbitcontrols",
         "r3f",
         "react-three-fiber",
         "shader",
-        "three",
         "three.js",
         "threejs",
         "useframe",
@@ -4607,10 +4595,7 @@
       "surfaces": [
         "frontend"
       ],
-      "intents": [
-        "DESIGN",
-        "IMPLEMENT"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [
         "**/{three,3d,scene,scenes,webgl,r3f}/**/*.{ts,tsx,js,jsx}",

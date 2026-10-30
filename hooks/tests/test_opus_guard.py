@@ -13,6 +13,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -42,10 +43,22 @@ def _load_module():
     return mod
 
 
+_HOMES: list = []
+
+
 def _clean_home() -> Path:
+    """A tmp HOME with an empty ~/.claude/state; removed after the test (FIX2 item 6: 69 leaked per suite run)."""
     home = Path(tempfile.mkdtemp(prefix="opusguard-home-"))
+    _HOMES.append(home)
     (home / ".claude" / "state").mkdir(parents=True)
     return home
+
+
+@pytest.fixture(autouse=True)
+def _remove_homes():
+    yield
+    while _HOMES:
+        shutil.rmtree(_HOMES.pop(), ignore_errors=True)
 
 
 def run_agent(tool_input: dict, home: Path | None = None) -> dict:
@@ -182,9 +195,9 @@ def test_no_agent_is_auto_pinned_to_fable():
 def test_unguarded_explore_label_honoured_within_cap():
     ui = resolved(run_agent({"description": "[opus] map the code", "subagent_type": "explore"}))
     assert ui["model"] == "opus" and ui["description"] == "[opus] map the code"
-    TF.set_tier("pro")
+    TF.set_tier("pro")  # D6: tiers.pro.ask_only holds opus, so an unphrased [opus] label is ignored, not capped
     out = run_agent({"description": "[opus] map the code", "subagent_type": "explore"})
-    assert resolved(out)["model"] == "sonnet" and "tier-cap" in out["hookSpecificOutput"]["additionalContext"]
+    assert resolved(out)["model"] == "haiku" and "explicit 'opus' ignored" in out["hookSpecificOutput"]["additionalContext"]
 
 
 def test_explicit_model_param_honored():
@@ -298,7 +311,8 @@ def test_per_project_mode_beats_explicit(monkeypatch, tmp_path):
     assert mod._resolve_required("general-purpose", "sonnet", "x", str(repo))[:2] == \
         ("sonnet", "per-project model mode; tier-cap: opus -> sonnet (pro)")
     assert mod._mm.set_mode(str(repo), None)
-    assert mod._resolve_required("general-purpose", "sonnet", "x", str(repo))[0] == "sonnet"
+    # D6: without the pin an unphrased explicit sonnet is ignored on Pro (tiers.pro.ask_only)
+    assert mod._resolve_required("general-purpose", "sonnet", "x", str(repo))[0] == "haiku"
 
 
 # --- tiers, usage guard, telemetry ------------------------------------------
@@ -348,9 +362,15 @@ def test_tier_cap_reason_in_telemetry(monkeypatch, tmp_path, capsys):
     mod = _load_module()
     monkeypatch.setattr(mod, "_TELEMETRY_DIR", tmp_path)
     monkeypatch.delenv("CLAUDE_HOOK_DOCTOR", raising=False)
+    monkeypatch.setattr(mod, "_flag_paths", lambda: {})
+    monkeypatch.setattr(mod._mm, "modes_dir", lambda: tmp_path / "model-modes")
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    # D6: an unphrased explicit opus is ignored on Pro; a stored opus pin is what still meets the Pro cap
+    assert mod._mm.set_mode(str(repo), "opus")
     TF.set_tier("pro")
-    assert mod.main_with_payload({"tool_name": "Agent", "session_id": "s9", "tool_input": {
-        "description": "[opus] review", "model": "opus", "subagent_type": "general-purpose"}}) == 0
+    assert mod.main_with_payload({"tool_name": "Agent", "session_id": "s9", "cwd": str(repo), "tool_input": {
+        "description": "review", "subagent_type": "general-purpose"}}) == 0
     rec = json.loads((tmp_path / "s9.model-routing.jsonl").read_text(encoding="utf-8").splitlines()[-1])
     assert rec["model"] == "sonnet" and "tier-cap" in rec["reason"] and rec["tier"] == "pro"
     assert rec["fallback"] == ["haiku"]
@@ -418,6 +438,21 @@ def test_policy_actually_loaded_from_disk():
         assert agents[i] == "impl", i
     assert agents["explore"] == "explore"
     assert mod._default_model() == "sonnet"
+
+
+def test_the_throwaway_homes_are_removed_after_each_test(tmp_path):
+    """FIX2 item 6 (REVERIFY R6): `_clean_home()` left an `opusguard-home-*` dir in the temp dir per hook run.
+    Run two of the file's tests in a child pytest whose temp dir is ours: nothing may be left behind."""
+    tmpdir = tmp_path / "tmp"
+    tmpdir.mkdir()
+    env = {**os.environ, "TEMP": str(tmpdir), "TMP": str(tmpdir), "TMPDIR": str(tmpdir), "CLAUDE_HOOK_DOCTOR": "1"}
+    for var in ("CLAUDE_HOOK_TELEMETRY_DIR", "CLAUDE_HOOK_STATE_DIR", "CLAUDE_HOOK_DOTSTATE_DIR"):
+        env.pop(var, None)  # the child's conftest makes its own, inside our temp dir
+    cp = subprocess.run([sys.executable, "-m", "pytest", str(Path(__file__)), "-q", "-p", "no:cacheprovider",
+                         "-k", "test_default_is_sonnet or test_sonnet_flag_overrides_opus_agent"], env=env,
+                        capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=120)
+    assert cp.returncode == 0, cp.stdout[-800:]
+    assert [p.name for p in tmpdir.iterdir() if p.name.startswith("opusguard-home-")] == []
 
 
 if __name__ == "__main__":

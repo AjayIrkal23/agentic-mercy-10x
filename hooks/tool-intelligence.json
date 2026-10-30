@@ -3,7 +3,7 @@
     "purpose": "Single source of truth for (a) AGENT INTENT -> ordered jcodemunch/graphify/jdocmunch tool playbooks (`intents` playbooks are reference data for skills/docs (no hook renders them)) and (b) prompt-time MCP auto-routes (`mcp_routes`, consumed by prompt_router/modules/mcp_routes.py — availability-aware, one 'call X now' line per route, first-listed wins, max `max_mcp_routes` per prompt; jcodemunch/graphify/jdocmunch directives come from router.py SUBSTRATE, per intent). PostToolUse write hints: hooks/mcp-post-hints.py. Facts (jcode/graphify/jdocmunch) -> reasoning -> action.",
     "consumed_by": [
       "hooks/prompt_router/modules/mcp_routes.py (mcp_routes, connectors)",
-      "rules/codebase-intel-first.md (human mirror)"
+      "skills/codebase-intel-first/SKILL.md (human mirror)"
     ],
     "version": 2,
     "tool_prefix": "mcp__jcodemunch__ / mcp__graphify__ / mcp__jdocmunch__ (bare names below)"
@@ -69,7 +69,7 @@
     {
       "id": "browser",
       "server": ["reticle", "playwright", "browser-tools-mcp"],
-      "when": {"intents": ["QA", "VERIFY"], "regex": "\\b(screenshot|looks (?:wrong|off|broken)|visually|in the browser|blank page|white screen|console errors?|network errors?|verify the (?:ui|page|flow)|check (?:that )?it works|does it (?:actually )?work)\\b"},
+      "when": {"all": true, "intents": ["QA", "VERIFY"], "regex": "\\b(screenshot|looks (?:wrong|off|broken)|in the browser|blank page|white screen|console errors?|network errors?|verify the (?:ui|page|flow)|check (?:that )?it works|does it (?:actually )?work)\\b"},
       "guard": "dev_server_listening",
       "tools": ["reticle_look", "reticle_verify", "browser_navigate", "browser_snapshot"],
       "text": "Your app is running on :{port} → verify with {server} now. Never start a server.",

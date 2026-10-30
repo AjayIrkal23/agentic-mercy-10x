@@ -3,12 +3,15 @@
   git_commits(command, cwd)  -> (commits, add_seen)
       Every simple command whose git subcommand IS ``commit`` (``git -C dir commit``
       counts, ``git commit-tree`` and a ``-m "... --amend ..."`` message do not), as
-      ``(args_after_commit, directory)``; ``add_seen`` when a ``git add`` runs in the
+      ``(args_after_commit, directory)``; ``add_seen`` when a ``git add`` (or ``git stage``) runs in the
       same command line. Tokenised with shlex, so quoted text never looks like a flag.
       A newline, ``{`` and ``}`` end a command like ``;``; ``git.exe`` and a quoted path
       to it are git; ``cd`` / ``Set-Location`` / ``sl`` / ``pushd`` / ``Push-Location``
       move the directory; the payload of ``powershell -c`` / ``bash -c`` / ``cmd /c`` /
       ``iex`` / ``eval`` is scanned too (two levels). Backtick-newline is a continuation.
+  git_adds(command, cwd)  -> [(args_after_add, directory), ...]
+      Every ``git add`` / ``git stage`` of the same command line (the secret scan dry-runs them to see which
+      untracked files they would add, SP-3).
   missing_docs(root, commit_args, add_seen) -> list[str]
       For a repo with ``server_docs/`` or ``frontend_docs/``: the doc trees the files
       going into this commit need but do not touch. Judged from git itself (staged
@@ -132,17 +135,18 @@ def _payload(head: str, args: list):
     return None
 
 
-def _scan(command: str, here: str, depth: int) -> tuple:
-    """(commits, add_seen) of ``command``; a nested payload is scanned from the directory it starts in."""
+def _scan(command: str, here: str, depth: int, adds: list | None = None) -> tuple:
+    """(commits, add_seen) of ``command``; a nested payload is scanned from the directory it starts in.
+    ``adds`` (optional) collects ``(args_after_add, directory)`` of every ``git add``."""
     commits, add_seen = [], False
     for seg in _segments(command):
-        found = _scan_segment(seg, here, depth)
+        found = _scan_segment(seg, here, depth, adds)
         commits, add_seen = commits + found[0], add_seen or found[1]
         here = found[2]
     return commits, add_seen
 
 
-def _scan_segment(seg: list, here: str, depth: int) -> tuple:
+def _scan_segment(seg: list, here: str, depth: int, adds: list | None = None) -> tuple:
     head, args = _program(seg[0]), seg[1:]
     if head in _DIR_COMMANDS:
         target = _dir_arg(args)
@@ -152,8 +156,8 @@ def _scan_segment(seg: list, here: str, depth: int) -> tuple:
         if not body:
             return [], False, here
         if isinstance(body, list):  # cmd /c git commit ...: the rest of the line is one command
-            return (*_scan_segment(body, here, depth + 1)[:2], here)
-        return (*_scan(body, here, depth + 1), here)
+            return (*_scan_segment(body, here, depth + 1, adds)[:2], here)
+        return (*_scan(body, here, depth + 1, adds), here)
     i, d = 1, here
     while i < len(seg) and seg[i].startswith("-"):
         opt = seg[i].split("=", 1)[0]
@@ -164,7 +168,10 @@ def _scan_segment(seg: list, here: str, depth: int) -> tuple:
         else:
             i += 1
     sub = seg[i] if i < len(seg) else ""
-    return ([(seg[i + 1:], d)] if sub == "commit" else []), sub == "add", here
+    added = sub in ("add", "stage")  # `git stage` is git's built-in synonym for `git add` (REVERIFY R4)
+    if added and adds is not None:
+        adds.append((seg[i + 1:], d))
+    return ([(seg[i + 1:], d)] if sub == "commit" else []), added, here
 
 
 def git_commits(command: str, cwd: str) -> tuple:
@@ -172,6 +179,17 @@ def git_commits(command: str, cwd: str) -> tuple:
         return _scan(command, cwd, 0)
     except ValueError:  # unbalanced quotes: nothing parseable
         return [], False
+
+
+def git_adds(command: str, cwd: str) -> list:
+    """``[(args_after_add, directory), ...]`` for every ``git add`` in ``command`` (same parsing
+    as ``git_commits``); [] when nothing parses."""
+    adds: list = []
+    try:
+        _scan(command, cwd, 0, adds)
+    except ValueError:
+        return []
+    return adds
 
 
 def _git(root: str, *args: str) -> list:

@@ -6,8 +6,8 @@
 
 ### One install, and every Claude Code prompt gets the right skill, tool, model and check.
 
-![Version](https://img.shields.io/badge/version-4.3.0-2E7D32?style=flat-square)
-![Claude Code](https://img.shields.io/badge/Claude_Code-2.1.288%2B_%C2%B7_tested_2.1.306-D97757?style=flat-square)
+![Version](https://img.shields.io/badge/version-4.3.1-2E7D32?style=flat-square)
+![Claude Code](https://img.shields.io/badge/Claude_Code-2.1.288%2B_%C2%B7_tested_2.1.314-D97757?style=flat-square)
 ![Models](https://img.shields.io/badge/models-Haiku_5.5_%C2%B7_Sonnet_5.5_%C2%B7_Opus_5.5-D97757?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Ubuntu%20%C2%B7%20macOS%20%C2%B7%20Windows-E95420?style=flat-square)
 ![License](https://img.shields.io/badge/license-MIT-000000?style=flat-square)
@@ -35,17 +35,26 @@ pinned Python, then installs PortableGit (Git Bash), Node 22, Claude Code, uv, g
 per user into `%LOCALAPPDATA%\Programs\agentic-mercy` (override: `AGENTIC_MERCY_TOOLS_DIR`),
 each download SHA-256 checked; tools already on PATH are reused.
 
-<img src="assets/install.webp" alt="Install flow: git clone and install.sh, then base tools, packages, local AI, 16 MCP servers and 11 plugins, and a self-heal loop until the doctor reports 20 PASS, 1 WARN, 0 FAIL" width="100%">
+<img src="assets/install.webp" alt="Install flow: git clone and install.sh, then base tools, packages, local AI, 15 MCP servers and 11 plugins, and a self-heal loop until the doctor reports 0 FAIL" width="100%">
 
 A fresh Ubuntu 24.04+ needs only `git`, `curl` and `python3`, and no sudo. The installer
 merges the clone into `~/.claude` (a file of yours that differs is kept as
 `<name>.pre-install`), installs what is missing into your home directory, and re-checks
 until the doctor reports 0 FAIL. Re-running is safe. The first run downloads about 3.5 GB,
-mostly ollama and its models.
+mostly ollama and its models. A fresh box starts on Claude Code 2.1.288 and the native updater
+moves it up; check `claude --version` and the doctor `mods` row after the first launch.
 
-Four steps only you can do; the installer prints them at the end:
-run `claude` once and sign in · authorize higgsfield and openart in `/mcp` ·
-`gh auth login` · open a new terminal so `~/.local/bin` is on `PATH`.
+Steps only you can do; the installer prints them at the end (also in the visual mode's
+console): run `claude` once and sign in · run `/mcp` and authorize openart · enable the
+Higgsfield connector at claude.ai · `gh auth login` · open a new terminal so `~/.claude/bin`
+and `~/.local/bin` are on `PATH`.
+
+Over SSH or without a browser: `install.sh --headless`. On another machine's ollama:
+`OLLAMA_HOST=http://<host>:11434 ~/agentic-mercy/install.sh --headless` (saved into
+`~/.claude/settings.user.json`; see [PREREQUISITES.md](PREREQUISITES.md)). A small or headless
+box (16 GB, no desktop): [docs/OOM-GUARD.md § Small or headless machine](docs/OOM-GUARD.md#small-or-headless-machine).
+`CLAUDE.machines.local.md` is per machine and gitignored: copy it by hand or write your own;
+without it directives 20, 21 and 30 do nothing.
 
 <details>
 <summary>What the installer puts on the machine</summary>
@@ -57,7 +66,8 @@ run `claude` once and sign in · authorize higgsfield and openart in `/mcp` ·
 | Local AI | ollama (user space) + the `all-minilm` embedding and `qwen2.5-coder:3b` summary models; or another machine's ollama via `OLLAMA_HOST` in `settings.user.json` (nothing installed locally) |
 | Claude Code | 15 MCP servers at pinned versions, 5 marketplaces + 11 plugins, rendered `settings.json` (status line, mods env) |
 | Workbench | re-vendored skills, generated `/invoke` skills and agent blocks, skills index, validators, doctor |
-| OS tools (apt) | `canberra-gtk-play`, `notify-send`, `ss`, `pw-play` for the UI deck: installed with root or passwordless sudo, otherwise one `sudo apt-get install` line is printed. The deck works without them |
+| OS tools (apt) | `tmux` (session restore after an OOM kill), `ss`, `curl`, and on a desktop `canberra-gtk-play`, `notify-send`, `pw-play` for the UI deck: installed with root or passwordless sudo, otherwise one `sudo apt-get install` line is printed (plus a one-time zram line when swap is under half of RAM). Everything but restore works without them |
+| Per machine | `settings.user.json` (mode 600) gets `OLLAMA_HOST` from the install environment, a machine-wide `CLAUDE_CODE_TOOL_MEMORY_LIMIT` of half the RAM on a Linux box over 12 GB (one cgroup that every session's tool commands share), and on a bare box `permissions.defaultMode: acceptEdits` (set `AGENTIC_MERCY_PERMISSION_MODE=bypassPermissions` before installing to keep the template's bypass) |
 
 An existing `settings.json` is kept as `settings.json.pre-install`, and your env (Bedrock,
 proxy), `apiKeyHelper`, `model`, permission mode and own hooks move into
@@ -69,9 +79,13 @@ Installer internals: [`installer/CLAUDE.md`](installer/CLAUDE.md).
 registered the 15 user-scope MCP servers (`~/.claude.json`), the 5 marketplaces and 11
 plugins, the uv tools and npm globals, and the two user units (`claude-memwatch`,
 `claude-restore`) plus `~/.config/systemd/user.conf.d/10-oom.conf`
-(`installer/oomguard_setup.py` has no `--remove`). Remove those by hand
-(`claude mcp remove`, `claude plugin uninstall`, `uv tool uninstall`, `npm rm -g`,
-`systemctl --user disable --now claude-memwatch claude-restore`).
+(`installer/oomguard_setup.py` has no `--remove`), the `# >>> claude-workbench >>>` PATH block
+in `~/.bashrc` / `~/.profile` / `~/.zshrc`, the tools in `~/.local/bin` (node, claude, uv, gh,
+gitleaks), `~/.config/lean-ctx/config.toml`, a local ollama (binary, user unit, models) and
+lingering. Remove those by hand (`claude mcp remove`, `claude plugin uninstall`,
+`uv tool uninstall`, `npm rm -g`, `systemctl --user disable --now claude-memwatch claude-restore`,
+delete the PATH block, `loginctl disable-linger`); the OOM guard's own switches are in
+[docs/OOM-GUARD.md § Opt-out](docs/OOM-GUARD.md#opt-out).
 
 </details>
 
@@ -133,7 +147,7 @@ context7 for library APIs, semgrep on auth and input changes, sequential-thinkin
 plan or a debug. Hooks only suggest servers that are connected, and the indexes refresh on
 events with no daemons.
 
-<img src="assets/mcp.webp" alt="16 MCP servers grouped by job: code and docs intelligence, reasoning and memory, verify and secure, assets and diagrams, repo" width="100%">
+<img src="assets/mcp.webp" alt="15 MCP servers grouped by job, plus the claude.ai Higgsfield connector: code and docs intelligence, reasoning and memory, verify and secure, assets and diagrams, repo" width="100%">
 
 ## Verify
 
@@ -157,12 +171,12 @@ Counts change; recompute them rather than trusting this table.
 | Plugin skills | 0 | `hooks/skills-index.json` → `_meta.plugin_count` |
 | Agents | 17 | `agents/*.md` minus README and team-lead |
 | Hook events wired | 13 | `settings.template.json` → `hooks` |
-| Dispatch links enabled | 59 | `hooks/dispatch.config.json` → `chains` |
+| Dispatch links enabled | 61 | `hooks/dispatch.config.json` → `chains` |
 | MCP servers | 15 | `installer/manifest.json` → `mcp_servers` |
 | Plugins | 11 | `installer/manifest.json` → `plugins.install` |
 | Vendored skill sources | 27 | `hooks/skills-sources.json` |
-| Test files | 185 | `ls tests/test_*.py hooks/tests/test_*.py` |
-| Always-on context | 18,409 chars doctrine | `python3 scripts/measure_context_cost.py` |
+| Test files | 196 | `ls tests/test_*.py hooks/tests/test_*.py \| wc -l` |
+| Always-on context | about 16.6k chars doctrine (includes your machines file) | `python3 scripts/measure_context_cost.py` |
 
 Measured context cost before and after the 2026-10 merge: `docs/TOKEN-BUDGET.md`.
 
@@ -200,6 +214,16 @@ executes on max5/max20, Opus judges on max20 only. Your `/model`, a per-turn "us
 per-project pin always win. Rules: [`rules/04-model-routing.md`](rules/04-model-routing.md);
 full matrix and state files: [`docs/MODEL-ROUTING.md`](docs/MODEL-ROUTING.md).
 
+| Plan | Workers | Judges | Above the routed set |
+|---|---|---|---|
+| Pro | Haiku (Sonnet is the ceiling) | Sonnet | a `[sonnet]` / `[opus]` label alone keeps Haiku; say "use sonnet" this turn |
+| Max 5x | Sonnet (Haiku for explore, docs, verify) | Sonnet | Opus on "use opus" |
+| Max 20x | Sonnet (Haiku for explore, docs, verify) | Opus | Fable on "use fable" |
+
+At 80 % of the 5-hour usage window the guard steps workers down a model (Haiku at the floor).
+Team, enterprise and API logins count as `api`, which follows the Max 5x rules. The first
+launch after sign-in re-detects the plan and re-renders models and workflows.
+
 Per-project mode: "use opus for this project" / "back to normal", or
 `python3 ~/.claude/scripts/model-mode.py opus|sonnet|clear` inside the repo. A plain
 `Agent` call has no `name`; a named call launches a teammate and follows
@@ -219,8 +243,8 @@ Per-project mode: "use opus for this project" / "back to normal", or
 | `mods/` | Claude Code mods ([`mods/CLAUDE.md`](mods/CLAUDE.md)) |
 | `installer/`, `install.*` | one-command installer and doctor |
 | `scripts/` | vendoring, validation, model mode, DB MCP, inventory |
-| `templates/`, `workflows/` | per-project MCP template; saved `/invoke-fullstack` workflow |
-| `docs/` | [changelog](docs/CHANGELOG.md), [ADRs](docs/adr/), [index](docs/INDEX.md), archive |
+| `templates/`, `workflows/` | per-project MCP template; 7 saved workflows (invoke, invoke-fullstack, review, audit, research, migrate, build) |
+| `docs/` | [changelog](docs/CHANGELOG.md), [ADRs](docs/adr/), [index](docs/INDEX.md), archive; the vendored ECC library: [`library/README.md`](library/README.md) |
 
 Your own settings go in `settings.user.json`; `settings.json` is rendered from
 `settings.template.json` and must never contain the string `lean-ctx`. Updating vendored

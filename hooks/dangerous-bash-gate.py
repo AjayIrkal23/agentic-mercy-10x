@@ -31,8 +31,12 @@ Patterns blocked:
   - Heredoc / here-string bodies fed to a shell, `ssh`, `eval`/`source` or a DB client are scanned
     (P9 issue 1); a heredoc into `cat` / `tee` / an interpreter stays a file write (bash-write-gate)
   - git hook bypass (`--no-verify`, commit `-n` clusters, `-c core.hooksPath|include.path`,
-    `GIT_CONFIG_*` env): denied on EVERY attempt, the retry override never applies. Known miss:
-    an option value between a wrapper and git (`sudo -u user git commit -n`)
+    `GIT_CONFIG_*` env, `HUSKY=0` / `SKIP=` before a commit/push (also exported or assigned earlier in
+    the same command line, and a quoted `HUSKY="0"`), a persistent
+    `git config core.hooksPath` to /dev/null, "" or a missing absolute dir): denied on EVERY attempt,
+    the retry override never applies. A relative hooksPath (`.githooks`) passes. Known misses: an
+    option value between a wrapper and git (`sudo -u user git commit -n`); deleting `.git/hooks/*`
+    (a visible tree change, and the workbench secret scan still runs)
   - force push spellings: bundled `-fu`, `+refspec`; the backup/wip suppressor judges each segment
   - dev-server / long-running service start (`npm run dev`, `vite`, `uvicorn`, `pm2 start`, ...):
     ASK, not deny (CLAUDE.md §5), downgraded through lib/gate_mode to a once-per-command advisory
@@ -344,6 +348,20 @@ _COMMIT_OPTIONAL_VALUE_LETTERS = frozenset("uS")   # -uno is --untracked-files=n
 _GIT_ENV = re.compile(r"^GIT_CONFIG_(?:COUNT|PARAMETERS|KEY_\d+|VALUE_\d+)=")
 _ASSIGN = re.compile(r"^[A-Za-z_]\w*=")
 _WRAPPERS = frozenset({"env", "sudo", "command", "exec", "nohup", "time", "nice"})
+# husky off / pre-commit's skip list; `HUSKY=` is a quoted value after quote stripping (`HUSKY="0"`): judged a switch
+_HOOK_SWITCH_ENV = re.compile(r"^(?:HUSKY=0?|SKIP=\S*)$")
+_EXPORTERS = frozenset({"export", "declare", "typeset"})
+_CONFIG_SCOPE_FLAGS = frozenset({"--local", "--global", "--system", "--worktree", "--add", "--replace-all"})
+
+
+def _has_files(d: str) -> bool:
+    """A real hook dir: exists and is not empty (fail-closed False on any error)."""
+    try:
+        return os.path.isdir(d) and any(os.scandir(d))
+    except OSError:
+        return False
+
+
 _GIT_BYPASS_NAME = "git hook bypass (--no-verify / -n / core.hooksPath / GIT_CONFIG_*)"
 _NO_OVERRIDE = frozenset({_GIT_BYPASS_NAME})
 
@@ -389,14 +407,20 @@ class _GitBypass:
     tokens. Runs on the quote-stripped text, so `-m "… --no-verify"` is gone before the walk."""
 
     def search(self, text: str):
+        armed = False  # `export HUSKY=0` / a bare `HUSKY=0` earlier in the line reaches a later git (REVERIFY R4)
         for seg in _GIT_SEG.split(text):
+            if not armed and ("HUSKY=" in seg or "SKIP=" in seg):
+                pre = _tokens(seg)
+                if pre and (pre[0].lower() in _EXPORTERS or all(_ASSIGN.match(t) for t in pre)):
+                    armed = any(_HOOK_SWITCH_ENV.match(t) for t in pre)
             if "git" not in seg.lower():                          # cheap pre-filter (GIT_CONFIG_ contains it)
                 continue
             toks = _tokens(seg)
-            env_hit, i = False, 0
+            env_hit, switch, i = False, False, 0
             while i < len(toks) and (_ASSIGN.match(toks[i]) or toks[i].lower() in _WRAPPERS
                                      or (i and toks[i - 1].lower() in ("sudo", "env") and toks[i].startswith("-"))):
                 env_hit = env_hit or bool(_GIT_ENV.match(toks[i]))
+                switch = switch or bool(_HOOK_SWITCH_ENV.match(toks[i]))
                 i += 1
             if toks[:1] and toks[0].lower() == "export" and any(_GIT_ENV.match(t) for t in toks[1:]):
                 return _Hit("GIT_CONFIG_* export")
@@ -417,8 +441,17 @@ class _GitBypass:
                 else:
                     i += 1
             sub = toks[i].lower() if i < len(toks) else ""
+            if sub == "config":  # a persistent core.hooksPath to nowhere switches every hook off (SP-6)
+                rest = [t for t in toks[i + 1:] if t not in _CONFIG_SCOPE_FLAGS]
+                if len(rest) >= 2 and rest[0].lower() == "core.hookspath":
+                    val = rest[1]  # a quoted value reads as "" after quote stripping: judged empty
+                    if val in ("", "/dev/null", "NUL", "nul") or (os.path.isabs(val) and not _has_files(val)):
+                        return _Hit("core.hooksPath set to an empty or missing hook dir", "config")
+                continue
             if sub not in _GIT_PROTECTED:
                 continue
+            if switch or armed:  # husky / pre-commit read these to skip every hook
+                return _Hit("HUSKY=0 / SKIP= hook switch", sub)
             for tok in toks[i + 1:]:
                 if tok == "--":
                     break

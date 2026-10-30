@@ -8,6 +8,7 @@ connection error); the Windows profile dir from CLAUDE_REPLICA_HOME (forward sla
 The remote shell is cmd.exe: commands chain with `&&`, no quoting. Reports PASS/WARN/SKIP and exits 0 for
 all three; exit 2 only on misuse (run on Windows). Never writes host or home into a tracked file.
   replica_sync.py [--machines PATH] [--host user@host] [--home C:/Users/<name>] [--dry-run]
+  replica_sync.py --posix --host user@host [--dry-run]   # a Linux box: pull + render, then the doctor line
 """
 from __future__ import annotations
 
@@ -15,6 +16,7 @@ import argparse
 import json
 import os
 import re
+import shlex
 import sys
 import time
 from dataclasses import dataclass, field
@@ -126,6 +128,37 @@ def run_step(step: Step, rep: Replica, *, run=plat.run) -> str:
     return "OK"
 
 
+_POSIX_STEPS = (("pull", "git -C ~/.claude pull --ff-only && python3 ~/.claude/installer/render.py", 600),
+                ("doctor", "python3 ~/.claude/installer/doctor.py | tail -1", 300))
+
+
+def posix_main(host: str, dry: bool, *, run=plat.run) -> int:
+    """A POSIX replica (another Linux box with a git ~/.claude): pull + render, then the doctor's
+    summary line. Same PASS/WARN/SKIP semantics as the Windows path (FI-9)."""
+    if not host:
+        print("replica_sync: SKIP (no replica host: pass --host user@host or set CLAUDE_REPLICA_SSH)")
+        return 0
+    if dry:
+        for _, cmd, _t in _POSIX_STEPS:
+            print(f"plan ssh -o BatchMode=yes {host} {shlex.quote(cmd)}")
+        return 0
+    rows: list[tuple[str, str]] = []
+    for name, cmd, timeout in _POSIX_STEPS:
+        if name == "doctor" and rows and rows[0][1] != "OK":
+            rows.append((name, "SKIP(pull failed)"))
+            continue
+        cp = run(["ssh", *_SSH_OPTS, host, cmd], timeout=timeout, stdin_devnull=True)
+        status = ("WARN(timeout)" if cp.returncode == 124 else
+                  f"WARN(rc={cp.returncode})" if cp.returncode != 0 else
+                  "WARN(doctor FAIL)" if name == "doctor" and re.search(r"[1-9]\d* FAIL", cp.stdout or "") else "OK")
+        rows.append((name, status))
+    for name, status in rows:
+        print(f"{name} {status}")
+    _record(rows)
+    print("replica_sync: " + ("PASS" if all(st == "OK" for _, st in rows) else "WARN"))
+    return 0
+
+
 def _record(rows: list[tuple[str, str]]) -> None:
     try:
         d = plat.state_dir() / "golive"
@@ -142,10 +175,13 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--host", default=None)
     ap.add_argument("--home", default=None)
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--posix", action="store_true", help="the replica is a Linux/macOS box (plain ssh, bash)")
     a = ap.parse_args(argv)
     if plat.IS_WINDOWS:
         print("replica_sync: refused: run replica_sync from the Linux workstation")
         return 2
+    if a.posix:
+        return posix_main(a.host or os.environ.get("CLAUDE_REPLICA_SSH", ""), a.dry_run)
     env = dict(os.environ)
     if a.host:
         env["CLAUDE_REPLICA_SSH"] = a.host

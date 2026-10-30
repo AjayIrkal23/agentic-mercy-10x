@@ -372,15 +372,36 @@ def _flatten(obj, out: list[str]) -> None:
             _flatten(v, out)
 
 
+_NO_UI = re.compile(r"\b(?:no|without|not an?)\s+(?:ui|gui|web ?page|front[- ]?end|html)\b"
+                    r"|\bplain[- ]text\b|\b(?:cli|command[- ]line|terminal) (?:app|tool|program)\b")
+_URL_RX = re.compile(r"https?://\S+")
+
+
 # Harness-generated "prompts" (background-agent results, local command output, a peer
 # session's message) are not user tasks: routing skills onto them is pure noise.
 _MACHINE_PREFIXES = ("<task-notification>", "<local-command-stdout>", "<local-command-stderr>",
-                     "<cross-session-message")
+                     "<cross-session-message", "Another Claude session sent a message:",
+                     # scripts/restore_sessions.py CONTINUE_PROMPT (the crash-restore unit)
+                     "Session restored automatically after a crash")
 
 
 def is_trivial_ack(prompt: str) -> bool:
     p = prompt.strip()
     return p.lower().rstrip(".!") in ACK_ALLOWLIST or p.startswith(_MACHINE_PREFIXES)
+
+
+def _machine_cwd(cwd) -> bool:
+    """The double-shot-latte headless judge runs from <claude_dir>/double-shot-latte:
+    its "prompts" are a transcript to grade, not a task."""
+    if not cwd:
+        return False
+    try:
+        from lib import platform as _plat  # noqa: PLC0415
+        judge = (_plat.claude_dir() / "double-shot-latte").resolve()
+        c = Path(str(cwd)).resolve()
+        return c == judge or judge in c.parents
+    except Exception:  # noqa: BLE001 - fail-open: route as usual
+        return False
 
 
 def classify(payload: dict) -> TaskProfile:
@@ -389,8 +410,9 @@ def classify(payload: dict) -> TaskProfile:
         return _classify_impl(payload)
     except Exception:  # noqa: BLE001 - classify must be fail-open
         prompt = payload.get("prompt") if isinstance(payload, dict) else ""
+        cwd = payload.get("cwd") if isinstance(payload, dict) else None
         return TaskProfile(text=str(prompt or "").lower(),
-                           trivial_ack=is_trivial_ack(str(prompt or "")))
+                           trivial_ack=is_trivial_ack(str(prompt or "")) or _machine_cwd(cwd))
 
 
 _SCAN_HEAD, _SCAN_TAIL = 6000, 2000
@@ -405,7 +427,8 @@ def _classify_impl(payload: dict) -> TaskProfile:
     text, paths = collect_text(payload)
     idx = _floor_index()
 
-    prof = TaskProfile(text=text, paths=paths, trivial_ack=is_trivial_ack(prompt))
+    prof = TaskProfile(text=text, paths=paths,
+                       trivial_ack=is_trivial_ack(prompt) or _machine_cwd(payload.get("cwd")))
     if prof.trivial_ack:
         return prof
 
@@ -470,7 +493,17 @@ def _classify_impl(payload: dict) -> TaskProfile:
     ui_weight = sum(idx["ui_w"].get(k, 1.0) for k in prof.ui_hit)
     backend_only = (prof.surface_source == "prompt" and "backend" in prof.surfaces
                     and "frontend" not in prof.surfaces)
-    prof.is_ui = bool(prof.ui_hit) and ui_weight >= 1.0 and not backend_only
+    # "no UI", "plain-text report", "a CLI tool": the prompt rules the frontend out (RT-3),
+    # unless it still names the frontend once the negated phrases are gone
+    no_ui = False
+    if _NO_UI.search(text):
+        try:
+            s2, src2, w2 = _surface.detect(payload, text=_NO_UI.sub(" ", text))
+            named2 = set(s2) - set(w2) if src2 == "prompt" else set()
+        except Exception:  # noqa: BLE001
+            named2 = named
+        no_ui = "frontend" not in named2
+    prof.is_ui = bool(prof.ui_hit) and ui_weight >= 1.0 and not backend_only and not no_ui
 
     # legacy path-segment / ui-suffix rules on any collected paths
     seg = idx["path_segment"]
@@ -495,6 +528,20 @@ def _classify_impl(payload: dict) -> TaskProfile:
             prof.surface_source = "prompt"
     if {"frontend", "backend"} <= prof.surfaces:
         prof.surfaces.add("fullstack")
+    if no_ui:
+        fe = {"frontend", "ui", "fullstack"}
+        prof.surfaces -= fe
+        prof.weak_surfaces -= fe
+        prof.path_suffixes = []
+        prof.intents.pop("DESIGN", None)
+    # a pasted URL with a question and no task is reading, not building: "API" in the
+    # sentence is not a backend task (RT-3)
+    if (prof.surface_source == "prompt" and _URL_RX.search(prompt) and not paths  # text drops URLs
+            and not {"IMPLEMENT", "DEBUG", "TEST", "REFACTOR"} & set(prof.intents)):
+        prof.surfaces -= {"backend", "frontend", "fullstack", "api"}
+    # a cwd-only surface (server/) loses to a page the prompt names (RQ-10)
+    if prof.surface_source == "cwd" and prof.is_ui:
+        prof.weak_surfaces.add("backend")
 
     # --- model-routing talk is claude-infra work, not frontend (R3.6) ---
     if mr:

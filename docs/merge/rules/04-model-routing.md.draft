@@ -1,3 +1,5 @@
+> APPLIED 2026-10 by the integrate package; history only, not instructions.
+
 # Model routing (mechanism)
 
 One truth: `hooks/model-policy.json`. The plan tier is detected at session start from the login

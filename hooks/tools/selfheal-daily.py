@@ -5,7 +5,7 @@ Detached (``async: true``): a session never waits. Once per 24 h (``at`` in
 ``state/selfheal-daily.json``), one copy at a time (non-blocking ``selfheal-daily.lock``).
 Independent steps, one failing never stops the others: ``mcp`` (re-add a missing manifest
 server, pin + env + alwaysLoad reconcile), ``deps`` (base tools node/claude/uv/gh in ~/.local, then absent
-CLIs, never upgrade), ``plan-tier`` (re-detect the plan tier), ``settings`` (re-render when the
+CLIs, never upgrade, then the lean-ctx config merge), ``plan-tier`` (re-detect the plan tier), ``settings`` (re-render when the
 template/manifest is newer, a pinned interpreter path is gone or the tier's model keys changed),
 ``oomguard`` (``oomguard_setup.ensure``), ``machines-split`` (keep the imported machines file small),
 ``vendor`` (``vendor_skill.py --all`` only on DRIFT),
@@ -89,7 +89,8 @@ def _deps(ctx: Ctx):
         rows += basetools.ensure_base_tools(ctx.env(), deps._load_manifest(), ci=False, dry_run=ctx.dry)
     # an absent optional dep is the user's choice (A4-16)
     rows += deps.install_deps(ctx.env(), ci=False, dry_run=ctx.dry, skip_optional=True)
-    return [("dep", n, s) for n, s in rows]
+    import selfheal  # type: ignore  # a lean-ctx install or run may rewrite its config (F2): merge it back
+    return [("dep", n, s) for n, s in rows] + [("config", *selfheal._configure_lean_ctx(deps, ctx.dry))]
 
 
 def _settings(ctx: Ctx):
@@ -241,8 +242,12 @@ def _vendor(ctx: Ctx):
     note = f" (drift: {', '.join(drifted)})" if drifted else ""
     if ctx.dry:
         return [("vendor", "--all", f"WOULD-RE-VENDOR{note}")]
-    rc = plat.run(cmd, timeout=900).returncode
-    return [("vendor", "--all", f"VENDORED{note}" if rc == 0 else f"WARN(rc={rc})")]
+    cp = plat.run(cmd, timeout=900)
+    if cp.returncode == 0:
+        return [("vendor", "--all", f"VENDORED{note}")]
+    # a moved tag (RefMoved) prints "WARN <skill>: <repo>@<ref> moved a -> b; ..." and exits 1 (SP-7)
+    warn = next((ln.strip() for ln in (cp.stdout or "").splitlines() if ln.startswith("WARN ")), "")
+    return [("vendor", "--all", f"WARN(rc={cp.returncode}" + (f": {warn[5:]}" if warn else "") + ")")]
 
 
 # The import never revisits a session it wrote, so a live transcript would stay half-counted (and a

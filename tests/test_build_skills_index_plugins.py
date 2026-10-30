@@ -56,3 +56,28 @@ def test_plugin_skills_go_to_the_gitignored_sidecar_and_load_merges(tmp_path, mo
     assert set(merged["skills"]) == {"local-a", "p:s"} and merged["_meta"]["plugin_count"] == 1
     (tmp_path / "state" / "skills-index.plugins.json").unlink()
     assert set(SI.load(hooks)["skills"]) == {"local-a"}
+
+
+def test_plugin_description_keywords_are_marked_and_still_go_to_the_sidecar(tmp_path, monkeypatch):
+    """RQ-5: a plugin skill whose keywords came from its description scores at half weight in
+    select.py, like a local one; curated plugin metadata keeps source "plugin"."""
+    desc = B._entry("p:s", {"description": "Use when executing implementation plans with tasks."}, {},
+                    source_kind="plugin")
+    assert desc["source"] == "plugin-description"
+    for stop in ("implementation", "plan", "tasks", "report", "changes"):
+        assert stop not in desc["keywords"], desc["keywords"]
+    curated = B._entry("p:c", {"description": "x.", "metadata": {"triggers": {"keywords": ["foo"]}}}, {},
+                       source_kind="plugin")
+    assert curated["source"] == "plugin"
+    hooks = tmp_path / "hooks"
+    hooks.mkdir()
+    payload = {"_meta": {"skill_count": 1, "plugin_count": 1, "checksum": "x"}, "aliases": {},
+               "skills": {"local-a": {"name": "local-a", "source": "metadata"}, "p:s": desc}}
+    monkeypatch.setattr(B, "build", lambda: payload)
+    monkeypatch.setattr(B, "INDEX", hooks / "skills-index.json")
+    monkeypatch.setattr(B, "SIDECAR", tmp_path / "state" / "skills-index.plugins.json")
+    B.write_index()
+    tracked = json.loads((hooks / "skills-index.json").read_text(encoding="utf-8"))
+    assert list(tracked["skills"]) == ["local-a"]
+    side = json.loads((tmp_path / "state" / "skills-index.plugins.json").read_text(encoding="utf-8"))
+    assert list(side["skills"]) == ["p:s"]

@@ -58,6 +58,16 @@ def _no_user_bus(tmp_path, monkeypatch):
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path / "no-user-bus"))
 
 
+@pytest.fixture(autouse=True)
+def _jcm_trusts_tmp(tmp_path, monkeypatch):
+    """Repos here live under the temp dir, outside the host's jcodemunch trusted_folders (RT-4):
+    trust tmp_path so probes keep their FRESH/STALE/MISSING shape."""
+    ci = tmp_path / "code-index-cfg"
+    ci.mkdir(exist_ok=True)
+    (ci / "config.jsonc").write_text(json.dumps({"trusted_folders": [str(tmp_path)]}), encoding="utf-8")
+    monkeypatch.setenv("CODE_INDEX_PATH", str(ci))
+
+
 def _tier(monkeypatch, tmp_path, level, age=0):
     """state/mem-pressure.json as memwatch writes it."""
     state = tmp_path / "state"
@@ -955,6 +965,17 @@ def test_graphify_floor_applies_when_the_tier_file_is_stale(tmp_path, monkeypatc
     assert il._memory_defer_reason("jcodemunch", cfg) == ""  # the floor is graphify's only
 
 
+def test_graphify_floor_scales_with_ram(tmp_path, monkeypatch):
+    """FI-3: a 15.9 GB box gets max(6000, 12288 x 0.53) = 6513, not the 30 GB box's 12288."""
+    cfg = il._load_config()
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path / "no-tier"))
+    monkeypatch.setattr(il.ogc, "ram_factor", lambda total_mb=None: 0.53)
+    monkeypatch.setattr(il, "_mem_available_mb", lambda: 7000)
+    assert il._memory_defer_reason("graphify", cfg) == ""
+    monkeypatch.setattr(il, "_mem_available_mb", lambda: 5500)
+    assert il._memory_defer_reason("graphify", cfg) == "mem_available 5500"
+
+
 def test_scoped_omits_nice_and_ionice_when_absent(tmp_path, monkeypatch):
     (tmp_path / "bus").touch()
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
@@ -1084,7 +1105,7 @@ def test_flush_skips_deferred_surfaces_at_warn(env, tmp_path, monkeypatch):
     assert len(il._load_state(env["ctx"])["journal"]["entries"]) == 2
 
 
-_MEMORY_KEYS = {"tier_stale_s", "defer_at", "fallback_min_avail_mb", "memory_high", "memory_max",
+_MEMORY_KEYS = {"tier_stale_s", "defer_at", "fallback_min_avail_mb", "fallback_floor_mb", "memory_high", "memory_max",
                 "swap_max", "cpu_weight", "io_weight", "nice", "ionice_class", "defer_surfaces"}
 
 
@@ -1230,6 +1251,50 @@ def test_session_start_neutral_line_for_a_doc_index_with_vectors(env, monkeypatc
     monkeypatch.setitem(il._PROBE, "jdocmunch", lambda root, prior, cfg: (il.STALE, {}, "detail"))
     blob = json.loads(_silent(il.mode_session_start, env["payload"], env["cfg"]))
     assert f"jdocmunch index: {il.NEUTRAL_DEFER_LINE}" in blob.get("additionalContext", "")
+
+
+# --------------------------------------------------------------------------- #
+# audit2 D1-D3
+def test_ok_keeps_the_timeout_head_of_a_long_error():
+    il._ok(subprocess.CompletedProcess([], 124, "", "x" * 2000))
+    assert il._LAST_ERR[0].startswith("timeout; rc=124") and len(il._LAST_ERR[0]) <= 400
+
+
+def test_graphify_first_build_gets_room(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(il, "_which", lambda n: "/usr/bin/" + n)
+    monkeypatch.setattr(il, "_memory_defer_reason", lambda *a, **k: "")
+    monkeypatch.setattr(il, "_prune_graph_backups", lambda root: None)
+    monkeypatch.setattr(il, "_run_build", lambda surface, root, cmd, cfg, timeout, env=None:
+                        (calls.append((cmd, timeout)), subprocess.CompletedProcess(cmd, 0, "", ""))[1])
+    cfg = il._load_config()
+    repo = tmp_path / "r"
+    repo.mkdir()
+    assert il._build_graphify(repo, False, None, cfg) is True
+    cmd, timeout = calls[-1]
+    assert timeout == 1200 and "--max-workers" in cmd
+    assert 2 <= int(cmd[cmd.index("--max-workers") + 1]) <= 8
+    (repo / "graphify-out").mkdir()
+    (repo / "graphify-out" / "graph.json").write_text("{}", encoding="utf-8")
+    il._build_graphify(repo, False, None, cfg)
+    assert calls[-1][1] == 300
+
+
+def test_jcodemunch_outside_trusted_folders_is_unavailable(tmp_path, monkeypatch):
+    ci = tmp_path / "ci"
+    ci.mkdir()
+    home = tmp_path / "home"
+    (home / "proj").mkdir(parents=True)
+    (ci / "config.jsonc").write_text('{\n  // trusted roots\n  "trusted_folders": ["%s"]\n}\n' % home.as_posix(),
+                                     encoding="utf-8")
+    monkeypatch.setenv("CODE_INDEX_PATH", str(ci))
+    monkeypatch.setattr(il, "_which", lambda n: "/usr/bin/" + n)
+    assert il._jcm_trusted(home / "proj") is True
+    assert il._jcm_trusted(tmp_path / "x") is False
+    assert il._probe_jcodemunch(tmp_path / "x", {}) == (il.UNAVAILABLE, {}, "outside jcodemunch trusted_folders")
+    monkeypatch.setenv("CODE_INDEX_PATH", str(tmp_path / "no-config"))
+    monkeypatch.setattr(il.Path, "home", classmethod(lambda cls: home))
+    assert il._jcm_trusted(home / "proj") is True     # default: [HOME]
 
 
 if __name__ == "__main__":

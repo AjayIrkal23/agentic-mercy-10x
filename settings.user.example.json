@@ -1,0 +1,5 @@
+{
+  "env": {
+    "OLLAMA_HOST": "http://<ollama-host>:11434"
+  }
+}

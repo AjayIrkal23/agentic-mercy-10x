@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # agentic-mercy oomguard launcher: every interactive `claude` runs in its own systemd scope that
-# survives one OOM victim, with RAM-derived agent caps. Hook helpers (-p/--print/--bare), nested
-# launches (CLAUDECODE / CLAUDE_WORKBENCH_SCOPE) and hosts without a user bus exec the real binary
-# untouched. Design: docs/OOM-GUARD.md (layer L1).
+# survives one OOM victim, with RAM-derived agent caps. Subcommands (`claude plugin test`, `claude mcp
+# list`), hook helpers (-p/--print/--bare), nested launches (CLAUDECODE / CLAUDE_WORKBENCH_SCOPE) and hosts
+# without a user bus exec the real binary untouched. Design: docs/OOM-GUARD.md (layer L1).
 set -u
 
 self=$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || printf '%s' "${BASH_SOURCE[0]}")
@@ -36,8 +36,9 @@ for a in "$@"; do
     --model|--model=*) has_model=1 ;;
   esac
 done
+subcmd=0
 case "${1:-}" in  # subcommands take no session model (`claude --help` Commands list, 2.1.3xx)
-  agents|attach|auth|auto-mode|config|doctor|gateway|import|install|kill|logs|mcp|migrate-installer|plugin|plugins|purge|respawn|rm|setup-token|stop|ultrareview|update|upgrade) has_model=1 ;;
+  agents|attach|auth|auto-mode|config|doctor|gateway|import|install|kill|logs|mcp|migrate-installer|plugin|plugins|purge|respawn|rm|setup-token|stop|ultrareview|update|upgrade) has_model=1; subcmd=1 ;;
 esac
 if [ "$unattended" = 1 ]; then
   export CLAUDE_WORKBENCH_UNATTENDED=1
@@ -73,7 +74,7 @@ if [ "${CLAUDE_LAUNCHER_PRINT_ARGV:-}" = 1 ]; then  # the doctor's probe: the de
 fi
 
 passthrough=0
-if [ "$unattended" = 1 ] || [ "$bare" = 1 ]; then
+if [ "$subcmd" = 1 ] || [ "$unattended" = 1 ] || [ "$bare" = 1 ]; then  # a subcommand is not a session (F3)
   passthrough=1
 elif [ -n "${CLAUDECODE:-}" ] || [ "${CLAUDE_WORKBENCH_SCOPE:-}" = 1 ]; then
   passthrough=1
@@ -87,13 +88,16 @@ if [ "$passthrough" = 1 ]; then
 fi
 
 # --- launch caps from MemAvailable (the same /proc field as hooks/lib/platform.mem_probe) ---
-avail_kb=0
-if [ -r /proc/meminfo ]; then
+# CLAUDE_LAUNCHER_MEMINFO: test seam (a fake meminfo file)
+meminfo=${CLAUDE_LAUNCHER_MEMINFO:-/proc/meminfo}
+avail_kb=0; total_kb=0
+if [ -r "$meminfo" ]; then
   while IFS=': ' read -r key val _; do
-    if [ "$key" = MemAvailable ]; then avail_kb=$val; break; fi
-  done < /proc/meminfo
+    case "$key" in MemAvailable) avail_kb=$val ;; MemTotal) total_kb=$val ;; esac
+  done < "$meminfo"
 fi
 case "$avail_kb" in ''|*[!0-9]*) avail_kb=0 ;; esac
+case "$total_kb" in ''|*[!0-9]*) total_kb=0 ;; esac
 avail_gib=$(( avail_kb / 1048576 ))
 clamp() {
   local v=$1 lo=$2 hi=$3
@@ -122,7 +126,21 @@ if [ "$has_settings" = 0 ]; then
   fi
 fi
 
+# scope MemoryHigh: CLAUDE_SCOPE_MEMORY_HIGH > oomguard.local.json memory_high > MemTotal minus 4 GiB for the
+# desktop, never below half of MemTotal (hooks/lib/oomguard_config.memory_cap_mb; bin/claude-tmux repeats it)
+mh=${CLAUDE_SCOPE_MEMORY_HIGH:-}
+if [ -z "$mh" ]; then
+  ocfg=$(cat "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/oomguard.local.json" 2>/dev/null || true)
+  if [[ $ocfg =~ \"memory_high\"[[:space:]]*:[[:space:]]*\"([0-9]+[KMGT]?)\" ]]; then mh=${BASH_REMATCH[1]}; fi
+fi
+if [ -z "$mh" ]; then
+  total_mb=$(( total_kb / 1024 ))
+  cap_mb=$(( total_mb - 4096 ))
+  [ "$cap_mb" -lt $(( total_mb / 2 )) ] && cap_mb=$(( total_mb / 2 ))
+  if [ "$total_mb" -le 0 ]; then mh=12G; else mh="${cap_mb}M"; fi
+fi
+
 export CLAUDE_WORKBENCH_SCOPE=1
 # --scope runs the command in this environment, so the exported caps reach the real binary.
 exec systemd-run --user --scope --quiet --collect --unit "claude-$$" \
-  -p OOMPolicy=continue -p ManagedOOMPreference=avoid -p "MemoryHigh=${CLAUDE_SCOPE_MEMORY_HIGH:-12G}" -- "$@"
+  -p OOMPolicy=continue -p ManagedOOMPreference=avoid -p "MemoryHigh=$mh" -- "$@"

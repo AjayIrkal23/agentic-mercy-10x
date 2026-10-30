@@ -82,3 +82,38 @@ def test_dead_sections_are_gone_and_higgsfield_names_the_connector():
     assert hf["server"] == ["claude_ai_higgsfield", "higgsfield"]
     assert "mcp__claude_ai_higgsfield__" in hf["text_by_server"]["claude_ai_higgsfield"]
     assert data.get("connectors") == ["claude_ai_higgsfield"]
+
+
+def test_consumers_named_in_meta_exist():
+    data = json.loads((HOOKS / "tool-intelligence.json").read_text(encoding="utf-8"))
+    for ref in data["_meta"]["consumed_by"]:
+        assert (HOOKS.parent / ref.split(" ", 1)[0]).exists(), ref
+
+
+def test_browser_route_needs_intent_and_phrase():
+    data = json.loads((HOOKS / "tool-intelligence.json").read_text(encoding="utf-8"))
+    br = next(r for r in data["mcp_routes"] if r["id"] == "browser")
+    assert br["when"].get("all") is True
+    assert not _route("browser").search("it should be visually properly understanding")
+
+
+def test_dev_server_port_is_repo_scoped(tmp_path, monkeypatch):
+    import sys
+    sys.path.insert(0, str(HOOKS))
+    from prompt_router.modules import mcp_routes as M
+    root = tmp_path / "repo"
+    (root / "web").mkdir(parents=True)
+    other = tmp_path / "other"
+    other.mkdir()
+    monkeypatch.setattr(M, "_listeners", lambda: [(8080, 1)])
+    try:
+        M.dev_server_port.cache_clear()
+        assert M.dev_server_port(None) is None
+        monkeypatch.setattr(M, "_pid_cwd", lambda pid: str(other))
+        M.dev_server_port.cache_clear()
+        assert M.dev_server_port(str(root)) is None
+        monkeypatch.setattr(M, "_pid_cwd", lambda pid: str(root / "web"))
+        M.dev_server_port.cache_clear()
+        assert M.dev_server_port(str(root)) == 8080
+    finally:
+        M.dev_server_port.cache_clear()

@@ -20,7 +20,8 @@ live in ``r10_repair.py``:
              hash then matches its baseline; otherwise REVERT.
 
 Order matters: the lean-ctx config (zero injection) is written BEFORE lean-ctx is
-installed or registered (audit I-03), so its first start reads it.
+installed or registered (audit I-03), so its first start reads it, and merged again right
+after the deps step (F2: an npm script or a lean-ctx run may rewrite it).
 
 MCP/plugin registration is attempted automatically; when the CLI is genuinely
 absent it stays a non-blocking WARN — success is 0 doctor FAILs, never gated on
@@ -86,13 +87,22 @@ def _tier_drift(st: Path) -> bool:
         return False
 
 
+def _injected(st: Path) -> bool:
+    """settings.json mentions lean-ctx (its `onboard` wrote hooks / a plugin into it, F2): render it again."""
+    try:
+        return "lean-ctx" in st.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return False
+
+
 def _stale(st: Path) -> bool:
     """settings.json is older than any file it is rendered from (audit I-16: an
     existing file used to be kept forever, so a pulled template never landed), names an
-    interpreter that no longer exists, or carries another plan tier's model keys."""
+    interpreter that no longer exists, carries another plan tier's model keys, or mentions
+    lean-ctx (F2)."""
     mtime = st.stat().st_mtime
     return (any(p.is_file() and p.stat().st_mtime > mtime for p in _render_sources())
-            or interpreter_gone(st) or _tier_drift(st))
+            or interpreter_gone(st) or _tier_drift(st) or _injected(st))
 
 
 def _ensure_settings(target: Path, env, emit, *, force: bool = False, preserved: bool = False) -> None:
@@ -141,6 +151,11 @@ def _repair(target: Path, failed: set, env, emit) -> None:
         import deps as _deps  # type: ignore
         for name, s in _deps.reconcile_mcp_pins():
             emit("repair", name, s)
+    if "cli-on-path" in {f.lower() for f in failed}:  # F1: the deps step links npm globals into ~/.local/bin
+        import deps as _deps  # type: ignore
+        for name, s in _deps.install_deps(env):
+            if s != "PRESENT":
+                emit("repair", name, s)
     if {"oom-policy", "memwatch-unit", "memwatch-code", "restore-unit", "claude-launcher"} & {f.lower() for f in failed}:
         # the sandboxed tests must never attach live sessions on this machine's user bus
         if os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("OOMGUARD_REPAIR_ALLOW_TEST"):
@@ -175,7 +190,13 @@ def _install_pass(target: Path, env, emit, ci: bool, todo: list | None = None) -
     import jcodemunch_config as _jc  # type: ignore
     import ostools  # type: ignore
     import settings_install  # type: ignore
+    # a bare box (no settings.json, never rendered) gets acceptEdits, not the template's bypass (SP-1)
+    fresh = not (target / "settings.json").exists() and \
+        not (target / settings_install.PRE_INSTALL).exists()
     settings_install.preserve_existing(target, env, emit)  # the user's settings.json, before anything runs
+    # per-machine keys (OLLAMA_HOST, tool memory limit, permission mode) before deps read them
+    settings_install.seed_machine_overlay(target, emit, fresh=fresh)  # inside the checkout: runs under --ci too
+    settings_install.seed_askpass(target, emit)  # the owner's opt-in: LOCAL_SUDO_PASS in .env (F8)
     manifest = _deps._load_manifest()
     env, sudo_cmd = basetools.before_deps(env, manifest, ci, emit)  # apt tools, node, claude, uv, gh
     for name, s in _deps.check_prereqs(env):
@@ -183,9 +204,11 @@ def _install_pass(target: Path, env, emit, ci: bool, todo: list | None = None) -
     emit("config", *_configure_lean_ctx(_deps, ci))  # BEFORE lean-ctx is installed (I-03)
     for name, s in _deps.install_deps(env, ci=ci, dry_run=ci):
         emit("dep", name, s)
+    emit("config", *_configure_lean_ctx(_deps, ci))  # and AFTER: a lean-ctx install or run may rewrite it (F2)
     basetools.after_deps(manifest, ci, emit)  # ollama + all-minilm / qwen2.5-coder
     if todo is not None:
-        todo.extend(ostools.checklist(manifest, sudo_cmd))
+        perm = settings_install.permission_line(target) if fresh else None
+        todo.extend(ostools.checklist(manifest, sudo_cmd, extra=[perm] if perm else None))
     for name, s in _deps.register_mcps(env, ci=ci, dry_run=ci):
         emit("mcp", name, s)
     for name, s in _deps.reconcile_mcp_env(dry_run=ci):

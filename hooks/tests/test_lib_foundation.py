@@ -88,16 +88,33 @@ def test_ollama_url_falls_back_to_settings_user_json_outside_claude():
 
 
 def test_atomic_write_roundtrip():
-    tmp = pathlib.Path(tempfile.mkdtemp()) / "deep" / "f.txt"
-    assert plat.atomic_write(tmp, "payload")
-    assert tmp.read_text(encoding="utf-8") == "payload"
-    assert plat.atomic_write(tmp, "second")  # overwrite atomically
-    assert tmp.read_text(encoding="utf-8") == "second"
+    with tempfile.TemporaryDirectory() as d:  # removed afterwards (FIX2 item 6); no fixture: _run_all calls it bare
+        tmp = pathlib.Path(d) / "deep" / "f.txt"
+        assert plat.atomic_write(tmp, "payload")
+        assert tmp.read_text(encoding="utf-8") == "payload"
+        assert plat.atomic_write(tmp, "second")  # overwrite atomically
+        assert tmp.read_text(encoding="utf-8") == "second"
 
 
 def test_run_never_raises_on_bad_command():
     cp = plat.run(["___definitely_not_a_binary___"])
     assert cp.returncode != 0  # synthetic 127, no exception
+
+
+def test_run_timeout_output_is_text(monkeypatch):
+    """RT-7 / FIX2 item 7: on POSIX TimeoutExpired carries BYTES even with text=True; run() passed them
+    through and index-lifecycle's `_ok` died on `.startswith("Deprecated:")` (jcodemunch build_error)."""
+    import subprocess  # noqa: PLC0415
+
+    def boom(cmd, **kw):
+        raise subprocess.TimeoutExpired(cmd, 1, output=b"partial \xff", stderr=b"Deprecated: x\nerr\n")
+
+    monkeypatch.setattr(plat.subprocess, "run", boom)
+    cp = plat.run(["x"], timeout=1)
+    assert cp.returncode == 124 and cp.stdout == "partial �"
+    assert [ln for ln in cp.stderr.splitlines() if not ln.startswith("Deprecated:")] == ["err"]
+    raw = plat.run(["x"], timeout=1, text=False)
+    assert raw.returncode == 124 and raw.stdout == b"partial \xff"
 
 
 def test_pid_alive_self_true_bogus_false():

@@ -183,6 +183,44 @@ def test_max20_judge_with_the_users_opus_phrase_survives_the_usage_guard(tmp_pat
     assert model(out, ti2) == "sonnet" and "user said" in rows[-1]["reason"]
 
 
+# ---- RT-10: Pro labels never lift Haiku; the fable floor is logged ---------------------------------
+# The policy half (tiers.pro.ask_only = ["sonnet", "opus"]) is a protected-file edit the owner makes;
+# these two tests switch on by themselves once hooks/model-policy.json carries it.
+_PRO_ASK = json.loads((HOOK.parent / "model-policy.json").read_text(encoding="utf-8"))["tiers"]["pro"]["ask_only"]
+_needs_pro_ask_only = pytest.mark.skipif(set(_PRO_ASK) != {"sonnet", "opus"},
+                                         reason="hooks/model-policy.json tiers.pro.ask_only must be "
+                                                "['sonnet', 'opus'] (audit2 D6, owner edit)")
+
+
+@_needs_pro_ask_only
+def test_pro_opus_label_stays_haiku(tmp_path):
+    TF.set_tier("pro")
+    ti = {"description": "[opus] deep dive", "subagent_type": "general-purpose"}
+    out, rows = run(ti, tmp_path)
+    assert model(out, ti) == "haiku" and "explicit 'opus' ignored" in rows[-1]["reason"]
+
+
+@_needs_pro_ask_only
+def test_pro_explicit_sonnet_needs_the_phrase(tmp_path):
+    TF.set_tier("pro")
+    ti = {"description": "research", "subagent_type": "general-purpose", "model": "sonnet"}
+    assert model(run(ti, tmp_path)[0], ti) == "haiku"
+    assert model(run(ti, tmp_path, "do it, use sonnet")[0], ti) == "sonnet"
+
+
+def test_pro_fable_label_is_not_lifted(tmp_path):
+    TF.set_tier("pro")
+    ti = {"description": "[fable] plan", "subagent_type": "general-purpose"}
+    out, rows = run(ti, tmp_path)
+    assert model(out, ti) == "haiku" and "fable floor" not in rows[-1]["reason"]
+
+
+def test_max20_fable_floor_is_logged(tmp_path):
+    ti = {"description": "[fable] x", "subagent_type": "Explore"}
+    out, rows = run(ti, tmp_path)
+    assert model(out, ti) == "sonnet" and "fable floor -> sonnet" in rows[-1]["reason"]
+
+
 def test_no_transcript_means_no_phrase(tmp_path):
     ti = {"description": "plan", "subagent_type": "planning-director", "model": "sonnet"}
     out, _ = run(ti, tmp_path, None)

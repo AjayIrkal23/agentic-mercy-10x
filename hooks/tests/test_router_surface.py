@@ -284,10 +284,10 @@ def test_mcp_routes_fire_by_intent_regex_and_guard(monkeypatch):
     ids = {it["id"] for it in MR.items(prof, {})}
     assert "mcp:semgrep" in ids and "mcp:memory" in ids
     # browser route needs a listening dev server — none: silent
-    monkeypatch.setattr(MR, "dev_server_port", lambda: None)
+    monkeypatch.setattr(MR, "dev_server_port", lambda *a: None)
     prof = C.TaskProfile(text="take a screenshot, it looks wrong in the browser", intents={"QA": 2})
     assert not any(it["id"] == "mcp:browser" for it in MR.items(prof, {}))
-    monkeypatch.setattr(MR, "dev_server_port", lambda: 5173)
+    monkeypatch.setattr(MR, "dev_server_port", lambda *a: 5173)
     items = MR.items(prof, {})
     assert any(it["id"] == "mcp:browser" and ":5173" in it["text"] for it in items)
 
@@ -309,15 +309,17 @@ def test_semgrep_route_demands_explicit_config():
     assert "explicit config" in sem["text"] and "p/default" in sem["text"]
 
 
-def test_dev_server_port_parses_ss_and_ignores_companion(monkeypatch):
+def test_dev_server_port_parses_ss_and_ignores_companion(monkeypatch, tmp_path):
     class CP:
         stdout = ("State Recv-Q Send-Q Local Address:Port Peer Address:Port\n"
                   "LISTEN 0 4096 127.0.0.1:631 0.0.0.0:*\n"
-                  "LISTEN 0 511 127.0.0.1:3025 0.0.0.0:*\n"
-                  "LISTEN 0 511 *:5173 *:*\n")
+                  'LISTEN 0 511 127.0.0.1:3025 0.0.0.0:* users:(("node",pid=11,fd=3))\n'
+                  'LISTEN 0 511 *:5173 *:* users:(("node",pid=22,fd=20))\n')
     monkeypatch.setattr(MR.subprocess, "run", lambda *a, **k: CP())
+    assert MR._listeners() == [(631, None), (3025, 11), (5173, 22)]
+    monkeypatch.setattr(MR, "_pid_cwd", lambda pid: str(tmp_path) if pid else None)
     MR.dev_server_port.cache_clear()
-    assert MR.dev_server_port() == 5173
+    assert MR.dev_server_port(str(tmp_path)) == 5173
     MR.dev_server_port.cache_clear()
 
 
@@ -338,7 +340,7 @@ def test_floor_has_ui_vocabulary_and_no_short_noise():
     counts = meta["_meta"]["source_counts"]
     assert counts["ui.keywords"] >= 380, counts
     assert all(n > 0 for n in counts.values()), counts
-    assert "v2" in meta["_meta"].get("charter", "")
+    assert "v3" in meta["_meta"].get("charter", "")
     kws = [e["value"] for e in meta["entries"] if e["kind"] in ("act_keyword", "ui_keyword")]
     assert "cr" not in kws and "off" not in kws and "odd" not in kws
     assert "ui" in kws and "bug" in kws  # allow-listed short words survive

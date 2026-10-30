@@ -176,7 +176,7 @@ def run(
     try:
         return subprocess.run(list(cmd), **kw)  # noqa: S603 - trusted internal command lists
     except subprocess.TimeoutExpired as exc:
-        return subprocess.CompletedProcess(cmd, 124, exc.stdout or "", exc.stderr or "")
+        return _timed_out(cmd, exc, text)
     except (OSError, ValueError) as exc:
         # Windows: a .cmd/.bat shim (the npm-installed `claude` CLI, `npx`, …) can't
         # be launched directly by CreateProcess — it raises OSError (WinError 193/2),
@@ -195,9 +195,19 @@ def _run_shell(cmd: Sequence[str], kw: dict) -> subprocess.CompletedProcess | No
     try:
         return subprocess.run(line, shell=True, **kw)  # noqa: S602 - quoted, vetted line
     except subprocess.TimeoutExpired as exc:
-        return subprocess.CompletedProcess(cmd, 124, exc.stdout or "", exc.stderr or "")
+        return _timed_out(cmd, exc, kw.get("text", True))
     except (OSError, ValueError):
         return None
+
+
+def _timed_out(cmd, exc: subprocess.TimeoutExpired, text: bool) -> subprocess.CompletedProcess:
+    """rc 124 with what the child printed. POSIX hands TimeoutExpired BYTES even under text=True: decode them,
+    or a caller's `.startswith("…")` raises TypeError (RT-7, jcodemunch build_error)."""
+    def out(v):
+        if v is None:
+            return "" if text else b""
+        return v.decode("utf-8", "replace") if text and isinstance(v, bytes) else v
+    return subprocess.CompletedProcess(cmd, 124, out(exc.stdout), out(exc.stderr))
 
 
 def _cmd_word(arg: str) -> str | None:

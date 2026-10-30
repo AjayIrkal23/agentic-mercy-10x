@@ -5,6 +5,8 @@ paths:
   - "**/tailwind.config.*"
   - "**/components.json"
 ---
+> APPLIED 2026-10 by the integrate package; history only, not instructions.
+
 # Frontend (loads on FE files)
 
 **React Native / Expo files** (an app with `app.json`/`app.config.*` and `react-native` in

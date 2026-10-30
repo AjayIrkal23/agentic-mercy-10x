@@ -1,3 +1,5 @@
+> APPLIED 2026-10 by the integrate package; history only, not instructions.
+
 # README patch note (package doctrine-tokens; integrate applies)
 
 Three passages of `README.md` change. Everything else stays.

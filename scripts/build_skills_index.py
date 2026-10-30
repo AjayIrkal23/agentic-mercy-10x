@@ -13,7 +13,9 @@ Per local skill (every skills/*/SKILL.md):
   keywords exist anywhere (``source`` records which path produced the keywords:
   ``metadata`` | ``frontmatter-legacy`` | ``description``).
 Plugin skills: every ``plugins/installed_plugins.json`` entry is scanned for
-  ``<installPath>/skills/*/SKILL.md`` → ``plugin:skill`` entries, ``source:"plugin"``.
+  ``<installPath>/skills/*/SKILL.md`` → ``plugin:skill`` entries, ``source:"plugin"``
+  (curated metadata) or ``"plugin-description"`` (keywords derived from the description:
+  the router counts those at half weight, RQ-5).
 Aliases: hooks/skill-aliases.json is emitted as a top-level ``aliases`` map; alias
   names never get their own entry (stubs are gone) but floor path rules that still
   name an alias are attributed to the canonical.
@@ -66,7 +68,16 @@ _STOP = {
     "it", "be", "as", "by", "at", "we", "do", "get", "set", "new", "code",
     "work", "task", "file", "files", "user", "before", "after", "over",
     "always", "must", "invoke", "mandatory",
+    # generic task words: plugin descriptions are full of them (RQ-5: "implementation plan"
+    # pushed superpowers:executing-plans onto a feature request)
+    "what", "current", "feature", "features", "tasks", "every", "did", "list", "needs",
+    "tools", "tool", "session", "report", "changes", "change", "implementation", "plan",
 }
+
+
+def _is_plugin(entry: dict) -> bool:
+    """``plugin`` (curated metadata) or ``plugin-description`` (keywords from the description)."""
+    return str((entry or {}).get("source") or "").startswith("plugin")
 
 
 def _load(p: Path) -> dict:
@@ -159,7 +170,7 @@ def _entry(name: str, fm: dict, floor_map: dict, *, source_kind: str | None = No
         keywords = sorted(derived)
         source = "description"
     if source_kind:
-        source = source_kind
+        source = f"{source_kind}-description" if source == "description" else source_kind
 
     surfaces = set(meta.get("surfaces") or []) | set(fl.get("surfaces", set()))
     intents = set(trig.get("intents") or meta.get("intents") or []) | set(fl.get("intents", set()))
@@ -238,7 +249,7 @@ def build() -> dict:
 
     skills = dict(sorted(entries.items()))
     canon = json.dumps(skills, sort_keys=True, ensure_ascii=False)
-    n_local = sum(1 for e in skills.values() if e.get("source") != "plugin")
+    n_local = sum(1 for e in skills.values() if not _is_plugin(e))
     return {
         "_meta": {
             "purpose": "Ranked-routing catalog: every local skill (metadata-first, aliases resolved) "
@@ -258,8 +269,8 @@ def _split(payload: dict) -> tuple[dict, dict]:
     """(tracked local-only index, per-machine plugin sidecar). The tracked file never names a plugin
     skill: plugin inventories differ per machine (Windows replica), and an install must not dirty git."""
     skills = payload.get("skills") or {}
-    local = {k: v for k, v in skills.items() if v.get("source") != "plugin"}
-    plug = {k: v for k, v in skills.items() if v.get("source") == "plugin"}
+    local = {k: v for k, v in skills.items() if not _is_plugin(v)}
+    plug = {k: v for k, v in skills.items() if _is_plugin(v)}
 
     def _sum(d: dict) -> str:
         return hashlib.sha256(json.dumps(d, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
@@ -325,7 +336,7 @@ def main(argv: list[str] | None = None) -> int:
     if "--check" in argv:
         idx = _load(INDEX)
         n_idx = int((idx.get("_meta") or {}).get("skill_count") or
-                    sum(1 for e in (idx.get("skills") or {}).values() if e.get("source") != "plugin"))
+                    sum(1 for e in (idx.get("skills") or {}).values() if not _is_plugin(e)))
         aliases = _load_aliases()
         n_disk = sum(1 for d in sl.skill_dirs() if d.name not in aliases)
         ok = n_idx == n_disk

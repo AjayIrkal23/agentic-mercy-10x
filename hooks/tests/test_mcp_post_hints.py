@@ -31,7 +31,7 @@ def _run(monkeypatch, payload: dict, state: dict, servers=("semgrep", "context7"
     monkeypatch.setattr(code_files, "is_code_file",
                         lambda p: Path(str(p)).suffix in code_files.CODE_EXTENSIONS)
     monkeypatch.setattr(H, "_server", lambda name: name in servers)
-    monkeypatch.setattr(H, "_dev_port", lambda: port)
+    monkeypatch.setattr(H, "_dev_port", lambda *a: port)
     return H.hints(payload, state)
 
 

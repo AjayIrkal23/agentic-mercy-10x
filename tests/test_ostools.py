@@ -17,6 +17,15 @@ M = json.loads((_ROOT / "installer" / "manifest.json").read_text(encoding="utf-8
 ALL_PKGS = sorted({p for t in M["user_space"]["os_tools"] for p in t["apt"]})
 
 
+import pytest  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _desktop(monkeypatch):
+    """The host's session type never decides a test: GUI tools count unless a test says otherwise."""
+    monkeypatch.setattr(ostools, "_graphical", lambda: True)
+
+
 def _which(have=()):
     return lambda n: f"/usr/bin/{n}" if n in have else None
 
@@ -31,7 +40,7 @@ def _recorder(rc_for=lambda argv: 0):
 
 
 def test_missing_tools_lists_only_absent_binaries():
-    got = ostools.missing_tools(M, _which(have={"ss", "curl", "notify-send"}))
+    got = ostools.missing_tools(M, _which(have={"ss", "curl", "notify-send", "tmux"}), graphical=True)
     assert {t["bin"] for t in got} == {"canberra-gtk-play", "pw-play"}
 
 
@@ -130,6 +139,55 @@ def test_checklist_prints_the_sudo_command_once_then_the_human_steps():
     assert "/mcp" in text and "higgsfield" in text and "openart" in text and "gh auth login" in text
 
 
-def test_checklist_without_sudo_has_only_human_only_steps():
+def test_checklist_without_sudo_has_only_human_only_steps(monkeypatch):
+    monkeypatch.setattr(ostools, "zram_line", lambda *a, **k: None)
     text = "\n".join(ostools.checklist(M, None))
     assert "sudo" not in text and "gh auth login" in text
+
+
+# ---- FI-5 / FI-10: tmux for restore; GUI packages only on a desktop ----------------------------------
+def test_tmux_is_in_the_sudo_line_when_missing():
+    rows, cmd = ostools.install_os_tools(M, ci=False, dry_run=False, run=_recorder(lambda a: 1)[1],
+                                         which=_which({"apt-get"}), euid=1000, system="Linux", graphical=False)
+    assert cmd and "tmux" in cmd.split()
+    assert "session restore" in rows[0][1]       # NEEDS-SUDO names why, not "UI deck degrades"
+
+
+def test_gui_tools_only_on_a_graphical_box():
+    have = _which(set())
+    server = {t["bin"] for t in ostools.missing_tools(M, have, graphical=False)}
+    desktop = {t["bin"] for t in ostools.missing_tools(M, have, graphical=True)}
+    gui = {t["bin"] for t in M["user_space"]["os_tools"] if t.get("gui")}
+    assert gui == {"canberra-gtk-play", "notify-send", "pw-play"}
+    assert not (server & gui) and gui <= desktop and "tmux" in server
+
+
+# ---- FI-8: zram line ----------------------------------------------------------------------------------
+def _mem(tmp, total_kb, swap_kb, swaps=""):
+    mi = tmp / "meminfo"
+    mi.write_text(f"MemTotal: {total_kb} kB\nMemAvailable: 1000 kB\nSwapTotal: {swap_kb} kB\n", encoding="ascii")
+    sw = tmp / "swaps"
+    sw.write_text("Filename Type Size Used Priority\n" + swaps, encoding="ascii")
+    return str(mi), str(sw)
+
+
+def test_zram_line_on_a_small_swap_box(tmp_path):
+    mi, sw = _mem(tmp_path, 16281600, 3 * 1048576)
+    line = ostools.zram_line(mi, sw, which=_which({"apt-get"}))
+    assert line and "systemd-zram-generator" in line and "zram-size = min(ram / 2, 8192)" in line
+
+
+def test_zram_line_none_when_swap_is_enough_or_zram_active_or_no_apt(tmp_path):
+    mi, sw = _mem(tmp_path, 16281600, 9000000)
+    assert ostools.zram_line(mi, sw, which=_which({"apt-get"})) is None
+    mi, sw = _mem(tmp_path, 16281600, 3 * 1048576, "/dev/zram0 partition 8388604 0 100\n")
+    assert ostools.zram_line(mi, sw, which=_which({"apt-get"})) is None
+    mi, sw = _mem(tmp_path, 16281600, 3 * 1048576)
+    assert ostools.zram_line(mi, sw, which=_which(set())) is None
+
+
+def test_checklist_prints_the_zram_line_under_the_sudo_block(monkeypatch):
+    monkeypatch.setattr(ostools, "zram_line", lambda *a, **k: "sudo apt-get install -y systemd-zram-generator && x")
+    text = "\n".join(ostools.checklist(M, "sudo apt-get install -y tmux"))
+    assert "Swap is small for this RAM. One-time zram setup (sudo):" in text
+    assert text.index("tmux") < text.index("zram")

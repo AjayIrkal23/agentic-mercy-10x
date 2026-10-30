@@ -62,6 +62,6 @@ Pure modules unless noted (no `$`): what each exports, and who imports it (`feat
 
 ## Up / down
 
-- Parent: [`../CLAUDE.md`](../CLAUDE.md)
+- Parent: [`../../../CLAUDE.md`](../../../CLAUDE.md)
 - Children: <links to deeper `*/CLAUDE.md`, or "none">
 - Related repo docs: <link to the numbered doc / CODEX.md section — link, don't restate>

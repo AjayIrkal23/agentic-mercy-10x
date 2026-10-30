@@ -265,7 +265,9 @@ def test_label_role_lookup_matches_tokens_not_substrings():
 def _pin(home: Path, cwd: Path, model: str) -> None:
     sys.path.insert(0, str(HOOK.parent))
     from lib import model_mode as mm  # noqa: PLC0415
-    d = home / ".claude" / "state" / "model-modes"
+    # the hook inherits CLAUDE_HOOK_STATE_DIR (conftest); pins live there when it is set (RQ-9)
+    st = os.environ.get("CLAUDE_HOOK_STATE_DIR")
+    d = (Path(st) if st else home / ".claude" / "state") / "model-modes"
     d.mkdir(parents=True, exist_ok=True)
     (d / mm.repo_key(str(cwd))).write_text(model + "\n", encoding="utf-8")
 
@@ -301,9 +303,9 @@ def test_t8b_escalation_from_args_task():
 def test_explicit_model_capped_and_fable_needs_phrase():
     script = ("agent('a', {model: 'opus'});\nagent('b', {model: 'fable'});\n"
               "agent('c', {model: 'haiku', agentType: 'santa-reviewer'});\n")
-    TF.set_tier("pro")
+    TF.set_tier("pro")  # D6: opus is ask_only on Pro and no fable floor lifts a Haiku role there
     calls = run_in_node(rewritten_script(run_hook({"script": script})))
-    assert [c[1]["model"] for c in calls] == ["sonnet", "sonnet", "haiku"]
+    assert [c[1]["model"] for c in calls] == ["haiku", "haiku", "haiku"]
     TF.set_tier("max20")
     calls = run_in_node(rewritten_script(run_hook({"script": script})))
     assert [c[1]["model"] for c in calls] == ["opus", "sonnet", "haiku"]  # fable without the phrase -> sonnet

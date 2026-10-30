@@ -2,7 +2,8 @@
 (`.claude/settings{,.local,.user}.json` in any repo or ~/.claude, ~/.claude/hooks/model-policy.json,
 ~/.claude.json) asks, new files included, never downgraded for subagents or unattended sessions; the turn's
 human prompt naming the file by its `.claude/` path or a permission-rule phrase is the escape (bare
-"settings"/"permission" and a bare `settings.json` basename are not)."""
+"settings"/"permission" and a bare `settings.json` basename are not), and (FIX2 item 1) a move, delete,
+truncate or `git checkout|restore` of the gates' wiring."""
 from __future__ import annotations
 
 import importlib.util
@@ -249,6 +250,119 @@ def test_windows_basename_is_case_folded(sp, monkeypatch):
 @pytest.mark.parametrize("raw", ["", "not json", "[1,2]", '{"tool_name": "Write", "tool_input": "x"}'])
 def test_garbage_stdin_is_quiet(sp, monkeypatch, raw):
     assert _run(sp, monkeypatch, raw) == {}
+
+
+# --- audit2 C6 (SP-2, RT-1): the gates protect their own wiring; a read-only open( passes ---------------
+def _cd(sp) -> Path:
+    return sp.plat.claude_dir()
+
+
+@pytest.mark.parametrize("make", [
+    lambda cd: _write(cd / "hooks" / "dispatch.config.json"),
+    lambda cd: _write(cd / "hooks" / "dangerous-bash-gate.py", tool="Edit"),
+    lambda cd: _write(cd / "settings.template.json"),
+    lambda cd: _write(cd / "installer" / "manifest.json"),
+    lambda cd: _bash(f"touch {cd}/.blast-bypass"),
+    lambda cd: _bash(f"sed -i 's/true/false/' {cd}/hooks/dispatch.config.json"),
+])
+def test_gate_wiring_asks_and_denies_unattended(sp, monkeypatch, make):
+    cd = _cd(sp)
+    assert _decision(_run(sp, monkeypatch, make(cd))) == "ask"
+    monkeypatch.setenv("CLAUDE_CODE_SESSION_ATTENDED", "0")
+    assert _decision(_run(sp, monkeypatch, make(cd))) == "deny"
+
+
+@pytest.mark.parametrize("rel,prompt", [
+    ("hooks/dispatch.config.json", "enable the observe link in dispatch.config.json"),
+    ("hooks/dangerous-bash-gate.py", "tighten dangerous-bash-gate.py for HUSKY=0"),
+    ("installer/manifest.json", "pin pyright in manifest.json"),
+])
+def test_prompt_naming_the_wiring_file_escapes(sp, monkeypatch, tmp_path, rel, prompt):
+    t = _transcript(tmp_path, prompt)
+    assert _run(sp, monkeypatch, _write(_cd(sp) / rel, transcript=t)) == {}
+    assert sp.calls[-1]["decision"] == "escape"
+
+
+def test_wiring_names_outside_claude_dir_are_free(sp, monkeypatch, tmp_path):
+    assert _run(sp, monkeypatch, _write(tmp_path / "repo" / "installer" / "manifest.json")) == {}
+    assert _run(sp, monkeypatch, _write(tmp_path / "repo" / "hooks" / "x-gate.py")) == {}
+
+
+def test_read_only_open_is_not_a_write(sp, monkeypatch):
+    home = Path.home()
+    read = f"python3 -c \"import json;print(len(json.load(open('{home}/.claude.json'))))\""
+    assert _run(sp, monkeypatch, _bash(read, agent_id="a1")) == {}
+    write = f"python3 -c \"open('{home}/.claude.json','w').write('{{}}')\""
+    assert _decision(_run(sp, monkeypatch, _bash(write, agent_id="a1"))) == "deny"
+    pw = f"python3 -c \"import pathlib; pathlib.Path('{_cd(sp)}/settings.json').write_text('x')\""
+    assert _decision(_run(sp, monkeypatch, _bash(pw, agent_id="a1"))) == "deny"
+
+
+# --- FIX2 item 1 (REVERIFY R3): moving, deleting, emptying or restoring the wiring is a write too ------------
+@pytest.fixture()
+def home_cd(monkeypatch):
+    """The probes spell `~/.claude` as REVERIFY did: the config dir must be the default one."""
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+
+
+_R3_PROBES = [
+    "mv ~/.claude/hooks/dispatch.config.json /tmp/x.json",                    # b1
+    "rm ~/.claude/hooks/dangerous-bash-gate.py",                              # b2
+    "cd ~/.claude/hooks && cp /tmp/x.json dispatch.config.json",              # b3
+    "mv ~/.claude/hooks ~/.claude/hooks.off",                                 # b4
+    "dd if=/dev/null of=$HOME/.claude/hooks/dispatch.config.json",            # b5
+    "git -C ~/.claude checkout HEAD~5 -- hooks/dangerous-bash-gate.py",       # b6
+]
+_R3_MORE = [
+    "rm -rf ~/.claude/hooks",
+    "unlink ~/.claude/settings.template.json",
+    "truncate ~/.claude/hooks/dispatch.config.json -s 0",
+    "sudo mv ~/.claude/installer/manifest.json /tmp/m.json",
+    "cd ~/.claude && git restore --source=HEAD~3 hooks/settings-protection-gate.py",
+    "cd ~/.claude && git checkout -- .",
+    "cp /tmp/dispatch.config.json ~/.claude/hooks/",
+    "bash -c 'rm ~/.claude/hooks/dispatch.config.json'",
+    "rm ~/.claude/state/dispatch.config.lkg.json",
+    "mv ~/.claude/hooks/dispatch.config.json /tmp/x.json; echo '",            # an unbalanced quote
+    "cd ~/.claude/hooks\nrm dispatch.config.json",
+]
+
+
+@pytest.mark.parametrize("cmd", _R3_PROBES + _R3_MORE)
+def test_move_delete_or_restore_of_the_wiring_asks_and_denies_unattended(sp, monkeypatch, home_cd, cmd):
+    assert _decision(_run(sp, monkeypatch, _bash(cmd))) == "ask", cmd
+    assert _decision(_run(sp, monkeypatch, _bash(cmd, agent_id="a1"))) == "deny", cmd
+    monkeypatch.setenv("CLAUDE_WORKBENCH_UNATTENDED", "1")
+    assert _decision(_run(sp, monkeypatch, _bash(cmd))) == "deny", cmd
+
+
+def test_powershell_remove_item_of_the_wiring_asks(sp, monkeypatch, home_cd):
+    out = _run(sp, monkeypatch, _bash("Remove-Item -Path ~/.claude/hooks/dispatch.config.json", tool="PowerShell"))
+    assert _decision(out) == "ask"
+
+
+@pytest.mark.parametrize("cmd", [
+    "cp ~/.claude/hooks/dispatch.config.json /tmp/x.json",
+    "cd ~/.claude/hooks && cat dispatch.config.json",
+    "cd ~/.claude && git diff -- hooks/dispatch.config.json",
+    "cd ~/.claude && git checkout -b fix/x",
+    "git -C ~/.claude status --short",
+    "rm -rf ~/.claude/hooks/__pycache__",
+    "mv /tmp/a.json /tmp/b.json",
+    "cd /tmp && rm -f settings.json",
+    "rm hooks/x-gate.py",
+    "cd ~/.claude/hooks && python3 -m pytest tests -q",
+    "truncate -s 0 /tmp/log.txt",
+    "cp /tmp/notes.md ~/.claude/hooks/",
+])
+def test_reads_and_unrelated_moves_stay_free(sp, monkeypatch, home_cd, cmd):
+    assert _run(sp, monkeypatch, _bash(cmd, agent_id="a1")) == {}, cmd
+
+
+def test_a_moved_hooks_dir_cannot_be_escaped_by_the_prompt(sp, monkeypatch, home_cd, tmp_path):
+    t = _transcript(tmp_path, "move ~/.claude/hooks/ to hooks.off and edit .claude/settings.json")
+    assert _decision(_run(sp, monkeypatch, _bash("mv ~/.claude/hooks ~/.claude/hooks.off", transcript_path=str(t)))) \
+        == "ask"
 
 
 def test_script_exits_zero_on_garbage():

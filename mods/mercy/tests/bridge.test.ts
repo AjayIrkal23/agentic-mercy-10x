@@ -184,15 +184,29 @@ describe('bridge: lanes are drained before readers', () => {
       expect(w.log[0]).toBe('dispatch post-write-aggregator')
     }
   })
-  bridgeTest('a write waits (bounded) for a running tdd-guard check and carries its advisory (B1-22)', async ($, on) => {
+  bridgeTest('a write waits for a quick tdd-guard check and carries its advisory (B1-22)', async ($, on) => {
+    const advice = { hookSpecificOutput: { additionalContext: 'tdd-guard: add a failing test for a.ts first' } }
+    const w = world(on, { dispatch: ids => (ids === 'tdd-guard-launcher-pre' ? { delayMs: 200, out: advice } : {}) })
+    await $.session.start(start)
+    await $.tool.call(write)
+    const p = $.tool.call({ ...write, file_path: '/r/src/b.ts' })
+    await w.clock.advance(200)
+    const r = await p
+    expect((r.context ?? []).join('\n')).toContain('add a failing test')
+  })
+  bridgeTest('a slow tdd-guard holds a write 300 ms at most; its advisory rides the next tool event (RT-6)', async ($, on) => {
     const advice = { hookSpecificOutput: { additionalContext: 'tdd-guard: add a failing test for a.ts first' } }
     const w = world(on, { dispatch: ids => (ids === 'tdd-guard-launcher-pre' ? { delayMs: 1500, out: advice } : {}) })
     await $.session.start(start)
     await $.tool.call(write)
     const p = $.tool.call({ ...write, file_path: '/r/src/b.ts' })
-    await w.clock.advance(1500)
+    await w.clock.advance(300)
     const r = await p
-    expect((r.context ?? []).join('\n')).toContain('add a failing test')
+    expect((r.context ?? []).join('\n')).not.toContain('add a failing test')
+    await w.clock.advance(1200)
+    await w.clock.settle()
+    const next = await $.tool.call({ tool: 'Read', file_path: '/r/README.md' })
+    expect((next.context ?? []).join('\n')).toContain('add a failing test')
   })
   bridgeTest('release keeps queued runs: they still run for the calls Python skipped (H-11)', async ($, on) => {
     // a 5 s graphify run outlasts the 4 s drain, so the post-write run queues behind it

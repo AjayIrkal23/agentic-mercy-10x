@@ -1,144 +1,140 @@
-# Prerequisites — install these BEFORE running the installer
+# Prerequisites
 
-> **Ubuntu 24.04+ (2026-10-05): only `git`, `curl` and `python3` are needed.** Node, the
-> Claude Code CLI, uv, gh, ollama and every package below are installed by the installer into
-> `~/.local`, without sudo (`install.sh`, or `install.sh --headless` in a console). The
-> table below is still the manual route, and what macOS / Windows need today.
+> **Ubuntu 24.04+: only `git`, `curl` and `python3` are needed, and no sudo.**
+> `sudo apt-get install -y git curl python3 tmux` covers a bare box (tmux is optional: it is
+> what restores sessions after an OOM kill). Node, the native Claude Code CLI, uv, gh, ollama
+> and every package below are installed by the installer into `~/.local`.
 
-The installer (one automatic, visual, self-healing command — driven by
-`installer/manifest.json`) auto-installs and auto-registers everything it can —
-`uv`, `pipx`, `semgrep`, `lean-ctx`, `tdd-guard`, `jcodemunch-mcp`,
-`jdocmunch-mcp`, `graphify`, **all MCP servers**, and the **plugins** — then
-repairs and re-checks itself until every health check is green. But a few base
-tools can't be reliably auto-installed cross-platform, so **you install these
-four first**, then run the one command. The installer's live status panel (and a
-read-only `python check.py`) always tells you exactly what's still missing.
+| OS | Install yourself first | The installer adds |
+|---|---|---|
+| Ubuntu 24.04+ | `git`, `curl`, `python3` (>= 3.10) | Node 22, Claude Code (native, `claude.ai/install.sh`), uv, gh, ollama, every package and MCP server |
+| macOS | `git`, `python3` (`brew install python@3.12`), Node LTS (nvm or brew), Claude Code (`curl -fsSL https://claude.ai/install.sh \| bash`) | uv, packages, MCP servers, plugins |
+| Windows 10/11 | nothing: double-click `install.cmd` | a pinned Python, PortableGit (Git Bash), Node 22, Claude Code, uv, gh, ollama, per user |
 
-## No root / sudo / Administrator needed
+The installer (one automatic, self-healing command driven by `installer/manifest.json`)
+installs and registers everything it can: `uv`, `semgrep`, `lean-ctx`, `tdd-guard`,
+`jcodemunch-mcp`, `jdocmunch-mcp`, `graphify`, all MCP servers and the plugins. It then repairs
+and re-checks itself until the doctor reports 0 FAIL. The live status panel (and a read-only
+`python check.py`) tells you what is still missing.
 
-`~/.claude` is your **user home** — `/home/<you>/.claude` (Ubuntu/macOS) or
-`C:\Users\<you>\.claude` (Windows) — **not** `/root`, `Program Files`, or any
-system directory. The installer writes only to user-owned locations:
+## No root, sudo or Administrator needed
 
-- **Ubuntu / macOS:** `~/.claude`, `~/.claude.json`, `~/.local` (uv/pipx/uv-tools), your npm prefix (`~/.npm-global` or nvm)
-- **Windows:** `%USERPROFILE%\.claude`, `%APPDATA%\npm` (npm -g), `%USERPROFILE%\.local` (uv/pipx)
+`~/.claude` is your user home (`/home/<you>/.claude` on Ubuntu/macOS,
+`C:\Users\<you>\.claude` on Windows), not `/root`, `Program Files` or a system directory. The
+installer writes only to user-owned places:
 
-So **`install.sh` / `install.ps1` / `install.py` need no sudo and no Administrator.**
-(`powershell -ExecutionPolicy Bypass -File install.ps1` runs unelevated — `Bypass`
-is per-process, not a system change.)
+- **Ubuntu / macOS:** `~/.claude`, `~/.claude.json`, `~/.local` (base tools, uv tools), your npm prefix
+- **Windows:** `%USERPROFILE%\.claude`, `%LOCALAPPDATA%\Programs\agentic-mercy`, `%APPDATA%\npm`
 
-**The one caveat — `npm install -g` (lean-ctx, tdd-guard):**
-- **Ubuntu / macOS:** needs sudo *only* if Node was installed system-wide (`apt install nodejs`, prefix `/usr`). Avoid it: install Node via **nvm** (user prefix, recommended below), or run `npm config set prefix ~/.npm-global` once and add `~/.npm-global/bin` to `PATH`.
-- **Windows:** `npm -g` goes to `%APPDATA%\npm` (user) — **never** needs Administrator.
+So `install.sh`, `install.cmd`, `install.ps1` and `install.py` need no sudo and no
+Administrator. On Ubuntu the installer's own Node 22 lives in `~/.local`, so `npm install -g`
+never needs sudo either. On macOS, a system-wide Node (prefix `/usr`) would: use nvm or
+`npm config set prefix ~/.npm-global`.
 
-The only Windows UAC prompts come from the **prereq installers** (`winget install
-Python/Node/Git` machine-wide) — the base-tool step, not the workbench installer.
-`python check.py` shows a **PRIVILEGES** line confirming both `~/.claude` and your
-`npm -g` prefix are user-writable.
+## Using another machine's ollama
 
-## Required (4)
+Set `OLLAMA_HOST` before the install command:
 
-| Tool | Why | Ubuntu / macOS | Windows |
-|---|---|---|---|
-| **Python ≥ 3.10** | The installer is Python; hooks run on it | `sudo apt install python3 python3-pip` · `brew install python@3.12` | `winget install Python.Python.3.12` (ships the `py -3` launcher) |
-| **Node.js LTS (+ npm)** | `lean-ctx`, `tdd-guard`, and 9 npx-launched MCP servers (exact versions pinned in the manifest) | nvm: `curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash && nvm install --lts` · or `apt`/`brew` | `winget install OpenJS.NodeJS.LTS` · or nvm-windows |
-| **Git** | Repo clone + line-ending self-repair + hook git calls | `sudo apt install git` · `brew install git` | `winget install Git.Git` |
-| **Claude Code CLI** | Registers MCP servers + installs plugins | `npm install -g @anthropic-ai/claude-code` | `npm install -g @anthropic-ai/claude-code` |
+```bash
+OLLAMA_HOST=http://<host>:11434 ~/agentic-mercy/install.sh --headless
+```
 
-> `uv` and `pipx` are **auto-installed** by the installer (uv via the official
-> script, pipx via `pip`). If `uv` isn't on `PATH` right after, reopen your shell.
+The installer saves it into `~/.claude/settings.user.json` (mode 600;
+`settings.user.example.json` shows the shape), installs no local ollama, points the jcodemunch /
+jdocmunch MCP env and the doctor at that host, and pulls missing models there. The remote must
+listen beyond 127.0.0.1 (`OLLAMA_HOST=0.0.0.0:11434` in its unit). With a remote `OLLAMA_HOST`,
+jcodemunch AI summaries send source snippets and the learning step sends scrubbed command digests
+and file paths to that host over plain HTTP; use a host you trust, or leave it unset.
 
-## Then install — one automatic command
+## Then install: one command
 
-**Clone anywhere and run one line.** The installer auto-detects your `~/.claude`,
-moves the clone into it (preserving your data), opens the visual installer, and
-**installs + self-repairs in a loop until 100%** — no folder picker, no flags,
-nothing to click.
-
-**Ubuntu / macOS**
 ```bash
 git clone https://github.com/AjayIrkal23/agentic-mercy-10x ~/agentic-mercy
-~/agentic-mercy/install.sh          # = python3 ~/agentic-mercy/install.py  ·  (cloning into ~/.claude works too)
+~/agentic-mercy/install.sh              # visual installer (opens a browser tab)
+~/agentic-mercy/install.sh --headless   # real install in the console (servers, SSH, containers)
+~/agentic-mercy/install.sh --ci         # plan only (network steps planned, local repo steps run)
 ```
 
-**Windows** (PowerShell)
-```powershell
-git clone https://github.com/AjayIrkal23/agentic-mercy-10x $env:USERPROFILE\agentic-mercy
-powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\agentic-mercy\install.ps1   # or: py -3 ...\agentic-mercy\install-ui.py
-```
+Windows: `install.cmd` (or `install.cmd -Headless` in a console; `install.cmd -Ci` only plans).
+Cloning straight into `~/.claude` works too and keeps `git pull --ff-only` for updates; a clone
+elsewhere is merged into `~/.claude` together with its `.git`.
 
-`install.py`, `install-ui.py`, `install.sh`, and `install.ps1` are all the **same
-one automatic installer** — nothing to configure (the only flag is `--ci`).
-It opens a local web page (127.0.0.1, stdlib only — no Node/Electron) that
-**auto-runs** the whole install: a live panel shows prerequisites · privileges ·
-deps · MCP servers · plugins · wiring turning green as each step and repair round
-completes, ending in a **WORKFLOW ACTIVE — 100%** banner.
+`install.py`, `install-ui.py`, `install.sh`, `install.cmd` and `install.ps1` are the same
+installer. The visual mode opens a local page (127.0.0.1, stdlib only) that runs the whole
+install and shows prerequisites, privileges, deps, MCP servers, plugins and wiring turning green.
+Both modes print the same end-of-run checklist to the console.
+
+On a bare box (no `settings.json` before) the permission mode is `acceptEdits`, not the
+template's `bypassPermissions`: the installer writes `permissions.defaultMode` into
+`settings.user.json` and prints one checklist line. To keep bypass, set
+`AGENTIC_MERCY_PERMISSION_MODE=bypassPermissions` for the install command. A machine that
+already had a `settings.json` keeps its mode.
+
+A small or headless machine (16 GB, no desktop, linger off): read
+[docs/OOM-GUARD.md § Small or headless machine](docs/OOM-GUARD.md#small-or-headless-machine).
 
 ## Check status any time (optional)
 
 ```bash
 python check.py
 ```
-The installer's own panel already shows this live, but `check.py` gives a headless
-report — **PREREQUISITES · DEPENDENCY BINARIES · MCP SERVERS · PLUGINS · WORKFLOW
-WIRING (router LIVE) · PALETTE**, with an exact fix command on every gap. Exit 0 =
-everything green.
 
-**What one click reproduces:** CLI deps (uv tools semgrep / `jcodemunch-mcp[openai]` /
-`jdocmunch-mcp[openai]` / graphifyy + the graphify serve venv; npm lean-ctx-bin,
-tdd-guard, pyright (symlinked into `~/.local/bin`), mmx-cli). The
-`~/.config/lean-ctx/config.toml` merge (no hooks / rules / skill injection, no updates
-or telemetry, `shadow_mode=false`) runs FIRST, before lean-ctx is installed or
-registered → 16 user-scope MCP servers from `installer/manifest.json` (every `npx`
-package pinned to an exact version, telemetry-off env) → 5 marketplaces (autoUpdate on)
-+ 12 plugins → rendered `settings.json` (never contains the string `lean-ctx`; a
-re-render keeps the newest 3 dated `settings.json.bak-*`) → re-vendored skills,
-generated `/invoke` skills + agent skill blocks, indexes, skill + mod validators →
-doctor 0 FAIL.
+A headless report of prerequisites, dependency binaries, MCP servers, plugins, workflow wiring
+(router live) and palette, with the fix command on every gap. Exit 0 = everything green.
 
-Headless / CI: `python3 install.py --ci` plans the network and everything outside the
-checkout (WOULD-*), but the local repo steps run for real (render, generators,
-validator), so it is not read-only. The read-only plan is `python3 installer/deps.py`.
+**What one run reproduces:** CLI deps (uv tools semgrep, `jcodemunch-mcp[openai]`,
+`jdocmunch-mcp[openai]`, graphifyy and the graphify serve venv; npm lean-ctx-bin, tdd-guard,
+pyright (symlinked into `~/.local/bin`), mmx-cli, all pinned). The
+`~/.config/lean-ctx/config.toml` merge (no hooks, rules or skill injection, no updates or
+telemetry, `shadow_mode=false`) runs first, before lean-ctx is installed or registered; then
+15 user-scope MCP servers from `installer/manifest.json` (every `npx` package pinned, telemetry
+off), 5 marketplaces (autoUpdate on) and 11 plugins, the rendered `settings.json` (never
+contains the string `lean-ctx`; a re-render keeps the newest 3 dated `settings.json.bak-*`),
+re-vendored skills, generated `/invoke` skills and agent skill blocks, indexes, skill and mod
+validators, and a doctor run with 0 FAIL.
 
-**Mods:** `mods/<id>/` (manifest `mods.enabled`) load through
-`env.CLAUDE_CODE_PLUGIN_DIRS`. `mods.claude_version` is the minimum verified Claude
-Code release: the doctor passes later patches of that minor and warns below it or on a
-newer minor. Re-verify with `python3 scripts/validate_mods.py` (plugin validate + mod
-tests) and bump the pin.
+`--ci` plans the network and everything outside the checkout (WOULD-*), but the local repo steps
+run for real (render, generators, validator), so it is not read-only. The read-only plan is
+`python3 installer/deps.py`.
 
-## The only things the installer can't do for you
+**Mods:** `mods/<id>/` (manifest `mods.enabled`) load through `env.CLAUDE_CODE_PLUGIN_DIRS`.
+`mods.claude_version` is the minimum verified Claude Code release: the doctor passes later
+patches of that minor and warns below it or on a newer minor. Re-verify with
+`python3 scripts/validate_mods.py` (plugin validate + mod tests) and bump the pin.
 
-- **OAuth MCPs** — `openart` is registered as an HTTP MCP; run `/mcp` inside Claude Code
-  once to authorize it. Higgsfield is the claude.ai connector (`mcp__claude_ai_higgsfield__*`),
-  enabled at claude.ai, not an MCP here.
-- **GitHub** — `gh auth login` once (the github MCP reads `gh auth token` at launch).
-- **Context7 key (optional)** — `export CONTEXT7_API_KEY=...` before installing.
-- **Semantic search (optional)** — install [ollama](https://ollama.com) and
-  `ollama pull all-minilm qwen2.5-coder:3b` (embeddings + jcodemunch AI summaries; the
-  doctor WARNs until both are present; search falls back to lexical). To use another
-  machine's ollama instead, set `"env": {"OLLAMA_HOST": "http://<host>:11434"}` in
-  `settings.user.json` (that server must listen beyond 127.0.0.1, e.g. `OLLAMA_HOST=0.0.0.0:11434`
-  in its unit): the installer and the daily self-heal then install nothing locally, point the
-  jcodemunch / jdocmunch MCP env and the doctor at that host, and pull missing models there.
-  The learning pipeline (`docs/LEARNING.md`) uses the same `OLLAMA_HOST` and defers when it is
-  down; it never spends Claude quota.
-- **OOM guard (Linux, optional but on by default)** — needs a systemd user manager
-  (`systemctl --user`); the installer writes `~/.config/systemd/user.conf.d/10-oom.conf`, two
-  user units and a PATH block, no sudo. `systemd-zram-generator` (apt, sudo) is the only
-  system package, installed by `scripts/golive.py` on the owner's machine only. Details:
+## The only things the installer cannot do for you
+
+- **Sign in:** run `claude` once.
+- **OAuth MCPs:** `openart` is registered as an HTTP MCP; run `/mcp` inside Claude Code once to
+  authorize it. Higgsfield is the claude.ai connector (`mcp__claude_ai_higgsfield__*`), enabled
+  at claude.ai, not an MCP here.
+- **GitHub:** `gh auth login` once (the github MCP reads `gh auth token` at launch).
+- **PATH:** open a new terminal so `~/.claude/bin` and `~/.local/bin` are on `PATH`.
+- **Context7 key (optional):** `export CONTEXT7_API_KEY=...` before installing.
+- **Semantic search (optional):** a local or remote ollama with `all-minilm` and
+  `qwen2.5-coder:3b` (embeddings and jcodemunch AI summaries; the doctor WARNs until both are
+  present; search falls back to lexical). The learning pipeline (`docs/LEARNING.md`) uses the
+  same `OLLAMA_HOST`, defers when it is down and never spends Claude quota.
+- **OOM guard (Linux, on by default):** needs a systemd user manager (`systemctl --user`); the
+  installer writes `~/.config/systemd/user.conf.d/10-oom.conf`, two user units and a PATH block,
+  and turns on lingering (`loginctl enable-linger`, no sudo). When swap is under half of RAM the
+  checklist prints a one-time zram command (sudo); the installer never runs it. Details:
   `docs/OOM-GUARD.md`.
-- **Secrets scan before a push** — `gitleaks` 8.30.1 lands in `~/.local/bin` from the pinned
+- **Secrets scan before a push:** `gitleaks` 8.30.1 lands in `~/.local/bin` from the pinned
   release (sha256-checked, no sudo); Windows skips it.
-- **Private files** — keep `.env*`, `CLAUDE.machines.local.md`, `.credentials.json` and
-  `settings.user.json` at mode 600; the doctor's `secret-perms` row prints the `chmod`.
-- **Escape hatch** — if a hook ever misbehaves: `claude --safe-mode`.
+- **Private files:** keep `.env*`, `CLAUDE.machines.local.md`, `.credentials.json`,
+  `settings.user.json`, `settings.local.json` and `scripts/sudo-askpass.sh` at mode 600; the
+  doctor's `secret-perms` row prints the `chmod`. `CLAUDE.machines.local.md` is per machine and
+  gitignored: copy it by hand or write your own. A machine whose owner lets agents use sudo puts
+  `LOCAL_SUDO_PASS` in `~/.claude/.env` (mode 600); the installer then copies
+  `scripts/sudo-askpass.example.sh` to `scripts/sudo-askpass.sh` (mode 700), which reads the
+  password from that file only.
+- **Escape hatch:** if a hook ever misbehaves, `claude --safe-mode`.
 
-> **Everything else is automatic**, including MCP-server + plugin registration
-> (on Windows the `claude` `.cmd` shim is run through the shell so it actually
-> completes).
-> Anything that needs the `claude` CLI or the network but can't reach it shows as
-> a non-blocking **WARN** — it never gates the "100%" success and self-completes on
-> the next launch once the prerequisite is in place.
+> **Everything else is automatic,** including MCP server and plugin registration (on Windows
+> the `claude` `.cmd` shim runs through the shell so it completes). Anything that needs the
+> `claude` CLI or the network but cannot reach it shows as a non-blocking WARN; it never gates
+> success and completes on the next launch once the prerequisite is in place.
 
 ## Optional (only if you use them)
 

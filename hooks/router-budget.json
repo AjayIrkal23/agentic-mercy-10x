@@ -1,0 +1,13 @@
+{
+  "_about": "Live misroute budget for scripts/router_replay.py --check. Baseline 2026-10-30: union 0.292 (167/572). Rates are shares of routed prompts. Never raise a max to pass: add the flagged pattern to hooks/tests/fixtures/router_corpus.jsonl (paraphrased) and fix the router.",
+  "window_days": 14,
+  "max": {
+    "union": 0.10,
+    "threejs_no_3d": 0.01,
+    "debug_no_bug": 0.03,
+    "fe_skill_no_ui": 0.01,
+    "app_line_no_repo": 0.0,
+    "machine_routed": 0.0,
+    "backend_git_oneliner": 0.01
+  }
+}

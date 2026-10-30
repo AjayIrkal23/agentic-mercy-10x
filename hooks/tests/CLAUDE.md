@@ -105,7 +105,9 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 | `test_memwatch_brake.py` | `memwatch-brake.py` (PreToolUse) and `memwatch-ensure.py` (SessionStart) |
 | `test_observe_log.py` | `lib/scrub.py` (keys, bare tokens, URL creds, private keys, linear time) and `observe-log.py` (row shape, 2 KB cap, skip list, doctor no-op; dispatch regex mirrors `skip_tools`) |
 | `test_ollama_lib.py` | `lib/ollama.py`: host from `OLLAMA_HOST`, alive on any HTTP answer, chat shape and None on every failure, models |
-| `test_oomguard_config.py` | `~/.claude/oomguard.local.json` readers fall back to defaults |
+| `test_oomguard_config.py` | `~/.claude/oomguard.local.json` readers fall back to defaults; RAM factor, `scale_mb`, `memory_cap_mb`, `tiers_override`, `linger_wanted` |
+| `test_router_corpus.py` (+ `fixtures/router_corpus.jsonl`) | router replay corpus through `router.route_payload` in synthetic repos (listener probe patched): hard/positive rows never miss, soft rows <= 10 %; classify-level intent rows; `CONTINUE_PROMPT` is a machine prompt. A new live misroute becomes a paraphrased row here first |
+| `test_model_mode_isolation.py` | model-mode pins land under `CLAUDE_HOOK_STATE_DIR` (never the live `state/model-modes/`) |
 | `test_router_model_routing.py` | R3.6: a model-routing prompt is not routed as frontend work |
 | `test_session_ledger.py` | `session-ledger.py`: entries, dead-pid detection, `sessionTitle`, end unlink, restore marks |
 | `test_stop_failure_log.py` | stop-failure-log: telemetry row per API-error stop, state file only for rate_limit |

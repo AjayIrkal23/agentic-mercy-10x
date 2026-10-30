@@ -341,6 +341,40 @@ def _state_base() -> Path:
     return Path(os.environ.get("CLAUDE_HOOK_STATE_DIR") or _HOOKS.parent / "state")
 
 
+_LKG_NAME = "dispatch.config.lkg.json"  # last-known-good copy (settings-protection guards it as wiring)
+
+
+def _config_ok(cfg) -> bool:
+    return isinstance(cfg, dict) and isinstance(cfg.get("chains"), dict)
+
+
+def _load_config() -> tuple[dict | None, str]:
+    """(config, note). The live file when it parses, refreshing the last-known-good copy in the state dir
+    when it differs; else that copy and a note saying so; else (None, why). A missing config used to switch
+    every gate off without a word (REVERIFY R3)."""
+    lkg = _state_base() / _LKG_NAME
+    try:
+        text = CONFIG.read_text(encoding="utf-8")
+        cfg = json.loads(text)
+        if not _config_ok(cfg):
+            raise ValueError("no chains object")
+    except Exception as exc:  # noqa: BLE001 - missing, unreadable, malformed
+        why = f"{CONFIG.name} unusable ({type(exc).__name__})"
+        try:
+            cfg = json.loads(lkg.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            cfg = None
+        if _config_ok(cfg):
+            return cfg, f"{why}; running the last-known-good copy {lkg}"
+        return None, why
+    try:
+        if _plat is not None and (not lkg.is_file() or lkg.read_text(encoding="utf-8") != text):
+            _plat.atomic_write(lkg, text)
+    except OSError:
+        pass
+    return cfg, ""
+
+
 def _mem_tier() -> str:
     """'ok' | 'warn' | 'crit' from state/mem-pressure.json (oom-sentinel); anything odd -> 'ok'."""
     global _MEM_TIER_CACHE
@@ -630,8 +664,9 @@ def _dispatch_one(event: str, payload: dict, cfg: dict, only: frozenset | None =
     merged = _cap("\n\n".join(c for _, c in contexts if c).strip(), char_cap)
     total_ms = round((time.perf_counter() - t_start) * 1000, 2)
     if total_ms > ms_budget:
-        _telemeter(event, "_dispatch", decision="budget-overrun",
-                   ms=total_ms, budget_hit=True, session=sid)
+        # a `--only` run is the mod's background lane: nobody waits on it, so it is not a budget hit (RT-6)
+        _telemeter(event, "_dispatch", decision=("slow-bg" if only is not None else "budget-overrun"),
+                   ms=total_ms, budget_hit=only is None, session=sid)
 
     # Stop accepts only a top-level block or a systemMessage. Advisory text and
     # the permissionDecision schema belong to other hook events.
@@ -669,11 +704,17 @@ def main(argv: list[str]) -> int:
             payload = json.loads(raw) if raw.strip().startswith("{") else {}
         except (ValueError, TypeError):
             payload = {}
-        try:
-            cfg = json.loads(CONFIG.read_text(encoding="utf-8"))
-        except Exception:  # noqa: BLE001
-            print("{}")
+        cfg, note = _load_config()
+        if cfg is None:  # neither the live file nor the last-known-good copy parses: fail open, loudly
+            msg = (f"dispatch: {note} and no last-known-good copy: EVERY hook gate is OFF until "
+                   "hooks/dispatch.config.json is restored (git -C ~/.claude checkout -- hooks/dispatch.config.json)")
+            print(msg, file=sys.stderr)
+            _telemeter(event, "_dispatch", decision="config-fail-open", error=note)
+            print(json.dumps({"systemMessage": msg}))
             return 0
+        if note:
+            print(f"dispatch: {note}", file=sys.stderr)
+            _telemeter(event, "_dispatch", decision="config-lkg", error=note)
         only = None
         if len(argv) >= 2 and argv[1] == "--only":
             only = _ids(argv[2] if len(argv) >= 3 else "")
@@ -685,6 +726,9 @@ def main(argv: list[str]) -> int:
             # exit 2 + stderr = keep the teammate working (TeammateIdle contract)
             print(result.get("reason") or "expected artifact missing", file=sys.stderr)
             return 2
+        if note and event in ("session-start", "user-prompt-submit"):  # once per prompt, not per tool call
+            result["systemMessage"] = (str(result.get("systemMessage") or "") + f"\ndispatch: {note}; restore "
+                                       "hooks/dispatch.config.json").strip()
         print(json.dumps(result))  # ASCII-escaped: a cp1252 stdout cannot print "→"
         return 0
     except Exception:  # noqa: BLE001 - the dispatcher must never brick a session

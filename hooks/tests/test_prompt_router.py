@@ -173,7 +173,7 @@ def _mcp_items(prompt: str, servers: set[str], port=None, cwd="/nonexistent-dir"
     orig = (_mcp.available_servers, _mcp.needs_auth, _mcp.dev_server_port)
     _mcp.available_servers = lambda: set(servers)          # type: ignore[assignment]
     _mcp.needs_auth = lambda: set()                         # type: ignore[assignment]
-    _mcp.dev_server_port = lambda: port                     # type: ignore[assignment]
+    _mcp.dev_server_port = lambda *a: port                  # type: ignore[assignment]
     try:
         prof = C.classify({"prompt": prompt, "cwd": cwd})
         return [it["text"] for it in _mcp.items(prof, {"repo": None}, max_routes=4)]
@@ -208,8 +208,11 @@ def test_mcp_route_memory_and_semgrep():
 
 def test_mcp_route_browser_only_when_app_running():
     p = "verify the ui change works in the browser"
-    assert not any("verify-ui-change" in t for t in _mcp_items(p, _ALL, port=None))
-    assert any("verify-ui-change" in t and ":5173" in t for t in _mcp_items(p, _ALL, port=5173))
+    assert not any("Your app is running" in t for t in _mcp_items(p, _ALL, port=None))
+    # no repo: reticle has no instrumented app to attach to (A7), so playwright is named
+    lines = _mcp_items(p, _ALL, port=5173)
+    assert any("playwright" in t and ":5173" in t for t in lines), lines
+    assert not any("verify-ui-change" in t for t in lines)
 
 
 def test_verify_prompts_classify_as_verify():

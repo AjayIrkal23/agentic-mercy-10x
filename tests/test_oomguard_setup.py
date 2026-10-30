@@ -65,6 +65,10 @@ def box(tmp_path):
 def _ensure(box, dry=False, run=None, **kw):
     root, home, proc = box
     run = run or FakeRun()
+    if "linger_dir" not in kw:  # lingering already on: the host's /var/lib/systemd/linger never decides a test
+        kw["linger_dir"] = proc.parent / "linger"
+        kw["linger_dir"].mkdir(exist_ok=True)
+        (kw["linger_dir"] / og._user()).write_text("", encoding="utf-8")
     return og.ensure(dry, home=home, run=run, which=lambda n: "/usr/bin/" + n, bus=Path("/bus"), root=root,
                      proc_root=proc, **kw), run
 
@@ -241,19 +245,26 @@ def test_restore_script_absent(box):
 
 
 def test_dry_run_changes_nothing(box):
-    _, home, _ = box
+    _, home, proc = box
     before = _snapshot(home)
-    rows, run = _ensure(box, dry=True)
+    (proc.parent / "no-linger").mkdir()
+    rows, run = _ensure(box, dry=True, linger_dir=proc.parent / "no-linger")
     assert all(r.split(": ", 1)[1].startswith("WOULD-") for r in rows), rows
     assert _snapshot(home) == before and not run.mutating()
 
 
-def test_no_manager_or_windows_touches_nothing(box, monkeypatch):
+def test_no_manager_still_writes_the_path_block_and_windows_touches_nothing(box, monkeypatch):
+    """FI-6: a container / SSH session without a user bus still gets ~/.claude/bin on PATH."""
     root, home, proc = box
     before = _snapshot(home)
-    assert og.ensure(False, home=home, run=FakeRun(), bus=None, root=root, proc_root=proc) == [og.NO_MANAGER]
     monkeypatch.setattr(og.plat, "IS_WINDOWS", True)
     assert _ensure(box)[0] == [og.NO_MANAGER] and _snapshot(home) == before
+    monkeypatch.setattr(og.plat, "IS_WINDOWS", False)
+    rows = og.ensure(False, home=home, run=FakeRun(), bus=None, root=root, proc_root=proc)
+    assert rows[-1] == og.NO_MANAGER and ".bashrc: APPENDED PATH block" in rows
+    for rc in (".bashrc", ".profile"):
+        assert (home / rc).read_text(encoding="utf-8").count(og.BEGIN) == 1
+    assert not (home / ".config" / "systemd").exists()
 
 
 @pytest.mark.parametrize("how", ["foreign-home", "env"])
@@ -297,8 +308,40 @@ def test_rendered_units_verify(box, tmp_path):
 def _rows(box, run, **kw):
     root, home, proc = box
     which = kw.pop("which", lambda n: "/usr/bin/" + n)
+    if "linger_dir" not in kw:  # lingering on, like _ensure: the host never decides a row
+        kw["linger_dir"] = proc.parent / "linger"
+        kw["linger_dir"].mkdir(exist_ok=True)
+        (kw["linger_dir"] / og._user()).write_text("", encoding="utf-8")
     return {n: (s, d) for n, s, d in doc.rows(root, run=run, which=which, home=home, bus=Path("/bus"),
                                                 proc_root=proc, **kw)}
+
+
+def test_doctor_linger_row(box, tmp_path):
+    root, home, proc = box
+    empty = tmp_path / "linger-none"
+    empty.mkdir()
+    assert _rows(box, FakeRun())["linger"][0] == "PASS"
+    assert _rows(box, FakeRun(), linger_dir=empty)["linger"][0] == "WARN"      # guard not installed yet
+    _ensure(box)
+    r = _rows(box, FakeRun(), linger_dir=empty)["linger"]
+    assert r[0] == "FAIL" and "loginctl enable-linger" in r[1]
+    (home / ".claude").mkdir(exist_ok=True)
+    (home / ".claude" / "oomguard.local.json").write_text('{"linger": false}', encoding="utf-8")
+    assert _rows(box, FakeRun(), linger_dir=empty)["linger"] == ("PASS", "opted out (oomguard.local.json)")
+
+
+def test_doctor_restore_unit_needs_tmux(box):
+    run = FakeRun(**{"is-enabled:claude-restore": "enabled"})
+    r = _rows(box, run, which=lambda n: None if n == "tmux" else "/usr/bin/" + n)["restore-unit"]
+    assert r == ("WARN", "tmux missing: restore cannot run (sudo apt-get install -y tmux)")
+    assert _rows(box, run)["restore-unit"] == ("PASS", "enabled")
+
+
+def test_doctor_launcher_fails_when_the_real_binary_is_missing(box):
+    run = FakeRun(zsh="/h/.claude/bin/claude", bash="/h/.claude/bin/claude",
+                  **{"bash -ic": "claude: real binary not found (set CLAUDE_REAL_BIN)"})
+    r = _rows(box, run)["claude-launcher"]
+    assert r[0] == "FAIL" and "real claude missing" in r[1] and "~/.local/bin" in r[1]
 
 
 def test_doctor_before_install(box):
@@ -416,3 +459,69 @@ def test_unit_state_windows_and_start_unit(monkeypatch, tmp_path):
     assert og.start_unit(run=lambda cmd, timeout=None: (seen.append(cmd), subprocess.CompletedProcess(cmd, 0, "", ""))[1]) == 0
     assert seen == [["systemctl", "--user", "start", "claude-memwatch"]]
     assert og.unit_file(tmp_path) == tmp_path / ".config" / "systemd" / "user" / "claude-memwatch.service"
+
+
+# ---- FI-2 linger --------------------------------------------------------------------------------------
+def _linger(tmp_path, run_rc=0, dry=False, local=None, which=lambda n: "/usr/bin/" + n):
+    home, ldir = tmp_path / "h", tmp_path / "linger"
+    (home / ".claude").mkdir(parents=True, exist_ok=True)
+    ldir.mkdir(exist_ok=True)
+    if local is not None:
+        (home / ".claude" / "oomguard.local.json").write_text(json.dumps(local), encoding="utf-8")
+    calls = []
+
+    def run(cmd, timeout=None, **_):
+        calls.append(list(cmd))
+        return subprocess.CompletedProcess(cmd, run_rc, "", "")
+    return og._linger(run, dry, which, home, ldir, user="u1"), calls, ldir
+
+
+def test_linger_enabled_when_absent(tmp_path):
+    row, calls, _ = _linger(tmp_path)
+    assert row == "linger: ENABLED" and calls == [["loginctl", "enable-linger", "u1"]]
+
+
+def test_linger_dry_present_optout_and_failure(tmp_path):
+    row, calls, ldir = _linger(tmp_path, dry=True)
+    assert row == "linger: WOULD-ENABLE" and calls == []
+    (ldir / "u1").write_text("", encoding="utf-8")
+    assert _linger(tmp_path)[0] == "linger: OK"
+    (ldir / "u1").unlink()
+    assert _linger(tmp_path, local={"linger": False})[0] == "linger: SKIP(oomguard.local.json)"
+    (tmp_path / "h" / ".claude" / "oomguard.local.json").unlink()
+    row, _, _ = _linger(tmp_path, run_rc=1)
+    assert row == "linger: WARN(rc=1; run: sudo loginctl enable-linger u1)"
+    assert _linger(tmp_path, which=lambda n: None)[0] == "linger: SKIP(no loginctl)"
+
+
+def test_linger_row_in_ensure_and_sandbox(box, monkeypatch):
+    rows, run = _ensure(box)
+    assert "linger: OK" in rows
+    root, home, proc = box
+    ldir = proc.parent / "linger-empty"
+    ldir.mkdir()
+    rows, run = _ensure(box, linger_dir=ldir)
+    assert "linger: ENABLED" in rows and ["loginctl", "enable-linger", og._user()] in run.calls
+    monkeypatch.setenv("AGENTIC_MERCY_SANDBOX", "1")
+    rows, run = _ensure(box, linger_dir=ldir)
+    assert "linger: SKIP(sandbox)" in rows and not [c for c in run.calls if c[0] == "loginctl"]
+
+
+# ---- FI-11 / FI-6 PATH block and SKIP rc -------------------------------------------------------------
+def test_path_line_carries_local_bin_and_old_block_is_updated_in_place(box):
+    _, home, _ = box
+    assert og.PATH_LINE == 'export PATH="$HOME/.claude/bin:$HOME/.local/bin:$PATH"'
+    old = f"\n{og.BEGIN}\nexport PATH=\"$HOME/.claude/bin:$PATH\"\n{og.END}\n"
+    (home / ".bashrc").write_text("# mine\n" + old + "alias x=y\n", encoding="utf-8")
+    rows = _ensure(box)[0]
+    text = (home / ".bashrc").read_text(encoding="utf-8")
+    assert ".bashrc: UPDATED PATH block" in rows
+    assert text.count(og.BEGIN) == 1 and og.PATH_LINE in text and text.startswith("# mine\n")
+    assert text.endswith("alias x=y\n")
+
+
+def test_main_returns_3_without_a_manager(monkeypatch, capsys):
+    monkeypatch.setattr(og, "ensure", lambda dry=False, **k: [".bashrc: PRESENT", og.NO_MANAGER])
+    assert og.main(["--apply"]) == 3
+    monkeypatch.setattr(og, "ensure", lambda dry=False, **k: ["claude-memwatch: OK"])
+    assert og.main(["--apply"]) == 0

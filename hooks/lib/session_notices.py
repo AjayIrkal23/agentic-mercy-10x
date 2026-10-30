@@ -216,5 +216,17 @@ def instinct_lines(cwd: str | None = None) -> list[str]:
         return []
 
 
+def tier_line() -> str:
+    """``plan tier <tier> · main <model>`` from state/plan-tier.json; "" without the file (RT-8)."""
+    try:
+        base = _plat.state_dir() if _plat is not None else Path("~/.claude/state").expanduser()
+        d = json.loads((base / "plan-tier.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return ""
+    if not isinstance(d, dict) or not d.get("tier"):
+        return ""
+    return f"plan tier {_safe(d['tier'])} · main {_safe(d.get('main') or '?')}"
+
+
 __all__ = ["MOD_OFF", "mod_off_notice", "selfheal_line", "memwatch_line", "mod_active", "worktree_line",
-           "instinct_lines"]
+           "instinct_lines", "tier_line"]

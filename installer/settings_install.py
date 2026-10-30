@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import os
+import platform as _platform
 import shutil
 import sys
 from pathlib import Path
@@ -24,6 +25,7 @@ for _p in (str(_HERE), str(_HERE.parent / "hooks")):
 import backups  # noqa: E402
 import settings_seed  # noqa: E402
 from lib import platform as plat  # noqa: E402
+from lib import oomguard_config as ogc  # noqa: E402
 from relocation import PRE_INSTALL as _SUFFIX  # noqa: E402  (the one `.pre-install` suffix)
 
 PRE_INSTALL = "settings.json" + _SUFFIX
@@ -75,6 +77,126 @@ def preserve_existing(target, env, emit: Callable) -> None:
         _preserve(st, users, Path(target) / "settings.user.json", render, _subs(env), emit)
     except Exception as exc:  # noqa: BLE001
         emit("settings", PRE_INSTALL, f"WARN({exc})")
+
+
+def _mem_total_mb() -> int:
+    """MemTotal in MB from /proc/meminfo; 0 on failure (Windows, macOS, no /proc)."""
+    try:
+        with open("/proc/meminfo", encoding="ascii") as fh:
+            for line in fh:
+                if line.startswith("MemTotal:"):
+                    return int(line.split()[1]) // 1024
+    except (OSError, ValueError, IndexError):
+        pass
+    return 0
+
+
+_PERMISSION_MODES = {"default", "acceptEdits", "plan", "bypassPermissions", "dontAsk"}
+
+
+def machine_sizes(total_mb: int) -> dict[str, str]:
+    """Per-machine env sized from MemTotal (MB); {} when unknown. The tool cap follows the one memory rule
+    (ogc.memory_cap_mb, F7). The agent floors serve launches bin/claude does not size (-p, --bare, nested,
+    no user bus); they scale with RAM (F6): 3 subagents / 2 workflow agents at 15-20 GB, 5 / 4 at 25-30 GB."""
+    if total_mb <= 0:
+        return {}
+    sub = min(6, max(2, total_mb // 5120))
+    return {"CLAUDE_CODE_TOOL_MEMORY_LIMIT": f"{ogc.memory_cap_mb(total_mb)}M",
+            "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": str(sub),
+            "CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS": str(max(1, sub - 1))}
+
+
+def seed_machine_overlay(target, emit: Callable, *, environ=None, mem_total_mb=None, system=None,
+                         fresh: bool = False) -> list[str]:
+    """Per-machine keys a tracked template cannot know, written into settings.user.json (mode 600,
+    atomic) only when absent, so render, hooks and runtime agree:
+    - ``env.OLLAMA_HOST`` from the install-time environment (a remote ollama box, FI-1);
+    - ``env.CLAUDE_CODE_TOOL_MEMORY_LIMIT`` = MemTotal minus 4 GiB, never below half (F7), and the two
+      agent floors ``CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS`` / ``CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS``
+      (F6), on Linux, from ``machine_sizes()``. The tool cap caps ONE cgroup (``app.slice/claude-code-bash``)
+      that every session's tool commands share, so it is machine-wide (FI-3, REVERIFY R5); the template's
+      6G / 5 / 4 stay the floor where nothing sizes them;
+    - on a ``fresh`` install (no settings.json before): ``permissions.defaultMode`` =
+      ``$AGENTIC_MERCY_PERMISSION_MODE`` or ``acceptEdits``, and remote control only with bypass (SP-1).
+    Returns the seeded key names."""
+    environ = os.environ if environ is None else environ
+    p = Path(target) / "settings.user.json"
+    try:
+        data = json.loads(p.read_text(encoding="utf-8")) if p.is_file() else {}
+        if not isinstance(data, dict):
+            raise ValueError("not an object")
+    except (OSError, ValueError):
+        emit("settings", "settings.user.json", "WARN(unreadable; not seeded)")
+        return []
+    env = data.get("env") if isinstance(data.get("env"), dict) else {}
+    seeded: list[str] = []
+    host = str(environ.get("OLLAMA_HOST") or "").strip()
+    if host and not env.get("OLLAMA_HOST"):
+        env["OLLAMA_HOST"] = host
+        seeded.append("OLLAMA_HOST")
+    if (system or _platform.system()) == "Linux":
+        total = mem_total_mb if mem_total_mb is not None else _mem_total_mb()
+        for key, value in machine_sizes(total).items():
+            if key not in env:  # a value already there is the user's: kept
+                env[key] = value
+                seeded.append(key)
+    if env:
+        data["env"] = env
+    if fresh and "permissions" not in data:
+        mode = str(environ.get("AGENTIC_MERCY_PERMISSION_MODE") or "").strip()
+        mode = mode if mode in _PERMISSION_MODES else "acceptEdits"
+        data["permissions"] = {"defaultMode": mode}
+        data.setdefault("remoteControlAtStartup", mode == "bypassPermissions")
+        seeded.append("permissions.defaultMode")
+    if seeded:
+        if plat.atomic_write(p, json.dumps(data, indent=2, ensure_ascii=False) + "\n"):  # mkstemp: 0600
+            try:
+                p.chmod(0o600)
+            except OSError:
+                pass
+            emit("settings", "settings.user.json", "OK(seeded " + ", ".join(seeded) + ")")
+        else:
+            emit("settings", "settings.user.json", "WARN(write failed; not seeded)")
+            return []
+    return seeded
+
+
+def seed_askpass(target, emit: Callable) -> bool:
+    """POSIX: the tracked ``scripts/sudo-askpass.example.sh`` becomes the gitignored
+    ``scripts/sudo-askpass.sh`` (mode 700) once the owner opts in with a non-empty ``LOCAL_SUDO_PASS`` in
+    ``<target>/.env``. The helper reads that file when sudo calls it; no password is copied anywhere. An
+    existing helper is the owner's and is never replaced (F8)."""
+    if os.name != "posix":
+        return False
+    t = Path(target)
+    src, dst = t / "scripts" / "sudo-askpass.example.sh", t / "scripts" / "sudo-askpass.sh"
+    try:
+        lines = (t / ".env").read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return False
+    opted_in = any(ln.strip().removeprefix("export ").strip().partition("=")[0] == "LOCAL_SUDO_PASS"
+                   and ln.partition("=")[2].strip().strip("'\"") for ln in lines)
+    if not opted_in or dst.exists() or dst.is_symlink() or not src.is_file():
+        return False
+    try:
+        shutil.copyfile(src, dst)
+        dst.chmod(0o700)
+    except OSError as exc:
+        emit("settings", dst.name, f"WARN({type(exc).__name__})")
+        return False
+    emit("settings", dst.name, "OK(from sudo-askpass.example.sh, mode 700)")
+    return True
+
+
+def permission_line(target) -> str | None:
+    """The checklist line naming the permission mode a fresh install seeded, else None."""
+    try:
+        data = json.loads((Path(target) / "settings.user.json").read_text(encoding="utf-8"))
+        mode = data["permissions"]["defaultMode"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return None
+    return (f"Permission mode on this machine: {mode} (set permissions.defaultMode in "
+            "~/.claude/settings.user.json to change it).")
 
 
 def _tier_first(target, render) -> None:

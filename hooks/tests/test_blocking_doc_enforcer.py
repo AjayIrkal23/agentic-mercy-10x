@@ -211,3 +211,57 @@ def test_a_soft_ask_does_not_skip_the_docs_rule(tmp_path, monkeypatch, secret_re
     _stage(secret_repo, "server/app.py", f'token = "{_TOKEN}"\n')
     out = _commit(tmp_path, monkeypatch, secret_repo)
     assert _denied(out) and "documentation" in out["hookSpecificOutput"]["permissionDecisionReason"]
+
+
+# --- SP-3: files a same-command `git add` adds while untracked -------------------------------------------
+def _untracked(repo: Path, rel: str, text) -> None:
+    p = repo / rel
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_bytes(text) if isinstance(text, bytes) else p.write_text(text, encoding="utf-8")
+
+
+@needs_git
+def test_untracked_file_added_in_the_same_command_is_scanned(tmp_path, monkeypatch, secret_repo):
+    _untracked(secret_repo, "cfg.py", f'AWS_KEY = "{_AKIA}"\n')
+    out = _commit(tmp_path, monkeypatch, secret_repo, "git add -A && git commit -m x")
+    assert _decision(out) == "deny" and "cfg.py" in out["hookSpecificOutput"]["permissionDecisionReason"]
+    assert _AKIA not in out["hookSpecificOutput"]["permissionDecisionReason"]
+
+
+@needs_git
+def test_untracked_file_staged_with_git_stage_is_scanned(tmp_path, monkeypatch, secret_repo):
+    """FIX2 item 5 (REVERIFY R4): `git stage` adds like `git add`."""
+    _untracked(secret_repo, "cfg.py", f'AWS_KEY = "{_AKIA}"\n')
+    out = _commit(tmp_path, monkeypatch, secret_repo, "git stage cfg.py && git commit -m x")
+    assert _decision(out) == "deny" and "cfg.py" in out["hookSpecificOutput"]["permissionDecisionReason"]
+
+
+@needs_git
+def test_git_dash_c_add_from_another_cwd_is_scanned(tmp_path, monkeypatch, secret_repo):
+    _untracked(secret_repo, "tok.js", 'const t = "ghp_' + "b" * 36 + '"\n')
+    cmd = f"git -C {secret_repo} add tok.js && git -C {secret_repo} commit -m x"
+    out = _gate(tmp_path, monkeypatch, cmd, str(tmp_path), None)
+    assert _decision(out) == "deny"
+
+
+@needs_git
+def test_untracked_file_the_command_does_not_add_is_ignored(tmp_path, monkeypatch, secret_repo):
+    _untracked(secret_repo, "notes.txt", f'AWS_KEY = "{_AKIA}"\n')
+    _untracked(secret_repo, "main.py", "print(1)\n")
+    assert _decision(_commit(tmp_path, monkeypatch, secret_repo, "git add main.py && git commit -m x")) == "allow"
+
+
+@needs_git
+@pytest.mark.parametrize("rel,want", [(".env", "deny"), (".env.production", "ask")])
+def test_untracked_env_files_added_with_dot(tmp_path, monkeypatch, secret_repo, rel, want):
+    _untracked(secret_repo, rel, "A=1\n")
+    assert _decision(_commit(tmp_path, monkeypatch, secret_repo, "git add . && git commit -m x")) == want
+
+
+@needs_git
+def test_big_untracked_binary_is_skipped_fast(tmp_path, monkeypatch, secret_repo):
+    import time  # noqa: PLC0415
+    _untracked(secret_repo, "blob.bin", b"\0" * (5 * 1024 * 1024))
+    t0 = time.monotonic()
+    out = _commit(tmp_path, monkeypatch, secret_repo, "git add -A && git commit -m x")
+    assert _decision(out) == "allow" and time.monotonic() - t0 < 5

@@ -118,14 +118,25 @@ def apply_patches(root: Path, patches: list) -> None:
 # --------------------------------------------------------------------------- #
 # vendor
 # --------------------------------------------------------------------------- #
+class RefMoved(RuntimeError):
+    """The pinned ref (a tag) now resolves to another commit than the one vendored (SP-7)."""
+
+
 def vendor(name: str, entry: dict, ref: str | None = None) -> str:
+    """Vendor ``name`` at ``ref`` (default: the sources entry's). Without an explicit ``ref``, a ref
+    that resolves to a different sha than the marker recorded raises ``RefMoved`` and changes nothing:
+    a moved tag is upstream code nobody reviewed."""
+    explicit = ref is not None
     ref = ref or entry["ref"]
     src_root, sha = fetch(entry["repo"], ref)
+    old = _marker(name)  # read before the tree is replaced: an unchanged sha keeps its vendored_at
+    if not explicit and old.get("ref") == ref and old.get("sha") and old["sha"] != sha:
+        raise RefMoved(f"{name}: {entry['repo']}@{ref} moved {old['sha'][:12]} -> {sha[:12]}; "
+                       f"review upstream, then: vendor_skill.py {name} --ref {ref}")
     src = (src_root / entry.get("subpath", ".")).resolve()
     if not (src / "SKILL.md").is_file():
         raise FileNotFoundError(f"{name}: no SKILL.md at {entry.get('subpath')} in {entry['repo']}@{ref}")
     dst = sl.SKILLS_DIR / name
-    old = _marker(name)  # read before the tree is replaced: an unchanged sha keeps its vendored_at
     # FIX-r3 I12: build in a staging dir; swap only when the bytes differ, so an unchanged skill keeps
     # every mtime (and its marker) across installs. Staging sits in .cache/ (gitignored, same filesystem
     # for os.replace), so not even skills/ itself moves when nothing changed.
@@ -261,13 +272,22 @@ def main() -> int:
         ap.error(f"not in skills-sources.json: {unknown}")
     if a.ref and len(names) != 1:
         ap.error("--ref needs exactly one skill")
+    moved = []
     for n in names:
-        sha = vendor(n, sources[n], a.ref)
+        try:
+            sha = vendor(n, sources[n], a.ref)
+        except RefMoved as exc:  # the others still vendor; this one waits for a review
+            print(f"WARN {exc}")
+            moved.append(n)
+            continue
         print(f"vendored {n} @ {a.ref or sources[n]['ref']} ({sha[:12]})")
+    names = [n for n in names if n not in moved]
+    if not names:
+        return 1
     import build_provenance as bp  # rebaseline exactly what was vendored
     bp.write_registry(bp.build(recapture=set(names)))
     print(f"rebaselined {len(names)} skill(s) in skills-provenance.json")
-    return 0
+    return 1 if moved else 0  # selfheal-daily reports the WARN line
 
 
 if __name__ == "__main__":

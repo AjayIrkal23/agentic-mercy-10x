@@ -146,3 +146,26 @@ def test_skip_fix_reports_r4_and_leaves_a_tracked_skill_untouched(tmp_path, monk
     assert md.read_bytes() == before and "R4  WARN reference-test" in capsys.readouterr().out
     validator.validate(fix=True)
     assert md.read_bytes() != before
+
+
+def test_missing_pyyaml_is_one_clear_failure(monkeypatch, capsys):
+    """FI-7: without PyYAML the stdlib fallback cannot read block lists; say so once, exit 2."""
+    validator = _load_validator()
+    monkeypatch.setattr(validator.sl, "yaml", None)
+    monkeypatch.setattr(sys, "argv", ["validate_skills.py"])
+    assert validator.main() == 2
+    out = capsys.readouterr()
+    text = out.out + out.err
+    assert "PyYAML missing (pip install pyyaml==6.0.3)" in text and "R12" not in text
+
+
+def test_gen_agent_skill_blocks_without_pyyaml_exits_2(tmp_path):
+    import subprocess  # noqa: PLC0415
+    shim = tmp_path / "shim"
+    shim.mkdir()
+    (shim / "yaml.py").write_text("raise ModuleNotFoundError(\"No module named 'yaml'\")\n", encoding="utf-8")
+    import os  # noqa: PLC0415
+    cp = subprocess.run([sys.executable, str(_ROOT / "hooks" / "gen-agent-skill-blocks.py"), "--check"],
+                        capture_output=True, text=True, timeout=60,
+                        env={**os.environ, "PYTHONPATH": str(shim)})
+    assert cp.returncode == 2 and "PyYAML missing (pip install pyyaml==6.0.3)" in cp.stderr

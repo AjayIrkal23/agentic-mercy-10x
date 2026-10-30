@@ -50,6 +50,7 @@ def env(tmp_path, monkeypatch):
     state.mkdir(parents=True)
     monkeypatch.setattr(il, "STATE_DIR", state)
     monkeypatch.setattr(il, "_which", lambda name: True)
+    monkeypatch.setattr(il, "_jcm_trusted", lambda root: True)  # tmp repos sit outside trusted_folders
     monkeypatch.setattr(il, "_sleep", lambda s: sleeps.append(s))
     sleeps: list = []
     rows: list = []

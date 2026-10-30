@@ -15,6 +15,7 @@ the CLI. Pure stdlib.
 from __future__ import annotations
 
 import importlib.util
+import os
 import re
 import shutil
 import subprocess
@@ -94,6 +95,36 @@ def _tail(out: str, n: int = 3) -> str:
     return " | ".join(out.strip().splitlines()[-n:])[:160]
 
 
+# SIGKILL (-9 from Popen, 137 through a shell): the kernel's OOM killer in the shared tool memory cgroup
+# (app.slice/claude-code-bash), not a mod defect (REVERIFY R5)
+_SIGKILLED = (-9, 137)
+
+_LAUNCHER_MARK = b"agentic-mercy oomguard launcher"  # the first lines of bin/claude
+
+
+def _is_launcher(path: str) -> bool:
+    try:
+        with open(os.path.realpath(path), "rb") as fh:
+            return _LAUNCHER_MARK in fh.read(512)
+    except OSError:
+        return False
+
+
+def real_claude(environ=None) -> str | None:
+    """The Claude Code CLI itself, never bin/claude: ``CLAUDE_REAL_BIN`` when it is an executable file,
+    else the first ``claude`` on PATH that is not the launcher (F3: through the launcher `plugin test`
+    got `--settings` in front of it and refused)."""
+    environ = os.environ if environ is None else environ
+    pinned = environ.get("CLAUDE_REAL_BIN") or ""
+    if pinned and os.path.isfile(pinned) and os.access(pinned, os.X_OK):
+        return pinned
+    for d in (environ.get("PATH") or "").split(os.pathsep):
+        cand = shutil.which("claude", path=d) if d else None
+        if cand and not _is_launcher(cand):
+            return cand
+    return None
+
+
 def _load_validate_mods(root: Path):
     spec = importlib.util.spec_from_file_location("validate_mods", root / "scripts" / "validate_mods.py")
     vm = importlib.util.module_from_spec(spec)  # type: ignore[arg-type]
@@ -132,9 +163,11 @@ def check_mods_runtime(root: Path, enabled: list[str], ci: bool,
         return SKIP, "--ci (needs the claude CLI and the engine-laid types)"
     if not enabled:
         return PASS, "no mods enabled"
+    injected = which is not None
     which = which or shutil.which  # resolved per call so a test can patch shutil.which
-    tsc, claude = which("tsc"), which("claude")
-    problems, notes, ran, rollout_off, loaded = [], [], [], False, []
+    tsc = which("tsc")
+    claude = which("claude") if injected else real_claude()  # never the launcher (F3)
+    problems, notes, ran, rollout_off, loaded, killed = [], [], [], False, [], []
     for mod_id in enabled:
         folder = Path(root) / "mods" / mod_id
         if claude:
@@ -148,13 +181,17 @@ def check_mods_runtime(root: Path, enabled: list[str], ci: bool,
             ran.append("plugin test")
             if ROLLOUT_OFF in out:
                 rollout_off = True
+            elif rc in _SIGKILLED:
+                killed.append(f"{mod_id} plugin test")
             elif rc != 0:
                 problems.append(f"{mod_id} tests: {_tail(out)}")
         if tsc and (folder / "tsconfig.json").is_file() and (folder / ".claude-plugin" / "types").is_dir():
             # no path in argv: tsc is a .cmd shim on Windows and cmd.exe parses an `&` in a path
             rc, out = run([tsc, "-p", ".", "--noEmit"], cwd=folder)
             ran.append("tsc")
-            if rc != 0:
+            if rc in _SIGKILLED:
+                killed.append(f"{mod_id} tsc")
+            elif rc != 0:
                 problems.append(f"{mod_id} tsc: {_tail(out)}")
         elif tsc:
             notes.append(f"{mod_id}: types not laid yet (start claude once)")
@@ -163,6 +200,9 @@ def check_mods_runtime(root: Path, enabled: list[str], ci: bool,
             f"; {problems[0]}" if problems else "")
     if problems:
         return FAIL, "; ".join(problems)[:240]
+    if killed:
+        return WARN, (f"killed: memory cap ({', '.join(killed)} got SIGKILL; the tool memory cgroup is shared "
+                      "by every session on this machine): re-run when the box is idle")
     if loaded:
         return WARN, f"load-sensitive, re-run when idle: {', '.join(loaded)} tests timed out twice (CPU load)"
     if not ran:

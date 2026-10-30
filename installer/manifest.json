@@ -1,6 +1,6 @@
 {
  "_about": "Declarative install contract for the ~/.claude workbench, read by installer/{deps,verify,doctor,selfheal}.py. Idempotent + fail-visible. Tokens: {PYTHON} {NODE} {CLAUDE_DIR} (from detect.py). `network:true` / `ci_stub:true` steps only PLAN (WOULD-*) under `install.py --ci` / `--dry-run`. `env_from` adds `-e NAME=$NAME` to an MCP registration only when NAME is set in the installer's environment (secrets never live in this file). MCP servers are registered user-scope into ~/.claude.json (the single live MCP store; settings.template.json has no mcpServers). Counts (skills, agents) are always computed from disk, never pinned here.",
- "version": "4.3.0",
+ "version": "4.3.1",
  "min_python": "3.10",
  "prereqs": [
   {
@@ -18,7 +18,7 @@
    "which": "node",
    "min": "18",
    "required": true,
-   "note": "npm installs lean-ctx, tdd-guard, pyright, mmx and runs the npx-launched MCP servers. nvm recommended (user-writable -g prefix).",
+   "note": "npm installs lean-ctx (scripts off), tdd-guard, pyright, mmx and runs the npx-launched MCP servers; the installer links their CLIs into ~/.local/bin from npm's own prefix, so a node prefix off PATH works (F1). nvm recommended (user-writable -g prefix).",
    "install_posix": "nvm: curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash && nvm install --lts   # or apt/brew",
    "install_windows": "the installer unpacks the pinned Node.js per user (installer/wintools.py); or https://nodejs.org"
   },
@@ -73,28 +73,29 @@
   {
    "id": "lean-ctx",
    "which": "lean-ctx",
-   "install": ["npm", "install", "-g", "lean-ctx-bin@3.10.5"],
-   "note": "lean-ctx MCP server only (no hooks). installer writes ~/.config/lean-ctx/config.toml (shadow_mode=false, no rule/skill/hook injection, auto_update_mcp=false).",
+   "install": ["npm", "install", "-g", "--ignore-scripts", "lean-ctx-bin@3.10.5"],
+   "release_binary": "lean_ctx",
+   "note": "lean-ctx MCP server only (no hooks). Never its npm scripts: the preinstall pkill -f lean-ctx's every running lean-ctx and the postinstall fetches releases/latest and runs `lean-ctx onboard` (telemetry on, settings.json injection, a serve daemon; F2). installer/release_bin.py puts the pinned user_space.lean_ctx binary where the package's bin/lean-ctx.js shim looks for it. installer writes ~/.config/lean-ctx/config.toml before AND after this step (shadow_mode=false, no rule/skill/hook injection, auto_update_mcp=false).",
    "ci_stub": true
   },
   {
    "id": "tdd-guard",
    "which": "tdd-guard",
-   "install": ["npm", "install", "-g", "tdd-guard"],
+   "install": ["npm", "install", "-g", "tdd-guard@1.7.0"],
    "ci_stub": true
   },
   {
    "id": "tdd-guard-vitest",
    "npm_pkg": "tdd-guard-vitest",
-   "install": ["npm", "install", "-g", "tdd-guard-vitest"],
+   "install": ["npm", "install", "-g", "tdd-guard-vitest@0.2.0"],
    "ci_stub": true,
    "optional": true
   },
   {
    "id": "tdd-guard-pytest",
    "import": "tdd_guard_pytest",
-   "install": ["{PYTHON}", "-m", "pip", "install", "--user", "tdd-guard-pytest"],
-   "install_posix": ["uv", "pip", "install", "--quiet", "--python", "{PYTHON}", "--target", "{USER_SITE}", "tdd-guard-pytest"],
+   "install": ["{PYTHON}", "-m", "pip", "install", "--user", "tdd-guard-pytest==0.1.2"],
+   "install_posix": ["uv", "pip", "install", "--quiet", "--python", "{PYTHON}", "--target", "{USER_SITE}", "tdd-guard-pytest==0.1.2"],
    "note": "PyPI package (not npm). Usually installed into each project's venv instead; PEP 668 systems may refuse --user.",
    "ci_stub": true,
    "optional": true
@@ -137,7 +138,7 @@
   {
    "id": "pyright",
    "which": "pyright",
-   "install": ["npm", "install", "-g", "pyright"],
+   "install": ["npm", "install", "-g", "pyright@1.1.414"],
    "link_bins": ["pyright", "pyright-langserver"],
    "note": "Language server for the pyright-lsp plugin. On POSIX the binaries are symlinked into ~/.local/bin so a non-login shell (nvm not sourced) still finds them.",
    "ci_stub": true,
@@ -146,7 +147,7 @@
   {
    "id": "mmx-cli",
    "which": "mmx",
-   "install": ["npm", "install", "-g", "mmx-cli"],
+   "install": ["npm", "install", "-g", "mmx-cli@1.0.26"],
    "ci_stub": true,
    "optional": true
   }
@@ -252,6 +253,20 @@
    "sha256": {"x64": "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
               "arm64": "e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080"},
    "note": "layer 1 of scripts/golive.py's secrets scan; pinned release + SHA-256 (gitleaks_8.30.1_checksums.txt); bump both together. Linux only, no sudo."},
+  "lean_ctx": {
+   "version": "3.10.5",
+   "npm_pkg": "lean-ctx-bin",
+   "exe": "lean-ctx",
+   "download": "https://github.com/yvgude/lean-ctx/releases/download/v{version}/{asset}",
+   "assets": {
+    "linux-x64": {"name": "lean-ctx-x86_64-unknown-linux-musl.tar.gz", "sha256": "d9937d4277dfc73413ba1f260bce2bed87ef3c9b1d0fcde3277ed3dc16d5bee7"},
+    "linux-arm64": {"name": "lean-ctx-aarch64-unknown-linux-musl.tar.gz", "sha256": "ed83795987b21f689ea3b331d3df84fa06e4d5c83951e11b2f676e961ee75174"},
+    "darwin-x64": {"name": "lean-ctx-x86_64-apple-darwin.tar.gz", "sha256": "0343fd6b013f1999122ddd00aa4817bed272d4a1b7f0f65151f5303b26e3434e"},
+    "darwin-arm64": {"name": "lean-ctx-aarch64-apple-darwin.tar.gz", "sha256": "b5a899ea2010205af97263b0d2fdd86f785d7a4522f16c520c79685b72fb9dbd"},
+    "windows-x64": {"name": "lean-ctx-x86_64-pc-windows-msvc.zip", "sha256": "72a5ba9f6ecf2420192ef61a1f9eb83f2e482fb22e6b62d201422a2c772d320c"}
+   },
+   "note": "the release binary for the script-less lean-ctx-bin install (F2); hashes from the v3.10.5 release's SHA256SUMS. Linux takes musl (static, no glibc floor). Bump with the npm pin in deps (tests/test_leanctx_pinned.py)."
+  },
   "windows": {
    "_about": "Windows base tools, per user and without admin, into $AGENTIC_MERCY_TOOLS_DIR (default %LOCALAPPDATA%\\Programs\\agentic-mercy) by installer/wintools.py (+ winollama.py); install.ps1 reads `python` from here. Every download is a pinned version + SHA-256 per arch (x64 / arm64); `url` takes {version} {tag} {arch} (the tool's own `arch` names). Bump a version and its hashes together. claude.version must equal mods.claude_version. python is x64 only (arm64 Windows runs the x64 build).",
    "python": {
@@ -306,10 +321,11 @@
    }
   },
   "os_tools": [
-   {"bin": "canberra-gtk-play", "apt": ["gnome-session-canberra", "libcanberra-gtk3-module"], "why": "UI deck sounds"},
-   {"bin": "notify-send", "apt": ["libnotify-bin"], "why": "UI deck desktop notifications"},
+   {"bin": "tmux", "apt": ["tmux"], "why": "session restore (claude-restore, OOM stage 3)"},
+   {"bin": "canberra-gtk-play", "apt": ["gnome-session-canberra", "libcanberra-gtk3-module"], "why": "UI deck sounds", "gui": true},
+   {"bin": "notify-send", "apt": ["libnotify-bin"], "why": "UI deck desktop notifications", "gui": true},
    {"bin": "ss", "apt": ["iproute2"], "why": "/ports card and the ports watch"},
-   {"bin": "pw-play", "apt": ["pipewire-bin"], "why": "UI deck sound fallback"},
+   {"bin": "pw-play", "apt": ["pipewire-bin"], "why": "UI deck sound fallback", "gui": true},
    {"bin": "curl", "apt": ["curl"], "why": "uv and Claude Code installers"}
   ],
   "human_only": [

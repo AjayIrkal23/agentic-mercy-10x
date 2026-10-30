@@ -129,6 +129,15 @@ def test_doctor_ci_and_doctor_mode_skip_the_oomguard_rows(sandbox_home):
             assert by[name][0] == "SKIP", (name, by[name])
 
 
+def test_doctor_help_runs_no_check(monkeypatch, capsys):
+    """RT-9: `doctor.py --help` prints usage and exits 0 without running a single probe."""
+    doctor = _load("doctor", "installer/doctor.py")
+    monkeypatch.setattr(doctor, "run_doctor", lambda **k: pytest.fail("a check ran"))
+    with pytest.raises(SystemExit) as e:
+        doctor.main(["--help"])
+    assert e.value.code == 0 and "--ci" in capsys.readouterr().out
+
+
 def test_link_doctor_detects_a_broken_link(tmp_path):
     ld = _load("link_doctor", "hooks/tools/link-doctor.py")
     # a minimal dispatch config whose one GATE link emits NON-JSON garbage -> FAIL

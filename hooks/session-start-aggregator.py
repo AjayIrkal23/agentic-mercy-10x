@@ -108,7 +108,22 @@ def _discover_superpowers_skills_dir() -> Path | None:
     return None
 
 
+def _superpowers_enabled() -> bool:
+    """The superpowers plugin is enabled in the rendered settings.json: its own SessionStart hook
+    already prints the bootstrap, so ours would be a second copy (RT-8)."""
+    try:
+        from lib import platform as _plat  # noqa: PLC0415
+        d = json.loads((_plat.claude_dir() / "settings.json").read_text(encoding="utf-8"))
+    except Exception:  # noqa: BLE001
+        return False
+    plugins = d.get("enabledPlugins") if isinstance(d, dict) else None
+    return isinstance(plugins, dict) and any(
+        str(k).split("@", 1)[0] == "superpowers" and v is True for k, v in plugins.items())
+
+
 def _superpowers_session_context() -> str:
+    if _superpowers_enabled():
+        return ""
     sp_dir = _discover_superpowers_skills_dir()
     if not sp_dir:
         return ""
@@ -281,7 +296,7 @@ def _session_notices(cwd: str = "") -> str:
     except Exception:  # noqa: BLE001
         return ""
     lines: list[str] = []
-    for name in ("mod_off_notice", "selfheal_line", "memwatch_line"):
+    for name in ("mod_off_notice", "tier_line", "selfheal_line", "memwatch_line"):
         try:
             lines.append(str(getattr(mod, name, lambda: "")() or ""))
         except Exception:  # noqa: BLE001

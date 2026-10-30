@@ -91,6 +91,12 @@ def test_add_on_another_line_counts_as_add_seen():
     assert _one("git commit -m x")[1] is False
 
 
+def test_git_stage_is_git_add():
+    """FIX2 item 5 (REVERIFY R4): `git stage` is git's built-in synonym for `git add`."""
+    assert _one("git stage cfg.py && git commit -m x")[1] is True
+    assert cdc.git_adds("git stage cfg.py && git commit -m x", REPO) == [(["cfg.py"], REPO)]
+
+
 def test_a_multi_line_message_stays_one_argument():
     (args, _), _ = _one('git commit -m "line one\nline two"')
     assert args == ["-m", "line one\nline two"]

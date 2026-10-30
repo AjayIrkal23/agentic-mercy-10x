@@ -53,18 +53,28 @@ def _yaml_blocked_env(tmp_path):
 
 
 def test_validate_skills_no_crash_without_pyyaml(tmp_path):
-    """Block `import yaml`, run the validator: it must RUN to its summary line
-    (no ImportError traceback, non-empty stdout). rc may be nonzero because the
-    stdlib fallback can't reproduce yaml's exact scalar folding for the R10
-    baselines — but the process no longer crashes at import."""
+    """Block `import yaml`, run the validator: no ImportError traceback, and ONE clear
+    line instead of a page of R12 noise from the block-list-less fallback (FI-7, exit 2)."""
     cp = subprocess.run(
         [sys.executable, str(_ROOT / "scripts" / "validate_skills.py")],
         capture_output=True, text=True, env=_yaml_blocked_env(tmp_path),
         timeout=180, check=False,
     )
     assert "Traceback" not in cp.stderr and "ImportError" not in cp.stderr, cp.stderr[-600:]
-    assert "validate_skills:" in cp.stdout, f"validator did not run; stdout:\n{cp.stdout[-400:]}"
-    assert "HARD failures" in cp.stdout
+    assert cp.returncode == 2 and "PyYAML missing (pip install pyyaml==6.0.3)" in cp.stdout, cp.stdout[-400:]
+    assert "R12" not in cp.stdout
+
+
+def test_sudo_askpass_example_refuses_without_a_password(tmp_path):
+    """B11: the tracked example never prints anything but the owner's own .env password."""
+    import shutil as _sh  # noqa: PLC0415
+    import pytest  # noqa: PLC0415
+    if _sh.which("bash") is None or os.name == "nt":
+        pytest.skip("bash script")
+    env = {"PATH": os.environ.get("PATH", ""), "HOME": str(tmp_path)}
+    cp = subprocess.run(["bash", str(_ROOT / "scripts" / "sudo-askpass.example.sh")], capture_output=True,
+                        text=True, env=env, timeout=20, check=False)
+    assert cp.returncode == 2 and "LOCAL_SUDO_PASS not set" in cp.stderr and cp.stdout == ""
 
 
 def test_skills_lib_imports_without_pyyaml(tmp_path):
@@ -136,6 +146,24 @@ def test_post_steps_resolve_repo_local_scripts_against_root():
     assert rows["validate-skills"].startswith("WOULD-RUN"), rows["validate-skills"]
     # and the WOULD-RUN command must point at the real checkout, not the bogus dir
     assert "/nonexistent-xyz/.claude" not in rows["validate-skills"], rows["validate-skills"]
+
+
+def test_post_step_rc3_is_a_skip_not_a_fail(monkeypatch):
+    """FI-6: oomguard_setup.py exits 3 without a user manager (container); that is a SKIP row."""
+    import subprocess  # noqa: PLC0415
+    detect = _load("detect", "installer/detect.py")
+    deps = _load("deps", "installer/deps.py")
+    env = detect.Env(os_name="posix", is_windows=False, python="python3", node="node", git="git",
+                     claude_cli=None, tokens={}, real_dir="/nonexistent-xyz/.claude")
+    monkeypatch.setattr(deps, "_load_manifest", lambda: {"post_steps": [
+        {"id": "oomguard", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/installer/oomguard_setup.py", "--apply"], "optional": False},
+        {"id": "boom", "cmd": ["{PYTHON}", "{CLAUDE_DIR}/installer/oomguard_setup.py"], "optional": False}]})
+    answers = iter([subprocess.CompletedProcess([], 3, ".bashrc: PRESENT\nSKIP: no systemd user manager\n", ""),
+                    subprocess.CompletedProcess([], 1, "", "x")])
+    monkeypatch.setattr(deps.plat, "run", lambda cmd, timeout=None, **k: next(answers))
+    rows = dict(deps.run_post_steps(env))
+    assert rows["oomguard"] == "SKIP(SKIP: no systemd user manager)"
+    assert rows["boom"] == "FAIL(rc=1)"
 
 
 # --------------------------------------------------------------------------- #

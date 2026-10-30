@@ -5,8 +5,10 @@
   L3  ~/.config/systemd/user/claude-memwatch.service + claude-restore.service (rendered templates
       from hooks/tools/oomguard/), daemon-reload, enable; a changed memwatch unit under a running service
       is `try-restart`ed; the restore oneshot only needs the reload
-  L1  a PATH block at the END of ~/.zshrc / ~/.bashrc (after lean-ctx's block) so $HOME/.claude/bin/claude
-      resolves first; a missing rc file is never created
+  L1  a PATH block at the END of ~/.zshrc / ~/.bashrc / ~/.profile (after lean-ctx's block) so
+      $HOME/.claude/bin/claude resolves first and ~/.local/bin (the real claude) follows; a missing rc file
+      is never created; an older block of ours is updated in place; written even without a user manager
+  linger  `loginctl enable-linger` for the user (no sudo), unless oomguard.local.json "linger": false
       attach_live(): today's running claude sessions move into claude-safe-<pid>.scope (OOMPolicy=continue)
 
 Files we own carry the marker ``agentic-mercy oomguard``; a file without it is the user's and is kept.
@@ -19,6 +21,7 @@ carry no unit-manager literal: hooks/tests/test_index_lifecycle.py grep gate).
 from __future__ import annotations
 
 import argparse
+import getpass
 import os
 import shutil
 import sys
@@ -36,9 +39,14 @@ from lib import platform as plat  # noqa: E402
 MARK = "agentic-mercy oomguard"
 BEGIN = "# >>> claude-workbench >>>"
 END = "# <<< claude-workbench <<<"
-PATH_LINE = 'export PATH="$HOME/.claude/bin:$PATH"'
+# ~/.local/bin too: the native claude, node, uv and gh land there, and a login shell without it
+# finds the wrapper but not the real binary (FI-11)
+PATH_LINE = 'export PATH="$HOME/.claude/bin:$HOME/.local/bin:$PATH"'
 NO_MANAGER = "SKIP: no systemd user manager"
+SKIP_RC = 3  # main(): the rc the post step maps to SKIP (deps.run_post_steps), not FAIL (FI-6)
 _CHANGED = ("CREATED", "UPDATED")
+# loginctl keeps one file per lingering user here; readable without a session or sudo
+LINGER_DIR = Path("/var/lib/systemd/linger")
 
 
 def _render(text: str, subs: dict) -> str:
@@ -90,6 +98,19 @@ def _ensure_rc(rc: Path, dry: bool) -> str:
     text = rc.read_text(encoding="utf-8", errors="replace")
     if BEGIN in text and PATH_LINE in text:
         return f"{rc.name}: PRESENT"
+    start, end = text.find(BEGIN), text.find(END)
+    if 0 <= start < end:  # an older block of ours: rewrite only the text between the markers
+        if dry:
+            return f"{rc.name}: WOULD-UPDATE PATH block"
+        new = text[:start] + f"{BEGIN}\n{PATH_LINE}\n" + text[end:]
+        mode = rc.stat().st_mode & 0o777
+        if not plat.atomic_write(rc, new):
+            return f"{rc.name}: WARN(write failed)"
+        try:
+            rc.chmod(mode)
+        except OSError:
+            pass
+        return f"{rc.name}: UPDATED PATH block"
     if dry:
         return f"{rc.name}: WOULD-APPEND PATH block"
     with open(rc, "a", encoding="utf-8") as fh:  # append only: a shell rc is never rewritten
@@ -224,6 +245,28 @@ def _restore(run, dry: bool, root: Path, local_cfg: Path) -> str:
     return "claude-restore: " + ("DISABLED" if rc == 0 else f"WARN(rc={rc})")
 
 
+def _user() -> str:
+    return os.environ.get("USER") or getpass.getuser()
+
+
+def _linger(run, dry: bool, which, home: Path, linger_dir: Path = LINGER_DIR, user: str | None = None) -> str:
+    """Lingering starts the user manager at boot (memwatch from boot, the restore unit at boot) and
+    keeps scopes and the tmux server alive after logout (FI-2). Self-linger needs no sudo (polkit
+    set-self-linger). Opt out: oomguard.local.json ``"linger": false``."""
+    if not ogc.linger_wanted(home / ".claude" / "oomguard.local.json"):
+        return "linger: SKIP(oomguard.local.json)"
+    user = user or _user()
+    if (Path(linger_dir) / user).exists():
+        return "linger: OK"
+    if not which("loginctl"):
+        return "linger: SKIP(no loginctl)"
+    if dry:
+        return "linger: WOULD-ENABLE"
+    cp = run(["loginctl", "enable-linger", user], timeout=15)
+    rc = getattr(cp, "returncode", 1)
+    return "linger: ENABLED" if rc == 0 else f"linger: WARN(rc={rc}; run: sudo loginctl enable-linger {user})"
+
+
 def _foreign_home(home: Path) -> bool:
     """The systemd user manager reads the account's real HOME; a sandbox HOME must not drive it."""
     try:
@@ -240,17 +283,21 @@ def _sandboxed(home: Path, bus_injected: bool) -> bool:
 
 
 def ensure(dry: bool = False, *, home=None, run=None, which=None, bus=..., root=None, proc_root="/proc",
-           uid=None) -> list[str]:
+           uid=None, linger_dir: Path = LINGER_DIR) -> list[str]:
     """Bring L0/L1/L3 to the wanted state; one row per item. Never raises on a probe; never needs root.
-    In a sandbox (see _sandboxed) the files are written but no systemctl/busctl verb runs."""
+    In a sandbox (see _sandboxed) the files are written but no systemctl/busctl verb runs. Without a
+    user manager (container, SSH without a bus) only the PATH block is written, then NO_MANAGER."""
     home = Path(home or Path.home())
     run = run or plat.run
     which = which or shutil.which
     root = Path(root or _ROOT)
     sandbox = _sandboxed(home, bus is not ...)
     bus = plat.systemd_user_bus() if bus is ... else bus
-    if plat.IS_WINDOWS or bus is None or not which("systemctl"):
+    if plat.IS_WINDOWS:
         return [NO_MANAGER]
+    rc_rows = [_ensure_rc(rc, dry) for rc in _rc_files(home)]  # plain file edits, no systemd needed
+    if bus is None or not which("systemctl"):
+        return rc_rows + [NO_MANAGER]
     tmpl, subs = root / "hooks" / "tools" / "oomguard", _subs(root)
     rows = [_ensure_file(home / ".config" / "systemd" / "user.conf.d" / "10-oom.conf",
                          (tmpl / "10-oom.conf").read_text(encoding="utf-8"), dry, "drop-in 10-oom.conf",
@@ -262,8 +309,8 @@ def ensure(dry: bool = False, *, home=None, run=None, which=None, bus=..., root=
     changed = any(r.rsplit(": ", 1)[-1] in _CHANGED for r in rows)
     if sandbox:
         rows += ["systemctl daemon-reload: SKIP(sandbox)", "claude-memwatch: SKIP(sandbox)",
-                 "claude-restore: SKIP(sandbox)"]
-        rows += [_ensure_rc(rc, dry) for rc in _rc_files(home)]
+                 "claude-restore: SKIP(sandbox)", "linger: SKIP(sandbox)"]
+        rows += rc_rows
         return rows + ["attach: SKIP(sandbox)"]
     if dry:
         rows.append("systemctl daemon-reload: " + ("WOULD-RUN" if any("WOULD-" in r for r in rows) else "OK"))
@@ -277,8 +324,8 @@ def ensure(dry: bool = False, *, home=None, run=None, which=None, bus=..., root=
     if stale_row:
         rows.append(stale_row)
     rows.append(_restore(run, dry, root, home / ".claude" / "oomguard.local.json"))
-    for rc in _rc_files(home):
-        rows.append(_ensure_rc(rc, dry))
+    rows.append(_linger(run, dry, which, home, linger_dir))
+    rows += rc_rows
     rows += attach_live(dry, run=run, proc_root=proc_root, bus=bus, uid=uid)  # after the reload: item 15
     return rows
 
@@ -382,12 +429,15 @@ def main(argv=None) -> int:
     g.add_argument("--apply", action="store_true", help="make the changes")
     g.add_argument("--dry-run", action="store_true", help="print what would change (default)")
     args = ap.parse_args(argv)
+    rows: list[str] = []
     try:
-        for row in ensure(dry=not args.apply):
+        rows = ensure(dry=not args.apply)
+        for row in rows:
             print(row)
     except Exception as exc:  # noqa: BLE001 - rows carry WARN; the installer never fails on the guard
         print(f"oomguard: WARN({type(exc).__name__}: {exc})")
-    return 0
+    # no user manager: a real SKIP for the post step (rc 3), not OK and not FAIL
+    return SKIP_RC if rows and rows[-1] == NO_MANAGER else 0
 
 
 if __name__ == "__main__":

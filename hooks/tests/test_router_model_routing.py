@@ -39,6 +39,9 @@ def test_regression_prompt_is_model_routing_not_frontend(tmp_path):
     for s in FE_SKILLS:
         assert s not in text, s
     assert "frontend-uiux-designer" not in text and "act design" not in text
+    # RQ-6: the pointer is the answer; no skill push, no act line, no workflow, no browser line
+    assert "(MUST-READ)" not in text and "SHOULD-READ" not in text
+    assert "WORKFLOW:" not in text and "Your app is running" not in text
 
 
 def test_redesign_of_a_page_is_still_ui():

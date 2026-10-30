@@ -56,6 +56,12 @@ def dev_signal(profile) -> bool:
                 or profile.surface_source in ("prompt", "cwd"))
 
 
+def infra_routing(profile) -> bool:
+    """Model-routing talk about the workbench itself (RQ-6): the pointer line to
+    model-policy.json is the whole answer; no skill push, no act, no browser line."""
+    return "MODEL_ROUTING" in profile.intents and "claude-infra" in profile.surfaces
+
+
 def _trivial_only(profile) -> bool:
     return "TRIVIAL" in profile.intents and not (_WRITE_INTENTS & set(profile.intents))
 
@@ -148,4 +154,4 @@ def cap_section(items: list[dict], section: str, n: int) -> list[dict]:
 
 
 __all__ = ["enforce_level", "dev_signal", "write_gates", "code_shaped", "strong_arch", "skill_line",
-           "session_model", "ui_line", "cap_section"]
+           "session_model", "ui_line", "cap_section", "infra_routing"]

@@ -1,5 +1,77 @@
 # Changelog
 
+## v4.3.1 2026-10-30 audit2 fix pass (not yet released)
+
+Why: a six-report audit (router quality, fresh install on a 15 GiB headless box, security,
+runtime, static integrity, docs) found misroutes on 29 % of live prompts, an install that
+assumed this PC's RAM and lingering, and gate wiring the gates did not protect.
+
+- **Router**: a committed replay corpus (`hooks/tests/fixtures/router_corpus.jsonl`,
+  `test_router_corpus.py`) through the new seam `router.route_payload`, and a live replay
+  (`scripts/router_replay.py --check`, budget `hooks/router-budget.json`: union 0.011 on this
+  PC, from 0.292). Conversational DEBUG/REVIEW phrases are gone (trigger floor charter v3);
+  frontend-only skills need a frontend surface; stack-only tags push nothing; plugin
+  description keywords count half; model-routing talk gets only the policy pointer; "no UI",
+  CLI and URL questions drop the wrong surface; the browser line needs both a QA/VERIFY intent
+  and a phrase, and a dev server inside the active repo; machine prompts (teammate relay,
+  restore prompt, judge cwd) are not routed; model-mode pins honour `CLAUDE_HOOK_STATE_DIR`.
+- **Small and headless boxes**: memwatch tiers, the emergency line and the graphify floor scale
+  with RAM; `bin/claude` derives `MemoryHigh` (min 12G, 45 % of RAM) and reads
+  `oomguard.local.json`; the installer seeds `settings.user.json` with `OLLAMA_HOST` and a
+  RAM-sized tool memory limit, enables lingering (doctor rows: nine, adds `linger`), writes
+  the PATH block (now with `~/.local/bin`) even without a user manager (post step SKIP, not
+  FAIL), adds tmux to the sudo line, skips GUI packages on servers, prints a zram line, keeps
+  `.git` on relocation, prints the checklist in the visual mode's console, and pins tdd-guard,
+  pyright and mmx-cli. `replica_sync.py --posix` for a Linux replica.
+- **Security**: a bare box gets `acceptEdits`, not bypass (`AGENTIC_MERCY_PERMISSION_MODE`
+  opts in); the commit secret scan reads untracked files a same-command `git add` adds;
+  `HUSKY=0`, `SKIP=` and a persistent `core.hooksPath` to nowhere are hook bypasses; four more
+  secret-adjacent files and a world-traversable home are reported; a moved vendored tag raises
+  `RefMoved`; the settings gate also protects the gate scripts, `dispatch.config.json`,
+  `settings.template.json`, `installer/manifest.json` and `.blast-bypass`, and a read-only
+  `open(` no longer counts as a write.
+- **Runtime**: a timeout keeps its `timeout; rc=124` head; graphify's first build gets 20 min and
+  `--max-workers`; jcodemunch outside `trusted_folders` is UNAVAILABLE once; the dox deny names
+  the SKILL.md to Read; the mod holds a write for tdd-guard 300 ms at most and background
+  `--only` runs no longer count as budget overruns; the fable floor is logged; SessionStart
+  drops the duplicate superpowers block and adds a plan-tier line; `doctor.py --help`.
+- **Second pass (FIX2, REVERIFY R1-R7)**:
+  - Pro routing (D6): the tests follow `tiers.pro.ask_only = [sonnet, opus]`, and
+    `workflow-model-guard` no longer lifts a `fable` literal to sonnet on Pro.
+  - `platform.run` decodes a timed-out child's output (POSIX hands back bytes; index-lifecycle
+    raised a TypeError on it).
+  - No /tmp residue: the opus-guard test homes and the atomic-write test dir are removed, and
+    `router_replay.py` no longer leaks one `router-replay-*` dir per routed prompt.
+  - Doctor: a generator without PyYAML is SKIP naming the cause, not `drift`.
+  - Tool memory cap: `CLAUDE_CODE_TOOL_MEMORY_LIMIT` = max(50 % of RAM, 6G) on Linux over 12 GB,
+    because one cgroup serves every session's tool commands; a SIGKILLed `tsc` / plugin test is
+    WARN `killed: memory cap`.
+  - The dispatcher keeps `state/dispatch.config.lkg.json` and runs it when
+    `dispatch.config.json` is missing or corrupt; if neither parses it fails open and says so.
+  - `git stage` counts as `git add` for the commit secret scan; an exported or earlier
+    `HUSKY=0` / `SKIP=` before a commit is a hook bypass (gate edit by the owner).
+  - The settings gate also asks on a move, delete, truncate, `dd of=` or `git checkout|restore`
+    of the wiring, a copy into `~/.claude/hooks/`, and a move of `~/.claude` or `hooks/` (gate
+    edit by the owner).
+- **Third pass (FIX3, a fresh install on a 16 GB laptop)**:
+  - npm CLIs reach PATH when node lives in a prefix whose `bin` is off PATH: the installer links
+    lean-ctx, tdd-guard, pyright, pyright-langserver and mmx into `~/.local/bin` from npm's own prefix,
+    counts them PRESENT there (no reinstall each run), and the new doctor row `cli-on-path` FAILs when an
+    MCP command or one of those CLIs does not resolve on the shell's PATH.
+  - lean-ctx installs with `--ignore-scripts` and the pinned, sha256-checked v3.10.5 release binary: no
+    `releases/latest`, no `onboard` (telemetry, settings.json injection, a `serve` daemon); its config is
+    merged again after the deps step (install and daily), an injected settings.json counts as stale,
+    `*.v4-migration.*` is ignored, and the doctor row `lean-ctx-runtime` WARNs on a daemon or a version
+    other than the pin.
+  - `bin/claude` runs subcommands (`claude plugin test`, `claude mcp …`) untouched: no scope, caps or
+    `--settings`; the doctor calls the real binary.
+  - Memory: every cap is MemTotal minus 4 GiB, never below half (scope `MemoryHigh` in `bin/claude` and
+    `bin/claude-tmux`, the machine-wide tool cap); memwatch warns under 15 % of MemTotal, crit 8 %,
+    emergency 4 %, swap rule 22.5 %. The template keeps its 5 / 4 agent floor; the overlay sizes it per
+    machine (3 / 2 on 16 GB).
+  - The installer copies `scripts/sudo-askpass.example.sh` to the gitignored helper (mode 700) when
+    `.env` holds `LOCAL_SUDO_PASS`, and the helper reads that file only.
+
 ## v4.3.0 — 2026-10-30 ECC merge, OOM guard, plan-tier routing, workflows
 
 Why: the workbench took what was worth keeping from ECC (everything-claude-code), stopped OOM kills
@@ -10,7 +82,7 @@ worktree, then one integration pass applied every shared-file change.
 - **OOM guard**: `claude-memwatch` sentinel with a tiered ladder (warn, crit, kill), `bin/claude`
   scope launcher with per-launch caps, the live-session ledger and gated restore
   (`scripts/restore_sessions.py`), statusline memory segment, `memwatch-brake` gate,
-  `memwatch-ensure` link, six doctor rows, index builders in their own memory-capped scopes.
+  `memwatch-ensure` link, eight doctor rows, index builders in their own memory-capped scopes.
   Runbook: `docs/OOM-GUARD.md`.
 - **Plan-tier routing**: `hooks/plan-tier-detect.py` reads the plan from the login once per session
   (`state/plan-tier.json`); Haiku 5.5 is the default worker, tiers pick executor and judge models,

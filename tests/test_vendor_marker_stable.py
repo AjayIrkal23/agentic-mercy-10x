@@ -76,3 +76,30 @@ def test_new_sha_gets_todays_stamp(tmp_path, monkeypatch):
                                           encoding="utf-8")
     vs.vendor("x", {"repo": "r", "ref": SHA})
     assert json.loads((skills / "x" / vs.MARKER).read_text(encoding="utf-8"))["vendored_at"] != "2026-01-01"
+
+
+# --- SP-7: a moved tag is never taken silently --------------------------------------------------------------
+def test_a_moved_tag_raises_and_leaves_the_tree(tmp_path, monkeypatch):
+    skills = _box(tmp_path, monkeypatch)
+    (skills / "x").mkdir()
+    marker = {"repo": "r", "ref": "v3.3.0", "sha": "b" * 40, "vendored_at": "2026-01-01"}
+    (skills / "x" / vs.MARKER).write_text(json.dumps(marker), encoding="utf-8")
+    (skills / "x" / "SKILL.md").write_text("old\n", encoding="utf-8")
+    before = _mtimes(skills / "x")
+    try:
+        vs.vendor("x", {"repo": "r", "ref": "v3.3.0"})
+    except vs.RefMoved as exc:
+        assert "b" * 12 in str(exc) and SHA[:12] in str(exc) and "--ref v3.3.0" in str(exc)
+    else:
+        raise AssertionError("RefMoved not raised")
+    assert _mtimes(skills / "x") == before
+    vs.vendor("x", {"repo": "r", "ref": "v3.3.0"}, ref="v3.3.0")   # explicit: the owner reviewed it
+    assert json.loads((skills / "x" / vs.MARKER).read_text(encoding="utf-8"))["sha"] == SHA
+
+
+def test_same_tag_same_sha_is_unchanged(tmp_path, monkeypatch):
+    skills = _box(tmp_path, monkeypatch)
+    (skills / "x").mkdir()
+    (skills / "x" / vs.MARKER).write_text(json.dumps({"repo": "r", "ref": "v1", "sha": SHA,
+                                                      "vendored_at": "2026-01-01"}), encoding="utf-8")
+    assert vs.vendor("x", {"repo": "r", "ref": "v1"}) == SHA

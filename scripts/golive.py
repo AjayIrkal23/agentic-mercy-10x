@@ -182,7 +182,9 @@ _ZRAM_RESTART_HEADROOM_MB = 2048
 
 
 def _crit_mb() -> int:
-    """memwatch's crit line (hooks/memwatch.config.json tiers.crit.mem_available_mb); 3072 when unreadable."""
+    """memwatch's crit line (hooks/memwatch.config.json tiers.crit.mem_available_mb); 3072 when unreadable.
+    The raw shipped number, not the RAM-scaled one memwatch uses: golive runs on the owner's ~30 GB
+    machine, where the scale factor is 1.0."""
     try:
         cfg = json.loads((ROOT / "hooks" / "memwatch.config.json").read_text(encoding="utf-8"))
         return int(cfg["tiers"]["crit"]["mem_available_mb"])

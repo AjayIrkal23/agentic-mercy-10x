@@ -352,3 +352,19 @@ def test_crit_exempt_link_is_never_budget_dropped(tmp_path):
         slow_gate, _adv(tmp_path, "q1", 1), _adv(tmp_path, "q2x", 2, crit_exempt=True)]}}
     out = _ctx(mod.dispatch("pre-tool-use", {"tool_name": "Bash"}, cfg))
     assert "Q2X" in out and "Q1" not in out
+
+
+# ---- RT-6: a background --only run over budget is not a budget overrun ------ #
+def test_only_run_over_budget_is_slow_bg_not_an_overrun(tmp_path):
+    mod = _load()
+    slow = {"id": "slowx", "type": "advisory", "tools": "Bash",
+            "cmd": _script(tmp_path, "slowx", "json.load(sys.stdin); time.sleep(0.2); print('{}')\n")}
+    cfg = {"budgets": {"pre-tool-use": {"ms": 1, "chars": 4000}}, "chains": {"pre-tool-use": [slow]}}
+    bg, fg = f"bg-{time.time_ns()}", f"fg-{time.time_ns()}"
+    mod.dispatch("pre-tool-use", {"session_id": bg, "tool_name": "Bash"}, cfg, frozenset({"slowx"}))
+    mod.dispatch("pre-tool-use", {"session_id": fg, "tool_name": "Bash"}, cfg)
+    bg_rows = [r for r in _rows("_dispatch") if r.get("session") == bg]
+    fg_rows = [r for r in _rows("_dispatch") if r.get("session") == fg]
+    assert any(r.get("decision") == "slow-bg" and r.get("budget_hit") is False for r in bg_rows), bg_rows
+    assert not any(r.get("decision") == "budget-overrun" for r in bg_rows)
+    assert any(r.get("decision") == "budget-overrun" and r.get("budget_hit") is True for r in fg_rows), fg_rows

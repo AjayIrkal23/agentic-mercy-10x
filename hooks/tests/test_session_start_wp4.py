@@ -230,3 +230,37 @@ def test_doctor_run_skips_subprocesses_worktree_and_stays_under_the_acceptance_b
     assert calls == []
     assert len(raw[0].encode("utf-8")) <= 5500
     assert "ALWAYS-ON STYLE" in ctx and "[Always-active core skills]" in ctx
+
+
+# --------------------------------------------------------------------------- RT-8
+def _sp_plugin(agg, monkeypatch, tmp_path):
+    skills = tmp_path / "plugins" / "cache" / "m" / "superpowers" / "5.0.0" / "skills"
+    (skills / "using-superpowers").mkdir(parents=True)
+    (skills / "using-superpowers" / "SKILL.md").write_text("x", encoding="utf-8")
+    monkeypatch.setattr(agg, "PLUGINS_ROOT", tmp_path / "plugins")
+
+
+def test_enabled_superpowers_plugin_gets_no_duplicate_block(agg, monkeypatch, tmp_path):
+    """The plugin's own SessionStart already prints its bootstrap: ours would be a second copy."""
+    _no_hooks(agg, monkeypatch, tmp_path)
+    _sp_plugin(agg, monkeypatch, tmp_path)
+    settings = tmp_path / "home" / ".claude" / "settings.json"
+    settings.write_text(json.dumps({"enabledPlugins": {"superpowers@claude-plugins-official": True}}),
+                        encoding="utf-8")
+    ctx = _run(agg, {"cwd": str(tmp_path), "source": "startup"}, monkeypatch)
+    assert "### Superpowers plugin (active)" not in ctx and ctx.count("ALWAYS-ON STYLE") == 1
+    settings.write_text(json.dumps({"enabledPlugins": {"superpowers@claude-plugins-official": False}}),
+                        encoding="utf-8")
+    assert "### Superpowers plugin (active)" in agg._superpowers_session_context()
+
+
+def test_tier_line_appears_with_a_plan_tier_file(agg, monkeypatch, tmp_path):
+    _no_hooks(agg, monkeypatch, tmp_path)
+    mod = agg._notices_module()
+    assert mod.tier_line() == ""
+    (tmp_path / "pstate").mkdir(exist_ok=True)
+    (tmp_path / "pstate" / "plan-tier.json").write_text(json.dumps({"tier": "max20", "main": "opus"}),
+                                                        encoding="utf-8")
+    assert mod.tier_line() == "plan tier max20 · main opus"
+    ctx = _run(agg, {"cwd": str(tmp_path), "source": "startup"}, monkeypatch)
+    assert "plan tier max20 · main opus" in ctx

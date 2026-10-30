@@ -166,19 +166,35 @@ def _merge_canonical(raw: dict[str, float]) -> dict[str, float]:
 # --------------------------------------------------------------------------- #
 # scorers
 # --------------------------------------------------------------------------- #
+_FE = frozenset({"frontend", "ui"})
+
+
+def _fe_only(meta: dict) -> bool:
+    """A skill whose surfaces are all frontend/ui (fixing-*, improve-ui, debug-broken-ui)."""
+    s = set((meta or {}).get("surfaces") or [])
+    return bool(s) and s <= _FE
+
+
+def _fe_ok(profile) -> bool:
+    """The prompt or cwd established a frontend surface (a stack-only React dep does not)."""
+    strong = set(profile.surfaces) - set(getattr(profile, "weak_surfaces", set()) or set())
+    return bool(_FE & strong) or bool(getattr(profile, "is_ui", False))
+
+
 def _index_skills(profile, index: dict, grams: set) -> dict[str, float]:
     scores: dict[str, float] = {}
     intents = set(profile.intents)
     surfaces = set(profile.surfaces)
     weak = set(getattr(profile, "weak_surfaces", set()) or set())
     weak_factor = float(_router_cfg().get("weak_surface_factor", 0.5))
+    fe_ok = _fe_ok(profile)
     for name, meta in (index.get("skills") or {}).items():
         if not isinstance(meta, dict):
             continue
-        # description-token keywords (index source `description`; `floor-fallback`
-        # on the no-index path) count half and saturate at 2.0 — a long description
-        # must not outscore a real signal; curated keywords count 1.0, cap 4.0
-        fallback = meta.get("source") in ("description", "floor-fallback")
+        # description-token keywords (index source `description`, `plugin-description`;
+        # `floor-fallback` on the no-index path) count half and saturate at 2.0 — a long
+        # description must not outscore a real signal; curated keywords count 1.0, cap 4.0
+        fallback = meta.get("source") in ("description", "floor-fallback", "plugin-description")
         kw_w, kw_cap = (0.5, 2.0) if fallback else (1.0, 4.0)
         s = 0.0
         for kw in meta.get("keywords", []) or []:
@@ -186,7 +202,7 @@ def _index_skills(profile, index: dict, grams: set) -> dict[str, float]:
             if _classify.keyword_ok(k) and _classify.words(k) in grams:
                 s += kw_w
         s = min(s, kw_cap)
-        if intents & set(meta.get("intents", []) or []):
+        if intents & set(meta.get("intents", []) or []) and (fe_ok or not _fe_only(meta)):
             s += 1.5
         hit = surfaces & set(meta.get("surfaces", []) or [])
         if hit:  # stack-only (weak) surfaces earn partial credit, like _surface_skills
@@ -262,10 +278,14 @@ def _category_skills(profile) -> dict[str, float]:
     ``stack_groups[<surface>]`` for each surface the PROMPT/cwd established
     (stack-only inferences do not count) plus ``stack_groups.cross_cutting`` at
     half boost — so a build prompt never drags the other surface's baseline in.
+    The other categories skip frontend-only skills unless a frontend surface is
+    established (RQ-1: a REVIEW of an install plan is not an accessibility review).
     """
     scores: dict[str, float] = {}
     cats = _auton()
     strong = set(profile.surfaces) - set(getattr(profile, "weak_surfaces", set()) or set())
+    idx = _load_index().get("skills") or {}
+    fe_ok = _fe_ok(profile)
     for cat, hit_score in (profile.intents or {}).items():
         meta = cats.get(cat)
         if not isinstance(meta, dict):
@@ -281,6 +301,8 @@ def _category_skills(profile) -> dict[str, float]:
                 scores[sk] = max(scores.get(sk, 0.0), boost * 0.5)
             continue
         for sk in meta.get("local_skills") or []:
+            if not fe_ok and _fe_only(idx.get(sk) or {}):
+                continue
             scores[sk] = max(scores.get(sk, 0.0), boost)
     return scores
 
@@ -291,8 +313,18 @@ def _surface_skills(profile) -> dict[str, float]:
     weak_factor = float(cfg.get("weak_surface_factor", 0.5))
     weak = set(getattr(profile, "weak_surfaces", set()) or set())
     scores: dict[str, float] = {}
+    # a cwd-only surface pushes nothing on a ship/size-only one-liner (RQ-10: "commit and push")
+    if (getattr(profile, "surface_source", "") == "cwd"
+            and set(profile.intents) <= {"SHIP", "RESUME", "TRIVIAL", "SMALL", "MEDIUM", "LARGE"}):
+        return scores
     for surf in profile.surfaces:
-        f = weak_factor if surf in weak else 1.0
+        if surf in weak:
+            # stack-only tags (three, motion, shadcn...) need the prompt to name them (RQ-4)
+            f = weak_factor if surf in ("frontend", "backend") else 0.0
+        else:
+            f = 1.0
+        if not f:
+            continue
         for sk, boost in (table.get(surf) or {}).items():
             scores[sk] = max(scores.get(sk, 0.0), float(boost) * f)
     return scores

@@ -3,11 +3,14 @@
   oom-policy       DefaultOOMPolicy=continue AND this process's own scope continue (FAIL on stop)
   memwatch-unit    claude-memwatch.service installed, active, ExecStart = this tree's hooks/tools/memwatch.py
   memwatch-code    the running daemon is newer than memwatch.py / its config / libs (WARN: self-heal restarts it)
-  restore-unit     claude-restore enabled iff oomguard.local.json restore_enabled
-  claude-launcher  zsh -i / bash -i / bash -l resolve `claude` to ~/.claude/bin/claude
+  restore-unit     claude-restore enabled iff oomguard.local.json restore_enabled (WARN: enabled, no tmux)
+  claude-launcher  zsh -i / bash -i / bash -l resolve `claude` to ~/.claude/bin/claude, and the wrapper
+                   finds the real binary (FAIL when it does not: ~/.local/bin missing from PATH)
   launcher-model   bin/claude passes --model <plan-tier main>, or a --model / ANTHROPIC_MODEL / saved /model pick wins
   launch-caps      a launch through bin/claude in the last 24 h
   attach-live      no running claude session left in a stop scope
+  linger           /var/lib/systemd/linger/<user> exists (FAIL when the guard is installed without it),
+                   or oomguard.local.json "linger": false
 
 Every probe is wrapped (an error is a WARN row), every subprocess capped at 2 s. Windows, no user
 manager, a sandbox (foreign HOME on the real bus, or AGENTIC_MERCY_SANDBOX=1) or ``ci=True``: SKIP rows.
@@ -33,7 +36,7 @@ from lib import platform as plat  # noqa: E402
 
 PASS, WARN, FAIL, SKIP = "PASS", "WARN", "FAIL", "SKIP"
 NAMES = ("oom-policy", "memwatch-unit", "memwatch-code", "restore-unit", "claude-launcher", "launcher-model",
-         "launch-caps", "attach-live")
+         "launch-caps", "attach-live", "linger")
 TIMEOUT = 2
 
 
@@ -73,11 +76,13 @@ def _memwatch_unit(run, home, root):
     return PASS, f"active, {_verb(run, 'is-enabled', 'claude-memwatch') or '?'}"
 
 
-def _restore_unit(run, home, root):
+def _restore_unit(run, home, root, which=shutil.which):
     if not (root / "scripts" / "restore_sessions.py").exists():
         return SKIP, "scripts/restore_sessions.py absent"
     want = ogc.restore_enabled(home / ".claude" / "oomguard.local.json")
     state = _verb(run, "is-enabled", "claude-restore") or "unknown"
+    if want and state == "enabled" and not which("tmux"):  # restore_sessions.py relaunches into tmux (FI-5)
+        return WARN, "tmux missing: restore cannot run (sudo apt-get install -y tmux)"
     if want and state == "enabled":
         return PASS, "enabled"
     if not want and state != "enabled":
@@ -102,6 +107,11 @@ def _launcher(run, which):
         got = lines[-1].strip() if lines else ""
         if not got.endswith("/.claude/bin/claude"):
             bad.append(f"{label} resolves claude to {got or 'nothing'}")
+    if which("bash"):  # the wrapper resolves, but can it find the real binary? (FI-11)
+        cp = run(["bash", "-ic", "CLAUDE_LAUNCHER_PRINT_ARGV=1 claude"], timeout=TIMEOUT)
+        text = (getattr(cp, "stdout", "") or "") + (getattr(cp, "stderr", "") or "")
+        if getattr(cp, "returncode", 0) == 127 or "real binary not found" in text:
+            return FAIL, "wrapper on PATH, real claude missing: add ~/.local/bin to PATH"
     labels = [p[0] for p in probes]
     joined = labels[0] if len(labels) == 1 else ", ".join(labels[:-1]) + " and " + labels[-1]
     return (WARN, "; ".join(bad)) if bad else (PASS, joined + " -> ~/.claude/bin/claude")
@@ -154,6 +164,19 @@ def _attach(run, proc_root, bus, uid):
     return PASS, f"{len(done)} live session(s) in continue scopes"
 
 
+def _linger_row(home, linger_dir):
+    """Lingering on (FI-2): memwatch runs from boot and survives logout. FAIL when the guard is
+    installed but the user manager only starts at login."""
+    if not ogc.linger_wanted(home / ".claude" / "oomguard.local.json"):
+        return PASS, "opted out (oomguard.local.json)"
+    user = oomguard_setup._user()
+    if (Path(linger_dir) / user).exists():
+        return PASS, "Linger=yes"
+    if (home / ".config" / "systemd" / "user" / "claude-memwatch.service").exists():
+        return FAIL, f"memwatch only runs while you are logged in (run: loginctl enable-linger {user})"
+    return WARN, "not enabled yet (installer/oomguard_setup.py --apply enables it)"
+
+
 def _memwatch_code(run, root, proc_root):
     capped = lambda cmd, timeout=None, **_: run(cmd, timeout=TIMEOUT)  # noqa: E731 - every probe capped at 2 s
     stale = oomguard_setup.code_newer_than_daemon(capped, root, proc_root)
@@ -165,7 +188,7 @@ def _memwatch_code(run, root, proc_root):
 
 
 def rows(root=".", *, run=None, which=None, home=None, bus=..., proc_root="/proc", ci=False, uid=None,
-         now=None) -> list[tuple[str, str, str]]:
+         now=None, linger_dir=None) -> list[tuple[str, str, str]]:
     root, home = Path(root).resolve(), Path(home or Path.home())
     run, which = run or plat.run, which or shutil.which
     injected = bus is not ...
@@ -178,10 +201,12 @@ def rows(root=".", *, run=None, which=None, home=None, bus=..., proc_root="/proc
         return [(n, SKIP, "no systemd user manager") for n in NAMES]
     probes = (("oom-policy", lambda: _oom_policy(run, proc_root)), ("memwatch-unit", lambda: _memwatch_unit(run, home, root)),
               ("memwatch-code", lambda: _memwatch_code(run, root, proc_root)),
-              ("restore-unit", lambda: _restore_unit(run, home, root)), ("claude-launcher", lambda: _launcher(run, which)),
+              ("restore-unit", lambda: _restore_unit(run, home, root, which)),
+              ("claude-launcher", lambda: _launcher(run, which)),
               ("launcher-model", lambda: _launcher_model(run, root, home)),
               ("launch-caps", lambda: _launch_caps(time.time() if now is None else now)),
-              ("attach-live", lambda: _attach(run, proc_root, bus, uid)))
+              ("attach-live", lambda: _attach(run, proc_root, bus, uid)),
+              ("linger", lambda: _linger_row(home, linger_dir or oomguard_setup.LINGER_DIR)))
     out = []
     for name, fn in probes:
         try:

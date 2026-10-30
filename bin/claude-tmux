@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # agentic-mercy oomguard tmux launcher: runs the tmux server in its own scope that survives one OOM
-# victim. Panes still get their own tmux-spawn-*.scope (tmux 3.6), so each pane's `claude` is protected
-# by bin/claude; this script protects the server itself. No user bus, no systemd-run, or already inside
-# a guarded scope: plain `exec tmux`. Design: docs/OOM-GUARD.md (layer L1).
+# victim, with bin/claude's MemoryHigh. Panes get their own tmux-spawn-*.scope from tmux 3.6 on, so each
+# pane's `claude` is protected by bin/claude; this scope covers the server (and, before tmux 3.6, the
+# panes' other processes). No user bus, no systemd-run, or already inside a guarded scope: plain
+# `exec tmux`. Design: docs/OOM-GUARD.md (layer L1).
 set -u
 
 if [ "${CLAUDE_WORKBENCH_SCOPE:-}" = 1 ] || [ ! -e "${XDG_RUNTIME_DIR:-/nonexistent}/bus" ]; then
@@ -11,5 +12,25 @@ fi
 if ! command -v systemd-run >/dev/null 2>&1; then
   exec tmux "$@"
 fi
+# MemoryHigh: bin/claude's chain and rule (tests/test_claude_wrapper.py pins both to one value)
+mh=${CLAUDE_SCOPE_MEMORY_HIGH:-}
+if [ -z "$mh" ]; then
+  ocfg=$(cat "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/oomguard.local.json" 2>/dev/null || true)
+  if [[ $ocfg =~ \"memory_high\"[[:space:]]*:[[:space:]]*\"([0-9]+[KMGT]?)\" ]]; then mh=${BASH_REMATCH[1]}; fi
+fi
+if [ -z "$mh" ]; then
+  meminfo=${CLAUDE_LAUNCHER_MEMINFO:-/proc/meminfo}
+  total_kb=0
+  if [ -r "$meminfo" ]; then
+    while IFS=': ' read -r key val _; do
+      [ "$key" = MemTotal ] && total_kb=$val
+    done < "$meminfo"
+  fi
+  case "$total_kb" in ''|*[!0-9]*) total_kb=0 ;; esac
+  total_mb=$(( total_kb / 1024 ))
+  cap_mb=$(( total_mb - 4096 ))
+  [ "$cap_mb" -lt $(( total_mb / 2 )) ] && cap_mb=$(( total_mb / 2 ))
+  if [ "$total_mb" -le 0 ]; then mh=12G; else mh="${cap_mb}M"; fi
+fi
 exec systemd-run --user --scope --quiet --collect --unit "tmux-claude-$$" \
-  -p OOMPolicy=continue -p ManagedOOMPreference=omit -- tmux "$@"
+  -p OOMPolicy=continue -p ManagedOOMPreference=omit -p "MemoryHigh=$mh" -- tmux "$@"

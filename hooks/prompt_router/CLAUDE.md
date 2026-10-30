@@ -121,6 +121,25 @@ telemetry records.
   run the hook as a subprocess; keep them green (`python3 -m pytest hooks/tests -q`).
   `test_router_model_routing.py` pins the R3.6 regression prompt; `test_workflow_routes.py`
   uses a tmp `CLAUDE_CONFIG_DIR` with its own `workflows/index.json`.
+- **Replay corpus (audit2, 2026-10-30).** `router.route_payload(payload) -> str` is the in-process
+  seam (`run()` prints it). `tests/test_router_corpus.py` replays
+  `tests/fixtures/router_corpus.jsonl` (paraphrased; TEST-NET IPs only): hard and positive rows
+  never miss, soft rows stay under 10 %. The live twin is `scripts/router_replay.py --check`
+  against `hooks/router-budget.json`. A new misroute becomes a fixture row first, then a fix;
+  never raise a budget to pass.
+- Rules the corpus pins: frontend-only skills (`surfaces` ⊆ {frontend, ui}) need a strong
+  frontend surface or `is_ui`, both in the category lists and for the intent bonus (backend-only
+  skills are not guarded: `postgres-patterns` on Supabase prompts); a stack-only tag (`three`,
+  `motion`, `shadcn`, ...) pushes nothing until the prompt names it (weak `frontend`/`backend`
+  still score at half); plugin skills with description-derived keywords (`plugin-description`)
+  count half like local ones; `MODEL_ROUTING` on `claude-infra` (`policy.infra_routing`) gets the
+  `model-policy.json` pointer only (no skill, act, WORKFLOW or browser line); "no UI" /
+  "plain-text" / "a CLI tool" drop the frontend unless the prompt still names it; a pasted URL
+  with no task intent drops backend/frontend/api; a cwd-only surface pushes nothing on a
+  ship/size-only one-liner, and a prompt-named page makes cwd `backend` weak. Machine prompts
+  (teammate relay, `CONTINUE_PROMPT` of `scripts/restore_sessions.py`, the `double-shot-latte`
+  judge cwd) are trivial. DEBUG/REVIEW keyword lists hold no conversational phrases (`should be`,
+  `timeout`, `what do you think`, `can you check`, ...): charter v3 of the trigger floor.
 
 ## Up / down
 

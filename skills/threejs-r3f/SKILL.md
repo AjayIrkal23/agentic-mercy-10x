@@ -10,9 +10,8 @@ metadata:
   category: frontend
   surfaces: [frontend]
   triggers:
-    keywords: [three, three.js, threejs, r3f, react-three-fiber, "@react-three/fiber", drei, useGLTF, Canvas, glb, gltf, shader, webgl, 3d model, 3d hero, useFrame, OrbitControls, Environment]
+    keywords: [three.js, threejs, r3f, react-three-fiber, "@react-three/fiber", drei, useGLTF, glb, gltf, shader, webgl, 3d model, 3d hero, useFrame, OrbitControls]
     paths: [/three/, /3d/, /scene/, /scenes/, /models/, /webgl/, /r3f/, .glb]
-    intents: [IMPLEMENT, DESIGN]
 ---
 
 # Three.js in React — React Three Fiber + drei

@@ -28,8 +28,8 @@ aggregator sample. `docs/**` is never searched.
 | 17 | Style: caveman + no-ai-slop + ponytail reply shape | `full technical accuracy || smallest complete change || no banned words` | CLAUDE.md §9, output-styles/caveman.md | `hooks/session-start-aggregator.py` STYLE_DIRECTIVE; output style | SOFT |
 | 18 | Machines file is private, never committed | `never commit it` | CLAUDE.md §10 | `.gitignore`, `scripts/grep_gates.py` G6/G7 | HOOK |
 | 19 | Autonomy: the user only prompts and develops | `I only prompt and develop || Never end a turn with "run X" || Ask me only for human-only steps` | CLAUDE.md §11 | `hooks/tools/selfheal-daily.py`, `tests/test_autonomy_wpd.py` | SOFT |
-| 20 | Run sudo yourself, never ask the user | `never ask me to run sudo` | machines | `scripts/sudo-askpass.sh` (gitignored) | TEXT |
-| 21 | Dev PC #2 never sleeps; full performance | `NEVER let the laptop sleep || Full performance always` | machines | text | TEXT |
+| 20 | Run sudo yourself, never ask the user (owner machines only) | `never ask me to run sudo` | machines | `scripts/sudo-askpass.sh` (gitignored) | TEXT |
+| 21 | Dev PC #2 never sleeps; full performance (owner machines only) | `NEVER let the laptop sleep || Full performance always` | machines | text | TEXT |
 | 22 | Ubuntu + Windows parity | — | memory `cross-platform-ubuntu-windows` | `hooks/lib/platform.py`, `scripts/grep_gates.py`, CI | HOOK |
 | 23 | Zero `lean-ctx` strings in settings.json/CLAUDE.md | — | memory `lean-ctx-shadow-mode-deny-incident` | `installer/render.py` FORBIDDEN_SUBSTRING, `installer/doctor_checks.py` | HOOK |
 | 24 | `permissions.deny` stays `[]` | — | template | `hooks/settings-permissions-selfheal.py` (SessionStart exec and the ConfigChange link `permissions-deny-guard`, same file with arg `config-change`), `tests/test_template_contract.py` | HOOK |
@@ -38,7 +38,7 @@ aggregator sample. `docs/**` is never searched.
 | 27 | Index/graph freshness event-driven; ollama remote, no local fallback | `falls back to a local ollama` | machines | `hooks/index-lifecycle.py`, `installer/ollama_setup.py` | TEXT |
 | 28 | Auto-resume after a usage limit | — | memory `auto-resume-after-limit` | `mods/mercy/hooks/features/lifecycle.ts`, `scripts/restore_sessions.py` | HOOK |
 | 29 | Sessions survive an OOM kill | — | memory `oom-kills-terminal-scope` | `hooks/memwatch-ensure.py`, `hooks/memwatch-brake.py`, `installer/oomguard_setup.py` | HOOK |
-| 30 | Production safety: never touch Contabo/GCP prod, cutover or rollback without the user's word; GCP VM read-only; servers run IST | `without my explicit word || GCP VM is read-only || Servers run IST || Read-only unless the user asks` | machines (prod-safety block written by `scripts/split_machines_file.py`) | text | TEXT |
+| 30 | Production safety (owner machines only): never touch Contabo/GCP prod, cutover or rollback without the user's word; GCP VM read-only; servers run IST | `without my explicit word || GCP VM is read-only || Servers run IST || Read-only unless the user asks` | machines (prod-safety block written by `scripts/split_machines_file.py`) | text | TEXT |
 | 31 | ask-or-advise: every gate `ask` becomes a logged advisory when unattended (subagent, restored session, `-p`, Workflow); `.blast-bypass` never covers secret material; git hook bypass denied; GitHub write tools denied for subagents | — | gates, oom-sentinel | `hooks/lib/gate_mode.py`, `hooks/gateguard-write-gate.py`, `hooks/dangerous-bash-gate.py`, `hooks/connector-ask-gate.py` | HOOK |
 | 32 | Plan ceilings are hard: pro never Opus/Fable; max5 Opus only when asked that turn; Fable only when asked | `pro never Opus` | rules/04 | `hooks/opus-guard.py` (`hooks/tests/test_opus_guard.py::test_tier_matrix_per_role`) | HOOK |
 

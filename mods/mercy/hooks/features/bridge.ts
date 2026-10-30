@@ -112,11 +112,11 @@ function startPump($: EngineInterface, lane: Lane): void {
   void pump($, lane).catch(err => noteError('bridge lane', err))
 }
 
-/** Waits for the fast lane (and the slow one before a write: its tdd-guard advisory rides this call, B1-22), at most 4 s. */
+/** Waits for the fast lane (at most 4 s); before a write, gives the slow lane (tdd-guard) at most 300 ms.
+ * Its advisory otherwise lands on the next tool event (B1-22, RT-6): a write never sits 4 s on tdd-guard. */
 async function drain($: EngineInterface, signal: AbortSignal, write: boolean): Promise<void> {
-  const lanes: Lane[] = write ? ['fast', 'slow'] : ['fast']
-  if (!lanes.some(busy)) return
-  await Promise.race([Promise.all(lanes.map(idle)), $.clock.sleep(4000, { signal })])
+  if (busy('fast')) await Promise.race([idle('fast'), $.clock.sleep(4000, { signal })])
+  if (write && busy('slow')) await Promise.race([idle('slow'), $.clock.sleep(300, { signal })])
 }
 
 /** Whether the git root above `path` already has a CLAUDE.md (undefined outside a repo). */

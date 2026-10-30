@@ -50,6 +50,17 @@ try:
 except Exception:  # noqa: BLE001
     _gs = _cf = None
 
+
+def _skill_md() -> str:
+    """Absolute path of the dox-doc-tree SKILL.md (Read counts as loaded; RT-2)."""
+    try:
+        from lib import platform as _plat  # noqa: PLC0415
+        base = _plat.claude_dir()
+    except Exception:  # noqa: BLE001
+        base = SCRIPT_DIR.parent
+    return (base / "skills" / "dox-doc-tree" / "SKILL.md").as_posix()
+
+
 # ECC doc-file-warning name list: loose report files at the repo root or in code dirs.
 _ADHOC = re.compile(r"^(NOTES|TODO|SCRATCH|TEMP|DRAFT|BRAINSTORM|SPIKE|DEBUG|WIP)\.(md|txt)$")
 _ADHOC_OK_DIRS = (".claude", "notes", "wiki", "adr")
@@ -266,7 +277,8 @@ def main() -> int:
             return _deny(
                 f"DOX GATE: no root `CLAUDE.md` in `{root.name}` "
                 f"({root}). Code work is blocked until the dox tree's root exists.\n\n"
-                "Fix (preferred): invoke the `dox-doc-tree` skill and scaffold the root "
+                f"Fix (preferred): Read `{_skill_md()}` (a `paths:` skill: the Skill tool cannot "
+                "load it before a CLAUDE.md exists) and scaffold the root "
                 "(+ the area you're touching). Writing `CLAUDE.md`/`*.md` is always allowed.\n"
                 "Override: re-issue the edit to proceed anyway; the gate then stays quiet "
                 "for this repo for the rest of the session (logged)."

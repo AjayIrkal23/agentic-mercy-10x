@@ -23,7 +23,9 @@ _SELF_KILLING = ("lean-ctx",)
 
 
 def needs_pack(cmd: list) -> bool:
-    return list(cmd[:3]) == ["npm", "install", "-g"] and any(
+    """A scripted install of a self-killing package. `--ignore-scripts` runs no preinstall, so it goes the
+    plain way, flags intact (install() keeps only the package words) (F2)."""
+    return list(cmd[:3]) == ["npm", "install", "-g"] and "--ignore-scripts" not in cmd and any(
         any(name in str(a) for name in _SELF_KILLING) for a in cmd[3:])
 
 

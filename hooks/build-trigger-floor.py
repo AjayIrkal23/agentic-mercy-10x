@@ -27,7 +27,9 @@ they are still too ambiguous to keep).
 
 Charter: removals from the floor require a ``_meta.charter`` bump (this file
 bumped it to v2 when the historic ``/invoke-*`` command names and the
-``invoke_command_map`` entries were retired with the commands/ directory).
+``invoke_command_map`` entries were retired with the commands/ directory; v3 on
+2026-10-30 when audit2 A2 dropped conversational DEBUG/REVIEW phrases such as
+"should be", "timeout", "what do you think", "can you check").
 
 Usage:
   python3 build-trigger-floor.py                  # (re)build trigger-floor.json
@@ -47,7 +49,7 @@ _HOOKS = Path(__file__).resolve().parent
 _FLOOR_PATH = _HOOKS / "trigger-floor.json"
 _ROUTER_CONFIG = _HOOKS / "prompt_router" / "router.config.json"
 
-CHARTER = "v2 floor (2026-09-27): removals require a charter bump"
+CHARTER = "v3 floor (2026-10-30): removals require a charter bump"
 _KNOWN_ARGS = {"--check", "--quiet"}
 
 # JSON sources (name -> path). A missing file or a zero-entry bucket FAILS --check.

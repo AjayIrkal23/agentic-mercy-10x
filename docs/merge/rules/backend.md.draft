@@ -8,6 +8,8 @@ paths:
   - "**/{routes,handlers,controllers,middleware}/**/*.{ts,js,py}"
   - "**/{api,app,services}/**/*.py"
 ---
+> APPLIED 2026-10 by the integrate package; history only, not instructions.
+
 # Backend (loads on BE files)
 
 **Baseline skills:** `backend-standards-always-follow`, `backend-api-standards`,

@@ -47,7 +47,8 @@ JOURNAL_CMD_TIMEOUT = 10.0
 RANK = {"ok": 0, "warn": 1, "crit": 2}
 LOWER = {"crit": "warn", "warn": "ok"}
 
-# Fallbacks when memwatch.config.json is missing; identical to the shipped file.
+# Fallbacks when memwatch.config.json is missing. The MB lines below apply only when MemTotal is unknown; the
+# shipped file carries the percents alone (an MB line written in the file pins that line).
 VICTIM_COMMS = ["Isolated Web Co", "Web Content", "WebExtensions", "WebKitWebProcess", "WebKitNetworkProcess"]
 BROWSER_PARENTS = ["firefox", "firefox-bin", "chrome", "chromium", "chromium-browser", "brave", "electron", "code",
                    "msedge"]
@@ -64,13 +65,14 @@ PROTECTED = ["claude", "tmux", "tmux: server", "gnome-shell", "mutter", "Xwaylan
              "dbus-daemon", "dbus-broker", "ollama"]
 DEFAULT_CFG = {
     "interval_s": 5,
-    "tiers": {"warn": {"mem_available_mb": 8192, "psi": 10, "swap_free_pct": 5, "swap_mem_available_mb": 12288},
-              "crit": {"mem_available_mb": 3072, "psi": 25}},
+    "tiers": {"warn": {"mem_available_pct": 15, "mem_available_mb": 8192, "psi": 10, "swap_free_pct": 5,
+                       "swap_mem_available_pct": 22.5, "swap_mem_available_mb": 12288},
+              "crit": {"mem_available_pct": 8, "mem_available_mb": 3072, "psi": 25}},
     "hysteresis": {"margin_mb": 1024, "holdoff_s": 60},
     "top_n": 8,
     "state_stale_s": 30,
     "notify": {"quiet_hours": "", "mod_flag_fresh_s": 60},
-    "kill_policy": {"enabled": True, "stage_holdoff_s": 20, "emergency_mb": 1500, "idle_min": 10,
+    "kill_policy": {"enabled": True, "stage_holdoff_s": 20, "emergency_pct": 4, "emergency_mb": 1500, "idle_min": 10,
                     "victim_interval_s": 10, "stage3_after_s": 40, "victims": VICTIM_COMMS,
                     "victim_cmd_re": BUILD_RE, "claude_cmd_re": CLAUDE_CMD_RE, "browser_parents": BROWSER_PARENTS,
                     "protected": PROTECTED},
@@ -97,13 +99,49 @@ def _merge(base: dict, over: dict) -> dict:
     return out
 
 
-def load_config(path=None) -> dict:
-    """DEFAULT_CFG deep-updated by the file; a missing or bad file gives the defaults."""
+# MemAvailable lines that are percent of MemTotal (F7, 2026-10-30): (tier, MB key, percent key)
+_PCT_LINES = (("warn", "mem_available_mb", "mem_available_pct"),
+              ("warn", "swap_mem_available_mb", "swap_mem_available_pct"),
+              ("crit", "mem_available_mb", "mem_available_pct"))
+
+
+def _pct_mb(total_mb: int, pct) -> int:
+    return int(total_mb * float(pct) / 100)
+
+
+def load_config(path=None, *, total_mb=None, local_path=None) -> dict:
+    """DEFAULT_CFG deep-updated by the file; a missing or bad file gives the defaults.
+
+    The MemAvailable lines are percent of MemTotal (F7: warn 15, crit 8, kill_policy emergency 4, the swap
+    rule's line 22.5), resolved to MB with ``total_mb`` (default this machine's MemTotal): a 16 GB box warns
+    under ~2.3 GB free, a 30 GB box under ~4.5 GB. MemTotal unknown: the MB fallbacks. An MB number the
+    file itself sets is absolute and beats its percent; ``oomguard.local.json`` ``tiers`` (absolute MB)
+    win over both (FI-3)."""
     try:
         data = json.loads(Path(path or CONFIG_PATH).read_text(encoding="utf-8"))
-        return _merge(DEFAULT_CFG, data) if isinstance(data, dict) else copy.deepcopy(DEFAULT_CFG)
     except (OSError, ValueError):
-        return copy.deepcopy(DEFAULT_CFG)
+        data = {}
+    data = data if isinstance(data, dict) else {}
+    cfg = _merge(DEFAULT_CFG, data)
+    total = ogc.mem_total_mb() if total_mb is None else int(total_mb or 0)
+    if total > 0:
+        file_tiers = data.get("tiers") if isinstance(data.get("tiers"), dict) else {}
+        for lvl, mb_key, pct_key in _PCT_LINES:
+            line, pinned = cfg["tiers"][lvl], file_tiers.get(lvl)
+            if pct_key in line and not (isinstance(pinned, dict) and mb_key in pinned):
+                line[mb_key] = _pct_mb(total, line[pct_key])
+        kp, file_kp = cfg["kill_policy"], data.get("kill_policy")
+        if "emergency_pct" in kp and not (isinstance(file_kp, dict) and "emergency_mb" in file_kp):
+            kp["emergency_mb"] = _pct_mb(total, kp["emergency_pct"])
+    cfg["tiers"] = _merge(cfg["tiers"], ogc.tiers_override(local_path))
+    return cfg
+
+
+def _stage3_suffix(local_cfg=None, which=shutil.which) -> str:
+    """What stage 3 can promise for the stopped session: a restore needs the unit on and tmux."""
+    if not ogc.restore_enabled(local_cfg):
+        return "(restore off)"
+    return "(restored later)" if which("tmux") else "(not restorable: tmux missing)"
 
 
 # --------------------------------------------------------------------------- #
@@ -788,8 +826,8 @@ class Ctx:
                         _err(f"OOM guard stage 3: DRY-RUN would stop idle session {sid[:8]}")
                     else:
                         self._stop_session(pid, scope)
-                        self.announce("kill", f"OOM guard stage 3: stopped idle session {sid[:8]} (restored later)",
-                                      "critical", now)
+                        self.announce("kill", f"OOM guard stage 3: stopped idle session {sid[:8]} "
+                                      f"{_stage3_suffix(self.local_cfg)}", "critical", now)
             except Exception as exc:  # noqa: BLE001
                 _err(f"act {a[0]}: {type(exc).__name__}: {exc}")
 
@@ -1010,12 +1048,14 @@ def _parser() -> argparse.ArgumentParser:
 def main(argv=None, **seams) -> int:
     args = _parser().parse_args(argv)
     try:
-        if plat.IS_WINDOWS or plat.mem_probe(args.proc_root) is None:
+        probe = None if plat.IS_WINDOWS else plat.mem_probe(args.proc_root)
+        if probe is None:
             st = mws.State(level="ok", unsupported=True, ts=round(time.time(), 3))
             mws.write_atomic(st, path=Path(args.state) if args.state else None)
             print("unsupported")
             return 0
-        cfg = load_config(args.config)
+        # the percent lines resolve against the watched tree's MemTotal (a --proc-root rehearsal uses its own)
+        cfg = load_config(args.config, total_mb=probe.get("mem_total_mb"), local_path=seams.get("local_cfg"))
         if args.interval:
             cfg["interval_s"] = args.interval
         ctx = Ctx(args, cfg, **seams)

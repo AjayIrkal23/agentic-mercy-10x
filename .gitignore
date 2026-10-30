@@ -104,6 +104,8 @@ settings.local.json
 # per-machine OOM guard opt-out / overrides (hooks/lib/oomguard_config.py)
 /oomguard.local.json
 /scripts/sudo-askpass.sh
+# lean-ctx's own migration leftovers (settings.json.v4-migration.lock from a 3.12 `onboard`, F2)
+*.v4-migration.*
 # settings.json is a RENDERED artifact (P6-T3): installer/render.py generates it
 # from settings.template.json (tracked source of truth) ⊕ settings.user.json
 # (per-machine overlay). The rendered output + the overlay are per-machine and
