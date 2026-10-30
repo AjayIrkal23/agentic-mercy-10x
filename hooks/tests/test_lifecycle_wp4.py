@@ -78,7 +78,7 @@ def test_subagent_context_carries_the_protocol_within_budget(monkeypatch):
     ctx = out["hookSpecificOutput"]["additionalContext"]
     assert out["hookSpecificOutput"]["hookEventName"] == "SubagentStart"
     assert "FILE ACCESS PROTOCOL" in ctx and "git commit" in ctx and "MCP PROTOCOL" in ctx
-    assert len(ctx) <= 1800
+    assert len(ctx) <= 1200
 
 
 def test_subagent_context_fails_open_on_garbage(monkeypatch):

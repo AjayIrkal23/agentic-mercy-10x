@@ -110,6 +110,26 @@ def test_ceiling_and_cap():
     assert PT.cap("haiku", "max20") == "haiku" and PT.cap("fable", "max20") == "fable" and PT.cap("gpt", "pro") == "gpt"
 
 
+@pytest.mark.parametrize("case,main", [("pro", "sonnet"), ("max5", "sonnet"), ("max20", "opus"),
+                                       ("team", "sonnet"), ("missing", "sonnet")])
+def test_detect_and_state_carry_the_tier_main_model(tmp_path, monkeypatch, case, main):
+    """Final-fix 4: bin/claude reads `main` from plan-tier.json and passes --model when nothing else chose one."""
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path))
+    d = PT.detect(FIX / case)
+    assert d["main"] == main
+    PT.update_state(d)
+    assert json.loads((tmp_path / "plan-tier.json").read_text(encoding="utf-8"))["main"] == main
+    assert PT.read()["main"] == main
+
+
+def test_read_of_a_state_file_without_main_still_works(tmp_path, monkeypatch):
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path))
+    (tmp_path / "plan-tier.json").write_text(
+        json.dumps({"schema": 1, "tier": "max20", "source": "credentials", "detected_at": 0}), encoding="utf-8")
+    d = PT.read()
+    assert d["tier"] == "max20" and "main" not in d
+
+
 def test_write_state_and_notice(tmp_path, monkeypatch):
     monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path))
     assert PT.update_state(PT.detect(FIX / "max20"))["changed"] is False  # first ever write: no notice

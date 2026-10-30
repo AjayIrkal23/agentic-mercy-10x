@@ -344,6 +344,19 @@ def test_floor_has_ui_vocabulary_and_no_short_noise():
     assert "ui" in kws and "bug" in kws  # allow-listed short words survive
 
 
+def test_floor_build_twice_is_byte_stable_and_skips_the_write(tmp_path, monkeypatch):
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("btf2", _HOOKS / "build-trigger-floor.py")
+    btf = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(btf)  # type: ignore[union-attr]
+    out = tmp_path / "trigger-floor.json"
+    monkeypatch.setattr(btf, "_FLOOR_PATH", out)
+    btf.build()
+    first, mtime = out.read_bytes(), out.stat().st_mtime_ns
+    btf.build()
+    assert out.read_bytes() == first and out.stat().st_mtime_ns == mtime
+
+
 def test_floor_check_fails_on_zero_bucket(tmp_path, monkeypatch):
     import importlib.util
     spec = importlib.util.spec_from_file_location("btf", _HOOKS / "build-trigger-floor.py")

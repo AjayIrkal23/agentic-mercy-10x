@@ -6,8 +6,12 @@
 ## What lives here
 
 The saved workflow library (`~/.claude/workflows/<name>.js`, run with `Workflow({name, args})`). Every
-`*.js`, `index.json` and `.rendered.json` is GENERATED from `src/` by `scripts/build_workflows.py` for
-the plan tier in `state/plan-tier.json` (fallback max20); the tracked render is the max20 column.
+`*.js`, `index.json` and `.rendered.json` is GENERATED per machine from `src/` by
+`scripts/build_workflows.py` for the plan tier in `state/plan-tier.json` (fallback max20) and is NOT
+tracked (gitignored, FIX-r3 I10): `install.sh`, the render post step and self-heal (doctor row
+`workflows-rendered`) build them; `build_workflows.py --check` proves the render. Only `src/`,
+`CLAUDE.md` and `README.md` are tracked; the router falls back to `src/index.src.json` before the
+first render.
 
 ## Local conventions
 

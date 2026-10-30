@@ -245,6 +245,29 @@ def test_stage3_skips_pending_bash(env, capsys):
     assert "stage3: no idle session" in capsys.readouterr().err
 
 
+def test_stage3_activity_is_per_pid_so_a_stale_sibling_never_exposes_a_live_session(env):
+    root = _stage3_tree(env)                       # s-idle→100 (900 s), s-active→200 (5 s)
+    led = env / "state" / "live-sessions"
+    now = time.time()
+    old_tr = env / "s-idle.jsonl"                  # readable and 900 s old: a candidate under the sid-keyed code
+    for sid in ("fixture-a", "fixture-b"):         # two stale replays bound to the ACTIVE pid 200 (O5)
+        (led / f"{sid}.json").write_text(json.dumps({"sid": sid, "pid": 200, "transcript": str(old_tr),
+                                                     "scope": "claude-200.scope", "seen": now - 7200, "ended": None}), encoding="utf-8")
+    _, st, ev = _run(env, root, "--dry-run")
+    kills = [(k["stage"], k["sid"], k["pid"]) for k in ev if k["kind"] == "kill"]
+    assert kills == [(3, "s-idle", 100)]           # never pid 200, whatever its siblings say
+
+
+def test_stage3_never_picks_an_entry_without_a_readable_transcript(env, capsys):
+    root = _stage3_tree(env)
+    led = env / "state" / "live-sessions"
+    (led / "s-idle.json").write_text(json.dumps({"sid": "s-idle", "pid": 100, "transcript": str(env / "gone.jsonl"),
+                                                 "scope": "claude-100.scope", "seen": time.time() - 900, "ended": None}), encoding="utf-8")
+    _, st, ev = _run(env, root, "--dry-run")
+    assert not [e for e in ev if e["kind"] == "kill"] and st["kill_policy"]["stage"] == 3
+    assert "stage3: no idle session" in capsys.readouterr().err
+
+
 def test_policy_disabled_and_dry_run_never_signal(env):
     def boom(*a, **k):
         raise AssertionError("signalled")
@@ -286,7 +309,8 @@ def test_maybe_restore_then_restore_sessions_launches(env, monkeypatch):
     monkeypatch.setattr(rs.shutil, "which", lambda n: "/usr/bin/" + n)
     monkeypatch.setattr(rs, "_sleep", lambda s: None)
     monkeypatch.setattr(rs._sl, "mark_restored", lambda sid: None)
-    dead = {"sid": "s-dead", "pid": 4190000, "cwd": str(env), "started": time.time() - 100}
+    dead = {"sid": "5f0c3a3e-1d2b-4c5d-9e8f-0a1b2c3d4e5f", "pid": 4190000, "cwd": str(env),  # a UUID: O6
+            "started": time.time() - 100}
     monkeypatch.setattr(rs._sl, "classify", lambda max_age, now=None: {"eligible": [dead], "stale": [], "ended": []})
     out = rs.run(rs.build_parser().parse_args(["--only-if-ok", "--max-age", "7200"]))
     assert out["stopped_reason"] is None and out["launched"] >= 1
@@ -424,6 +448,58 @@ def test_uid_filter_and_eperm_not_announced(env):
     assert [(e["pid"], e["ok"]) for e in ev] == [(701, False)] and notes == []
     assert 701 not in lad.killed and not c.kp["last_kill_ts"]
     assert [a[1]["pid"] for a in lad.step(1e6 + 5, "crit", s, procs, [], c.kp)[1] if a[0] == "kill"] == [701]
+
+
+# ---- FIX-r2 O1: a native-installer Claude (comm = version string) is recognised by cmdline -----
+def _native_tree(lad, parent_name="2.1.312"):
+    lad.uid = 1000
+    cmds = {600: "/usr/bin/ptyxis", 610: "/opt/u/.local/share/claude/versions/2.1.312 --session-id x",
+            620: "node /x/typescript-language-server --stdio", 630: "node /x/tsserver.js",
+            700: "/usr/bin/bash", 710: "node /y/tsserver.js"}
+    if parent_name != "2.1.312":
+        cmds[610] = "/usr/bin/" + parent_name
+    lad.cmd = lambda pid: cmds.get(pid, "")
+    return [_p(600, "ptyxis", 1, 100), _p(610, parent_name, 600, 700), _p(620, "node", 610, 200),
+            _p(630, "node", 620, 900), _p(700, "bash", 1, 5), _p(710, "node", 700, 400)]
+
+
+def test_native_claude_child_is_protected_and_shelters(env):
+    lad = mw.Ladder(CFG, "/nonexistent", env / "absent.json")
+    procs = _native_tree(lad)
+    by = {p["pid"]: p for p in procs}
+    assert lad.classify(by[630], by) == "protected"
+    assert lad.classify(by[610], by) == "protected"
+    assert lad.classify(by[710], by) == "victim"   # the same tsserver under a plain bash
+    s = {"mem_available_mb": 1000, "psi_some_avg10": 30.0, "swap_free_pct": 0.0}
+    kills = [a[1]["pid"] for a in lad.step(1e6, "crit", s, procs, [], {})[1] if a[0] == "kill"]
+    assert kills == [710]
+
+
+def test_npm_claude_with_mainthread_comm_shelters_its_children(env):
+    # SANTA-FINAL hooks F5: node 24 names its main thread "MainThread", so an npm Claude's comm is that
+    lad = mw.Ladder(CFG, "/nonexistent", env / "absent.json")
+    procs = _native_tree(lad, parent_name="MainThread")
+    lad.cmd = lambda pid: {610: "node /u/lib/node_modules/@anthropic-ai/claude-code/cli.js"}.get(pid, "")
+    by = {p["pid"]: p for p in procs}
+    assert lad.classify(by[630], by) == "protected"
+
+
+def test_version_comm_without_claude_cmdline_is_not_claude(env):
+    lad = mw.Ladder(CFG, "/nonexistent", env / "absent.json")
+    procs = _native_tree(lad, parent_name="bash")
+    by = {p["pid"]: p for p in procs}
+    assert lad.classify(by[630], by) == "victim"
+
+
+# ---- FIX-r2 O4: a dry run never pops a desktop kill toast -------------------------------------
+def test_dry_run_kill_sends_no_notification(env):
+    notes = []
+    c = _ctx(env, FIX / "proc-ok", "--dry-run", notify=lambda *a, **k: notes.append(a) or True, kill=lambda *a: None)
+    p = {"pid": 4242, "name": "sleep", "rss_mb": 7, "unit": None}
+    c.act([("kill", p, 2)], 1e6)
+    c.act([("stop-session", "sid-dry-0001", 4242, "claude-4242.scope")], 1e6)
+    ev = [e for e in _events(env) if e["kind"] == "kill"]
+    assert notes == [] and len(ev) == 2 and all(e["dry_run"] for e in ev)
 
 
 def test_local_cfg_without_kill_policy_keeps_shipped_enabled_false(env):

@@ -65,7 +65,8 @@ TIER_STALE_S = 30
 HOUR_S = 3600
 MOD_FRESH_S = 60
 _TIERS = ("ok", "warn", "crit")
-_SID_OK = re.compile(r"^[A-Za-z0-9._-]+$")
+# Claude Code session ids are UUIDs; `claude --resume` of anything else cannot resume (fixture / verifier ids, O6).
+_SID_OK = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 
 
 def _now() -> float:

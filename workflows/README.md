@@ -25,9 +25,12 @@ switches executor roles to their escalated model through the `up()` helper; judg
 
 ## Generated files
 
+Every `*.js`, `index.json` and `.rendered.json` here is a per-machine render for this machine's plan tier,
+gitignored like `settings.json` (FIX-r3 I10); `src/` is the tracked source.
+
 - `index.json`: per script `{name, file, triggers, acts, min_size, phases, args_schema, description, whenToUse}`.
 - `.rendered.json`: `{schema, tier, usage_guard, policy_sha, content_sha}`, deterministic (no timestamp),
-  so a re-render of the committed tier leaves the tree clean; the guard compares `tier` and
+  so a re-render of the recorded tier rewrites nothing; the guard compares `tier` and
   `usage_guard` with the live session and regenerates on a mismatch.
 
 ## Local runs

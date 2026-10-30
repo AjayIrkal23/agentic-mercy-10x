@@ -97,7 +97,7 @@ def test_aggregator_sample_under_5500():
 
 
 @pytest.mark.parametrize("agent_type", ["implementation-engineer", "qa-verifier"])
-def test_subagent_context_under_1800(agent_type):
+def test_subagent_context_under_1200(agent_type):
     script = _ROOT / "hooks" / "subagent-context.py"
     if not script.is_file():
         pytest.skip("hooks/subagent-context.py missing")
@@ -106,7 +106,7 @@ def test_subagent_context_under_1800(agent_type):
                        env={**os.environ, "CLAUDE_HOOK_DOCTOR": "1"})
     data = json.loads(r.stdout or "{}")
     ctx = data.get("additionalContext") or (data.get("hookSpecificOutput") or {}).get("additionalContext") or ""
-    assert len(ctx) <= 1800, f"{agent_type}: {len(ctx)} chars"
+    assert len(ctx) <= 1200, f"{agent_type}: {len(ctx)} chars"
 
 
 def test_agent_descriptions_under_1200():
@@ -116,6 +116,13 @@ def test_agent_descriptions_under_1200():
     over = {p.name: len(_description(_frontmatter(p))) for p in agents}
     over = {k: v for k, v in over.items() if v > 1200}
     assert over == {}, over
+
+
+def test_agent_descriptions_total_under_10000():
+    """FIX-r2 T4: `/context` loads every agent description; keep the set under 10k chars, 600 each."""
+    sizes = {p.name: len(_description(_frontmatter(p))) for p in _agents()}
+    assert sum(sizes.values()) <= 10000, sum(sizes.values())
+    assert {k: v for k, v in sizes.items() if v > 600} == {}
 
 
 def test_manifest_always_load():

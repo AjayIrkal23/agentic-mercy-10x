@@ -1,6 +1,6 @@
 ---
 name: refactor-specialist
-description: "The /invoke refactor act: behavior-preserving restructuring, renaming, extracting, de-duplicating and untangling, guarded by a suite that is green before and after every step and by jcodemunch blast-radius checks; writes REFACTOR-REPORT.md. New behavior goes to implementation-engineer; a bug found mid-refactor is reported, never silently fixed.\n\n<example>\nContext: a tangled module needs splitting.\nuser: \"/invoke refactor — split this 900-line handlers file into per-domain modules\"\nassistant: \"Dispatching refactor-specialist to map the blast radius, confirm the suite is green and move code in small test-verified steps.\"\n<commentary>\nThe diff changes shape, never behavior.\n</commentary>\n</example>"
+description: "The /invoke refactor act: behavior-preserving restructuring, renaming, extracting, de-duplicating and untangling, guarded by a suite that is green before and after every step and by jcodemunch blast-radius checks; writes REFACTOR-REPORT.md. New behavior goes to implementation-engineer; a bug found mid-refactor is reported, never silently fixed.\n\n<example>\nuser: \"/invoke refactor — split this 900-line handlers file into per-domain modules\"\nassistant: \"Dispatching refactor-specialist to map the blast radius and move code in small test-verified steps.\"\n</example>"
 model: sonnet
 effort: high
 disallowedTools: Agent

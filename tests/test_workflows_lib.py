@@ -11,7 +11,26 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-WF, SRC, FIX = ROOT / "workflows", ROOT / "workflows" / "src", ROOT / "tests" / "fixtures" / "workflows"
+SRC, FIX = ROOT / "workflows" / "src", ROOT / "tests" / "fixtures" / "workflows"
+
+
+def _wf_dir() -> Path:
+    """The machine's render (workflows/*.js is per machine and untracked, I10); a fresh clone that has not
+    rendered yet gets a max20 render in a temp dir for the static and stub tests."""
+    live = ROOT / "workflows"
+    if (live / "index.json").is_file() and (live / ".rendered.json").is_file():
+        return live
+    import atexit
+    import shutil
+    import tempfile
+    out = Path(tempfile.mkdtemp(prefix="wf-render-")) / "workflows"
+    subprocess.run([sys.executable, str(ROOT / "scripts" / "build_workflows.py"), "--tier", "max20", "--usage", "off",
+                    "--out", str(out), "--quiet"], check=True, capture_output=True, text=True, timeout=120)
+    atexit.register(shutil.rmtree, out.parent, True)
+    return out
+
+
+WF = _wf_dir()
 sys.path.insert(0, str(ROOT / "hooks"))
 sys.path.insert(0, str(ROOT / "tests" / "fixtures" / "plan-tier"))
 from lib import model_mode as mm  # noqa: E402
@@ -227,13 +246,35 @@ def test_check_catches_hand_edited_record(tmp_path):
     assert cp.returncode == 1 and "DRIFT .rendered.json (content_sha)" in cp.stdout
 
 
-def test_tracked_render_reproduces_byte_identical_outputs(tmp_path):
-    """A re-render of the committed tier/usage must leave every tracked output untouched (replica pulls)."""
+def test_machine_render_reproduces_byte_identical_outputs(tmp_path):
+    """A re-render of the recorded tier/usage leaves every output untouched (no churn on self-heal)."""
     rec = rendered()
     cp = builder("--tier", rec["tier"], "--usage", "on" if rec["usage_guard"] else "off", "--out", str(tmp_path / "w"))
     assert cp.returncode == 0, cp.stdout + cp.stderr
     for p in sorted((tmp_path / "w").iterdir()):
         assert p.read_bytes() == (WF / p.name).read_bytes(), p.name
+
+
+def test_api_and_max20_renders_both_check_ok(tmp_path):
+    """I10: the render is per machine; every tier renders cleanly and proves itself with --check."""
+    for tier in ("api", "max20"):
+        out = build(tmp_path, tier)
+        cp = builder("--check", "--out", str(out))
+        assert cp.returncode == 0 and f"tier {tier}" in cp.stdout, cp.stdout
+
+
+def test_render_outputs_are_gitignored_and_sources_are_not():
+    """I10: workflows/*.js, index.json and .rendered.json are per-machine artifacts (like settings.json), so a
+    tier render never dirties tracked files; the templates and docs stay tracked."""
+    ignored = ["workflows/review.js", "workflows/index.json", "workflows/.rendered.json"]
+    kept = ["workflows/src/review.js.tpl", "workflows/src/index.src.json", "workflows/CLAUDE.md", "workflows/README.md"]
+    cp = subprocess.run(["git", "-C", str(ROOT), "check-ignore", *ignored, *kept],
+                        capture_output=True, text=True, timeout=30)
+    assert sorted(cp.stdout.split()) == sorted(ignored), cp.stdout + cp.stderr
+    # a tracked file is never ignored: the render outputs must be out of the index too
+    ls = subprocess.run(["git", "-C", str(ROOT), "ls-files", "--", "workflows/*.js", "workflows/index.json",
+                         "workflows/.rendered.json"], capture_output=True, text=True, timeout=30)
+    assert ls.stdout.strip() == "", ls.stdout
 
 
 def test_unknown_role_token_is_refused(tmp_path):

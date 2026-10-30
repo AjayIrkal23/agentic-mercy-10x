@@ -19,6 +19,10 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
   use `CLAUDE_HOOK_TELEMETRY_DIR` too (`test_gates._tel_dir`). `conftest.py` also sets
   `CLAUDE_HOOK_DOTSTATE_DIR` (`hooks/.state`); a full run leaves 0 files in the live
   state/telemetry dirs.
+- A SessionStart replay against the live `dispatch.py` (outside pytest) MUST set
+  `CLAUDE_HOOK_STATE_DIR` to a scratch dir, else it writes `state/live-sessions/<sid>.json`
+  bound to the nearest live claude pid. `session-ledger.py` drops non-UUID sids and
+  `CLAUDE_HOOK_DOCTOR` replays (O6), so a UUID sid is the remaining risk.
 
 ## Key files
 
@@ -27,6 +31,8 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 | `test_lib_foundation.py` | `platform` (incl. every `OLLAMA_HOST` form `ollama_url` reads), `repo_context` ($HOME ceiling), `hook_telemetry`, `code_files.is_infra_root` (the four never-indexed roots) |
 | `test_dispatch_mutator.py` | dispatcher threads mutator `updatedInput` (the dropped-mutation regression); mod bridge: owned links skipped only for the owner session with a fresh `MERCY_MOD_BEAT`, `--only` ignores ownership |
 | `test_prompt_router.py`, `test_router_surface.py`, `test_surface_classification.py` | router classify/rank/output shape, stack/cwd surface, FE/BE detection, path-scoped push = Read; `fullstack-post` doc hit decided by path segments, never file content |
+| `test_router_migration.py` | "migrate/port/rewrite X from A to B" is IMPLEMENT; a size-L invoke chain that writes tests/docs gains `impl`; acts come in canonical order |
+| `test_router_budget.py` | per-prompt router injection stays small: a matched skill is named, never inlined; the WORKFLOW line carries no prompt echo; size caps per prompt class |
 | `test_router_scoring.py` | description keywords half weight, stack-only surface half credit, hidden skills never ranked, learned weights never boost, URLs / `*-guard` names are not SECURITY |
 | `test_tool_intelligence_routes.py` | context7 route needs an API-question cue plus a library token (never a `name/` path, never bare "go") |
 | `test_jdocmunch_enforce.py` | jdoc-doc-steer nudges only whole reads of large indexed docs; small, sliced and `CODEX.md` reads pass silently (`{}`) |
@@ -84,6 +90,7 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 | `test_blast_radius.py` | `lib/blast_radius.py`: the one importer counter (pure Python walk) and the sensitive/secret target classifier |
 | `test_code_files_skip.py` | `lib.code_files`: one anchored skip list shared by every consumer |
 | `test_config_protection.py` | config-protection-gate: an existing lint/format config asks unless the prompt asked for it; new and build configs pass |
+| `test_settings_protection_gate.py` | settings-protection-gate (R2-F2): `.claude/settings*.json` (new too), `~/.claude/hooks/model-policy.json`, `~/.claude.json` ask interactively and deny for subagent / unattended / headless `-p` (`CLAUDE_CODE_SESSION_ATTENDED=0`), never an advisory; prompt naming the file (settings files by their `.claude/` path, `/` or `\`) or a permission-rule phrase escapes ("allowlist", a bare `settings.local.json` and `.vscode/settings.json` do not); Bash/PowerShell writes (heredoc, cp, sed -i, interpreter, Set-Content) deny for a subagent, reads stay `{}`; Windows case fold; other paths and garbage stdin are `{}` |
 | `test_connector_github.py` | connector-ask-gate on the github MCP: write tools ask interactively; when nobody can answer (subagent, unattended) they are denied with the reason `No one can confirm in this ... session` (`connector-ask-gate.py:109-110`, never downgraded to an advisory; the gate has no override file) |
 | `test_context_monitor.py` | context-monitor: loop, scope and compaction nudge (replaces ECC's context monitor scripts) |
 | `test_dispatch_config_schema.py` | `dispatch.config.json` shape: link ids, types, fields, flags (ECC validate-hooks idea) |

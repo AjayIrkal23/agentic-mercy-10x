@@ -8,11 +8,14 @@
 
 The **UserPromptSubmit router** (`router.py`): a `dispatch.py user-prompt-submit`
 advisory link (p0, 12 s) once integrate lands the chain; callable directly for tests.
-One process per prompt: classify → detect FE/BE/API/docs surface → rank ≤4 skills →
+One process per prompt: classify → detect FE/BE/API/docs surface → rank ≤3 skills →
 pointer / WORKFLOW / MCP / LIBRARY routes → agent/act suggestion → emit
 `{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":
 "<!-- prompt-router v3 -->\n…"}}`. Measured 88 tokens mean / 310 p90 (1,257 live
-fires, 2026-10-15..29). Nothing in here starts servers or mutates the repo; side
+fires, 2026-10-15..29); after the merge 768 ch mean (post-T7, n=29), so final-fix 2
+(2026-10-30) shortened every line: fixed 4-prompt probe 1,145 → 964 ch mean; the
+real-session number needs ≥ 30 prompts after epoch 1793342134 (target ≤ 445 ch mean,
+≤ 1,474 p90; next lever `max_routing_lines` 5 → 4). Nothing in here starts servers or mutates the repo; side
 effects are the session manifest, `hooks/.telemetry/<sid>.pushed-skills.jsonl` and
 telemetry records.
 
@@ -49,9 +52,12 @@ telemetry records.
   `lib.skill_aliases` (fallback `skill-aliases.json`).
 - Plural stemming (optional s/es) applies to intent (`act:`) groups only; UI/arch lists
   carry their own plurals.
-- A skill push is two lines: `- **name** (LABEL)` + `  ACTION: Skill("name")` (or
-  `Read <abs SKILL.md>` for `paths:` skills). No description — the Skill tool lists it.
-  The mercy governor and `test_prompt_router` parse the ACTION line.
+- A skill push is one line: `- **name** (LABEL) ACTION: Skill("name")` (or
+  `ACTION: Read <abs SKILL.md>` for `paths:` skills). No description — the Skill tool lists it.
+  The mercy governor and `test_prompt_router` parse the `ACTION: ` token (not a line start).
+- When the first-write baseline and the TDD gate both fire they merge into one line
+  (`gate:firstwrite+tdd`); it keeps "First substantive change this session" (the mercy
+  governor drops it after the first write by that phrase).
 - **Deep injection (H4):** at most one body (`[inlined skill: x]`), rank 1 only, when the
   strongest NON-size intent reaches `auto_dispatch_threshold` (size words never trigger
   it). An inlined body replaces the rank-1 line: no line is MUST-READ then, and nothing is
@@ -71,7 +77,7 @@ telemetry records.
   graph build. `_doc_index_exists` checks both manifest names index-lifecycle uses
   (`<name>`, `<name>-<sha1(realpath)[:8]>`). Never reintroduce `/invoke <act>`,
   `/model <id>` or `graphify update` in router text (`tests/test_autonomy_wpc_text.py`).
-- Caps: `max_skill_pushes` 4, `max_route_lines` 3 (dispatch), `max_mcp_routes` 4,
+- Caps: `max_skill_pushes` 3, `max_route_lines` 3 (dispatch), `max_mcp_routes` 4,
   `max_routing_lines` 5 (total; order: model-mode echo, surface pointer, WORKFLOW, UI,
   asset login, MCP, dispatch, LIBRARY).
 - The `prompt_router.live` telemetry row carries `ms` (router wall time, A-10).

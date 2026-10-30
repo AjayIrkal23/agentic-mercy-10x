@@ -33,6 +33,7 @@ def _load():
 sl = _load()
 DEAD_PID = 4190000
 ZERO_BOOT = "00000000-0000-0000-0000-000000000000"
+S1 = "5f0c3a3e-1d2b-4c5d-9e8f-0a1b2c3d4e5f"  # Claude Code session ids are UUIDs; mode_start ignores anything else (O6)
 
 
 @pytest.fixture(autouse=True)
@@ -59,7 +60,7 @@ def _entry(state: Path, sid: str):
     return json.loads(p.read_text(encoding="utf-8")) if p.exists() else None
 
 
-def _start(tmp_path, sid="s1", source="startup", cwd=None):
+def _start(tmp_path, sid=S1, source="startup", cwd=None):
     cwd = cwd or str(tmp_path)
     return _main(["start"], {"session_id": sid, "source": source, "cwd": cwd,
                              "transcript_path": str(tmp_path / "t.jsonl")})
@@ -75,7 +76,7 @@ def test_start_writes_the_ledger_entry(tmp_path, _state):
     repo = _git_repo(tmp_path / "repo")
     rc, _ = _start(tmp_path, cwd=str(repo))
     assert rc == 0
-    e = _entry(_state, "s1")
+    e = _entry(_state, S1)
     for k in ("sid", "pid", "cwd", "transcript", "tmux", "scope", "started", "seen", "ended", "restored"):
         assert k in e
     assert e["pid"] == 4242 and e["ended"] is None and e["restored"] is False
@@ -109,22 +110,22 @@ def test_title_uses_the_git_root_name(tmp_path):
 def test_resume_keeps_started_and_refreshes_seen_and_pid(tmp_path, _state, monkeypatch):
     monkeypatch.setattr(sl, "_now", lambda: 1000)
     _start(tmp_path)
-    e = _entry(_state, "s1")
+    e = _entry(_state, S1)
     e["restored"] = True
     sl.write_entry(e)
     monkeypatch.setattr(sl, "_now", lambda: 1500)
     monkeypatch.setattr(sl, "_claude_pid", lambda *a, **k: 7)
     _start(tmp_path, source="resume")
-    e = _entry(_state, "s1")
+    e = _entry(_state, S1)
     assert e["started"] == 1000 and e["seen"] == 1500 and e["pid"] == 7
     assert e["restored"] is True
 
 
 def test_end_deletes_the_entry(tmp_path, _state):
     _start(tmp_path)
-    rc, out = _main(["end"], {"session_id": "s1", "reason": "prompt_input_exit"})
+    rc, out = _main(["end"], {"session_id": S1, "reason": "prompt_input_exit"})
     assert rc == 0 and json.loads(out) == {}
-    assert _entry(_state, "s1") is None
+    assert _entry(_state, S1) is None
 
 
 def test_end_marks_ended_when_the_unlink_fails(tmp_path, _state, monkeypatch):
@@ -134,10 +135,29 @@ def test_end_marks_ended_when_the_unlink_fails(tmp_path, _state, monkeypatch):
         raise OSError("busy")
 
     monkeypatch.setattr(sl, "_unlink", boom)
-    rc, out = _main(["end"], {"session_id": "s1", "reason": "other"})
+    rc, out = _main(["end"], {"session_id": S1, "reason": "other"})
     assert rc == 0 and json.loads(out) == {}
-    e = _entry(_state, "s1")
+    e = _entry(_state, S1)
     assert isinstance(e["ended"], int)
+
+
+@pytest.mark.parametrize("sid", ["doctor-fixture", "verify-hookrt-r2-ss2", "s1", "5f0c3a3e-1d2b-4c5d-9e8f"])
+def test_start_ignores_non_uuid_session_ids(tmp_path, _state, sid):
+    rc, out = _start(tmp_path, sid=sid)
+    assert rc == 0 and json.loads(out) == {}
+    assert _entry(_state, sid) is None and not list((_state / "live-sessions").glob("*.json"))
+
+
+def test_start_under_doctor_replay_writes_nothing(tmp_path, _state, monkeypatch):
+    monkeypatch.setenv("CLAUDE_HOOK_DOCTOR", "1")
+    rc, out = _start(tmp_path)
+    assert rc == 0 and json.loads(out) == {}
+    assert _entry(_state, S1) is None
+
+
+def test_start_accepts_an_uppercase_uuid(tmp_path, _state):
+    _start(tmp_path, sid=S1.upper())
+    assert _entry(_state, S1.upper())["sid"] == S1.upper()
 
 
 def test_end_without_an_entry_is_a_silent_noop(_state):
@@ -252,7 +272,7 @@ def test_windows_start_and_end_exit_zero_with_empty_output(tmp_path, _state, mon
     rc, out = _start(tmp_path)
     assert rc == 0 and json.loads(out) == {}
     assert not (_state / "live-sessions").exists()
-    rc, out = _main(["end"], {"session_id": "s1", "reason": "other"})
+    rc, out = _main(["end"], {"session_id": S1, "reason": "other"})
     assert rc == 0 and json.loads(out) == {}
 
 
@@ -265,5 +285,5 @@ def test_garbage_stdin_prints_empty_json():
 def test_entry_write_is_atomic_json(tmp_path, _state):
     _start(tmp_path)
     d = _state / "live-sessions"
-    assert [p.name for p in d.iterdir()] == ["s1.json"]
+    assert [p.name for p in d.iterdir()] == [f"{S1}.json"]
     assert not list(d.glob("*.tmp")) and not list(d.glob(".tmp-*"))

@@ -75,6 +75,16 @@ def test_deferred_advisory_does_not_block_and_arrives_on_the_next_call(tmp_path)
     assert "TDD-NOTE" not in _ctx(mod.dispatch("post-tool-use", {"session_id": sid, "tool_name": "Read"}, {"chains": {}}))
 
 
+def test_subagent_call_never_drains_the_parent_queue(tmp_path):
+    mod = _load()
+    sid = f"subq-{time.time_ns()}"
+    mod._sup.enqueue(sid, "hard-completion-gate", "PARENT-NOTE")
+    sub = mod.dispatch("pre-tool-use", {"session_id": sid, "tool_name": "Read", "agent_id": "a1"}, {"chains": {}})
+    assert "PARENT-NOTE" not in _ctx(sub)
+    parent = mod.dispatch("pre-tool-use", {"session_id": sid, "tool_name": "Read"}, {"chains": {}})
+    assert "PARENT-NOTE" in _ctx(parent)
+
+
 def test_only_run_keeps_a_deferred_link_synchronous(tmp_path):
     """The mod's async lane runs `--only tdd-guard-launcher-pre` and needs the answer."""
     mod = _load()

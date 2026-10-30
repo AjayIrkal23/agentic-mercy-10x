@@ -57,7 +57,8 @@ def test_two_acts_route_to_invoke_in_canonical_order(home):
     it = _items("plan the retry queue, then implement it and write the tests")
     assert len(it) == 1 and it[0]["text"].startswith("WORKFLOW: run saved workflow invoke with args ")
     args = _args(it[0]["text"])
-    assert args["acts"][:2] == ["plan", "impl"] or args["acts"] == ["plan", "impl", "test"]
+    # the invoke entry's canonical order (audit spec plan debug test impl ...), as invoke.js runs them
+    assert args["acts"] in (["plan", "impl"], ["plan", "test", "impl"])
     assert args["run"].startswith("/nonexistent-dir/.claude/runs/") and args["slug"] and "tier_hint" not in args
     assert it[0]["id"].startswith("route:workflow:invoke:")
     assert it[0]["section"] == "ROUTING" and it[0]["tier"] == 2
@@ -87,6 +88,23 @@ def test_missing_index_emits_nothing(tmp_path, monkeypatch):
     W._index.cache_clear()
     try:
         assert _items("plan the retry queue, then implement it and write the tests") == []
+    finally:
+        W._index.cache_clear()
+
+
+def test_missing_index_falls_back_to_the_tracked_source_index(tmp_path, monkeypatch):
+    """I10: the render is per machine and untracked; a fresh clone before its first render still routes."""
+    src = {"_comment": "x", **{e["name"]: {k: e[k] for k in ("triggers", "acts", "min_size", "args_schema")}
+                               for e in INDEX}}
+    (tmp_path / "workflows" / "src").mkdir(parents=True)
+    (tmp_path / "workflows" / "src" / "index.src.json").write_text(json.dumps(src), encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setattr(W, "_escalation", lambda text, cwd: None)
+    W._index.cache_clear()
+    try:
+        assert [e["name"] for e in W._index()] == sorted(e["name"] for e in INDEX)
+        it = _items("plan the retry queue, then implement it and write the tests")
+        assert len(it) == 1 and it[0]["text"].startswith("WORKFLOW: run saved workflow invoke with args ")
     finally:
         W._index.cache_clear()
 
@@ -153,3 +171,22 @@ def test_two_strong_acts_route_even_at_size_s(home, monkeypatch):
 def test_workflow_text_never_tells_the_user_to_type_a_command(home):
     it = _items("plan the retry queue, then implement it and write the tests")
     assert "/workflow" not in it[0]["text"] and "run `" not in it[0]["text"]
+
+
+# --- final-fix 5: precedence multi-act invoke > corpus trigger > single-act size-L invoke ---------
+def test_named_corpus_trigger_beats_a_single_act_invoke(home):
+    it = _items("research the changelog of https://example.com/changelog and compare the docs with our "
+                "harness, a feature study across all releases")
+    assert it and "saved workflow research" in it[0]["text"], it
+    args = _args(it[0]["text"])
+    assert args["url"].startswith("https://") and "acts" not in args
+
+
+def test_multi_act_invoke_still_outranks_a_trigger(home):
+    it = _items("write a spec, then a plan, then implement a research notebook for this repo")
+    assert it and "saved workflow invoke" in it[0]["text"] and len(_args(it[0]["text"])["acts"]) >= 2
+
+
+def test_trigger_without_corpus_falls_back_to_invoke(home):
+    it = _items("research every option and document the findings across all modules from scratch")
+    assert it and "saved workflow invoke" in it[0]["text"], it

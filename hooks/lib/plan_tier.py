@@ -29,7 +29,7 @@ _LIT = {"pro": {"ceiling": "sonnet", "main": "sonnet", "subagent_env": "haiku", 
         "max20": {"ceiling": "fable", "main": "opus", "subagent_env": "sonnet", "fallback": ["sonnet", "haiku"]}}
 _LIT["api"] = _LIT["max5"]
 _ORDER = ["haiku", "sonnet", "opus", "fable"]
-_STATE_KEYS = ("schema", "tier", "source", "detected_at", "detail", "notice", "notice_ts")
+_STATE_KEYS = ("schema", "tier", "source", "detected_at", "detail", "main", "notice", "notice_ts")
 
 
 def _policy() -> dict:
@@ -86,8 +86,20 @@ def _map(sub: object, rate: object) -> str | None:
     return None
 
 
+def main_model(tier: str) -> str:
+    """The tier's main-session model (`tiers.<tier>.main`): bin/claude passes it as --model."""
+    return str(_tier_block(tier).get("main") or _LIT.get(tier, _LIT["api"])["main"] or "sonnet")
+
+
 def detect(home: Path | None = None) -> dict:
-    """Live detection. {"schema","tier","source","detected_at","detail"}; detail holds only the plan strings."""
+    """Live detection. {"schema","tier","source","detected_at","detail","main"}; detail holds only the
+    plan strings, main = main_model(tier)."""
+    d = _detect(home)
+    d["main"] = main_model(d["tier"])
+    return d
+
+
+def _detect(home: Path | None) -> dict:
     now = time.time()
     creds, cjs = _paths(home)
     for p in creds:
@@ -163,7 +175,7 @@ def update_state(new: dict, path: Path | None = None) -> dict:
     prev = _load_json(path or state_path()) or {}
     old = prev.get("tier")
     changed = old in TIERS and old != new.get("tier")
-    d = {k: new[k] for k in ("schema", "tier", "source", "detected_at", "detail") if k in new}
+    d = {k: new[k] for k in ("schema", "tier", "source", "detected_at", "detail", "main") if k in new}
     if changed:
         d["notice"] = (f"plan tier changed: {old} -> {new.get('tier')} ({new.get('source')}); "
                        "routing ceilings follow the new tier")

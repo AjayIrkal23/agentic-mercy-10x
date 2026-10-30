@@ -277,6 +277,15 @@ def build() -> dict:
         },
         "entries": entries,
     }
+    try:
+        prev = json.loads(_FLOOR_PATH.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        prev = {}
+    prev_meta = prev.get("_meta") if isinstance(prev, dict) and isinstance(prev.get("_meta"), dict) else {}
+    if prev_meta.get("checksum") == floor["_meta"]["checksum"] and prev_meta.get("generated"):
+        floor["_meta"]["generated"] = prev_meta["generated"]  # same content: keep the old stamp
+    if prev == floor:
+        return floor  # byte-stable: no write, so a self-heal run never dirties the tracked file
     _FLOOR_PATH.write_text(json.dumps(floor, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
     return floor
 

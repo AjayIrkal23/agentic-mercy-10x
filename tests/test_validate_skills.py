@@ -130,3 +130,19 @@ def test_r14_warns_on_block_scalar_description(tmp_path, monkeypatch, capsys):
     assert validator.validate() == 0
     out = capsys.readouterr().out
     assert any(line.startswith("  R14 WARN") for line in out.splitlines()), out
+
+
+def test_skip_fix_reports_r4_and_leaves_a_tracked_skill_untouched(tmp_path, monkeypatch, capsys):
+    """FIX-r2 I2: self-heal passes --fix-untracked; a tracked skill's token-cost is a WARN, not a rewrite."""
+    validator = _load_validator()
+    skill_dir = tmp_path / "skills" / "reference-test"
+    skill_dir.mkdir(parents=True)
+    md = skill_dir / "SKILL.md"
+    md.write_text("---\nname: reference-test\ndescription: Validates reference paths.\nmetadata:\n"
+                  "  token-cost: 5\n---\n" + ("word " * 400) + "\n", encoding="utf-8")
+    _isolate_validator(monkeypatch, validator, skill_dir, tmp_path / "skills")
+    before = md.read_bytes()
+    validator.validate(fix=True, skip_fix={"reference-test"})
+    assert md.read_bytes() == before and "R4  WARN reference-test" in capsys.readouterr().out
+    validator.validate(fix=True)
+    assert md.read_bytes() != before

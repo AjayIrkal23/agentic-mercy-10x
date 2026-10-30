@@ -11,6 +11,7 @@ transcript can be hundreds of MB. Pure stdlib, never raises.
 from __future__ import annotations
 
 import json
+import re
 from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
@@ -110,6 +111,20 @@ def last_user_turn(transcript_path) -> Tuple[Optional[datetime], Optional[str]]:
     return (None, None)
 
 
+PERMISSION_PHRASES = ("permission rule", "permissions rule", "allow rule", "deny rule", "ask rule",
+                      "permissions.allow", "permissions.deny", "permissions.ask")
+
+
+def prompt_names(transcript_path, names: "tuple[str, ...]", phrases: "tuple[str, ...]" = ()) -> bool:
+    """True when the last human turn contains one of `names` (lower-cased substring, exact spelling:
+    a basename or a path ending) or one of `phrases`. No stems, no bare words."""
+    _, text = last_user_turn(transcript_path)
+    t = (text or "").lower()
+    # phrases match whole words only: "ask rule" must not hit "task rules", "allow rule" not "shallow rule"
+    return bool(t) and (any(n.lower() in t for n in names if n)
+                        or any(re.search(r"(?<![\w.])" + re.escape(p) + r"s?\b", t) for p in phrases))
+
+
 def last_user_turn_ts(transcript_path) -> Optional[datetime]:
     """Aware timestamp of the last real user prompt, or None."""
     return last_user_turn(transcript_path)[0]
@@ -190,5 +205,5 @@ def turn_bash_results(transcript_path) -> list:
 
 
 __all__ = ["TAIL_LINES", "WRITE_TOOLS", "to_aware", "tail_entries", "iter_tail", "last_user_turn",
-           "last_user_turn_ts", "turn_key", "turn_written_files", "turn_bash_commands",
+           "PERMISSION_PHRASES", "prompt_names", "last_user_turn_ts", "turn_key", "turn_written_files", "turn_bash_commands",
            "turn_bash_results"]

@@ -77,6 +77,13 @@ def path_block() -> str:
     return f"\n{BEGIN}\n{PATH_LINE}\n{END}\n"
 
 
+def _rc_files(home: Path) -> tuple:
+    """Shell startup files that get the PATH block when they exist. `.profile`: a bash login shell
+    reads it after `.bashrc` and prepends ~/.local/bin again (final-fix 8). Never creates one:
+    a new ~/.bash_profile or ~/.zprofile would change login behaviour."""
+    return (home / ".zshrc", home / ".bashrc", home / ".profile")
+
+
 def _ensure_rc(rc: Path, dry: bool) -> str:
     if not rc.is_file():
         return f"{rc.name}: SKIP(absent)"
@@ -142,6 +149,63 @@ def _memwatch(run, dry: bool, changed: bool = False) -> str:
     return "claude-memwatch: " + ("ENABLED" if rc == 0 else "WARN(enable failed)")
 
 
+# The daemon's code: any of these newer than the running process means it runs old code (O7 / D1).
+_CODE = (("hooks", "tools", "memwatch.py"), ("hooks", "memwatch.config.json"), ("hooks", "lib", "memwatch_state.py"),
+         ("hooks", "lib", "oomguard_config.py"), ("hooks", "lib", "platform.py"),
+         ("hooks", "lib", "hook_telemetry.py"))  # memwatch.py imports both
+
+
+def _mtime(path: Path) -> float:
+    try:
+        return path.stat().st_mtime
+    except OSError:
+        return 0.0
+
+
+def unit_started_at(run, proc_root="/proc") -> float | None:
+    """Epoch of claude-memwatch's main process from /proc (locale-free; ExecMainStartTimestamp is a date string)."""
+    pid = _verb(run, "show", UNIT, "-p", "MainPID", timeout=5)[1].rpartition("=")[2].strip()
+    if not pid.isdigit() or pid == "0":
+        return None
+    try:
+        with open(Path(proc_root) / "stat", encoding="utf-8") as fh:
+            btime = next(int(ln.split()[1]) for ln in fh if ln.startswith("btime "))
+        with open(Path(proc_root) / pid / "stat", encoding="utf-8") as fh:
+            after = fh.read().rsplit(")", 1)[1].split()
+        return btime + int(after[19]) / os.sysconf("SC_CLK_TCK")  # field 22 = starttime (ticks since boot)
+    except (OSError, ValueError, IndexError, StopIteration):
+        return None
+
+
+def code_newer_than_daemon(run, root: Path, proc_root="/proc") -> bool | None:
+    """True when the daemon runs older code than the files on disk; None when it is not running."""
+    started = unit_started_at(run, proc_root)
+    if started is None:
+        return None
+    return max(_mtime(Path(root).joinpath(*p)) for p in _CODE) > started
+
+
+def _tier() -> str:
+    try:
+        from lib import memwatch_state as mws  # noqa: PLC0415
+        return mws.read().raw_level or "ok"
+    except Exception:  # noqa: BLE001
+        return "ok"
+
+
+def _restart_if_stale(run, root: Path, proc_root) -> str | None:
+    """memwatch code newer than the running daemon -> restart (never at crit). None: daemon not running."""
+    stale = code_newer_than_daemon(run, root, proc_root)
+    if stale is None:
+        return None
+    if not stale:
+        return "memwatch-code: OK(current)"
+    if _tier() == "crit":
+        return "memwatch-code: SKIP(crit: restart later)"
+    rc, _ = _verb(run, "restart", UNIT, timeout=20)
+    return "memwatch-code: " + ("RESTARTED" if rc == 0 else f"WARN(restart rc={rc})") + "(code newer than daemon)"
+
+
 def _restore(run, dry: bool, root: Path, local_cfg: Path) -> str:
     if not (root / "scripts" / "restore_sessions.py").exists():
         return "claude-restore: SKIP(restore_sessions.py absent)"
@@ -160,13 +224,30 @@ def _restore(run, dry: bool, root: Path, local_cfg: Path) -> str:
     return "claude-restore: " + ("DISABLED" if rc == 0 else f"WARN(rc={rc})")
 
 
+def _foreign_home(home: Path) -> bool:
+    """The systemd user manager reads the account's real HOME; a sandbox HOME must not drive it."""
+    try:
+        import pwd  # noqa: PLC0415
+        real = Path(pwd.getpwuid(os.getuid()).pw_dir).resolve()
+    except Exception:  # noqa: BLE001  (Windows, odd nss)
+        return False
+    return Path(home).resolve() != real
+
+
+def _sandboxed(home: Path, bus_injected: bool) -> bool:
+    """AGENTIC_MERCY_SANDBOX=1, or a foreign HOME on the real user bus (an injected bus is a test seam)."""
+    return os.environ.get("AGENTIC_MERCY_SANDBOX") == "1" or (not bus_injected and _foreign_home(home))
+
+
 def ensure(dry: bool = False, *, home=None, run=None, which=None, bus=..., root=None, proc_root="/proc",
            uid=None) -> list[str]:
-    """Bring L0/L1/L3 to the wanted state; one row per item. Never raises on a probe; never needs root."""
+    """Bring L0/L1/L3 to the wanted state; one row per item. Never raises on a probe; never needs root.
+    In a sandbox (see _sandboxed) the files are written but no systemctl/busctl verb runs."""
     home = Path(home or Path.home())
     run = run or plat.run
     which = which or shutil.which
     root = Path(root or _ROOT)
+    sandbox = _sandboxed(home, bus is not ...)
     bus = plat.systemd_user_bus() if bus is ... else bus
     if plat.IS_WINDOWS or bus is None or not which("systemctl"):
         return [NO_MANAGER]
@@ -179,6 +260,11 @@ def ensure(dry: bool = False, *, home=None, run=None, which=None, bus=..., root=
                                  _render((tmpl / unit).read_text(encoding="utf-8"), subs), dry, f"unit {unit}",
                                  "user unit"))
     changed = any(r.rsplit(": ", 1)[-1] in _CHANGED for r in rows)
+    if sandbox:
+        rows += ["systemctl daemon-reload: SKIP(sandbox)", "claude-memwatch: SKIP(sandbox)",
+                 "claude-restore: SKIP(sandbox)"]
+        rows += [_ensure_rc(rc, dry) for rc in _rc_files(home)]
+        return rows + ["attach: SKIP(sandbox)"]
     if dry:
         rows.append("systemctl daemon-reload: " + ("WOULD-RUN" if any("WOULD-" in r for r in rows) else "OK"))
     elif changed:
@@ -187,8 +273,11 @@ def ensure(dry: bool = False, *, home=None, run=None, which=None, bus=..., root=
         rows.append("systemctl daemon-reload: OK(nothing changed)")
     unit_changed = rows[1].rsplit(": ", 1)[-1] in _CHANGED + ("WOULD-CREATE", "WOULD-UPDATE")
     rows.append(_memwatch(run, dry, changed=unit_changed))  # after the reload: the new ExecStart must be loaded first
+    stale_row = None if dry else _restart_if_stale(run, root, proc_root)
+    if stale_row:
+        rows.append(stale_row)
     rows.append(_restore(run, dry, root, home / ".claude" / "oomguard.local.json"))
-    for rc in (home / ".zshrc", home / ".bashrc"):
+    for rc in _rc_files(home):
         rows.append(_ensure_rc(rc, dry))
     rows += attach_live(dry, run=run, proc_root=proc_root, bus=bus, uid=uid)  # after the reload: item 15
     return rows

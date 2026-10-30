@@ -40,3 +40,27 @@ def pin(monkeypatch, exe: str | None = None) -> None:
     import doctor_hook  # type: ignore
     shell = doctor_hook._shell
     monkeypatch.setattr(doctor_hook, "_shell", lambda command, payload, env: shell(command, payload, {**env, **_REAL_HOME}))
+
+
+def pin_tier(home: Path, monkeypatch) -> Path:
+    """Pin this machine's plan tier in a sandbox HOME (FIX-r2 S3): the live settings.json carries its tier
+    keys, so a render that fell back (or re-detected `api` from an empty HOME) would not match it. Copies
+    state/plan-tier.json into ``home/.claude/state`` (CLAUDE_HOOK_STATE_DIR) and gives the sandbox the two
+    plan strings only (no token) so the doctor's session-start re-detection lands on the same tier."""
+    state = Path(home) / ".claude" / "state"
+    state.mkdir(parents=True, exist_ok=True)
+    try:
+        pin_ = json.loads((_ROOT / "state" / "plan-tier.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        pin_ = {"schema": 1, "tier": "max20", "source": "credentials", "detail": "max/default_claude_max_20x"}
+    (state / "plan-tier.json").write_text(json.dumps(pin_), encoding="utf-8")
+    sub, _, rate = str(pin_.get("detail") or "").partition("/")
+    if pin_.get("source") == "credentials" and sub:
+        (Path(home) / ".claude" / ".credentials.json").write_text(
+            json.dumps({"claudeAiOauth": {"subscriptionType": sub, "rateLimitTier": "" if rate == "-" else rate}}),
+            encoding="utf-8")
+    elif pin_.get("source") == "claude.json" and pin_.get("detail"):
+        (Path(home) / ".claude.json").write_text(
+            json.dumps({"oauthAccount": {"organizationRateLimitTier": pin_["detail"]}}), encoding="utf-8")
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(state))
+    return state

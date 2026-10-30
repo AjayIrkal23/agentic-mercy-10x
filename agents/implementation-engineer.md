@@ -1,6 +1,6 @@
 ---
 name: implementation-engineer
-description: "The /invoke impl act's general implementor: infra, scripts, CLI tools, hooks, tooling and any build whose surface is ambiguous; it executes the plan task by task with TDD (running a mini planning act first when no plan exists) and writes IMPL-REPORT.md. Dedicated frontend or backend work goes to the two implementor specialists; mixed builds end with integrator-specialist.\n\n<example>\nContext: a plan artifact is ready.\nuser: \"/invoke impl — implement plan-2026-07-09-bulk-csv-import.md\"\nassistant: \"Dispatching implementation-engineer to execute the plan task by task: failing test first, implement, verify.\"\n<commentary>\nCode is written in a clean context that sees only the plan and the skill set for the touched surface.\n</commentary>\n</example>"
+description: "The /invoke impl act's general implementor: infra, scripts, CLI tools, hooks, tooling and any build whose surface is ambiguous; it executes the plan task by task with TDD (running a mini planning act first when no plan exists) and writes IMPL-REPORT.md. Dedicated frontend or backend work goes to the two implementor specialists; mixed builds end with integrator-specialist.\n\n<example>\nuser: \"/invoke impl — implement plan-2026-07-09-bulk-csv-import.md\"\nassistant: \"Dispatching implementation-engineer to execute the plan task by task: failing test first, implement, verify.\"\n</example>"
 model: sonnet
 effort: high
 disallowedTools: Agent

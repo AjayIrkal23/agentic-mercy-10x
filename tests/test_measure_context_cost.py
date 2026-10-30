@@ -91,6 +91,16 @@ def test_overrides_change_listing(tmp_path):
     assert mc.listing_chars(tmp_path, {})[0] == sum(len(n) + len(f"skill {n} description") + 4 for n in "ab")
 
 
+def test_load_overrides_prefers_the_shipped_template_over_the_merge_draft(tmp_path):
+    """FIX-r2 T6: the template's list (no lean-ctx) wins over docs/merge/skill-overrides.json."""
+    (tmp_path / "settings.template.json").write_text(json.dumps({"skillOverrides": {"a": "name-only"}}),
+                                                     encoding="utf-8")
+    (tmp_path / "docs" / "merge").mkdir(parents=True)
+    (tmp_path / "docs" / "merge" / "skill-overrides.json").write_text(
+        json.dumps({"skillOverrides": {"a": "name-only", "lean-ctx": "name-only"}}), encoding="utf-8")
+    assert mc.load_overrides(tmp_path, None) == {"a": "name-only"}
+
+
 def test_write_document(tmp_path):
     tb = tmp_path / "TB.md"
     r = _run("--write", str(tb))
@@ -107,6 +117,21 @@ def test_write_document(tmp_path):
     # a later --write without --record keeps the recorded figure
     _run("--write", str(tb))
     assert "<!-- mcp-eager-observed: 1234 -->" in tb.read_text(encoding="utf-8")
+
+
+def test_record_is_a_token_figure(tmp_path):
+    """FIX-r3 T8: /context reports tokens; the table is chars, so the eager row is the token figure x 4."""
+    tb = tmp_path / "doc.md"
+    r = _run("--record", "725", "--json", "--write", str(tb))
+    assert r.returncode == 0, r.stderr
+    data = json.loads(r.stdout)
+    eager = next(x for x in data["rows"] if x["name"] == "eager MCP schemas")
+    assert eager["after"] == 2900 and "725 tok" in eager["note"]
+    assert "eager MCP schemas" in mc.FLOOR and data["fixed_floor"] >= 2900
+    text = tb.read_text(encoding="utf-8")
+    assert "725 tokens (~2,900 chars in the table)" in text and "<!-- mcp-eager-observed: 725 -->" in text
+    again = json.loads(_run("--json", "--mcp-eager", "--write", str(tb)).stdout)  # marker read back as tokens
+    assert next(x for x in again["rows"] if x["name"] == "eager MCP schemas")["after"] == 2900
 
 
 def test_json():

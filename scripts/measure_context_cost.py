@@ -27,7 +27,8 @@ BEFORE = {"CLAUDE.md": 5703, "CLAUDE.machines.local.md (imported part)": 22512,
           "plan-tier notice line": 0, "instinct lines": 0, "eager MCP schemas": 0}
 DOCTRINE = ("CLAUDE.md", "CLAUDE.machines.local.md (imported part)", "rules/0*.md (no paths: frontmatter)")
 FLOOR = DOCTRINE + ("MEMORY.md", "skill listing (local + plugins)", "agent descriptions", "eager MCP schemas")
-PER_EVENT_NOTES = ("prompt router line: mean ~85 tokens per prompt", "memwatch-brake: 0 / 40 / 60 tokens (ok / warn / crit)",
+PER_EVENT_NOTES = ("prompt router line: ~92 tok mean pre-merge, ~192 post-merge (768 ch); final-fix 2 probe "
+                   "1,145 -> 964 ch, target <= 445 ch (hooks/prompt_router/CLAUDE.md)","memwatch-brake: 0 / 40 / 60 tokens (ok / warn / crit)",
                    "tdd-guard advisory: ~120 tokens per write in test-stack repos")
 ECC_ADVICE = (
     "- Haiku for mechanical work (explore, docs, cleanup, verify); the plan tier picks it (`rules/04`).",
@@ -124,9 +125,30 @@ def _frontmatter(path: Path) -> dict:
         return dict(re.findall(r"^([A-Za-z0-9_-]+):\s*(.*)$", m.group(1), re.M)) if m else {}
 
 
+def _skills_index(root: Path) -> dict:
+    """hooks/skills-index.json (local skills) merged with the per-machine plugin sidecar
+    state/skills-index.plugins.json; `_meta.plugin_count` comes from the sidecar."""
+    def rd(p: Path) -> dict:
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+        return d if isinstance(d, dict) else {}
+    idx = rd(root / "hooks" / "skills-index.json")
+    side = rd(root / "state" / "skills-index.plugins.json")
+    plug = side.get("skills") if isinstance(side.get("skills"), dict) else {}
+    if plug:
+        skills = dict(idx.get("skills") or {}) if isinstance(idx.get("skills"), dict) else {}
+        skills.update({k: v for k, v in plug.items() if k not in skills})
+        idx = {**idx, "skills": skills, "_meta": {**(idx.get("_meta") or {}), "plugin_count": len(plug)}}
+    return idx
+
+
 def load_overrides(root: Path, path: str | None) -> dict:
-    cands = [Path(path).expanduser()] if path else [root / "docs" / "merge" / "skill-overrides.json",
-                                                    _claude_dir() / "settings.json"]
+    # the shipped list first (template, then the rendered live file); the merge draft is a last resort
+    # (it carries entries kept out on purpose, e.g. lean-ctx)
+    cands = [Path(path).expanduser()] if path else [root / "settings.template.json", _claude_dir() / "settings.json",
+                                                    root / "docs" / "merge" / "skill-overrides.json"]
     for c in cands:
         try:
             ov = json.loads(c.read_text(encoding="utf-8")).get("skillOverrides")
@@ -145,7 +167,7 @@ def listing_chars(root: Path, overrides: dict) -> tuple[int, str]:
         mode = overrides.get(name, "on")
         total += 0 if mode == "user-invocable-only" else len(name) + 4 + (0 if mode == "name-only" else len(desc))
     try:
-        idx = json.loads((root / "hooks" / "skills-index.json").read_text(encoding="utf-8"))
+        idx = _skills_index(root)
         skills = idx.get("skills") if isinstance(idx.get("skills"), dict) else idx
         for k, v in skills.items():
             if ":" in k and isinstance(v, dict):
@@ -203,6 +225,13 @@ def _budget_doc(root: Path, write: str | None) -> Path:
     return Path(write).expanduser() if write else root / "docs" / "TOKEN-BUDGET.md"
 
 
+TOK_TO_CHARS = 4  # the table is chars; /context reports tokens (FIX-r3 T8: the marker stores the token figure)
+
+
+def _eager_note(rec: int, names: list[str]) -> str:
+    return f"{rec} tok from /context ×{TOK_TO_CHARS}; " + (", ".join(names) or "none")
+
+
 def recorded(root: Path, write: str | None) -> int | None:
     m = MARKER_RE.search(_text(_budget_doc(root, write)))
     return int(m.group(1)) if m else None
@@ -240,7 +269,7 @@ def measure(root: Path, drafts: Path | None, a) -> list[dict]:
     if a.mcp_eager:
         rec = recorded(root, a.write)
         names = eager_servers(root)
-        rows.append(row("eager MCP schemas", rec, ", ".join(names) or "none") if rec is not None
+        rows.append(row("eager MCP schemas", rec * TOK_TO_CHARS, _eager_note(rec, names)) if rec is not None
                     else row("eager MCP schemas", None, f"{', '.join(names) or 'none'}; unmeasured"))
     return rows
 
@@ -274,8 +303,8 @@ def counts(root: Path) -> list[tuple[str, int, str]]:
     plugins = (man.get("plugins") or {}).get("install") or []
     return [
         ("Local skills", len(list((root / "skills").glob("*/SKILL.md"))), "`ls skills/*/SKILL.md \\| wc -l`"),
-        ("Plugin skills", int((js("hooks/skills-index.json").get("_meta") or {}).get("plugin_count") or 0),
-         "`hooks/skills-index.json` → `_meta.plugin_count`"),
+        ("Plugin skills", int((_skills_index(root).get("_meta") or {}).get("plugin_count") or 0),
+         "`state/skills-index.plugins.json` → `_meta.plugin_count`"),
         ("Agents", len(_agents(root)), "`agents/*.md` minus README and team-lead"),
         ("Hook events wired", len(js("settings.template.json").get("hooks") or {}), "`settings.template.json` → `hooks`"),
         ("Dispatch links enabled", links, "`hooks/dispatch.config.json` → `chains`"),
@@ -323,7 +352,7 @@ def observed_text(tel: Path) -> str:
 def eager_text(root: Path, write: str | None, record: int | None = None) -> str:
     names = eager_servers(root)
     rec = record if record is not None else recorded(root, write)
-    fig = f"recorded /context figure: {rec:,} chars" if rec is not None else \
+    fig = f"recorded /context figure: {rec:,} tokens (~{rec * TOK_TO_CHARS:,} chars in the table)" if rec is not None else \
         "unmeasured (run /context at go-live, then --record N)"
     return f"eager MCP servers: {', '.join(names) or 'none'}\n{fig}"
 
@@ -337,6 +366,9 @@ def document(rows, root: Path, write: str | None, record: int | None) -> str:
              f"Doctrine total: {_total(rows, DOCTRINE):,} chars (~{_total(rows, DOCTRINE) // 4:,} tokens); "
              f"fixed floor: {_total(rows, FLOOR):,} chars. Before: {sum(BEFORE[n] for n in DOCTRINE):,} / "
              f"{sum(BEFORE[n] for n in FLOOR):,}.", "",
+             "Token figures here are chars/4, which understates path-heavy prose: at go-live `/context` "
+             "showed ~8.2k real tokens for the memory files where chars/4 gives ~4.6k (factor ~1.8). "
+             "Compare targets in chars, or multiply by ~1.8 for real tokens.", "",
              "## Fixed per session", "", table(fixed), "",
              "## Per event", "", table(event), "", *[f"- {n}" for n in PER_EVENT_NOTES], "",
              "## Observed", "", observed_text(telemetry(root)), "",
@@ -348,7 +380,8 @@ def document(rows, root: Path, write: str | None, record: int | None) -> str:
               "- `python3 scripts/measure_context_cost.py --write docs/TOKEN-BUDGET.md --counts --observed --mcp-eager`",
               "- `python3 scripts/measure_context_cost.py --mcp-eager --record <n>` after reading `/context`", "",
               "## Weekly manual inputs", "",
-              "- `/context`: the eager MCP schema figure (feed it to `--record`).",
+              "- `/context`: the eager MCP schema figure in tokens (feed it to `--record`; the marker stores "
+              "tokens, the table shows tokens x 4 as chars).",
               "- `/doctor prompt-audit`: the system prompt as the harness sees it.",
               "- `/skill-doctor`: listing entries the harness flags as unused.", "",
               "## Token advice carried over from ECC", "", *ECC_ADVICE, ""]
@@ -365,7 +398,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--counts", action="store_true")
     ap.add_argument("--observed", action="store_true")
     ap.add_argument("--mcp-eager", action="store_true")
-    ap.add_argument("--record", type=int)
+    ap.add_argument("--record", type=int, metavar="TOKENS", help="the /context token figure for the eager MCP schemas")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
     root = Path(a.root).expanduser().resolve()
@@ -377,7 +410,7 @@ def main(argv: list[str] | None = None) -> int:
         a.mcp_eager = True
     rows = measure(root, drafts, a)
     if a.record is not None:  # the recorded figure is the eager row
-        rows[-1].update(after=a.record, note=", ".join(eager_servers(root)) or "none")
+        rows[-1].update(after=a.record * TOK_TO_CHARS, note=_eager_note(a.record, eager_servers(root)))
     doctrine, floor = _total(rows, DOCTRINE), _total(rows, FLOOR)
     if a.json:
         print(json.dumps({"doctrine_total": doctrine, "fixed_floor": floor, "rows": rows,

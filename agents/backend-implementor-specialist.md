@@ -1,6 +1,6 @@
 ---
 name: backend-implementor-specialist
-description: "The /invoke impl act for backend surfaces: routes, controllers, services, schemas, migrations, workers and queues, built contract-first with per-task TDD; it publishes IMPL-REPORT-BE.md whose CONTRACT section the frontend specialist and integrator consume verbatim. In a fullstack build it runs first; pure backend work comes here rather than to implementation-engineer.\n\n<example>\nContext: a fullstack plan is ready; backend goes first.\nuser: \"/invoke impl — build the bulk CSV import (server endpoint + client screen)\"\nassistant: \"Surfaces are FE+BE, so backend-implementor-specialist goes first: typed contract, endpoint with per-task TDD, then IMPL-REPORT-BE.md.\"\n<commentary>\nThe backend owns and publishes the contract so the frontend never invents API shapes.\n</commentary>\n</example>"
+description: "The /invoke impl act for backend surfaces: routes, controllers, services, schemas, migrations, workers and queues, built contract-first with per-task TDD; publishes IMPL-REPORT-BE.md whose CONTRACT the frontend specialist and integrator consume verbatim. Runs first in a fullstack build; pure backend work comes here, not to implementation-engineer.\n\n<example>\nuser: \"/invoke impl — build the bulk CSV import (server endpoint + client screen)\"\nassistant: \"Surfaces are FE+BE, so backend-implementor-specialist goes first: typed contract, endpoint with TDD, IMPL-REPORT-BE.md.\"\n</example>"
 model: sonnet
 effort: high
 disallowedTools: Agent

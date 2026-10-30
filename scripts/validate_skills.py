@@ -30,7 +30,7 @@ from collections import defaultdict
 from pathlib import Path
 
 import skills_lib as sl
-from build_skills_index import LEGACY_META_KEYS, skill_meta
+from build_skills_index import LEGACY_META_KEYS, SIDECAR, skill_meta
 
 PROVENANCE = sl.HOOKS_DIR / "skills-provenance.json"
 SOURCES = sl.HOOKS_DIR / "skills-sources.json"
@@ -79,7 +79,9 @@ def _locked_names() -> set[str]:
     return sl.locked_skills()
 
 
-def validate(fix: bool = False) -> int:
+def validate(fix: bool = False, skip_fix: set[str] | frozenset = frozenset()) -> int:
+    """skip_fix: skill names reported but never rewritten (the tracked ones under --fix-untracked)."""
+    fix_all = fix
     locked = _locked_names()
     provenance = _load_json(PROVENANCE)
     floor = _load_json(FLOOR)
@@ -97,6 +99,7 @@ def validate(fix: bool = False) -> int:
         fm, body, ok = sl.read_frontmatter(d / "SKILL.md")
         is_locked = name in locked
         is_user = not is_locked
+        fix = fix_all and name not in skip_fix
         if not ok:
             print(f"  R0  HARD {name}: unreadable front-matter")
             hard_fail += 1
@@ -220,7 +223,8 @@ def validate(fix: bool = False) -> int:
     # alias (resolved at runtime by lib/skill_aliases), or on-disk dir.
     floor_entries = floor.get("entries") if isinstance(floor.get("entries"), list) else None
     if floor_entries:
-        resolvable = set((index.get("skills", {}) or {}).keys()) | aliases | set(sl.skill_names())
+        resolvable = (set((index.get("skills", {}) or {}).keys()) | aliases | set(sl.skill_names())
+                      | set((_load_json(SIDECAR).get("skills", {}) or {}).keys()))  # plugin skills (per machine)
         referenced: set[str] = set()
         for ent in floor_entries:
             val = ent.get("value") if isinstance(ent, dict) else None
@@ -255,10 +259,27 @@ def validate(fix: bool = False) -> int:
     return 1 if hard_fail else 0
 
 
+def _tracked_skills() -> set[str]:
+    """Skill dir names git tracks under skills/ (empty outside a git checkout)."""
+    import subprocess  # noqa: PLC0415
+    try:
+        cp = subprocess.run(["git", "-c", "safe.directory=*", "-C", str(sl.CLAUDE_DIR), "ls-files", "skills"],
+                            capture_output=True, text=True, timeout=20)
+    except (OSError, subprocess.SubprocessError):
+        return set()
+    if cp.returncode != 0:
+        return set()
+    return {p.split("/")[1] for p in cp.stdout.splitlines() if p.count("/") >= 2}
+
+
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--fix", action="store_true", help="apply R1/R4 fixes")
+    ap.add_argument("--fix-untracked", action="store_true",
+                    help="apply R1/R4 fixes only to skills git does not track (self-heal: never dirties the tree)")
     args = ap.parse_args()
+    if args.fix_untracked and not args.fix:
+        return validate(fix=True, skip_fix=_tracked_skills())
     return validate(fix=args.fix)
 
 

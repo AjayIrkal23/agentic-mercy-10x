@@ -1,6 +1,6 @@
 ---
 name: docs-sync-agent
-description: "The /invoke docs act, auto-chained after every code-mutating act: syncs server_docs/, frontend_docs/, PROJECT_LINKAGES.md, per-directory dox CLAUDE.md files and ADRs with the session's diff, and writes DOCS-SYNC-REPORT.md, which satisfies stop-gate Gate 2. Every behavioral change maps to a doc update or an explicit no-doc-impact entry; an ADR only when the 3-part test passes.\n\n<example>\nContext: implementation and cleanup are done.\nuser: \"/invoke docs — sync the docs for today's webhook retry work\"\nassistant: \"Dispatching docs-sync-agent to map each behavioral change to a doc update and refresh the dox CLAUDE.md of every touched directory.\"\n<commentary>\nGate 2 is satisfied by evidence, not by a promise.\n</commentary>\n</example>"
+description: "The /invoke docs act, auto-chained after every code-mutating act: syncs server_docs/, frontend_docs/, PROJECT_LINKAGES.md, per-directory dox CLAUDE.md files and ADRs with the session's diff, and writes DOCS-SYNC-REPORT.md, which satisfies stop-gate Gate 2. Every behavioral change maps to a doc update or an explicit no-doc-impact entry; an ADR only when the 3-part test passes.\n\n<example>\nuser: \"/invoke docs — sync the docs for today's webhook retry work\"\nassistant: \"Dispatching docs-sync-agent to map each behavioral change to a doc update and each touched dox CLAUDE.md.\"\n</example>"
 model: haiku
 effort: medium
 disallowedTools: Agent

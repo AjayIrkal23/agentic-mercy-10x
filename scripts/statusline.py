@@ -314,7 +314,7 @@ SEGMENTS = (seg_model, seg_context, seg_cost, seg_mem, seg_limits, seg_git, seg_
 def _bridge(d) -> None:
     """Every BRIDGE_EVERY s: state/session-bridge/<sid>.json (context, cost, five-hour numbers for the usage
     guard and context monitor) and a `seen` heartbeat in state/live-sessions/<sid>.json when that ledger
-    entry exists. Never raises, never adds imports."""
+    entry exists, then lets lib/usage_guard flip state/usage-guard.json on this reading. Never raises."""
     sid = _text(d.get("session_id"), 80)
     if not sid:
         return
@@ -335,6 +335,14 @@ def _bridge(d) -> None:
     if isinstance(cur, dict):
         cur["seen"] = time.time()
         _store(ledger, cur)
+    try:  # flip state/usage-guard.json now, so the `↓` follows this very reading (only on a bridge write)
+        hooks = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "hooks")
+        if hooks not in sys.path:
+            sys.path.insert(0, hooks)
+        from lib import usage_guard  # noqa: PLC0415
+        usage_guard.state()
+    except Exception:  # noqa: BLE001 - the line never depends on the guard
+        pass
 
 
 def _width(s: str) -> int:
@@ -376,13 +384,13 @@ def main() -> int:
         except ValueError:
             d = {}
         cols = os.environ.get("COLUMNS", "")
-        line = render(d if isinstance(d, dict) else {}, not os.environ.get("NO_COLOR"),
-                      int(cols) if cols.isdigit() else None)
         if isinstance(d, dict):
             try:
-                _bridge(d)
+                _bridge(d)  # before render: the usage-guard arrow reads what the bridge just evaluated
             except Exception:  # noqa: BLE001 - the bridge never blanks the line
                 pass
+        line = render(d if isinstance(d, dict) else {}, not os.environ.get("NO_COLOR"),
+                      int(cols) if cols.isdigit() else None)
     except Exception:  # noqa: BLE001
         line = ""
     sys.stdout.write((line or "◆ Claude") + "\n")

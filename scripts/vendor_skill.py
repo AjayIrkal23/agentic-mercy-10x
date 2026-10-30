@@ -17,7 +17,9 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -123,31 +125,59 @@ def vendor(name: str, entry: dict, ref: str | None = None) -> str:
     if not (src / "SKILL.md").is_file():
         raise FileNotFoundError(f"{name}: no SKILL.md at {entry.get('subpath')} in {entry['repo']}@{ref}")
     dst = sl.SKILLS_DIR / name
+    old = _marker(name)  # read before the tree is replaced: an unchanged sha keeps its vendored_at
+    # FIX-r3 I12: build in a staging dir; swap only when the bytes differ, so an unchanged skill keeps
+    # every mtime (and its marker) across installs. Staging sits in .cache/ (gitignored, same filesystem
+    # for os.replace), so not even skills/ itself moves when nothing changed.
+    stage_dir = sl.SKILLS_DIR.parent / ".cache" / "vendor-staging"
+    stage_dir.mkdir(parents=True, exist_ok=True)
+    staged, prev = stage_dir / name, stage_dir / f"{name}.old"
+    _remove(staged)
+    shutil.copytree(src, staged, symlinks=False,
+                    ignore=shutil.ignore_patterns(".git", ".git-upstream", ".gitmodules"))
+    for rel in entry.get("prune", []) or []:
+        _remove(staged / rel)
+    for gp in list(staged.rglob(".git*")):  # .gitignore/.gitattributes etc.
+        _remove(gp)
+    apply_patches(staged, entry.get("patches"))
+    apply_overrides(staged / "SKILL.md", entry.get("frontmatter_overrides") or {},
+                    entry.get("prepend_body") or "")
+    stamp = old.get("vendored_at") if old.get("sha") == sha and old.get("vendored_at") else \
+        dt.date.today().isoformat()
+    (staged / MARKER).write_text(json.dumps({
+        "repo": entry["repo"], "ref": ref, "sha": sha, "vendored_at": stamp,
+    }, indent=2) + "\n", encoding="utf-8", newline="\n")
+    if dst.is_dir() and not dst.is_symlink() and tree_digest(staged) == tree_digest(dst):
+        _remove(staged)
+        return sha
+    _remove(prev)
     if dst.is_symlink() or dst.is_file():
         dst.unlink()
     elif dst.exists():
-        shutil.rmtree(dst)
-    shutil.copytree(src, dst, symlinks=False,
-                    ignore=shutil.ignore_patterns(".git", ".git-upstream", ".gitmodules"))
-    for rel in entry.get("prune", []) or []:
-        p = dst / rel
-        if p.is_dir():
-            shutil.rmtree(p)
-        elif p.exists():
-            p.unlink()
-    for gp in list(dst.rglob(".git*")):  # .gitignore/.gitattributes etc.
-        if gp.is_dir():
-            shutil.rmtree(gp, ignore_errors=True)
-        elif gp.exists():
-            gp.unlink()
-    apply_patches(dst, entry.get("patches"))
-    apply_overrides(dst / "SKILL.md", entry.get("frontmatter_overrides") or {},
-                    entry.get("prepend_body") or "")
-    (dst / MARKER).write_text(json.dumps({
-        "repo": entry["repo"], "ref": ref, "sha": sha,
-        "vendored_at": dt.date.today().isoformat(),
-    }, indent=2) + "\n", encoding="utf-8", newline="\n")
+        os.replace(dst, prev)
+    os.replace(staged, dst)
+    _remove(prev)
     return sha
+
+
+def _remove(p: Path) -> None:
+    if p.is_dir() and not p.is_symlink():
+        shutil.rmtree(p, ignore_errors=True)
+    elif p.exists() or p.is_symlink():
+        p.unlink()
+
+
+def tree_digest(root: Path) -> str:
+    """sha256 over sorted (relpath, exec bit, sha256 of bytes) of every file and every dir name."""
+    h = hashlib.sha256()
+    for p in sorted(root.rglob("*")):
+        rel = p.relative_to(root).as_posix().encode("utf-8")
+        if p.is_file():
+            h.update(b"F" + rel + b"\0" + bytes([bool(p.stat().st_mode & 0o111)]) +
+                     hashlib.sha256(p.read_bytes()).digest())
+        elif p.is_dir():
+            h.update(b"D" + rel + b"\0")
+    return h.hexdigest()
 
 
 def _marker(name: str) -> dict:

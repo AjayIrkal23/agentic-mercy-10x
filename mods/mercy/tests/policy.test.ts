@@ -105,6 +105,21 @@ describe('bridge plan', () => {
       expect(sync('PowerShell', command), command).toEqual([])
     }
   })
+  test('Bash: in-place and interpreter writes reach the owned write gate (R2-F1)', () => {
+    const cfg = parseConfig(JSON.stringify({ chains: { 'pre-tool-use': [{ id: 'bash-write-gate', type: 'gate', tools: 'Bash|PowerShell' }] } }))
+    if (!cfg) throw new Error('config fixture did not parse')
+    const own = ownedLinks(cfg, { tddGuard: 'async', bashWriteDenyArmed: false })
+    const sync = (command: string) => planFor(cfg, own, 'pre-tool-use', facts('Bash', { command }), 'async').sync
+    for (const command of ["sed -i 's/b + a/a + b/' src/calc.py", "perl -pi -e 's/double/twice/' src/util.py", 'ruby -i -pe "gsub(/a/,\'b\')" a.rb',
+      "sed --in-place 's/a/b/' x.py", `python3 -c "open('src/gen2.py','w').write('y = 2\\n')"`, `node -e "require('fs').writeFileSync('a.js','x')"`,
+      "python3 - <<'PY'\nopen('a.py','w')\nPY", "cd src && sed -i 's/a/b/' calc.py", "$(perl -pi -e 's/a/b/' x)"]) {
+      expect(sync(command), command).toEqual(['bash-write-gate'])
+    }
+    for (const command of ['git commit -m "switch from sed -i to ctx_patch"', "sed -n '1,5p' src/calc.py", 'grep -i foo src', 'ls -i',
+      'python3 -m pytest -q', "echo 'use perl -i' ", 'npm test 2>&1']) {
+      expect(sync(command), command).toEqual([])
+    }
+  })
   test('writes: dox only when the root lacks CLAUDE.md; tdd async unless off', () => {
     const edit = (has: boolean | undefined) => planFor(CFG, owned, 'pre-tool-use', facts('Edit', { file_path: '/r/a.ts' }, { rootHasClaudeMd: has }), 'async')
     expect(edit(true)).toEqual({ sync: [], async: ['tdd-guard-launcher-pre'] })

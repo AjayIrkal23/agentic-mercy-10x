@@ -88,6 +88,34 @@ def generated_status(results: list) -> tuple[str, str]:
     return "PASS", "invoke skills + agent skill blocks in sync"
 
 
+_WF_BAD = ("DRIFT", "MISSING", "EXTRA", "NOT-RENDERED")
+
+
+def workflows_rendered_status(root: Path, ci: bool = False) -> tuple[str, str]:
+    """I10: workflows/*.js + index.json are a per-machine render (untracked). Missing or drifted -> FAIL,
+    which self-heal repairs with `scripts/build_workflows.py --quiet`. --ci: SKIP (CI renders and checks)."""
+    import subprocess  # noqa: PLC0415
+    import sys  # noqa: PLC0415
+    root = Path(root)
+    script = root / "scripts" / "build_workflows.py"
+    if ci:
+        return "SKIP", "ci: the CI job renders and checks the workflows itself"
+    if not script.is_file() or not (root / "workflows" / "src").is_dir():
+        return "SKIP", "no workflow sources"
+    if not (root / "workflows" / "index.json").is_file():
+        return "FAIL", "workflows not rendered (self-heal runs scripts/build_workflows.py)"
+    try:
+        cp = subprocess.run([sys.executable, str(script), "--check"], capture_output=True, text=True,
+                            encoding="utf-8", errors="replace", timeout=60, check=False)
+    except (OSError, subprocess.SubprocessError) as exc:
+        return "WARN", f"build_workflows.py --check: {type(exc).__name__}"
+    lines = (cp.stdout or "").strip().splitlines()
+    if cp.returncode != 0:
+        bad = [ln for ln in lines if ln.startswith(_WF_BAD)]
+        return "FAIL", ("; ".join(bad[:3]) or f"--check rc={cp.returncode}") + " (self-heal re-renders)"
+    return "PASS", lines[-1][:100] if lines else "rendered"
+
+
 def _approved_locked_source(link: Path) -> bool:
     """Accept only links that resolve to a recognizable skill source surface."""
     try:

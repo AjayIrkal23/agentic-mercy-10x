@@ -38,15 +38,20 @@ state `state/mem-pressure.json`; runbook `docs/OOM-GUARD.md`.
 | `dox-write-gate` | Write/Edit in a repo with no root `CLAUDE.md` | `DOX GATE: no root CLAUDE.md …` | deny once per repo |
 | `gateguard-write-gate` | Write/Edit with high blast radius | `GATEGUARD — high-blast-radius write to …` | `ask`, not deny |
 | `tdd-guard-gate` | Write/Edit in a project with a test runner | `⚠️ TDD GUARD (advisory — not blocking):` | advisory, 15 s cap; never in `$HOME` / non-git |
-| `bash-write-gate` | Bash / PowerShell shell-write patterns (`>`, `tee`, `Set-Content`, `Out-File`, …) | advisory unless `BASH_WRITE_GATE_DENY_SHELL_WRITES=1` | rule carried by `01-no-shell-writes.md` |
+| `bash-write-gate` | Bash / PowerShell shell-write patterns (`sed -i`, `>`, `tee`, `Set-Content`, `Out-File`, …) | `BASH-WRITE-GATE (advisory)`, once per kind per session; deny when `BASH_WRITE_GATE_DENY_SHELL_WRITES=1` | rule carried by `01-no-shell-writes.md` |
 | `memwatch-brake` | Agent/Task/Workflow + heavy shell commands | `memory warn:` / `memory crit:` | warn: advisory once per tier per session; crit: `ask`, advisory when unattended |
 | `config-protection-gate` | Write/Edit on lint/format config | — | `ask` unless the prompt asked for it |
+| `settings-protection-gate` | Write/Edit, and Bash/PowerShell writes, on `.claude/settings*.json`, `hooks/model-policy.json`, `~/.claude.json` (new files too) | — | `ask`; deny when nobody can answer (subagent, unattended, headless `-p`); escape = the prompt names the file (`.claude/settings…` path for the settings files; basename for `.claude.json` / `model-policy.json`) or a permission-rule phrase (`permission rule`, `allow rule`, `permissions.allow`, ...) |
 | `hookify-gate` | repo `.claude/hookify.*.local.md` rules | — | gate on tools; advisory on prompt/stop |
 | `connector-ask-gate` | claude.ai connector, plugin and GitHub write tools | — | `ask`; deny for subagents |
 | `hard-completion-gate` | Stop | `Gate 2 (docs)` … `Gate 5 (dead code)` | ≤1 block per turn |
 | `blocking-doc-enforcer` | `git commit` | `BLOCKED: Cannot commit without documentation updates.` | only when doc trees exist |
 | mercy mod guard | Bash / PowerShell dev server / watcher, subagent commit/push, live secret in a write | `mercy guard:` | deny; userConfig `guard` |
 | mercy mod verify gate | Stop after unverified code edits | `mercy verify gate:` | ≤1 block per turn; userConfig `verifyGate` |
+
+jcm-gate-read: non-code paths and `~/.claude` are exempt. Index freshness is event-driven (active
+repo only); a session-start STALE/MISSING line → `mcp__jcodemunch__index_folder({path, incremental:true})`
+and `graphify update <root>`.
 
 Mods (`mods/<name>`, loaded via rendered `env.CLAUDE_CODE_PLUGIN_DIRS`) run in-process
 beside the Python hooks; check them with `python3 scripts/validate_mods.py`.

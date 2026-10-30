@@ -1,6 +1,6 @@
 ---
 name: frontend-implementor-specialist
-description: "The /invoke impl act for frontend surfaces: components, hooks, query layers, styling and client wiring with per-task TDD, built against the CONTRACT in IMPL-REPORT-BE.md (else the SPEC or the live backend via jcodemunch); writes IMPL-REPORT-FE.md. It never invents API shapes, and every raster, video, 3D or audio asset comes from Higgsfield, never a placeholder.\n\n<example>\nContext: the backend half of a fullstack build landed with a published contract.\nuser: \"/invoke impl — now build the client screen for the CSV import\"\nassistant: \"IMPL-REPORT-BE.md is on disk, so frontend-implementor-specialist consumes its CONTRACT verbatim and builds the query layer and screen test-first.\"\n<commentary>\nContract mismatches are flagged back, never papered over with invented shapes.\n</commentary>\n</example>"
+description: "The /invoke impl act for frontend surfaces: components, hooks, query layers, styling and client wiring with per-task TDD, built against the CONTRACT in IMPL-REPORT-BE.md (else the SPEC or the live backend via jcodemunch); writes IMPL-REPORT-FE.md. It never invents API shapes, and every raster, video, 3D or audio asset comes from Higgsfield, never a placeholder.\n\n<example>\nuser: \"/invoke impl — now build the client screen for the CSV import\"\nassistant: \"frontend-implementor-specialist consumes the CONTRACT in IMPL-REPORT-BE.md and builds the screen test-first.\"\n</example>"
 model: sonnet
 effort: high
 disallowedTools: Agent

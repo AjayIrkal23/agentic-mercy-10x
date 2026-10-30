@@ -77,6 +77,17 @@ def preserve_existing(target, env, emit: Callable) -> None:
         emit("settings", PRE_INSTALL, f"WARN({exc})")
 
 
+def _tier_first(target, render) -> None:
+    """No state/plan-tier.json yet (fresh install): detect the tier before the first render, so the
+    tier keys are right in round 1 instead of after the `plan-tier` post step and a second round."""
+    try:
+        from lib import plan_tier  # noqa: PLC0415
+        if not plan_tier.state_path().is_file():
+            render._detect_tier_first(Path(target))
+    except Exception:  # noqa: BLE001 - the post step still detects it
+        pass
+
+
 def ensure(target, env, emit: Callable, *, force: bool, stale: Callable[[Path], bool],
            preserved: bool = False) -> None:
     """``preserved``: ``preserve_existing`` already ran in this install pass, so a settings.json
@@ -96,6 +107,7 @@ def ensure(target, env, emit: Callable, *, force: bool, stale: Callable[[Path], 
         subs, overlay = _subs(env), Path(target) / "settings.user.json"
         if users is not None:
             _preserve(st, users, overlay, render, subs, emit)
+        _tier_first(target, render)  # a fresh HOME renders tier-correct in round 1 (FIX-r2 I7)
         text = render.render(user_path=overlay, subs=subs)
         if st.exists():  # keep the user's Claude-managed keys (theme, tui, voice …) and additions
             text = render.carry_managed(text, st)

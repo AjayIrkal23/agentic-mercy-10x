@@ -94,6 +94,20 @@ def test_machine_terms_file_is_optional_and_case_insensitive(tmp_path, monkeypat
     assert rules == ["ptyxis-spawn", "rfc1918", "rfc1918", "rfc1918"]
 
 
+def test_gitignored_files_are_skipped_inside_a_work_tree(tmp_path, monkeypatch):
+    import subprocess
+    tree = tmp_path / "t"
+    (tree / "sub").mkdir(parents=True)
+    bad = "x = '/home/" + "someone/secret/path'\n"
+    (tree / "sub" / "ignored.md").write_text(bad, encoding="utf-8")
+    (tree / ".gitignore").write_text("sub/ignored.md\n", encoding="utf-8")
+    assert VI.scan([tree / "sub"]) != []                       # no .git: reported
+    subprocess.run(["git", "init", "-q", str(tree)], check=True, capture_output=True)
+    assert VI.scan([tree / "sub"]) == []                       # ignored in a work tree: skipped
+    monkeypatch.setattr(VI, "RESPECT_GITIGNORE", False)
+    assert VI.scan([tree / "sub"]) != []                       # --no-gitignore
+
+
 def test_binary_and_excluded_dirs_are_skipped(tmp_path):
     bidi = "\u202e"
     for rel in ("node_modules/x.txt", ".git/x", "__pycache__/a.pyc"):

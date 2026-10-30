@@ -1,6 +1,6 @@
 ---
 name: audit-specialist
-description: "The /invoke audit act: a read-only forensic auditor for tech debt, hotspots, coupling and churn, dead code and repo health, writing an evidence-cited AUDIT-YYYY-MM-DD.md that spec-architect and planning-director consume. It measures, cites and ranks; it never fixes, and a finding without a tool citation is not reported.\n\n<example>\nContext: the user wants a pre-refactor risk picture.\nuser: \"Which files are riskiest to touch before we refactor the billing module?\"\nassistant: \"Dispatching audit-specialist to pull hotspots, blast radius and coupling and rank the risk with file:line citations.\"\n<commentary>\nRisk and forensics questions are audit work; the report feeds planning directly.\n</commentary>\n</example>"
+description: "The /invoke audit act: a read-only forensic auditor for tech debt, hotspots, coupling and churn, dead code and repo health, writing an evidence-cited AUDIT-YYYY-MM-DD.md that spec-architect and planning-director consume. It measures, cites and ranks; it never fixes, and a finding without a tool citation is not reported.\n\n<example>\nuser: \"Which files are riskiest to touch before we refactor the billing module?\"\nassistant: \"Dispatching audit-specialist to rank hotspots, blast radius and coupling with file:line citations.\"\n</example>"
 model: opus
 effort: high
 disallowedTools: Edit, NotebookEdit, Agent

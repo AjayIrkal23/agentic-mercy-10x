@@ -96,7 +96,7 @@ def test_missing_graph_line_says_it_is_building_and_gives_the_fallback(monkeypat
     items = R._substrate_items(prof, {"repo": repo, "payload": {}})
     txt = next(i["text"] for i in items if i["id"] == "substrate:graphify")
     assert "graphify update" not in txt
-    assert "graph is building in the background; use jcodemunch get_dependency_graph now" in txt
+    assert "no graphify graph yet (building); use jcodemunch get_dependency_graph now" in txt
 
 
 def _arch(monkeypatch, root):

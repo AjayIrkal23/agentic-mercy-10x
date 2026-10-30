@@ -454,7 +454,9 @@ def _dispatch_one(event: str, payload: dict, cfg: dict, only: frozenset | None =
               and ln.get("id") not in owned]
 
     contexts: list[tuple[int, str]] = []
-    if drain and only is None and _sup and event in ("user-prompt-submit", "pre-tool-use", "post-tool-use"):
+    # a subagent shares the parent's session id: it must never eat the parent's queue
+    is_sub = bool(payload.get("agent_id") or payload.get("agent_type"))
+    if drain and only is None and _sup and not is_sub and event in ("user-prompt-submit", "pre-tool-use", "post-tool-use"):
         # advisories of deferred links (tdd-guard) from earlier calls (B1-02), and Stop-gate
         # notes for the model (CLAUDE.md §11) — the prompt delivers them before any tool runs
         contexts += [(1, "[Deferred advisory from an earlier write]\n" + c) for c in _sup.drain(sid)]

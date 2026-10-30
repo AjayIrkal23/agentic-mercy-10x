@@ -92,6 +92,11 @@ STEPS: list[Step] = [
         ["{PY}", "{W}/scripts/build_library_index.py", "--check"]], 300),
     Step("render-check", "settings render dry-run + doctor --ci", [
         ["{PY}", "{W}/installer/render.py", "--dry-run"], ["{PY}", "{W}/installer/doctor.py", "--ci"]], 300),
+    # the one generator allowed to dirty the tree at release: the shipped TOKEN-BUDGET.md is never stale
+    # (before the secrets scans, so the regenerated doc is scanned too)
+    Step("tokens", "regenerate docs/TOKEN-BUDGET.md from the release tree", [
+        ["{PY}", "{W}/scripts/measure_context_cost.py", "--root", "{W}", "--write", "{W}/docs/TOKEN-BUDGET.md",
+         "--counts", "--observed", "--mcp-eager"]], 120),
     Step("secrets-gitleaks", "secrets layer 1: gitleaks (GITLEAKS_TOML) over the tree and the branch diff (redacted)", [
         ["gitleaks", "dir", "{W}", "--redact", "--exit-code", "1", "--no-banner"],
         ["git", "-C", "{W}", "diff", "main...{B}"],
@@ -173,9 +178,48 @@ def _push_argv(remote_https: str, workflows_changed: bool, tag: str = "v4.3.0", 
     return ["git", "push", url, branch, tag]
 
 
+_ZRAM_RESTART_HEADROOM_MB = 2048
+
+
+def _crit_mb() -> int:
+    """memwatch's crit line (hooks/memwatch.config.json tiers.crit.mem_available_mb); 3072 when unreadable."""
+    try:
+        cfg = json.loads((ROOT / "hooks" / "memwatch.config.json").read_text(encoding="utf-8"))
+        return int(cfg["tiers"]["crit"]["mem_available_mb"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return 3072
+
+
+def _zram_used_mb(path: str = "/sys/block/zram0/mm_stat") -> int:
+    """MB of data in zram0 (mm_stat orig_data_size): what a restart (swapoff first) must fit in RAM."""
+    try:
+        with open(path, encoding="ascii") as fh:
+            return int(fh.read().split()[0]) // (1024 * 1024)
+    except (OSError, ValueError, IndexError):
+        return 0
+
+
+def _zram_applied(zramctl_out: str) -> bool:
+    """zramctl `NAME ALGORITHM DISKSIZE` shows the generator's algorithm (zstd), not the package default."""
+    for line in zramctl_out.splitlines():
+        f = line.split()
+        if f and f[0].endswith("zram0"):
+            return len(f) > 1 and f[1].strip("[]") == "zstd"
+    return False
+
+
+def _zram_deferred(used_mb: int, avail_mb: int) -> str:
+    return (f"WARN(zram: config installed, restart deferred: {used_mb} MB in zram, {avail_mb} MB available; "
+            f"needs > {used_mb + _crit_mb() + _ZRAM_RESTART_HEADROOM_MB} MB available to restart live, "
+            "else it applies on the next reboot)")
+
+
 def _zram_plan(askpass_exists: bool, apt: bool | None = None, mem_available_mb: int | None = None,
-               conf_path: str = "{ZRAM_CONF}"):
-    """A skip tuple, or the sudo argv list (swapoff only when RAM headroom is large enough)."""
+               conf_path: str = "{ZRAM_CONF}", zram_used_mb: int | None = None):
+    """A skip tuple, or the sudo argv list. The unit is RESTARTED (`restart` starts an inactive unit; apt's
+    postinst only daemon-reloads): always when zram0 holds no data, else only when its data fits in RAM and
+    what is left stays 2 GB above memwatch's crit line (O8: else the sentinel kills during the apply; the
+    conf applies on the next reboot); swapoff of /swap.img only when RAM headroom is large enough."""
     if not askpass_exists:
         return ("zram", "SKIP(no sudo askpass)")
     if apt is None:
@@ -185,11 +229,17 @@ def _zram_plan(askpass_exists: bool, apt: bool | None = None, mem_available_mb: 
         return ("zram", "SKIP(no apt)")
     if mem_available_mb is None:
         probe = plat.mem_probe() or {}
-        mem_available_mb = int(probe.get("MemAvailable") or 0) // 1024
+        mem_available_mb = int(probe.get("mem_available_mb") or 0)  # plat.mem_probe() keys are MB
+    if zram_used_mb is None:
+        zram_used_mb = _zram_used_mb()
     steps = [["sudo", "-A", "apt-get", "install", "-y", "systemd-zram-generator"],
              ["sudo", "-A", "install", "-m644", conf_path, "/etc/systemd/zram-generator.conf"],
-             ["sudo", "-A", "systemctl", "daemon-reload"],
-             ["sudo", "-A", "systemctl", "start", "systemd-zram-setup@zram0"]]
+             ["sudo", "-A", "systemctl", "daemon-reload"]]
+    # no data in zram0 (fresh host: the unit is not up yet, apt's postinst only daemon-reloads; or an empty
+    # device): (re)starting costs no RAM, so always do it. A device with data restarts only when the data
+    # fits back in RAM 2 GB above memwatch's crit line (O8); else the conf applies on the next reboot.
+    if zram_used_mb == 0 or mem_available_mb > zram_used_mb + _crit_mb() + _ZRAM_RESTART_HEADROOM_MB:
+        steps.append(["sudo", "-A", "systemctl", "restart", "systemd-zram-setup@zram0"])
     if mem_available_mb > _SWAPOFF_MIN_MB:
         steps.append(["sudo", "-A", "swapoff", "/swap.img"])
     return steps
@@ -327,6 +377,11 @@ def _x_zram(step, subs, a):
     shown = _out(_call(["swapon", "--show"], step, subs))
     if "zram0" not in shown:
         raise _Fail("FAIL(zram0 not in swapon --show)", 1, shown)
+    zc = _out(_call(["zramctl", "--noheadings", "--output", "NAME,ALGORITHM,DISKSIZE"], step, subs))
+    if not _zram_applied(zc):
+        probe = plat.mem_probe() or {}
+        return _zram_deferred(_zram_used_mb(), int(probe.get("mem_available_mb") or 0)), 0, \
+            "\n".join(out + [zc])
     return "OK", 0, "\n".join(out)
 
 

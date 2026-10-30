@@ -85,7 +85,7 @@
   },
   {
    "id": "tdd-guard-vitest",
-   "which": "tdd-guard-vitest",
+   "npm_pkg": "tdd-guard-vitest",
    "install": ["npm", "install", "-g", "tdd-guard-vitest"],
    "ci_stub": true,
    "optional": true

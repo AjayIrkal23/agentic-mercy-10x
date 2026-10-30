@@ -13,7 +13,7 @@ tmux 3.6 puts each pane in its own `tmux-spawn-*.scope`, so wrapping the tmux se
 | Layer | What | Where |
 |---|---|---|
 | L0 | `DefaultOOMPolicy=continue` for every new user scope | `~/.config/systemd/user.conf.d/10-oom.conf` (template `hooks/tools/oomguard/10-oom.conf`) |
-| L1 | every interactive `claude` in its own `claude-<pid>.scope` with `OOMPolicy=continue`, `ManagedOOMPreference=avoid`, `MemoryHigh=12G`; RAM-derived agent caps | `bin/claude`, `bin/claude-tmux`, PATH block in `~/.zshrc` / `~/.bashrc` |
+| L1 | every interactive `claude` in its own `claude-<pid>.scope` with `OOMPolicy=continue`, `ManagedOOMPreference=avoid`, `MemoryHigh=12G`; RAM-derived agent caps | `bin/claude`, `bin/claude-tmux`, PATH block in `~/.zshrc` / `~/.bashrc` / `~/.profile` (bash login shells); the launcher also passes the tier's main model (`docs/MODEL-ROUTING.md` §6) |
 | L2 | per-tool memory cap and default agent caps | `settings.template.json` `env` (`CLAUDE_CODE_TOOL_MEMORY_LIMIT=6G`, …) |
 | L3 | the sentinel: tiers, kill ladder, journal readers, announcements | `hooks/tools/memwatch.py` as `claude-memwatch.service` |
 | L4 | session ledger and restore after a crash | `hooks/session-ledger.py`, `scripts/restore_sessions.py`, `claude-restore.service` |
@@ -34,7 +34,7 @@ Launch caps from `MemAvailable` (GiB, rounded down), exported only when the shel
 - `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` = clamp(⌊GiB/2⌋, 2, 6)
 - `workflowSizeGuideline` (passed with `--settings state/launch-settings-<pid>.json` unless the caller gave `--settings`): `small` under 8 GiB, `medium` under 16, else `large`.
 
-The numbers land in `state/launch-caps/<pid>.json`. `CLAUDE_SCOPE_MEMORY_HIGH` overrides `MemoryHigh`. `bin/claude-tmux` puts the tmux server in its own continue-scope; the panes are covered by `bin/claude`.
+Settings `env` beats the process environment, so the two caps also go into the launch-settings file's `env` block (it outranks the user settings file); `settings.template.json` sets neither. When you pass your own `--settings`, the caps stay env-only and a user settings `env` value wins. The numbers land in `state/launch-caps/<pid>.json`. `CLAUDE_SCOPE_MEMORY_HIGH` overrides `MemoryHigh`. `bin/claude-tmux` puts the tmux server in its own continue-scope; the panes are covered by `bin/claude`.
 
 ### L3: the sentinel
 
@@ -65,6 +65,8 @@ Each tier change and each kill is announced once: `notify-send` (warn `normal`, 
 | 1 | crit | `systemctl --user stop` our own `claude-index-*` scopes (`shed_mode: known-heavy` also kills headless chrome and vitest under claude) | any scope we did not start |
 | 2 | crit for 20 s, or MemAvailable < 1500 MB | SIGTERM (SIGKILL after 3 s) to the biggest browser renderer (`Isolated Web Co`, `Web Content`, `chrome --type=renderer`, …) or stray build (`tsserver`, `vitest`, `cargo`, …) outside every claude tree and owned by your uid; one victim per 10 s | browser parents, anything under a `claude` process or in a `claude-*` scope, a process with a `claude` below it (VS Code pty host), other users' processes, the protected list (`tmux`, `gnome-shell`, `sshd`, `systemd`, `pipewire`, `ollama`, …) |
 | 3 | stage 2 active for 40 s, or an emergency with no stage-2 victim | SIGTERM the most idle ledger session (idle ≥ 10 min, not the foreground one, no Bash call still running), stop its scope 5 s later only when it is a `claude-*` scope; the restore brings it back | the foreground session or the one under the focused tmux pane, a session with a pending Bash call, a terminal or editor scope |
+
+A Claude session is recognised by command line, not only by the process name `claude`: the native installer's binary shows its version (`2.1.312`) as the name and the npm cli runs as `node`, so `kill_policy.claude_cmd_re` in `hooks/memwatch.config.json` (`/claude/versions/<n>`, `claude bg-pty-host`, `@anthropic-ai/claude-code/`, …) decides for those. A `--dry-run` pass writes `dry_run: true` rows and a `DRY-RUN would kill` journal line, never a desktop toast.
 
 Stages 2 and 3 act on the current sample: when MemAvailable climbs back above the crit enter line, the tier can stay crit (hysteresis) but nothing more is killed, and the stage-3 clock restarts. A refused SIGTERM (EPERM) is logged with `"ok": false`, is not announced, and frees the kill slot. A browser parent kill closes every window, while a killed renderer reloads its tab. Children of claude belong to the 6G tool cap (L2). Stage 3 only stops a session the restore can bring back. memwatch debounces restore spawns with `state/restore.spawned`; `state/restore.lock` belongs to `restore_sessions.py`.
 
@@ -137,6 +139,10 @@ Restore sessions by hand when `scripts/restore_sessions.py` cannot: one tmux ses
 | `kill_policy.stage_holdoff_s`, `emergency_mb`, `idle_min` | stage timings |
 | `protected_extra` | process names never touched (wins over `victims_extra`) |
 | `victims_extra` | process names stage 2 may kill |
+
+To drop the launcher from PATH, remove the `# >>> claude-workbench >>>` block from `.zshrc`,
+`.bashrc` and `.profile` (the installer only appends it to files that exist; it never creates
+`~/.bash_profile` or `~/.zprofile`, so `zsh -l` without an interactive shell keeps `~/.local/bin/claude`).
 
 ## Ask-or-advise rule (directive 31)
 

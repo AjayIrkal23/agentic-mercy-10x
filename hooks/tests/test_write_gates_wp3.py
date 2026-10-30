@@ -113,6 +113,22 @@ def test_armed_layer_still_denies_real_writes(monkeypatch, tmp_path):
         assert _decision(_main(mod, _bash(cmd), monkeypatch)) == "deny", cmd
 
 
+def test_unarmed_in_place_edit_is_advised_once_per_session(bwg, monkeypatch):
+    monkeypatch.delenv("BASH_WRITE_GATE_DENY_SHELL_WRITES", raising=False)
+    out = _main(bwg, _bash("sed -i 's/a/b/' src/calc.py", sid="h1"), monkeypatch)
+    assert _decision(out) == "allow"
+    assert "in-place edit" in out["hookSpecificOutput"]["additionalContext"]
+    assert _main(bwg, _bash("sed -i 's/c/d/' src/calc.py", sid="h1"), monkeypatch) == {}
+    assert _main(bwg, _bash("sed -i 's/a/b/' /tmp/x.py", sid="h2"), monkeypatch) == {}
+
+
+def test_armed_in_place_edit_is_denied(monkeypatch, tmp_path):
+    monkeypatch.setenv("BASH_WRITE_GATE_DENY_SHELL_WRITES", "1")
+    mod = _load("bash-write-gate.py")
+    monkeypatch.setattr(mod, "STATE_DIR", tmp_path)
+    assert _decision(_main(mod, _bash("sed -i 's/a/b/' src/calc.py"), monkeypatch)) == "deny"
+
+
 def test_inner_grep_timeout_is_below_the_link_timeout(bwg):
     cfg = json.loads((HOOKS / "dispatch.config.json").read_text(encoding="utf-8"))
     link = next(ln for ln in cfg["chains"]["pre-tool-use"] if ln["id"] == "bash-write-gate")
@@ -139,6 +155,7 @@ def test_count_references_needs_no_grep_binary(bwg, tsrepo, monkeypatch):
 
 
 def test_existing_file_without_importers_gets_no_new_file_advisory(bwg, tsrepo, monkeypatch):
+    monkeypatch.setattr(bwg, "_detect_bypass", lambda cmd: None)  # Layer 2 only
     (tsrepo / "src" / "orphanmodule.ts").write_text("export const x = 1\n", encoding="utf-8")
     payload = {**_bash("echo x > src/orphanmodule.ts"), "cwd": str(tsrepo)}
     monkeypatch.chdir(tsrepo)

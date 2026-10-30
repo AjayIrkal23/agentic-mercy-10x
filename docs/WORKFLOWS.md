@@ -11,9 +11,9 @@ adds one `WORKFLOW:` line naming a saved script and its args when a rule fires:
 
 | Rule | Script |
 |---|---|
-| 2 or more `/invoke` acts, or a size-L act | `invoke` |
+| 2 or more `/invoke` acts, or a size-L act with no corpus trigger (next rows) | `invoke` |
 | REVIEW intent over 3+ named or changed files | `review` |
-| a trigger keyword + a named corpus (path, URL, "this repo") + size ≥ `min_size` | `audit`, `research`, `migrate`, `build` |
+| a trigger keyword + a named corpus (path, URL, "this repo") + size ≥ `min_size`; beats a single-act size-L `invoke`, never a multi-act one | `audit`, `research`, `migrate`, `build` |
 | anything else | inline (plain tool calls, `Agent`, or an inline `Workflow` script) |
 
 `invoke-fullstack` has no triggers: it runs only when asked by name. Web-only research stays with the
@@ -84,8 +84,9 @@ literal for executor roles through `up({...}, '<model>')`. With the usage guard 
 steps down one model and is clamped to `tiers.<tier>.usage_guard`.
 
 `workflows/.rendered.json` records `{schema, tier, usage_guard, policy_sha, content_sha}`. It is
-deterministic (no timestamp), so a re-render of the committed tier, or a usage-guard flip and flip-back,
-leaves the tree clean; `--check` also flags a record whose `content_sha` disagrees. The builder runs from the
+deterministic (no timestamp), so a re-render of the recorded tier, or a usage-guard flip and flip-back,
+rewrites nothing. The render (`*.js`, `index.json`, `.rendered.json`) is per machine and gitignored (FIX-r3
+I10); doctor row `workflows-rendered` FAILs when it is missing or drifted and self-heal rebuilds it; `--check` also flags a record whose `content_sha` disagrees. The builder runs from the
 installer post_step, the daily self-heal (`workflows` step, only on `--check` drift), `plan-tier-detect`
 on a tier change and `usage_guard` on a flip. `workflow-model-guard` compares the record with the live
 session and, on a mismatch, regenerates in the background and warns that the running script keeps its

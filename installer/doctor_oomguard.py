@@ -2,13 +2,16 @@
 
   oom-policy       DefaultOOMPolicy=continue AND this process's own scope continue (FAIL on stop)
   memwatch-unit    claude-memwatch.service installed, active, ExecStart = this tree's hooks/tools/memwatch.py
+  memwatch-code    the running daemon is newer than memwatch.py / its config / libs (WARN: self-heal restarts it)
   restore-unit     claude-restore enabled iff oomguard.local.json restore_enabled
-  claude-launcher  zsh / bash resolve `claude` to ~/.claude/bin/claude
+  claude-launcher  zsh -i / bash -i / bash -l resolve `claude` to ~/.claude/bin/claude
+  launcher-model   bin/claude passes --model <plan-tier main>, or a --model / ANTHROPIC_MODEL / saved /model pick wins
   launch-caps      a launch through bin/claude in the last 24 h
   attach-live      no running claude session left in a stop scope
 
 Every probe is wrapped (an error is a WARN row), every subprocess capped at 2 s. Windows, no user
-manager or ``ci=True``: SKIP rows. Design: docs/OOM-GUARD.md.
+manager, a sandbox (foreign HOME on the real bus, or AGENTIC_MERCY_SANDBOX=1) or ``ci=True``: SKIP rows.
+Design: docs/OOM-GUARD.md.
 """
 from __future__ import annotations
 
@@ -29,7 +32,8 @@ from lib import oomguard_config as ogc  # noqa: E402
 from lib import platform as plat  # noqa: E402
 
 PASS, WARN, FAIL, SKIP = "PASS", "WARN", "FAIL", "SKIP"
-NAMES = ("oom-policy", "memwatch-unit", "restore-unit", "claude-launcher", "launch-caps", "attach-live")
+NAMES = ("oom-policy", "memwatch-unit", "memwatch-code", "restore-unit", "claude-launcher", "launcher-model",
+         "launch-caps", "attach-live")
 TIMEOUT = 2
 
 
@@ -82,20 +86,51 @@ def _restore_unit(run, home, root):
 
 
 def _launcher(run, which):
-    probes = [(s, c) for s, c in (("zsh", "whence -p claude"), ("bash", "type -P claude")) if which(s)]
+    probes = [(label, flag, c) for label, flag, c in (("zsh", "-ic", "whence -p claude"),
+                                                       ("bash", "-ic", "type -P claude"),
+                                                       ("bash -l", "-lc", "type -P claude"))
+              if which(label.split()[0])]
     if not probes:
         return SKIP, "no zsh or bash"
     bad = []
-    for shell, cmd in probes:
-        cp = run([shell, "-ic", cmd], timeout=TIMEOUT)
+    for label, flag, cmd in probes:
+        cp = run([label.split()[0], flag, cmd], timeout=TIMEOUT)
         if getattr(cp, "returncode", 1) == 124:
-            bad.append(f"{shell}: shell took > {TIMEOUT} s")
+            bad.append(f"{label}: shell took > {TIMEOUT} s")
             continue
         lines = (getattr(cp, "stdout", "") or "").strip().splitlines()
         got = lines[-1].strip() if lines else ""
         if not got.endswith("/.claude/bin/claude"):
-            bad.append(f"{shell} resolves claude to {got or 'nothing'}")
-    return (WARN, "; ".join(bad)) if bad else (PASS, " and ".join(s for s, _ in probes) + " -> ~/.claude/bin/claude")
+            bad.append(f"{label} resolves claude to {got or 'nothing'}")
+    labels = [p[0] for p in probes]
+    joined = labels[0] if len(labels) == 1 else ", ".join(labels[:-1]) + " and " + labels[-1]
+    return (WARN, "; ".join(bad)) if bad else (PASS, joined + " -> ~/.claude/bin/claude")
+
+
+def _launcher_model(run, root, home):
+    """bin/claude passes the tier's main model unless --model, ANTHROPIC_MODEL or a saved /model pick
+    chose one (docs/MODEL-ROUTING.md §6). Probe: CLAUDE_LAUNCHER_PRINT_ARGV=1 in a terminal-like env."""
+    from lib import plan_tier  # noqa: PLC0415
+    main = plan_tier.read().get("main")
+    if not main:
+        return WARN, "plan-tier.json has no `main` yet (the next session start refreshes it)"
+    env = {k: v for k, v in os.environ.items() if k not in ("CLAUDECODE", "CLAUDE_WORKBENCH_SCOPE")}
+    env.update(CLAUDE_LAUNCHER_PRINT_ARGV="1", HOME=str(home))
+    cp = run(["bash", str(root / "bin" / "claude"), "--version"], timeout=TIMEOUT, env=env)
+    argv = (getattr(cp, "stdout", "") or "").strip().splitlines()
+    if "--model" in argv[:-1]:
+        got = argv[argv.index("--model") + 1]
+        return (PASS, f"--model {got} (tier main)") if got == main else (WARN, f"--model {got}, tier main is {main}")
+    if os.environ.get("ANTHROPIC_MODEL"):
+        return PASS, "ANTHROPIC_MODEL set"
+    cfg = Path(os.environ.get("CLAUDE_CONFIG_DIR") or home / ".claude") / "settings.json"
+    try:
+        saved = json.loads(cfg.read_text(encoding="utf-8")).get("model")
+    except (OSError, ValueError, AttributeError):
+        saved = None
+    if saved:
+        return PASS, f"settings.json model={saved} (your /model choice)"
+    return WARN, f"launcher adds no --model (tier main {main}); is bin/claude current?"
 
 
 def _launch_caps(now):
@@ -119,17 +154,32 @@ def _attach(run, proc_root, bus, uid):
     return PASS, f"{len(done)} live session(s) in continue scopes"
 
 
+def _memwatch_code(run, root, proc_root):
+    capped = lambda cmd, timeout=None, **_: run(cmd, timeout=TIMEOUT)  # noqa: E731 - every probe capped at 2 s
+    stale = oomguard_setup.code_newer_than_daemon(capped, root, proc_root)
+    if stale is None:
+        return SKIP, "claude-memwatch not running (memwatch-unit covers it)"
+    if stale:
+        return WARN, "daemon older than hooks/tools/memwatch.py or its config; self-heal restarts it"
+    return PASS, "daemon runs the code on disk"
+
+
 def rows(root=".", *, run=None, which=None, home=None, bus=..., proc_root="/proc", ci=False, uid=None,
          now=None) -> list[tuple[str, str, str]]:
     root, home = Path(root).resolve(), Path(home or Path.home())
     run, which = run or plat.run, which or shutil.which
+    injected = bus is not ...
     bus = plat.systemd_user_bus() if bus is ... else bus
     if ci:
         return [(n, SKIP, "ci") for n in NAMES]
+    if oomguard_setup._sandboxed(home, injected):  # a sandbox HOME must not report the live machine's units (I11)
+        return [(n, SKIP, "sandbox: foreign HOME or AGENTIC_MERCY_SANDBOX=1") for n in NAMES]
     if plat.IS_WINDOWS or bus is None or not which("systemctl"):
         return [(n, SKIP, "no systemd user manager") for n in NAMES]
     probes = (("oom-policy", lambda: _oom_policy(run, proc_root)), ("memwatch-unit", lambda: _memwatch_unit(run, home, root)),
+              ("memwatch-code", lambda: _memwatch_code(run, root, proc_root)),
               ("restore-unit", lambda: _restore_unit(run, home, root)), ("claude-launcher", lambda: _launcher(run, which)),
+              ("launcher-model", lambda: _launcher_model(run, root, home)),
               ("launch-caps", lambda: _launch_caps(time.time() if now is None else now)),
               ("attach-live", lambda: _attach(run, proc_root, bus, uid)))
     out = []

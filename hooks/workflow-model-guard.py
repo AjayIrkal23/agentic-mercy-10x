@@ -17,9 +17,10 @@ THE FIX (inline `script`):
       lifts every call; a retry marker in one call's prompt lifts that call (tested at run time, so a
       fix-loop template in the script does not lift its first call); the size/risk rule reads the
       script text plus task/brief once. Executor roles take their `escalate` model, judges never;
-    - an explicit `opts.model` is honoured within the tier ceiling. shortcut: unlike opus-guard
-      there is no E-04 phrase check for opus here (the script is the main model's deliberate code);
-      fable alone still needs the user's own phrase this turn, and the usage guard pauses it;
+    - an explicit `opts.model` is honoured within the tier ceiling, except a tier's ask-only model
+      (model-policy `ask_only`: Opus on max5/api, Fable on max20), which needs the user's phrase this
+      turn (otherwise the call takes its role route); fable always needs the phrase and pauses under
+      the usage guard, which also steps any other bare literal down;
     - a session flag (state/<m>-only-mode, haiku first) or the per-project mode FORCES one model
       on every agent, capped to the tier ceiling; the usage guard steps a per-project pin down (a
       flag is the user's words and stays).
@@ -215,10 +216,16 @@ def _wrapper_cfg(policy: dict, tier: str, usage: bool, forced: str | None, escal
     models = {r: finish(roles.get(r) or roles.get("default") or "sonnet", r) for r in set(roles) | {"default"}}
     models_up = {r: finish(m, r) for r, m in (blk.get("escalate") or {}).items()}
     explicit = {}
+    ask_only = {str(m) for m in (blk.get("ask_only") or [])}
     for m in policy.get("model_order") or _ORDER:
         target = m
         if m == "fable" and (usage or not phrase_for("fable")):
             target = "sonnet"  # fable needs the user's own words this turn and pauses under the guard
+        elif m in ask_only and not phrase_for(m):
+            explicit[m] = None  # the wrapper falls back to the call's role route (the literal is advice)
+            continue
+        elif usage and _ug is not None and not phrase_for(m):
+            target = _ug.step_down(m, "default", tier, policy)  # a bare literal is not the user's words
         explicit[m] = _cap(target, tier)
     esc = policy.get("escalation") if isinstance(policy.get("escalation"), dict) else {}
     retry = (esc.get("retry_markers") or []) if esc.get("enabled") else []

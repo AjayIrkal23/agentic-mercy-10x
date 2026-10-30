@@ -57,9 +57,10 @@ def _run_script(target: Path, rel: str, emit, *args: str) -> None:
 
 
 def _validate_fix(target: Path, emit) -> None:
-    # --fix only rewrites USER skills (R1/R4/R8); locked skills are never touched,
-    # so it cannot drift an R10 baseline.
-    _run_script(target, "scripts/validate_skills.py", emit, "--fix")
+    # --fix-untracked rewrites only USER skills git does not track (R1/R4); locked skills are never
+    # touched (no R10 drift) and a tracked skill is reported, not rewritten, so an install never
+    # dirties the tree. `--fix` stays available by hand.
+    _run_script(target, "scripts/validate_skills.py", emit, "--fix-untracked")
 
 
 def _render_sources() -> list[Path]:
@@ -76,7 +77,8 @@ def _tier_drift(st: Path) -> bool:
         live = json.loads(st.read_text(encoding="utf-8"))
         # subs=None: the tier keys hold no path token, so this machine's detection is not needed
         want = json.loads(render.render(user_path=st.parent / "settings.user.json"))
-        if any(live.get(k) != want.get(k) for k in ("model", "fallbackModel")):
+        # a key the user removed (`/model` → Default) is their choice, not drift
+        if any(k in live and live.get(k) != want.get(k) for k in ("model", "fallbackModel")):
             return True
         key = "CLAUDE_CODE_SUBAGENT_MODEL"
         return (live.get("env") or {}).get(key) != (want.get("env") or {}).get(key)
@@ -116,6 +118,9 @@ def pin_config_dir(target) -> None:
 
 
 def _repair(target: Path, failed: set, env, emit) -> None:
+    if "workflows-rendered" in {f.lower() for f in failed}:  # I10: the per-machine saved-workflow render
+        _run_script(target, "scripts/build_workflows.py", emit, "--quiet")
+        failed = {f for f in failed if f.lower() != "workflows-rendered"}  # not a settings re-render
     names = " ".join(failed).lower()
     if "generated" in names:
         _run_script(target, "hooks/gen-invoke-skills.py", emit)
@@ -136,7 +141,7 @@ def _repair(target: Path, failed: set, env, emit) -> None:
         import deps as _deps  # type: ignore
         for name, s in _deps.reconcile_mcp_pins():
             emit("repair", name, s)
-    if {"oom-policy", "memwatch-unit", "restore-unit", "claude-launcher"} & {f.lower() for f in failed}:
+    if {"oom-policy", "memwatch-unit", "memwatch-code", "restore-unit", "claude-launcher"} & {f.lower() for f in failed}:
         # the sandboxed tests must never attach live sessions on this machine's user bus
         if os.environ.get("PYTEST_CURRENT_TEST") and not os.environ.get("OOMGUARD_REPAIR_ALLOW_TEST"):
             emit("repair", "oomguard", "SKIP(pytest)")
@@ -232,6 +237,8 @@ def self_heal(target, emit=None, *, max_rounds: int = 4, ci: bool = False) -> di
         fails = {r[0] for r in rows if r[1] == "FAIL"}
         for name, st, det in rows:
             emit("doctor", name, f"{st}: {det}")
+        if any(n == "memwatch-code" and st == "WARN" for n, st, _ in rows):  # O7: restart a daemon older than its code
+            _repair(target, {"memwatch-code"}, env, emit)
         if not fails:
             emit("done", f"round {rnd}", "PASS — 0 FAIL")
             return {"success": True, "rounds": rnd, "fails": [], "rows": rows, "todo": todo}

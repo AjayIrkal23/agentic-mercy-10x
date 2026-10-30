@@ -134,6 +134,11 @@ def collect(env, target: Path | None = None) -> tuple[list, int]:
     rows = []
     for d in man.get("deps", []):
         w = d.get("which")
+        if not w and d.get("npm_pkg"):  # a global npm package with no bin (tdd-guard-vitest)
+            import deps as _deps  # noqa: PLC0415  (installer/ is on sys.path)
+            ok = _deps.npm_pkg_present(d["npm_pkg"])
+            _row(rows, OK if ok else (WARN if d.get("optional") else MISS), d["id"], "npm global package")
+            continue
         if not w:  # import-only (pyyaml)
             imp = d.get("import")
             ok = bool(imp) and plat.run([env.python.split()[0], "-c", f"import {imp}"], timeout=20).returncode == 0

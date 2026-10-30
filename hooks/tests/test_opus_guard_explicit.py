@@ -129,15 +129,17 @@ def test_opus_phrase_lifts_a_judge_on_max5_but_not_on_pro(tmp_path):
     assert model(run(ti2, tmp_path, "review it, use opus")[0], ti2) == "opus"
     TF.set_tier("pro")
     out, rows = run(ti2, tmp_path, "review it, use opus")
-    assert model(out, ti2) == "sonnet" and "tier-cap" in rows[-1]["reason"]
+    assert model(out, ti2) == "sonnet" and "over the pro ceiling" in rows[-1]["reason"]
 
 
 def test_fable_phrase_only_counts_on_max20(tmp_path):
     ti = {"description": "special", "subagent_type": "general-purpose", "model": "fable"}
     assert model(run(ti, tmp_path, "use fable for this")[0], ti) == "fable"
     TF.set_tier("max5")
+    # SANTA-FINAL D4: over the max5 ceiling -> role route, not a silent Opus (that needs "use opus")
     out, rows = run(ti, tmp_path, "use fable for this")
-    assert model(out, ti) == "opus" and "tier-cap" in rows[-1]["reason"]
+    assert model(out, ti) == "sonnet" and "over the max5 ceiling" in rows[-1]["reason"]
+    assert model(run(ti, tmp_path, "use fable for this, or use opus")[0], ti) == "opus"
 
 
 def test_fable_paused_under_usage_guard(tmp_path):
@@ -151,6 +153,34 @@ def test_explicit_opus_with_phrase_survives_usage_guard(tmp_path):  # the user's
     TF.set_usage(88.0, time.time() + 3600)
     ti = {"description": "build", "subagent_type": "implementation-engineer", "model": "opus"}
     assert model(run(ti, tmp_path, "build it, use opus")[0], ti) == "opus"
+
+
+@pytest.mark.parametrize("tier", ["max5", "api"])
+def test_ask_only_opus_needs_the_phrase_for_an_unguarded_role(tmp_path, tier):
+    TF.set_tier(tier)
+    ti = {"description": "research", "subagent_type": "general-purpose", "model": "opus"}
+    out, rows = run(ti, tmp_path)
+    assert model(out, ti) == "sonnet" and "ignored" in rows[-1]["reason"]
+    assert model(run(ti, tmp_path, "please use opus for this")[0], ti) == "opus"
+
+
+def test_bare_explicit_opus_is_stepped_down_by_the_usage_guard(tmp_path):
+    TF.set_usage(88.0, time.time() + 3600)
+    ti = {"description": "research", "subagent_type": "general-purpose", "model": "opus"}
+    out, rows = run(ti, tmp_path)
+    assert model(out, ti) == "sonnet" and "usage-guard: opus -> sonnet" in rows[-1]["reason"]
+
+
+def test_max20_judge_with_the_users_opus_phrase_survives_the_usage_guard(tmp_path):
+    """Final-fix 3 (live r2): max20 + guard on + "use opus" + no model param used to land on sonnet."""
+    TF.set_usage(88.0, time.time() + 3600)
+    ti = {"description": "review", "subagent_type": "santa-reviewer"}
+    out, rows = run(ti, tmp_path, "review the diff, use opus")
+    assert model(out, ti) == "opus" and "user said" in rows[-1]["reason"]
+    TF.set_tier("pro")  # inside the Pro ceiling the phrase also wins over the guard
+    ti2 = {"description": "build", "subagent_type": "implementation-engineer"}
+    out, rows = run(ti2, tmp_path, "build it, use sonnet")
+    assert model(out, ti2) == "sonnet" and "user said" in rows[-1]["reason"]
 
 
 def test_no_transcript_means_no_phrase(tmp_path):

@@ -101,6 +101,9 @@ def test_repair_routes_failed_rows(box, monkeypatch):
     assert ran == ["hooks/gen-invoke-skills.py", "hooks/gen-agent-skill-blocks.py"]
     selfheal._repair(box["target"], {"mods"}, None, emit)
     assert rendered == [True]  # mods.enabled feeds CLAUDE_CODE_PLUGIN_DIRS: re-render
+    ran.clear()
+    selfheal._repair(box["target"], {"workflows-rendered"}, None, emit)  # I10: the per-machine render
+    assert ran == ["scripts/build_workflows.py"] and rendered == [True]  # no settings re-render for it
 
 
 def test_repair_routes_oomguard_rows_only_when_allowed(box, monkeypatch):
@@ -116,6 +119,23 @@ def test_repair_routes_oomguard_rows_only_when_allowed(box, monkeypatch):
                         types.SimpleNamespace(ensure=lambda dry=False: ["memwatch: CREATED"]))
     selfheal._repair(box["target"], {"memwatch-unit"}, None, emit)
     assert ("repair", "oomguard", "memwatch: CREATED") in seen
+    seen.clear()
+    selfheal._repair(box["target"], {"memwatch-code"}, None, emit)  # O7: a stale daemon is repaired too
+    assert ("repair", "oomguard", "memwatch: CREATED") in seen
+
+
+def test_memwatch_code_warn_runs_the_oomguard_repair_without_a_fail(box, monkeypatch):
+    rows = [("memwatch-code", "WARN", "daemon older than hooks/tools/memwatch.py"), ("render", "PASS", "")]
+    repaired = []
+    monkeypatch.setattr(selfheal, "pin_config_dir", lambda target: None)
+    monkeypatch.setattr(selfheal, "_heal_line_endings", lambda *a, **k: None)
+    monkeypatch.setattr(selfheal, "_install_pass", lambda *a, **k: None)
+    monkeypatch.setattr(selfheal, "_doctor_rows", lambda ci: rows)
+    monkeypatch.setattr(selfheal, "_repair", lambda target, failed, env, emit: repaired.append(set(failed)))
+    monkeypatch.setitem(sys.modules, "detect", __import__("types").SimpleNamespace(detect=lambda: None))
+    _, emit = _emits()
+    res = selfheal.self_heal(box["target"], emit)
+    assert res["success"] is True and repaired == [{"memwatch-code"}]
 
 
 def test_forced_rerender_keeps_a_bounded_backup(box, monkeypatch):
@@ -168,6 +188,26 @@ def test_a_plan_tier_change_re_renders_the_tier_keys(box, monkeypatch, tmp_path)
     assert not selfheal._stale(st)
     selfheal._ensure_settings(box["target"], None, emit)
     assert seen[-1][2].startswith("PRESENT")
+
+
+def test_a_removed_model_key_is_not_tier_drift(box, monkeypatch, tmp_path):
+    """FIX-r2 I4: `/model` → Default deletes `model`; that is the user's choice, not drift."""
+    state = tmp_path / "state"
+    state.mkdir()
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(state))
+    (state / "plan-tier.json").write_text('{"tier": "max20"}\n', encoding="utf-8")
+    monkeypatch.setattr(selfheal, "_render_sources", lambda: [])
+    monkeypatch.setattr(selfheal, "interpreter_gone", lambda st: False)
+    st = box["target"] / "settings.json"
+    _, emit = _emits()
+    selfheal._ensure_settings(box["target"], None, emit)
+    data = json.loads(st.read_text(encoding="utf-8"))
+    data.pop("model")
+    st.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    assert not selfheal._tier_drift(st)
+    data["model"] = "sonnet"  # present with another tier's value: drift
+    st.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    assert selfheal._tier_drift(st)
 
 
 def test_relocate_merges_and_skips_vcs_dirs(tmp_path):

@@ -1,6 +1,6 @@
 ---
 name: santa-reviewer
-description: "Santa Method reviewer: an adversarial BREAKER + SIMPLIFIER + VERIFIER pass that hunts real correctness, data-loss, security and concurrency bugs in a diff, then verifies each finding before reporting. Dispatched by /invoke review (stop-gate Gate 4) or /santa-review; reports CONFIRMED findings with file:line and a minimal fix in SANTA-REVIEW.md, never edits code.\n\n<example>\nContext: a multi-file change just landed.\nuser: \"/santa-review — tear apart the diff I just wrote\"\nassistant: \"Launching santa-reviewer: BREAKER, SIMPLIFIER and VERIFIER on the session diff; only confirmed must-fix findings come back.\"\n<commentary>\nEvery claim defaults to false positive until an exact failing execution is described.\n</commentary>\n</example>"
+description: "Santa Method reviewer: an adversarial BREAKER + SIMPLIFIER + VERIFIER pass that hunts real correctness, data-loss, security and concurrency bugs in a diff, then verifies each finding before reporting. Dispatched by /invoke review (stop-gate Gate 4) or /santa-review; reports CONFIRMED findings with file:line and a minimal fix in SANTA-REVIEW.md, never edits code.\n\n<example>\nuser: \"/santa-review — tear apart the diff I just wrote\"\nassistant: \"Launching santa-reviewer: BREAKER, SIMPLIFIER and VERIFIER on the session diff; only confirmed findings come back.\"\n</example>"
 model: opus
 effort: xhigh
 disallowedTools: Edit, NotebookEdit, Agent

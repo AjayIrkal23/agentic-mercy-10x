@@ -32,3 +32,27 @@ def test_disabled_plugin_skills_are_skipped(tmp_path, monkeypatch):
     monkeypatch.setattr(B, "TEMPLATE", template)
 
     assert sorted(short for short, _ in B._plugin_skill_files()) == ["on", "synced"]
+
+
+def test_plugin_skills_go_to_the_gitignored_sidecar_and_load_merges(tmp_path, monkeypatch):
+    """FIX-r2 I2: the tracked index holds local skills only; plugin skills live in state/ per machine."""
+    hooks = tmp_path / "hooks"
+    hooks.mkdir()
+    payload = {"_meta": {"skill_count": 1, "plugin_count": 1, "checksum": "x"}, "aliases": {},
+               "skills": {"local-a": {"name": "local-a", "source": "metadata"},
+                          "p:s": {"name": "p:s", "source": "plugin", "plugin": "p"}}}
+    monkeypatch.setattr(B, "build", lambda: payload)
+    monkeypatch.setattr(B, "INDEX", hooks / "skills-index.json")
+    monkeypatch.setattr(B, "SIDECAR", tmp_path / "state" / "skills-index.plugins.json")
+    B.write_index()
+    tracked = json.loads((hooks / "skills-index.json").read_text(encoding="utf-8"))
+    assert list(tracked["skills"]) == ["local-a"] and tracked["_meta"]["plugin_count"] == 0
+    first = (hooks / "skills-index.json").read_bytes()
+    B.write_index()
+    assert (hooks / "skills-index.json").read_bytes() == first
+    sys.path.insert(0, str(_SCRIPTS.parent / "hooks"))
+    from lib import skills_index as SI
+    merged = SI.load(hooks)
+    assert set(merged["skills"]) == {"local-a", "p:s"} and merged["_meta"]["plugin_count"] == 1
+    (tmp_path / "state" / "skills-index.plugins.json").unlink()
+    assert set(SI.load(hooks)["skills"]) == {"local-a"}

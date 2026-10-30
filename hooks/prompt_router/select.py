@@ -15,7 +15,7 @@ with a max-merge inside itself, then the scorers SUM):
 Then: the ``additions.demote`` table multiplies (clamped to <= 1.0), candidates that
 do not exist on disk (local skill dir or installed plugin ``plugin:skill``) or that
 core-skill-set already injects are dropped, and the result is the top-N
-(``max_skill_pushes``, 4) above ``min_skill_score``.
+(``max_skill_pushes``, 3 in router.config.json) above ``min_skill_score``.
 
 Dispatch tiering: an intent at/above ``auto_dispatch_threshold`` is surfaced as
 an AGENT dispatch (agent from the autonomous config, IMPLEMENT surface-routed via
@@ -317,12 +317,21 @@ def _rule_skills(profile) -> dict[str, float]:
 
 def index_meta() -> dict:
     """skills-index metadata (name -> {description, keywords, ...}); {} on error."""
-    return (_load_json(_SKILLS_INDEX).get("skills") or {})
+    return (_load_index().get("skills") or {})
+
+
+def _load_index() -> dict:
+    """skills-index: the tracked local index + the per-machine plugin sidecar (lib/skills_index)."""
+    try:
+        from lib import skills_index as _si  # noqa: PLC0415
+        return _si.load(_SKILLS_INDEX.parent)
+    except Exception:  # noqa: BLE001
+        return _load_json(_SKILLS_INDEX)
 
 
 def rank_all(profile) -> list[tuple[str, float]]:
     """Every scored, existing, non-core skill — descending (no cap, no floor)."""
-    index = _load_json(_SKILLS_INDEX)
+    index = _load_index()
     grams = _classify.ngrams(profile.text)
     scorers = [
         _index_skills(profile, index, grams) if index.get("skills") else _path_route_skills(profile),

@@ -89,7 +89,8 @@ _FE_SEGS = ("/client/", "/web/", "/frontend/", "/components/", "/pages/", "/ui/"
 
 def _skill_meta() -> dict:
     try:
-        sk = json.loads(SKILLS_INDEX.read_text(encoding="utf-8")).get("skills") or {}
+        from lib import skills_index as _si  # noqa: PLC0415  (tracked index + plugin sidecar)
+        sk = _si.skills(SKILLS_INDEX.parent)
         return {_canon(k): v for k, v in sk.items() if isinstance(v, dict)}
     except Exception:
         return {}

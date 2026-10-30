@@ -13,7 +13,8 @@ session flag > per-project pin > explicit model/[label] with your phrase > role 
   > escalation > usage step-down > tier ceiling (always last)
 ```
 
-Your `/model` and your per-turn phrase always win. The ceiling still applies to everything: a plan
+Your `/model` and your per-turn phrase always win **within the plan ceiling**: on Pro "use opus"
+cannot lift (the ceiling is Sonnet), "use sonnet" does, on every tier, usage guard on or off. A plan
 cannot run a model it does not include.
 
 ## 2. Plan tiers
@@ -55,6 +56,8 @@ Rows are roles (`roles.agents` maps each `subagent_type`); columns are tiers (`t
 | judge | santa-reviewer, frontend-uiux-designer, planning-director, spec-architect, debug-detective, audit-specialist, Plan | sonnet | sonnet; opus when your turn says "use opus" | opus |
 | default | general-purpose (the plain `Agent` type) and any other agent type | haiku | sonnet | sonnet |
 
+A per-turn phrase ("use haiku/sonnet/opus/fable") overrides the row for that turn, up to the ceiling.
+
 | Tier setting | pro | max5 / api | max20 |
 |---|---|---|---|
 | ceiling | sonnet | opus | fable |
@@ -89,16 +92,28 @@ a planned small impl task drops to Haiku; on max20 qa-verifier moves to Sonnet f
 
 A flip rewrites `state/usage-guard.json` and regenerates the saved workflows in the background.
 The statusline shows a down arrow while the guard is on. The guard never raises a model (a judge
-pinned to haiku stays haiku). Explicit models you asked for in your own turn, a judge lifted by
-your "use opus" phrase, and a global `<model>-only-mode` flag are not stepped down (fable still
+pinned to haiku stays haiku). Explicit models you asked for in your own turn, any role your per-turn
+phrase names (inside the ceiling), and a global `<model>-only-mode` flag are not stepped down (fable still
 pauses); a per-project pin is, in opus-guard and in Workflow scripts alike. API-key logins have no 5-hour window, so the guard
 never activates for them.
 
 ## 6. Forcing a model
 
+**Main session.** `bin/claude` (the launcher on PATH) starts an interactive session with
+`--model <tier main>` (Sonnet on Pro / Max 5x / API, Opus on Max 20x; `main` in
+`state/plan-tier.json`) only when nothing else chose one: no `--model` on the command line, no
+`ANTHROPIC_MODEL`, and no `"model"` key in `~/.claude/settings.json` (a saved `/model` pick wins across
+launches; when Claude Code's org-default sync deletes it, the tier default returns). `-p`, `--bare`,
+nested launches and subcommands (`claude mcp ...`, `claude logs <id>`, every name in `claude --help`
+Commands) get nothing added. The launcher re-detects the tier when `.credentials.json` is newer than
+`state/plan-tier.json` (a login since the last session). Doctor row `launcher-model`
+shows which rule applied. The Windows replica has no launcher yet: its main session keeps the account
+default.
+
 - **This turn:** say "use opus", "use haiku", "use sonnet" or "use fable". An explicit `model` on a
-  call (or a `[model]` label) moves a judge, an executor or fable only when your turn carries that
-  phrase; for other agents it is honoured within the ceiling.
+  call (or a `[model]` label) moves any agent to a tier's ask-only model (Opus on max5/api, Fable on
+  max20) or moves a judge, executor or pin only when your turn carries that phrase; otherwise it is
+  honoured within the ceiling and the usage guard still applies.
 - **This project:** "use opus for this project" or `scripts/model-mode.py opus|haiku|sonnet|fable|clear`.
   A pin above the ceiling is stored capped (`opus` on pro is stored as `sonnet`, with a one-line
   reason) and capped again on read if the tier drops later.
@@ -117,8 +132,8 @@ model with the usage step-down and ceiling already computed. Escalation lifts ex
 a retry marker in `args.task`/`args.brief` lifts every call; a retry marker in one call's prompt
 lifts that call at run time (a fix-loop template in the script does not lift its first call); the
 size/risk rule reads the script text plus task and brief once. An explicit `opts.model` is honoured
-within the ceiling without the phrase check (the script is the main model's deliberate code); fable
-alone still needs your phrase.
+within the ceiling except a tier's ask-only model (Opus on max5/api, Fable on max20), which needs your
+phrase this turn; fable always needs it, and the usage guard steps a bare literal down.
 
 Saved scripts (`scriptPath`, `name`) are never rewritten. They were rendered per tier by
 `scripts/build_workflows.py`, which records `workflows/.rendered.json`. When `args.task` or
@@ -136,12 +151,17 @@ for the report. `hooks/subagent-context.py` renders them as the SubagentStart li
 
 ```
 state/plan-tier.json      {"schema":1,"tier":"max20","source":"credentials","detected_at":<epoch s>,
-                           "detail":"max/default_claude_max_20x","notice":"<line>"}   (no token, ever)
+                           "detail":"max/default_claude_max_20x","main":"opus","notice":"<line>"}   (no token, ever)
 state/usage-guard.json    {"schema":1,"active":true,"five_hour_pct":83.0,"resets_at":<epoch s>,
                            "since":<epoch s>,"tier":"max20"}
 state/session-bridge/<sid>.json   statusline output; read for five_hour_pct / five_hour_resets_at
 state/model-modes/<repo_key>      per-project pin (one word)
 ```
+
+`model` in settings.json is rendered from the tier on first render. If you remove it with `/model` →
+Default, the installer keeps it removed (not drift); a tier change re-adds it only while the key is present.
+Claude Code itself deletes a user-settings `model` when the org default-model record changes, so the
+main session's tier model rides on the launcher instead (§6); `main` in `plan-tier.json` is what it reads.
 
 Every decision appends a row to `hooks/.telemetry/<sid>.model-routing.jsonl`:
 `{ts, agent, model, reason, tier, usage_guard, fallback}` from opus-guard and

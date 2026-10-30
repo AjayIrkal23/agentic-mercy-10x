@@ -39,6 +39,8 @@ except Exception:  # noqa: BLE001
     rc = None
 
 _SID_RE = re.compile(r"[^A-Za-z0-9._-]")
+# Claude Code session ids are UUIDs (`--session-id` requires one): fixture and verifier ids never enter the ledger (O6).
+_UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 
 
 def _now() -> int:
@@ -247,6 +249,9 @@ def mode_start(payload: dict) -> int:
     sid = payload.get("session_id")
     if not sid or entry_path(sid) is None:
         print("{}")
+        return 0
+    if os.environ.get("CLAUDE_HOOK_DOCTOR") or not _UUID_RE.match(str(sid)):
+        print("{}")  # doctor replays and fixture ids (doctor-fixture, verify-*) never enter the ledger
         return 0
     source = payload.get("source") or "startup"
     cwd = payload.get("cwd") or os.getcwd()

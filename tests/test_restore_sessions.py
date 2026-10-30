@@ -10,6 +10,7 @@ import importlib.util
 import io
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
@@ -31,6 +32,8 @@ def _load():
 
 
 rs = _load()
+REAL_SID_OK = rs._SID_OK
+U1 = "5f0c3a3e-1d2b-4c5d-9e8f-0a1b2c3d4e5f"
 
 FAKE_TMUX = r"""#!/bin/sh
 for a in "$@"; do printf '%s\037' "$a" >> "$FAKE_LOG"; done
@@ -81,6 +84,9 @@ class World:
         monkeypatch.setattr(rs, "_sleep", lambda s: self.sleeps.append(s))
         monkeypatch.setattr(rs, "_now", lambda: NOW)
         monkeypatch.setattr(rs._sl, "_now", lambda: NOW)
+        # shortcut: the gating/locking tests keep short readable sids ("a", "old"); the UUID-only gate itself
+        # is covered by the *_real_sid_gate tests below, which put REAL_SID_OK back.
+        monkeypatch.setattr(rs, "_SID_OK", re.compile(r"^[a-z][a-z0-9]{0,3}$|" + REAL_SID_OK.pattern[1:], re.I))
 
     def ledger(self, sid, **over):
         e = {"sid": sid, "pid": 4190000, "cwd": str(self.tmp), "transcript": None, "tmux": None,
@@ -499,3 +505,25 @@ def test_help_lists_every_contract_flag():
     for flag in ("--dry-run", "--max", "--max-age", "--per-window", "--stagger", "--only-if-ok",
                  "--tmux-session", "--resume-after-limit", "--state-dir", "--flag-file", "--claude-bin"):
         assert flag in text
+
+
+@posix_only
+def test_fake_sids_are_skipped_by_the_real_sid_gate(world):
+    world.mp.setattr(rs, "_SID_OK", REAL_SID_OK)
+    for sid in ("verify-hookrt-r2-ss2", "doctor-fixture", "a"):
+        world.ledger(sid)
+    out = world.run("--dry-run")
+    plan = {p["sid"]: p for p in out["plan"]}
+    assert out["launched"] == 0
+    for sid in ("verify-hookrt-r2-ss2", "doctor-fixture", "a"):
+        assert plan[sid] == {"sid": sid, "action": "skip", "reason": "bad sid"}
+
+
+@posix_only
+def test_uuid_sid_passes_the_real_sid_gate(world):
+    world.mp.setattr(rs, "_SID_OK", REAL_SID_OK)
+    world.ledger(U1)
+    world.ledger(U1.upper().replace("5F0C", "6A0C"))
+    out = world.run("--dry-run")
+    actions = sorted(p["action"] for p in out["plan"])
+    assert actions == ["launch", "launch"] and out["launched"] == 0

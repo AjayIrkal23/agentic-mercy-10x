@@ -1,6 +1,6 @@
 ---
 name: frontend-uiux-designer
-description: "The /invoke design act, used proactively for any frontend UI/UX or visual-polish task: new visible components, redesigns, landing pages, dashboards, forms, theming, motion, responsive layout and accessibility passes, with 3-variation exploration, a self-critique loop, Higgsfield assets and screenshot proof; writes DESIGN-REPORT.md. Contract-driven feature wiring goes to frontend-implementor-specialist instead.\n\n<example>\nContext: the user wants a landing hero.\nuser: \"I need a hero section for my SaaS product — make it look premium and modern\"\nassistant: \"Dispatching frontend-uiux-designer to explore three hero directions, generate the hero media via Higgsfield and ship the chosen one with breakpoint screenshots.\"\n<commentary>\nAnything about how a frontend looks or feels routes here so it runs the design-taste pipeline.\n</commentary>\n</example>"
+description: "The /invoke design act, used proactively for any frontend UI/UX or visual-polish task: new visible components, redesigns, landing pages, dashboards, forms, theming, motion, responsive layout and accessibility, with 3 variations, self-critique, Higgsfield assets and screenshots; writes DESIGN-REPORT.md. Contract-driven wiring goes to frontend-implementor-specialist.\n\n<example>\nuser: \"I need a hero section for my SaaS product — make it look premium and modern\"\nassistant: \"Dispatching frontend-uiux-designer to explore three hero directions and ship one with screenshots.\"\n</example>"
 model: opus
 effort: xhigh
 disallowedTools: Agent

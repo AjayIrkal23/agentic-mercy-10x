@@ -24,6 +24,14 @@ const SHELL_WRITE = /(^|[^0-9&<>|])>{1,2}(?!&)\s*[^\s&|>]|\btee\b|<<-?\s*['"]?[A
 // PowerShell writers `bash-write-gate.py` detects (`_PS_WRITERS`, `_PS_DOTNET_RE`): the write cmdlets, `sc`/`ac` in command
 // position, `[IO.File]::Write*/Append*`. A superset is fine (a false hit costs one `--only` run); a miss skips the gate.
 const PS_WRITE = /\b(?:set-content|add-content|out-file)\b|(?:^|[;&|(\n"']\s*)(?:sc|ac)\s+\S|\[(?:system\.)?io\.file\]::(?:write|append)/i
+// Layer-1 kinds bash-write-gate.py classifies (`_INPLACE_RE`, `_INTERP_INLINE_RE`, `_INTERP_STDIN_RE`): command-position
+// anchored like its `_CMD_POS`, so `git commit -m "... sed -i ..."` is a mention, not a write. Python keeps the exact
+// classification, the /tmp silence and the once-per-kind dedupe; these four regexes only decide that the link runs (R2-F1).
+const CMD_POS = String.raw`(?:^|[\n;&|(]|\$\()\s*`
+const INTERP = String.raw`(?:python3?(?:\.\d+)?|node|nodejs|ruby|perl|php|deno|bun)`
+const IN_PLACE = new RegExp(CMD_POS + String.raw`(?:sed|perl|ruby)\s+(?:-[A-Za-z]*i\b|--in-place)`, 'm')
+const INTERP_WRITE = new RegExp(CMD_POS + INTERP + String.raw`\b[^\n;|&]*?\s-(?:c|e)\b|` + CMD_POS + INTERP + String.raw`\b[^\n;|&]*?\s-\s*<<`, 'm')
+const bashWrite = (c: string): boolean => SHELL_WRITE.test(c) || PS_WRITE.test(c) || IN_PLACE.test(c) || INTERP_WRITE.test(c)
 const GIT_COMMIT = /\bgit\b[^|;&\n]*\bcommit\b/
 const SEMGREP = /\bsemgrep\b/
 const SKILL_MD = /[\\/]skills[\\/][^\\/]+[\\/]SKILL\.md$/
@@ -39,7 +47,7 @@ const POLICIES: readonly Policy[] = [
   { id: 'tdd-guard-launcher-pre', event: 'pre-tool-use', mode: 'async', when: always },
   // the graph nudge is for an Explore agent about to start: in line for Agent/Task (as Python ran it), async for Bash (B1-22)
   { id: 'graphify-enforce', event: 'pre-tool-use', mode: 'async', when: always, syncWhen: f => f.tool === 'Agent' || f.tool === 'Task' },
-  { id: 'bash-write-gate', event: 'pre-tool-use', mode: 'sync', when: f => SHELL_WRITE.test(str(f.input['command'])) || PS_WRITE.test(str(f.input['command'])) },
+  { id: 'bash-write-gate', event: 'pre-tool-use', mode: 'sync', when: f => bashWrite(str(f.input['command'])) },
   { id: 'blocking-doc-enforcer', event: 'pre-tool-use', mode: 'sync', when: f => GIT_COMMIT.test(str(f.input['command'])) },
   { id: 'jdoc-doc-steer', event: 'pre-tool-use', mode: 'sync', when: f => isDoc(str(f.input['file_path'] ?? f.input['path'])) },
   { id: 'jcm-gate-read', event: 'pre-tool-use', mode: 'sync', when: f => !f.jcodemunchUsed },

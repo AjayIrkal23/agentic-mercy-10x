@@ -10,7 +10,7 @@ Pipeline:
   S1  ONE classification pass -> TaskProfile (classify.py: word-boundary keyword
       matching over the trigger floor + FE/BE/API/docs surfaces from prompt paths,
       prompt vocabulary, cwd and the repo stack fingerprint — modules/surface.py).
-  S2  ranked skill selection (select.py): <= max_skill_pushes (4) skills above the
+  S2  ranked skill selection (select.py): <= max_skill_pushes (3) skills above the
       score floor, aliases collapsed, plugin skills included, core-skill-set never
       re-pushed; rank 1 = MUST-READ, the rest SHOULD-READ; at most ONE deep-injected
       body, which replaces the rank-1 line (size words never trigger it). Rank 1 is
@@ -122,9 +122,12 @@ def _doc_index_exists(repo) -> bool:
         return False
 
 
-def _skill_excerpt(name: str, max_chars: int = 3000) -> str:
+def _skill_excerpt(name: str, max_chars: int = 0) -> str:
     """First section of a skill body (frontmatter stripped), for deep injection.
-    Works for local skills and ``plugin:skill`` names."""
+    Works for local skills and ``plugin:skill`` names. ``max_chars <= 0`` (the default since FIX-r3 T7):
+    nothing, the MUST-READ pointer names the skill instead."""
+    if max_chars <= 0:
+        return ""
     try:
         p = _select.skill_path(name) or (Path.home() / ".claude" / "skills" / name / "SKILL.md")
         raw = p.read_text(encoding="utf-8", errors="replace")
@@ -152,14 +155,23 @@ def _gate_items(profile, ctx: dict) -> list[dict]:
     if not (_policy.dev_signal(profile) and _policy.write_gates(profile)):
         return items  # chat, questions, one-line renames (audit C-10)
     in_repo = ctx.get("repo") is not None
-    if profile.first_write_candidate or profile.paths:
+    first = bool(profile.first_write_candidate or profile.paths)
+    strong_backend = "backend" in profile.surfaces and "backend" not in profile.weak_surfaces
+    tdd = in_repo and (strong_backend or "TEST" in profile.intents)
+    if first and tdd:  # one line when both fire (final-fix 2); the governor keys on "this session"
+        items.append({
+            "id": "gate:firstwrite+tdd", "tier": 0, "section": "GATES",
+            "text": ("First substantive change this session: orient with codebase-intel-first + "
+                     "project-reference-linkage; TDD: failing test first (tdd-guard is advisory, treat "
+                     "as a directive); dead-code-and-change-audit after."),
+        })
+    elif first:
         items.append({
             "id": "firstwrite:baseline", "tier": 0, "section": "GATES",
             "text": ("First substantive change this session: orient with codebase-intel-first + "
                      "project-reference-linkage, then run dead-code-and-change-audit on your changes."),
         })
-    strong_backend = "backend" in profile.surfaces and "backend" not in profile.weak_surfaces
-    if in_repo and (strong_backend or "TEST" in profile.intents):
+    elif tdd:
         items.append({
             "id": "gate:tdd", "tier": 0, "section": "GATES",
             "text": ("TDD: write the failing test first, then implement "
@@ -202,9 +214,10 @@ def _substrate_items(profile, ctx: dict) -> list[dict]:
             and _mcp_ok("jcodemunch", root)):
         intent, tools = next(((i, t) for i, t in _JCM_BY_INTENT if i in profile.intents),
                              ("CODE", "search_symbols / get_symbol_source (or get_context_bundle)"))
+        tail = " — before any Read/Grep of source." if intent == "CODE" else "."
         items.append({
             "id": f"substrate:jcodemunch:{intent}", "tier": 1, "section": "SUBSTRATE",
-            "text": f"Code work → call jcodemunch {tools} now — before any Read/Grep of source.",
+            "text": f"Code work → call jcodemunch {tools} now{tail}",
         })
     if ("docs" in profile.surfaces or any(k in profile.text for k in _DOC_KEYWORDS)) and _mcp_ok("jdocmunch", root):
         if _doc_index_exists(repo):
@@ -212,8 +225,8 @@ def _substrate_items(profile, ctx: dict) -> list[dict]:
         elif repo is not None and _infra_root(repo):
             txt = "Docs work → jdocmunch never indexes this agent-infra dir; `Read` the doc files."
         else:
-            txt = ("Docs work → jdocmunch search_sections / get_toc when indexed; this repo is not "
-                   "doc-indexed yet (index-lifecycle builds it on writes) — `Read` meanwhile.")
+            txt = ("Docs work → `Read` the docs now; jdocmunch search_sections / get_toc once this repo "
+                   "is indexed (built on writes).")
         items.append({"id": "substrate:jdocmunch", "tier": 1, "section": "SUBSTRATE", "text": txt})
     if (_policy.strong_arch(profile) or _ARCH_RX.search(profile.text or "")) and _mcp_ok("graphify", root):
         # The graphify MCP keeps the graph it started with (empty when the session began
@@ -228,9 +241,8 @@ def _substrate_items(profile, ctx: dict) -> list[dict]:
             txt = ("Architecture/dependency question → this agent-infra dir has no graphify graph or "
                    "jcodemunch index (never auto-built); Read / Grep it directly.")
         else:
-            txt = ("Architecture/dependency question → no graphify graph yet: graph is building in the "
-                   "background; use jcodemunch get_dependency_graph now, graphify query_graph / "
-                   f"god_nodes with {pp} once it lands.")
+            txt = ("Architecture question → no graphify graph yet (building); use jcodemunch "
+                   f"get_dependency_graph now, graphify query_graph with {pp} once it lands.")
         items.append({"id": "substrate:graphify", "tier": 1, "section": "SUBSTRATE", "text": txt})
     return items
 
@@ -266,12 +278,13 @@ def _skill_items(profile, ctx: dict) -> list[dict]:
     # replaces the rank-1 line; no line is MUST-READ then.
     deep_item = None
     dev_top = max((v for k, v in (profile.intents or {}).items() if k not in _policy._SIZE_ONLY), default=0)
-    if ranked and dev_top >= threshold:
+    deep_chars = int(cfg.get("deep_inject_chars", 0))  # 0 = off (FIX-r3 T7); router.config.json opts in
+    if ranked and deep_chars > 0 and dev_top >= threshold:
         name, s1 = ranked[0]
         s2 = ranked[1][1] if len(ranked) > 1 else 0.0
         ratio = float(cfg.get("deep_inject_ratio", 1.5))
         if s1 >= ratio * s2 and name not in _select.core_skills():
-            body = _skill_excerpt(name, int(cfg.get("deep_inject_chars", 3000)))
+            body = _skill_excerpt(name, deep_chars)
             if body:
                 deep_item = {"id": f"deep:{name}", "tier": 1, "section": "SKILLS",
                              "text": f"[inlined skill: {name}]\n{body}"}
@@ -386,14 +399,12 @@ def _routing_items(profile, ctx: dict) -> list[dict]:
     for d in tiers[:max_lines]:
         who = d.get("agent")
         if d["kind"] == "agent" and who:
-            txt = (f"Intent {d['category']} (score {d['score']}): dispatch {who} "
-                   f"with the Agent tool (act {d['act']}).")
+            txt = f"{d['category']} ({d['score']}): dispatch {who} with the Agent tool (act {d['act']})."
         elif who:
-            txt = (f"Intent {d['category']} (score {d['score']}): consider dispatching {who} "
-                   f"with the Agent tool (act {d['act']}).")
+            txt = f"{d['category']} ({d['score']}): consider dispatching {who} with the Agent tool (act {d['act']})."
         else:
-            txt = (f"Intent {d['category']} (score {d['score']}): consider dispatching the "
-                   f"{d['act']} specialist with the Agent tool.")
+            txt = (f"{d['category']} ({d['score']}): consider dispatching the {d['act']} specialist "
+                   "with the Agent tool.")
         items.append({"id": f"route:{d['act']}", "tier": 3, "section": "ROUTING", "text": txt})
     return items
 

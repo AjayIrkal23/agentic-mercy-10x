@@ -1,7 +1,7 @@
 # ~/.claude — operating rules (always on)
 
-This file, `@CLAUDE.machines.local.md` and `rules/0*.md` are the always-on doctrine (~4k
-tokens); domain rules load by path (`rules/frontend.md`, `backend.md`, `claude-infra.md`).
+This file, `@CLAUDE.machines.local.md` and `rules/0*.md` are the always-on doctrine (~4.3k
+tokens by chars/4, ~8k real); domain rules load by path (`rules/frontend.md`, etc.).
 The 32 standing directives and what enforces each: `docs/DIRECTIVES.md`.
 
 ## 1. Subagents and workflows are pre-authorized (standing request)

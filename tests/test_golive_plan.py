@@ -144,7 +144,8 @@ def test_plan_prints_ordered_steps_and_runs_nothing(calls, capsys):
     assert G.main(["--plan"]) == 0
     s = capsys.readouterr().out
     ids = [st.id for st in G.STEPS]
-    assert ids == ["ownership", "pytest", "validators", "render-check", "secrets-gitleaks", "secrets-known-values",
+    assert ids == ["ownership", "pytest", "validators", "render-check", "tokens", "secrets-gitleaks",
+                   "secrets-known-values",
                    "git-commit", "merge", "render-live", "guard-checks", "zram", "mcp-remove", "push", "replica",
                    "memory"]
     pos = [s.index(f"{i:02d} {sid}") for i, sid in enumerate(ids, 1)]
@@ -232,6 +233,31 @@ def test_zram_step_skips_without_askpass_or_apt():
     high = G._zram_plan(askpass_exists=True, apt=True, mem_available_mb=20000)
     assert any("swapoff" in a for a in high)
     assert all(a[:2] == ["sudo", "-A"] for a in low)
+
+
+def test_zram_restart_only_with_headroom_and_applied_check():
+    """FIX-r2 O3 + SANTA-FINAL fix 7: apt's postinst only daemon-reloads, and `restart` starts an inactive
+    unit. A device holding data restarts only when that data fits in RAM with 2 GB to spare; an empty or
+    absent device (fresh host) always (re)starts, it costs no RAM."""
+    tight = G._zram_plan(askpass_exists=True, apt=True, mem_available_mb=5000, zram_used_mb=3600)
+    assert not any("restart" in a for a in tight) and not any("start" in a for a in tight)
+    roomy = G._zram_plan(askpass_exists=True, apt=True, mem_available_mb=9000, zram_used_mb=3600)
+    assert ["sudo", "-A", "systemctl", "restart", "systemd-zram-setup@zram0"] in roomy
+    fresh = G._zram_plan(askpass_exists=True, apt=True, mem_available_mb=4500, zram_used_mb=0)
+    assert ["sudo", "-A", "systemctl", "restart", "systemd-zram-setup@zram0"] in fresh
+    assert G._zram_applied("/dev/zram0 lzo-rle    4G") is False
+    assert G._zram_applied("/dev/zram0 zstd 15G") is True
+    assert G._zram_applied("") is False
+
+
+def test_zram_restart_keeps_memwatch_crit_headroom():
+    """FIX-r3 O8: the swapoff lands the zram data in RAM; what is left must stay 2 GB above memwatch's crit
+    line, else the sentinel starts killing during the apply. 7.5 GB with 3.9 GB in zram: defer to reboot."""
+    restart = ["sudo", "-A", "systemctl", "restart", "systemd-zram-setup@zram0"]
+    assert G._crit_mb() == 3072
+    assert restart not in G._zram_plan(askpass_exists=True, apt=True, mem_available_mb=7500, zram_used_mb=3900)
+    assert restart in G._zram_plan(askpass_exists=True, apt=True, mem_available_mb=9500, zram_used_mb=3900)
+    assert "next reboot" in G._zram_deferred(3900, 7500)
 
 
 def test_validators_step_runs_import_hygiene_over_five_dirs_with_root():

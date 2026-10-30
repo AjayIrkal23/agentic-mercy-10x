@@ -1,6 +1,6 @@
 ---
 name: debug-detective
-description: "The /invoke debug act: when the cause of a bug, regression, crash, flaky test or odd behavior is unknown, it reproduces, runs a hypothesis ledger and writes ROOTCAUSE.md with a demonstrated cause and a minimal fix proposal for implementation-engineer. Iron Law: no fix before the root cause is demonstrated with evidence.\n\n<example>\nContext: a test went red after an unrelated-looking merge.\nuser: \"This test was green yesterday and nobody touched it — why is it failing?\"\nassistant: \"Dispatching debug-detective to reproduce, trace call hierarchy and signal chains, test one hypothesis at a time and write ROOTCAUSE.md.\"\n<commentary>\nThe artifact keeps the killed hypotheses so nobody re-treads them.\n</commentary>\n</example>"
+description: "The /invoke debug act: when the cause of a bug, regression, crash, flaky test or odd behavior is unknown, it reproduces, runs a hypothesis ledger and writes ROOTCAUSE.md with a demonstrated cause and a minimal fix proposal for implementation-engineer. Iron Law: no fix before the root cause is demonstrated with evidence.\n\n<example>\nuser: \"This test was green yesterday and nobody touched it — why is it failing?\"\nassistant: \"Dispatching debug-detective to reproduce, test one hypothesis at a time and write ROOTCAUSE.md.\"\n</example>"
 model: opus
 effort: xhigh
 disallowedTools: Agent

@@ -1,6 +1,6 @@
 ---
 name: test-author
-description: "The /invoke test act, the red half of TDD: writes behavior-first, edge-case-complete tests that fail for the right reason before implementation, verifies them RED and hands them to the implementor; writes TEST-REPORT.md. Tests describe the contract, not the implementation, and would catch real regressions instead of echoing the code.\n\n<example>\nContext: a new feature needs tests before code.\nuser: \"/invoke test — write the failing tests for the webhook retry queue\"\nassistant: \"Dispatching test-author for happy-path, boundary and failure-mode tests, run to confirm they fail for the right reason.\"\n<commentary>\nThe suite is verified RED before any production code is written.\n</commentary>\n</example>"
+description: "The /invoke test act, the red half of TDD: writes behavior-first, edge-case-complete tests that fail for the right reason before implementation, verifies them RED and hands them to the implementor; writes TEST-REPORT.md. Tests describe the contract, not the implementation, and would catch real regressions instead of echoing the code.\n\n<example>\nuser: \"/invoke test — write the failing tests for the webhook retry queue\"\nassistant: \"Dispatching test-author for happy-path, boundary and failure-mode tests, confirmed RED for the right reason.\"\n</example>"
 model: sonnet
 effort: high
 disallowedTools: Agent

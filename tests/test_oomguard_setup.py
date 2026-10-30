@@ -19,6 +19,8 @@ import doctor_oomguard as doc  # noqa: E402
 import oomguard_setup as og  # noqa: E402
 from lib import platform as plat  # noqa: E402
 
+pytestmark = pytest.mark.skipif(plat.IS_WINDOWS, reason="systemd user units: Linux only")
+
 LEAN = "# >>> lean-ctx agent aliases >>>\nalias claude='LEAN_CTX_AGENT=1 claude'\n# <<< lean-ctx agent aliases <<<\nexport PATH=\"$HOME/.local/bin:$PATH\"\n"
 MUTATING = ("daemon-reload", "enable", "disable", "start", "try-restart", "busctl")
 
@@ -37,8 +39,8 @@ class FakeRun:
             key = "default" if cmd[3] == "-p" else f"show:{cmd[3]}"
             out = self.answers.get(key, "stop")
             out = f"{cmd[-1]}={out}"
-        else:
-            out = self.answers.get(cmd[0], "")
+        else:  # "bash -lc" answers before "bash" (the doctor's login-shell probe)
+            out = self.answers.get(" ".join(cmd[:2]), self.answers.get(cmd[0], ""))
         return subprocess.CompletedProcess(cmd, self.rc if cmd[0] == "busctl" else 0, out + "\n", "")
 
     def mutating(self):
@@ -55,6 +57,7 @@ def box(tmp_path):
     home.mkdir()
     (home / ".zshrc").write_text("# mine\n" + LEAN, encoding="utf-8")
     (home / ".bashrc").write_text(LEAN.rstrip("\n"), encoding="utf-8")  # no trailing newline
+    (home / ".profile").write_text('. "$HOME/.bashrc"\nPATH="$HOME/.local/bin:$PATH"\n', encoding="utf-8")
     (tmp_path / "proc").mkdir()
     return root, home, tmp_path / "proc"
 
@@ -75,7 +78,8 @@ def test_fresh_home_creates_everything(box):
     rows, run = _ensure(box)
     for want in ("drop-in 10-oom.conf: CREATED", "unit claude-memwatch.service: CREATED",
                  "unit claude-restore.service: CREATED", "systemctl daemon-reload: OK", "claude-memwatch: ENABLED",
-                 "claude-restore: ENABLED", ".zshrc: APPENDED PATH block", ".bashrc: APPENDED PATH block"):
+                 "claude-restore: ENABLED", ".zshrc: APPENDED PATH block", ".bashrc: APPENDED PATH block",
+                 ".profile: APPENDED PATH block"):
         assert want in rows, (want, rows)
     unit = (home / ".config" / "systemd" / "user" / "claude-memwatch.service").read_text(encoding="utf-8")
     assert f"ExecStart={plat.python_exe()} {root / 'hooks'}/tools/memwatch.py" in unit and "{" not in unit
@@ -84,6 +88,8 @@ def test_fresh_home_creates_everything(box):
     for rc in (".zshrc", ".bashrc"):
         text = (home / rc).read_text(encoding="utf-8")
         assert text.endswith(og.path_block()) and text.index(og.BEGIN) > text.index("# <<< lean-ctx agent aliases <<<")
+    profile = (home / ".profile").read_text(encoding="utf-8")  # after the ~/.local/bin prepend: bash -l wins too
+    assert profile.endswith(og.path_block()) and profile.index(og.BEGIN) > profile.index(".local/bin")
     assert "\n\n" + og.BEGIN in (home / ".bashrc").read_text(encoding="utf-8")
     assert ["systemctl", "--user", "enable", "--now", "claude-memwatch"] in run.calls
 
@@ -144,6 +150,82 @@ def test_created_unit_under_a_running_service_restarts_it(box):
     assert "unit claude-memwatch.service: CREATED" in rows and "claude-memwatch: RESTARTED" in rows
 
 
+# ---- O7: a daemon older than its code restarts itself ---------------------------------------------
+_RESTART = ["systemctl", "--user", "restart", "claude-memwatch"]
+
+
+def _daemon(box, started_ago: float, code_ago: float = 60, pid: int = 4242):
+    """Fake /proc for a running memwatch that started `started_ago` s ago; memwatch.py written `code_ago` s ago."""
+    import os
+    import time
+    root, _, proc = box
+    now = time.time()
+    clk = os.sysconf("SC_CLK_TCK")
+    btime = int(now - 100000)
+    (proc / "stat").write_text(f"cpu  1 2 3\nbtime {btime}\n", encoding="utf-8")
+    ticks = int((now - started_ago - btime) * clk)
+    (proc / str(pid)).mkdir(exist_ok=True)
+    (proc / str(pid) / "stat").write_text(f"{pid} (python3) S " + " ".join(["0"] * 18 + [str(ticks), "0", "0"]) + "\n",
+                                          encoding="utf-8")
+    code = root / "hooks" / "tools" / "memwatch.py"
+    code.write_text("# code\n", encoding="utf-8")
+    os.utime(code, (now - code_ago, now - code_ago))
+    return FakeRun(**_LIVE_UNITS, **{"show:claude-memwatch": str(pid)})
+
+
+def test_daemon_older_than_its_code_is_restarted(box):
+    _ensure(box)
+    run = _daemon(box, started_ago=3600, code_ago=60)
+    rows, run = _ensure(box, run=run)
+    assert "claude-memwatch: OK" in rows
+    assert "memwatch-code: RESTARTED(code newer than daemon)" in rows, rows
+    assert _RESTART in run.calls
+
+
+def test_imported_lib_change_marks_the_daemon_stale(box):
+    # SANTA-FINAL runtime F3: memwatch.py imports lib/platform + lib/hook_telemetry; a change there is stale code too
+    root = box[0]
+    run = _daemon(box, started_ago=30, code_ago=3600)
+    assert og.code_newer_than_daemon(run, root, proc_root=box[2]) is False
+    for name in ("platform.py", "hook_telemetry.py"):
+        lib = root / "hooks" / "lib" / name
+        lib.parent.mkdir(parents=True, exist_ok=True)
+        lib.write_text("# touched\n", encoding="utf-8")
+        assert og.code_newer_than_daemon(run, root, proc_root=box[2]) is True, name
+        lib.unlink()
+
+
+def test_current_daemon_is_left_alone(box):
+    _ensure(box)
+    rows, run = _ensure(box, run=_daemon(box, started_ago=30, code_ago=3600))
+    assert "memwatch-code: OK(current)" in rows and _RESTART not in run.calls
+
+
+def test_stale_daemon_waits_at_crit(box, monkeypatch):
+    _ensure(box)
+    monkeypatch.setattr(og, "_tier", lambda: "crit")
+    rows, run = _ensure(box, run=_daemon(box, started_ago=3600, code_ago=60))
+    assert "memwatch-code: SKIP(crit: restart later)" in rows and _RESTART not in run.calls
+
+
+def test_stale_daemon_dry_run_and_not_running(box):
+    _ensure(box)
+    rows, run = _ensure(box, dry=True, run=_daemon(box, started_ago=3600, code_ago=60))
+    assert not [r for r in rows if r.startswith("memwatch-code")] and _RESTART not in run.calls
+    rows, run = _ensure(box, run=FakeRun(**_LIVE_UNITS))          # MainPID unreadable -> no row, no restart
+    assert not [r for r in rows if r.startswith("memwatch-code")] and _RESTART not in run.calls
+
+
+def test_doctor_memwatch_code_row(box):
+    _ensure(box)
+    run = _daemon(box, started_ago=3600, code_ago=60)
+    r = _rows(box, run)
+    assert r["memwatch-code"][0] == "WARN" and "older than" in r["memwatch-code"][1]
+    assert _RESTART not in run.calls                                 # the doctor only reports
+    assert _rows(box, _daemon(box, started_ago=30, code_ago=3600))["memwatch-code"][0] == "PASS"
+    assert _rows(box, FakeRun(**_LIVE_UNITS))["memwatch-code"][0] == "SKIP"
+
+
 def test_restore_disabled_by_flag(box):
     _, home, _ = box
     (home / ".claude").mkdir()
@@ -174,10 +256,30 @@ def test_no_manager_or_windows_touches_nothing(box, monkeypatch):
     assert _ensure(box)[0] == [og.NO_MANAGER] and _snapshot(home) == before
 
 
+@pytest.mark.parametrize("how", ["foreign-home", "env"])
+def test_sandbox_writes_files_but_runs_no_verbs(box, monkeypatch, how):
+    root, home, proc = box
+    monkeypatch.setattr(og.plat, "IS_WINDOWS", False)
+    monkeypatch.setattr(og.plat, "systemd_user_bus", lambda: Path("/fake/bus"))
+    run = FakeRun(**_LIVE_UNITS)
+    if how == "env":
+        monkeypatch.setenv("AGENTIC_MERCY_SANDBOX", "1")
+        monkeypatch.setattr(og, "_foreign_home", lambda h: False)  # as if home were the real one
+    else:
+        monkeypatch.delenv("AGENTIC_MERCY_SANDBOX", raising=False)
+    rows = og.ensure(False, home=home, run=run, which=lambda n: "/usr/bin/" + n, root=root, proc_root=proc)
+    assert not [c for c in run.calls if c[0] in ("systemctl", "busctl")], run.calls
+    assert (home / ".config" / "systemd" / "user" / "claude-memwatch.service").is_file()
+    assert {"claude-memwatch: SKIP(sandbox)", "attach: SKIP(sandbox)"} <= set(rows)
+
+
 def test_missing_rc_is_never_created(box):
     _, home, _ = box
     (home / ".zshrc").unlink()
-    assert ".zshrc: SKIP(absent)" in _ensure(box)[0] and not (home / ".zshrc").exists()
+    (home / ".profile").unlink()
+    rows = _ensure(box)[0]
+    assert ".zshrc: SKIP(absent)" in rows and not (home / ".zshrc").exists()
+    assert ".profile: SKIP(absent)" in rows and not (home / ".profile").exists()
 
 
 def test_rendered_units_verify(box, tmp_path):
@@ -208,22 +310,48 @@ def test_doctor_before_install(box):
     assert r["attach-live"][0] == "PASS"
 
 
+def _launcher_argv(box, *argv) -> dict:
+    """FakeRun answer for the launcher-model probe (`bash <root>/bin/claude --version`)."""
+    return {f"bash {box[0].resolve() / 'bin' / 'claude'}": "\n".join(("/h/.local/bin/claude", *argv, "--version"))}
+
+
 def test_doctor_after_install(box, monkeypatch, tmp_path):
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path / "state"))
     _ensure(box)
     monkeypatch.setattr(doc.plat, "cgroup_of", lambda pid, root="/proc": "app-x.scope")
     caps = plat.state_dir() / "launch-caps"
     caps.mkdir(parents=True, exist_ok=True)
     (caps / "1.json").write_text(json.dumps({"workflow_agents": 4, "subagents": 5, "size_guideline": "medium"}),
                                  encoding="utf-8")
+    (plat.state_dir() / "plan-tier.json").write_text(json.dumps({"schema": 1, "tier": "max20", "main": "opus",
+                                                                 "detected_at": 1}), encoding="utf-8")
     ok = {"default": "continue", "show:app-x.scope": "continue", "is-active:claude-memwatch": "active",
           "is-enabled:claude-memwatch": "enabled", "is-enabled:claude-restore": "enabled",
-          "zsh": "/h/.claude/bin/claude", "bash": "/h/.claude/bin/claude"}
+          "zsh": "/h/.claude/bin/claude", "bash": "/h/.claude/bin/claude", "show:claude-memwatch": "4242",
+          **_launcher_argv(box, "--model", "opus")}
+    _daemon(box, started_ago=30, code_ago=3600)                     # a daemon newer than its code (O7)
     r = _rows(box, FakeRun(**ok))
     assert {n: s for n, (s, _) in r.items()} == dict.fromkeys(doc.NAMES, "PASS"), r
     assert r["launch-caps"][1].startswith("wf4 sub5 medium")
     r = _rows(box, FakeRun(**{**ok, "show:app-x.scope": "stop"}))
     assert r["oom-policy"][0] == "WARN" and "predates the reload" in r["oom-policy"][1]
     assert _rows(box, FakeRun(**ok), which=lambda n: None if n in ("zsh", "bash") else "/x")["claude-launcher"][0] == "SKIP"
+    assert r["claude-launcher"] == ("PASS", "zsh, bash and bash -l -> ~/.claude/bin/claude")
+    bad = _rows(box, FakeRun(**{**ok, "bash -lc": "/h/.local/bin/claude"}))["claude-launcher"]
+    assert bad == ("WARN", "bash -l resolves claude to /h/.local/bin/claude"), bad
+    assert r["launcher-model"] == ("PASS", "--model opus (tier main)")
+    monkeypatch.delenv("ANTHROPIC_MODEL", raising=False)
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+    nomodel = {**ok, **_launcher_argv(box)}
+    assert _rows(box, FakeRun(**nomodel))["launcher-model"][0] == "WARN"
+    (box[1] / ".claude").mkdir(exist_ok=True)
+    (box[1] / ".claude" / "settings.json").write_text('{"model": "sonnet"}', encoding="utf-8")
+    assert _rows(box, FakeRun(**nomodel))["launcher-model"] == ("PASS", "settings.json model=sonnet (your /model choice)")
+    monkeypatch.setenv("ANTHROPIC_MODEL", "claude-x")
+    assert _rows(box, FakeRun(**nomodel))["launcher-model"] == ("PASS", "ANTHROPIC_MODEL set")
+    monkeypatch.delenv("ANTHROPIC_MODEL")
+    (plat.state_dir() / "plan-tier.json").write_text('{"schema": 1, "tier": "max20"}', encoding="utf-8")
+    assert "no `main` yet" in _rows(box, FakeRun(**ok))["launcher-model"][1]
     assert r["memwatch-unit"][0] == "PASS"
     _, home, _ = box
     unit = home / ".config" / "systemd" / "user" / "claude-memwatch.service"
@@ -232,6 +360,28 @@ def test_doctor_after_install(box, monkeypatch, tmp_path):
                               for ln in unit.read_text(encoding="utf-8").splitlines()) + "\n", encoding="utf-8")
     r = _rows(box, FakeRun(**ok))
     assert r["memwatch-unit"][0] == "WARN" and "not " in r["memwatch-unit"][1]
+
+
+@pytest.mark.parametrize("how", ["foreign-home", "env"])
+def test_doctor_sandbox_skips_every_row(box, monkeypatch, how):
+    root, home, proc = box
+    monkeypatch.setattr(doc.plat, "IS_WINDOWS", False)
+    monkeypatch.setattr(doc.plat, "systemd_user_bus", lambda: Path("/fake/bus"))
+    run = FakeRun(**_LIVE_UNITS)
+    if how == "env":
+        monkeypatch.setenv("AGENTIC_MERCY_SANDBOX", "1")
+        monkeypatch.setattr(og, "_foreign_home", lambda h: False)
+    else:
+        monkeypatch.delenv("AGENTIC_MERCY_SANDBOX", raising=False)
+    out = doc.rows(root, run=run, which=lambda n: "/usr/bin/" + n, home=home, proc_root=proc)
+    assert [(n, s) for n, s, _ in out] == [(n, "SKIP") for n in doc.NAMES]
+    assert all("sandbox" in d for _, _, d in out) and run.calls == []
+
+
+def test_doctor_injected_bus_still_probes(box, monkeypatch):
+    monkeypatch.delenv("AGENTIC_MERCY_SANDBOX", raising=False)
+    r = _rows(box, FakeRun(**_LIVE_UNITS))
+    assert r["memwatch-unit"][0] != "SKIP"
 
 
 def test_doctor_ci_and_no_manager(box):

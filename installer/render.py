@@ -88,6 +88,10 @@ CLAUDE_MANAGED_KEYS = frozenset({
     "switchModelsOnFlag", "pluginConfigs",
 })
 
+# Tier-derived defaults the user may remove (`/model` → Default deletes `model`): absent in the live
+# file means the user's choice, not drift; a re-render keeps it absent.
+TIER_USER_KEYS = ("model",)
+
 # lean-ctx >= 3.10 re-injects its own hooks / statusLine / permissions.deny into
 # any settings.json that mentions it. The rendered file must never contain it
 # (the dispatch matcher spells the MCP prefix as the regex `mcp__lean.ctx__`).
@@ -181,6 +185,8 @@ def _post_steps_blocked(out: Path = _LIVE) -> bool:
         return False
     if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("CLAUDE_HOOK_DOCTOR"):
         return True
+    if os.environ.get("AGENTIC_MERCY_SANDBOX") == "1":
+        return True  # a sandbox-HOME rehearsal never drives the real user manager
     if _ROOT.resolve() != plat.claude_dir().resolve():
         return True  # a worktree or clone render never installs its own paths into the user's units
     return Path(out).resolve() != _LIVE.resolve()
@@ -220,8 +226,22 @@ def _detect_tier_first(root: Path = _ROOT) -> None:
 def carry_managed(text: str, existing: Path) -> str:
     """Keep Claude-managed keys from an existing settings.json (user /config choices) and
     what the user added: permission allow/deny/ask rules, plugins enabled through /plugin and
-    extra marketplaces (unioned with the template's; ``settings_diff.carry``)."""
-    return settings_diff.carry(text, existing, CLAUDE_MANAGED_KEYS)
+    extra marketplaces (unioned with the template's; ``settings_diff.carry``). A tier key the
+    user removed from a WORKBENCH render (``TIER_USER_KEYS``: `/model` → Default drops `model`)
+    stays removed; a file the workbench never rendered (first install) gets the tier's key (I9)."""
+    out = settings_diff.carry(text, existing, CLAUDE_MANAGED_KEYS)
+    try:
+        live = json.loads(Path(existing).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return out
+    data = json.loads(out)
+    workbench = settings_seed.is_workbench_file(live) if isinstance(live, dict) else False
+    gone = [k for k in TIER_USER_KEYS if workbench and k not in live and k in data]
+    if not gone:
+        return out
+    for k in gone:
+        data.pop(k)
+    return json.dumps(data, indent=2, ensure_ascii=False) + "\n"
 
 
 def emit_template(live_path: Path = _LIVE, out_path: Path = _TEMPLATE) -> str:
@@ -273,6 +293,9 @@ def check_equivalence(live_path: Path = _LIVE, template_path: Path = _TEMPLATE,
         rendered = json.loads(render(template_path, user_path, machine_subs()))
     except (OSError, ValueError) as exc:
         return False, f"{type(exc).__name__}: {exc}"
+    for k in TIER_USER_KEYS:  # removed by the user's /model choice: not drift
+        if isinstance(live, dict) and k not in live:
+            rendered.pop(k, None)
     want = _normalized(rendered)  # entries the user added (rules, /plugin, marketplaces) are not drift
     diffs = settings_diff.diff_paths(settings_diff.prune_empty_rules(want), settings_diff.prune_empty_rules(
         settings_diff.without_additions(_normalized(live), want)))

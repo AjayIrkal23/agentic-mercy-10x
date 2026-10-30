@@ -97,9 +97,9 @@ def code_shaped(profile) -> bool:
 
 # --------------------------------------------------------------------------- C-11
 def skill_line(name: str, label: str, read_path: str | None) -> str:
-    """Two short lines; the ``ACTION:`` line is parsed by the mercy governor and tests."""
+    """One line (final-fix 2); the ``ACTION:`` token is parsed by the mercy governor and tests."""
     action = f"Read {read_path}" if read_path else f'Skill("{name}")'
-    return f"- **{name}** ({label})\n  ACTION: {action}"
+    return f"- **{name}** ({label}) ACTION: {action}"
 
 
 # --------------------------------------------------------------------------- C-12

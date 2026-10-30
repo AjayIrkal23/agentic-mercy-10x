@@ -524,6 +524,8 @@ def _classify_impl(payload: dict) -> TaskProfile:
         prof.size = "S"
     else:
         prof.size = "M"
+    if prof.size == "L":
+        prof.intents.pop("SMALL", None)  # "update the docs" inside a size-L prompt is not a small task
 
     # --- reasoning-shaped (kept for profile consumers; no directive is emitted) ---
     reasoning_cats = {"DEBUG", "DESIGN", "PLAN", "AUDIT", "SPEC", "SECURITY",

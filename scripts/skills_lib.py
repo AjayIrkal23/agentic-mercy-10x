@@ -103,7 +103,7 @@ def dump_frontmatter(fm: dict, body: str) -> str:
         )
     dumped = yaml.dump(
         ordered, sort_keys=False, default_flow_style=False, allow_unicode=True,
-        width=100,
+        width=10**6,  # never re-wrap a line: a one-key fix must not rewrite the whole front-matter
     )
     body = body if body.startswith("\n") or not body else body
     return f"---\n{dumped}---\n{body}"

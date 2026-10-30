@@ -12,7 +12,9 @@ machine's data. Unicode, personal paths, workflow, token-shaped secrets and mach
 Allowlist: ``_ALLOW`` below (or ``--allowlist FILE``, JSON ``{"allow": [...]}``) drops findings by path glob
 (relative to ``--root``, default cwd; ``*`` spans directories) and rule name (fnmatch, so ``unicode-*`` works);
 every entry carries a ``why``. ``--no-allowlist`` shows everything it hides. Gitignored ``.claude/`` sidecars
-and ``.state/`` hook state (its breadcrumbs hold the workspace path) are never scanned.
+and ``.state/`` hook state (its breadcrumbs hold the workspace path) are never scanned; inside a git work
+tree a directory walk also skips every gitignored file (``skills/synced/``, ``hooks/.telemetry/``) unless
+``--no-gitignore``.
 Exit 0 clean, 1 findings, 2 usage error (a path that does not exist).
 Usage: validate_imports.py [--json] [--class U,P,...] [--terms FILE] [--max-bytes N]
                            [--allowlist FILE | --no-allowlist] [--root DIR] PATH...
@@ -82,17 +84,41 @@ _WF_INJECT_RE = re.compile(r"\$\{\{\s*github\.event\.(?:issue|comment|pull_reque
 _WF_RUN_RE = re.compile(r"^(\s*(?:-\s+)?)run:(.*)$")
 _VENDORED_RE = re.compile(r"^<!-- ecc:[^\s@]+@[0-9a-f]{40} -->$", re.M)
 _VENDORED_SKIP = frozenset({"rfc1918", "npx-unpinned", "at-latest", "assignment"})
-_EXCLUDE_PARTS = {".git", "node_modules", "__pycache__", ".cache", ".pytest_cache", "attic", ".claude", ".state"}
+_EXCLUDE_PARTS = {".git", "node_modules", "__pycache__", ".cache", ".pytest_cache", "attic", ".claude", ".state",
+                  "synced", ".telemetry"}
+RESPECT_GITIGNORE = True  # --no-gitignore turns it off (scan every file under a dir argument)
 _BINARY_SUFFIX = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".zip", ".gz", ".tgz", ".woff", ".woff2",
                   ".ttf", ".ico", ".mp4", ".mp3", ".pyc"}
 
 
+def _git_visible(base: Path) -> set[Path] | None:
+    """Tracked + untracked-not-ignored files under base, or None when base is not in a git work tree."""
+    import subprocess  # noqa: PLC0415
+    try:
+        top = subprocess.run(["git", "-C", str(base), "rev-parse", "--show-toplevel"],
+                             capture_output=True, text=True, timeout=5)
+        if top.returncode != 0:
+            return None
+        ls = subprocess.run(["git", "-C", str(base), "ls-files", "-z", "--cached", "--others", "--exclude-standard",
+                             "--full-name", "--", "."], capture_output=True, timeout=20)
+        if ls.returncode != 0:
+            return None
+        root = Path(top.stdout.strip())
+        return {(root / p).resolve() for p in ls.stdout.decode("utf-8", "replace").split("\0") if p}
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
 def iter_files(paths, max_bytes: int = 2_000_000):
-    """Regular text files under each path (a file argument yields itself), sorted."""
+    """Regular text files under each path (a file argument yields itself), sorted. A directory walk
+    skips gitignored files when the directory is inside a git work tree (RESPECT_GITIGNORE)."""
     out: list[Path] = []
     for base in paths:
         base = Path(base)
         cands = [base] if base.is_file() else [p for p in base.rglob("*") if p.is_file()]
+        vis = _git_visible(base) if (RESPECT_GITIGNORE and not base.is_file()) else None
+        if vis is not None:
+            cands = [p for p in cands if p.resolve() in vis]
         for p in cands:
             rel_parts = p.relative_to(base).parts if p != base else ()
             if any(part in _EXCLUDE_PARTS for part in rel_parts) or p.suffix.lower() in _BINARY_SUFFIX:
@@ -287,7 +313,10 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--allowlist", default=None, help="JSON allowlist file instead of the built-in one")
     ap.add_argument("--no-allowlist", action="store_true", help="report every finding")
     ap.add_argument("--root", default=None, help="base for allowlist path globs (default: cwd)")
+    ap.add_argument("--no-gitignore", action="store_true", help="also scan gitignored files under a dir argument")
     a = ap.parse_args(argv)
+    global RESPECT_GITIGNORE
+    RESPECT_GITIGNORE = not a.no_gitignore
     paths = [Path(p) for p in a.paths]
     missing = [p for p in paths if not p.exists()]
     if missing:

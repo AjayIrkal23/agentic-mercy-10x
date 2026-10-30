@@ -40,6 +40,7 @@ def sandbox_home(tmp_path, monkeypatch):
     monkeypatch.setenv("USERPROFILE", str(home))
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(home / ".claude"))
     monkeypatch.setenv("CLAUDE_HOOK_DOCTOR", "1")
+    live_interpreter.pin_tier(home, monkeypatch)  # FIX-r2 S3: this machine's tier, not a fallback
     # audit I-17: never depend on the installed claude CLI / tsc (offline, fresh clone)
     real_which = shutil.which
     monkeypatch.setattr(shutil, "which", lambda n, *a, **k: None if n in ("claude", "tsc") else real_which(n, *a, **k))
@@ -60,6 +61,30 @@ def test_doctor_is_green(sandbox_home, monkeypatch):
     assert by.get("mcp-roster") == "WARN"
     assert by.get("lean-ctx-config") in ("WARN", "PASS")
     assert by.get("statusline") in ("PASS", "SKIP")  # runs the rendered statusLine.command when settings.json exists
+
+
+def test_workflows_rendered_row(tmp_path):
+    """I10: the saved-workflow render is per machine and untracked; a missing or drifted render FAILs so
+    self-heal rebuilds it."""
+    import subprocess
+    checks = _load("doctor_checks", "installer/doctor_checks.py")
+    root = tmp_path / "root"
+    shutil.copytree(_ROOT / "workflows" / "src", root / "workflows" / "src")
+    (root / "scripts").mkdir()
+    shutil.copy2(_ROOT / "scripts" / "build_workflows.py", root / "scripts" / "build_workflows.py")
+    (root / "hooks").mkdir()
+    shutil.copy2(_ROOT / "hooks" / "model-policy.json", root / "hooks" / "model-policy.json")
+    st, det = checks.workflows_rendered_status(root, ci=False)
+    assert st == "FAIL" and "not rendered" in det
+    cp = subprocess.run([sys.executable, str(root / "scripts" / "build_workflows.py"), "--tier", "api", "--usage", "off",
+                         "--out", str(root / "workflows"), "--quiet"], capture_output=True, text=True, timeout=120)
+    assert cp.returncode == 0, cp.stdout + cp.stderr
+    assert checks.workflows_rendered_status(root, ci=False)[0] == "PASS"
+    with open(root / "workflows" / "review.js", "a", encoding="utf-8") as fh:
+        fh.write("//x\n")
+    st, det = checks.workflows_rendered_status(root, ci=False)
+    assert st == "FAIL" and "DRIFT review.js" in det
+    assert checks.workflows_rendered_status(root, ci=True)[0] == "SKIP"
 
 
 def _routing_status(tmp_path, mutate) -> tuple[str, str]:
@@ -99,7 +124,8 @@ def test_doctor_ci_and_doctor_mode_skip_the_oomguard_rows(sandbox_home):
     doctor = _load("doctor", "installer/doctor.py")
     for ci in (True, False):                       # sandbox_home sets CLAUDE_HOOK_DOCTOR=1
         by = {n: (s, d) for n, s, d in doctor.run_doctor(ci=ci)}
-        for name in ("oom-policy", "memwatch-unit", "restore-unit", "claude-launcher", "launch-caps", "attach-live"):
+        for name in ("oom-policy", "memwatch-unit", "memwatch-code", "restore-unit", "claude-launcher",
+                     "launcher-model", "launch-caps", "attach-live"):
             assert by[name][0] == "SKIP", (name, by[name])
 
 

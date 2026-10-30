@@ -16,6 +16,8 @@ Rows (PASS / WARN / FAIL / SKIP; non-zero exit on any FAIL):
   plugins-contract     template enabledPlugins == manifest plugins.install
   plugins-installed    every manifest plugin installed + enabled (`claude plugin list`)
   generated-in-sync    generators --check: rc != 0 FAIL, `drift:` lines WARN
+  workflows-rendered   the per-machine workflows/*.js + index.json render exists and
+                       build_workflows.py --check is OK (FAIL -> self-heal re-renders; SKIP --ci)
   palette-skills       SKILL.md / agent counts from disk; FAIL when either is 0
   aliases · R9/R10-validator · locked-source-links · ollama-embeddings (WARN) ·
   model-routing · workflow-args · hook-fixtures
@@ -30,8 +32,8 @@ Rows (PASS / WARN / FAIL / SKIP; non-zero exit on any FAIL):
                        minimum; tsc + `claude plugin test`
 
 ``--ci``: machine-dependent rows (mcp-roster, lean-ctx, jcodemunch, ollama,
-plugins-installed, mods-runtime, and the OOM guard's oom-policy, memwatch-unit, restore-unit,
-claude-launcher, launch-caps, attach-live; those six also SKIP in doctor mode and under pytest) → SKIP; hook-command and statusline run under it when a rendered
+plugins-installed, mods-runtime, and the OOM guard's oom-policy, memwatch-unit, memwatch-code, restore-unit,
+claude-launcher, launcher-model, launch-caps, attach-live; those eight also SKIP in doctor mode, a sandbox HOME and under pytest) → SKIP; hook-command and statusline run under it when a rendered
 settings.json exists. Pure stdlib; importable and CLI.
 """
 
@@ -212,6 +214,7 @@ def run_doctor(*, ci: bool = False) -> list[tuple[str, str, str]]:
     _check_plugins_contract(rows)
     _row(rows, "plugins-installed", *doctor_host.check_plugins_installed(m, ci))
     _check_generated(rows)
+    _row(rows, "workflows-rendered", *doctor_checks.workflows_rendered_status(_ROOT, ci))
     doctor_checks.check_palette(rows, _ROOT, _row, PASS, FAIL)
     _row(rows, "aliases", *doctor_checks.aliases_status(_ROOT))
     _check_validator(rows)

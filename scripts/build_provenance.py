@@ -57,7 +57,10 @@ def build(recapture: bool | set = False) -> dict:
         if not again and prior.get("baselineHash") and prior.get("family") == "vendored-git":
             baseline, captured = prior["baselineHash"], prior.get("capturedAt", now)
         else:
-            baseline, captured = sl.dir_content_hash(d), now
+            baseline = sl.dir_content_hash(d)
+            # a recapture over identical content keeps its date (no daily git churn)
+            captured = prior.get("capturedAt") if prior.get("baselineHash") == baseline and prior.get("capturedAt") \
+                else now
         reg[name] = {
             "family": "vendored-git",
             "source": src["repo"],
@@ -85,7 +88,13 @@ def write_registry(reg: dict) -> None:
                     "(validate_skills.py / doctor / CI) re-hashes and FAILS on any local edit.",
         }
     }
-    PROV_PATH.write_text(json.dumps({**header, **reg}, indent=2) + "\n", encoding="utf-8", newline="\n")
+    new = json.dumps({**header, **reg}, indent=2) + "\n"
+    try:
+        if PROV_PATH.read_text(encoding="utf-8") == new:  # FIX-r3 I12: same bytes -> keep the mtime
+            return
+    except OSError:
+        pass
+    PROV_PATH.write_text(new, encoding="utf-8", newline="\n")
 
 
 def run_check() -> int:

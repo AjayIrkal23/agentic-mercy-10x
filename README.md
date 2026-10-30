@@ -65,6 +65,14 @@ proxy), `apiKeyHelper`, `model`, permission mode and own hooks move into
 read-only DB MCP: `python3 ~/.claude/scripts/add-db-mcp.py --supabase|--mongodb`.
 Installer internals: [`installer/CLAUDE.md`](installer/CLAUDE.md).
 
+**Rollback** restores the `*.pre-install` files only; there is no uninstaller yet. It leaves
+registered the 15 user-scope MCP servers (`~/.claude.json`), the 5 marketplaces and 11
+plugins, the uv tools and npm globals, and the two user units (`claude-memwatch`,
+`claude-restore`) plus `~/.config/systemd/user.conf.d/10-oom.conf`
+(`installer/oomguard_setup.py` has no `--remove`). Remove those by hand
+(`claude mcp remove`, `claude plugin uninstall`, `uv tool uninstall`, `npm rm -g`,
+`systemctl --user disable --now claude-memwatch claude-restore`).
+
 </details>
 
 ## Every prompt is routed

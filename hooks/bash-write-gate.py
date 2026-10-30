@@ -4,13 +4,13 @@ Out-File, [IO.File] writers and `>` count as shell writes too).
 
 DEFAULT BEHAVIOR (2026-07-19): this hook does NOT block shell writes.
 
-  LAYER 1 — BYPASS DENY, **OPT-IN, OFF BY DEFAULT**. Detects shell-mediated file
-  writes (interpreter stdin heredocs, inline -c/-e writes, sed -i / perl -i, both
-  cat heredoc orders, tee, echo/printf redirects). Fully implemented and tested,
-  but disabled: static scanning cannot distinguish a command being run from one
-  quoted inside a commit message or doc string, and the false positives blocked
-  real work. Arm with BASH_WRITE_GATE_DENY_SHELL_WRITES=1. See the BYPASS_DENY_ON
-  comment for the full rationale.
+  LAYER 1 — BYPASS DETECTION. Detects shell-mediated file writes (interpreter
+  stdin heredocs, inline -c/-e writes, sed -i / perl -i, both cat heredoc orders,
+  tee, echo/printf redirects). Denies when armed (BASH_WRITE_GATE_DENY_SHELL_WRITES=1);
+  otherwise advises once per kind per session (additionalContext, no block). The
+  deny stays opt-in: static scanning cannot always tell a command being run from
+  one quoted inside a commit message, and false-positive denies blocked real work.
+  Scratch/log-only targets stay silent. See the BYPASS_DENY_ON comment.
 
   LAYER 2 (original) — blast-radius advisory on cat/tee/echo redirects to source
   files with >=THRESHOLD importers. Unchanged, still governed by
@@ -266,7 +266,8 @@ def _detect_bypass(cmd: str):
     """Return (kind, sanctioned_alternative) when cmd is a banned shell write."""
     # In-place editors: no read-only variant exists — the flag IS the write.
     if _INPLACE_RE.search(cmd):
-        if not _all_targets_allowed(_candidate_paths(cmd)):
+        # the bare trailing file args are the targets; a quoted `'s/a/b/'` script is not
+        if not _all_targets_allowed(_TRAILING_FILE_RE.findall(cmd) or _candidate_paths(cmd)):
             return ("in-place edit (sed -i / perl -i)", "ctx_patch")
 
     # Interpreter writes: only banned when the body actually writes.
@@ -333,6 +334,12 @@ def _emit_bypass_deny(kind: str, alternative: str, cmd_preview: str) -> None:
             "permissionDecisionReason": reason,
         }
     }))
+
+
+def _emit_bypass_advisory(kind: str, alternative: str, cmd: str) -> None:
+    msg = (f"BASH-WRITE-GATE (advisory): `{kind}` is a shell write (rules/01-no-shell-writes.md). "
+           f"Use Edit after a Read, or {alternative}, for the edit. Command: {cmd[:120]}")
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext": msg}}))
 
 
 # ---------------------------------------------------------------------------
@@ -494,6 +501,23 @@ def main() -> int:
                 kind, alternative = hit
                 _emit_bypass_deny(kind, alternative, cmd)
                 return 0
+        else:
+            # Unarmed: advise once per kind per session (Layer 2 only sees redirect
+            # targets, so `sed -i` would otherwise pass silently).
+            hit = _detect_bypass(cmd)
+            if hit:
+                kind, alternative = hit
+                cid = str(payload.get("conversation_id") or payload.get("session_id") or "")
+                state = _load_state(cid)
+                advised = set(state.get("advised_kinds") or [])
+                key = kind.split(" → ")[0]
+                if key not in advised:
+                    advised.add(key)
+                    state["advised_kinds"] = sorted(advised)
+                    _save_state(cid, state)
+                    _emit_bypass_advisory(kind, alternative, cmd)
+                    return 0
+                # already advised this session: fall through to Layer 2
 
         # -------------------------------------------------------------------
         # LAYER 2 — legacy blast-radius advisory on what Layer 1 permitted.

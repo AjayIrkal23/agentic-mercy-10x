@@ -98,6 +98,25 @@ def test_render_refuses_lean_ctx_and_carries_managed_keys(tmp_path):
     assert "X" not in data["env"]  # only managed keys are carried
 
 
+def test_first_install_over_a_user_file_without_model_renders_the_tier_model(tmp_path):
+    r = _load_render()
+    old = tmp_path / "settings.json"
+    old.write_text(json.dumps({"theme": "dark", "env": {"MY_OWN_VAR": "keep-me"}}))     # pre-workbench: no hooks (I9)
+    fresh = json.loads(r.render(user_path=None))
+    assert "model" in fresh
+    data = json.loads(r.carry_managed(r.render(user_path=None), old))
+    assert data["model"] == fresh["model"] and data["theme"] == "dark"
+
+
+def test_rerender_keeps_model_removed_from_a_workbench_file(tmp_path):
+    r = _load_render()
+    live = json.loads(r.render(user_path=None, subs=r.machine_subs()))
+    live.pop("model", None)                                                               # /model -> Default
+    p = tmp_path / "settings.json"
+    p.write_text(json.dumps(live))
+    assert "model" not in json.loads(r.carry_managed(r.render(user_path=None), p))
+
+
 def test_template_has_no_bare_interpreter_literals():
     r = _load_render()
     tmpl = (_ROOT / "settings.template.json").read_text(encoding="utf-8")

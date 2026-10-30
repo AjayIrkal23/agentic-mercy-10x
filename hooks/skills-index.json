@@ -5,7 +5,8 @@
     "skill_count": 132,
     "plugin_count": 0,
     "alias_count": 83,
-    "checksum": "00b83e103ff2183ac45d9e9ba3e47801a968f07202f63796c890f077c0b466e3"
+    "checksum": "00b83e103ff2183ac45d9e9ba3e47801a968f07202f63796c890f077c0b466e3",
+    "plugin_sidecar": "state/skills-index.plugins.json (gitignored, per machine)"
   },
   "aliases": {
     "accessibility": "fixing-accessibility",

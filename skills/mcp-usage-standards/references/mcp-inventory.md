@@ -17,7 +17,6 @@ Removed 2026-09-28 (do not re-add): `fetch`, `ast-grep`, `figma`, `gbrain`; plug
 | `drawio` | user | stdio | `npx -y @drawio/mcp@1.6.3` | — |
 | `github` | user | stdio | `sh -c GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) exec npx -y @modelcontextprotocol/server-github@2025.4.8` | GitHub issues/PRs/files via API (gh CLI is often simpler) |
 | `graphify` | user | stdio | `python3 ~/.claude/hooks/graphify_launcher.py` | architecture graph: god nodes, neighbors, paths (FIRST for architecture; needs graphify-out/) |
-| `higgsfield` | user | http | `https://mcp.higgsfield.ai/mcp` | DEFAULT asset engine: image/video/3D/audio generation |
 | `jcodemunch` | user | stdio | `~/.local/bin/jcodemunch-mcp` | code symbols, callers, blast radius, reading source (FIRST for code) |
 | `jdocmunch` | user | stdio | `~/.local/bin/jdocmunch-mcp` | section-level search/read over indexed doc sets (FIRST for docs) |
 | `lean-ctx` | user | stdio | `~/.local/bin/lean-ctx` | optional compressed ctx_read/ctx_shell/ctx_patch |
@@ -30,4 +29,4 @@ Removed 2026-09-28 (do not re-add): `fetch`, `ast-grep`, `figma`, `gbrain`; plug
 | `sequential-thinking` | user | stdio | `npx -y @modelcontextprotocol/server-sequential-thinking@2026.8.31` | MUST for non-trivial reasoning: plan/spec/audit/design/debug/decide |
 | `firecrawl` | plugin:firecrawl@claude-plugins-official | http | `https://mcp.firecrawl.dev/v2/mcp-search` | — |
 
-16 user-scope, 2 project/plugin-scope servers.
+15 user-scope, 1 project/plugin-scope servers.

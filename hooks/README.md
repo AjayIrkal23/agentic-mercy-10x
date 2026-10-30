@@ -13,7 +13,7 @@ registration). Every hook still lives in its own file; `dispatch.py` only orches
 |---|---|
 | `session-start` | settings-permissions-selfheal, state-cleanup (async), memwatch-ensure (async), session-ledger-start, plan-tier-detect, session-start-aggregator, memory-load-on-start, session-lifecycle-start, skills-index-guard (async), selfheal-daily (async) |
 | `user-prompt-submit` | router, hookify-prompt |
-| `pre-tool-use` | dangerous-bash-gate, connector-ask-gate, first-write-skill-gate, config-protection, gateguard-write-gate, dox-write-gate-write, bash-write-gate, blocking-doc-enforcer, hookify-gate, jcm-gate-read, jcm-gate-leanctx, jdoc-doc-steer, tdd-guard-launcher-pre, graphify-enforce, memwatch-brake, memwatch-brake-shell, opus-guard, workflow-model-guard |
+| `pre-tool-use` | dangerous-bash-gate, connector-ask-gate, first-write-skill-gate, config-protection, settings-protection, gateguard-write-gate, dox-write-gate-write, bash-write-gate, blocking-doc-enforcer, hookify-gate, jcm-gate-read, jcm-gate-leanctx, jdoc-doc-steer, tdd-guard-launcher-pre, graphify-enforce, memwatch-brake, memwatch-brake-shell, opus-guard, workflow-model-guard |
 | `post-tool-use` | skill-invocation-tracker, fullstack-post, codex-capture, post-write-aggregator, desloppify-cleanup, gateguard-ack, santa-method-writer, security-semgrep-tracker, index-git-reprobe (async), jcm-mcp-used, mcp-post-hints, context-monitor, observe-log (async) |
 | `post-tool-use-failure` | tool-failure-hint, observe-log-failure (async) |
 | `stop` | hard-completion-gate, invoke-suite-gate, stop-format-typecheck, hookify-stop, index-flush (async), session-lifecycle-stop (async) |

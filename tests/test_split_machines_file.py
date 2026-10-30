@@ -56,7 +56,7 @@ def test_fixture_shape():
             assert key in n, key
     for key in ("NEVER let the laptop sleep", "Full performance always"):
         unit = next(u for u in _units(text) if key in "\n".join(u))
-        assert "\n".join(unit).index(key) > 800, key
+        assert "\n".join(unit).index(key) > sm.DEFAULT_BUDGET, key
 
 
 def test_check_before_and_after(tmp_path):
@@ -84,7 +84,7 @@ def test_apply_shrinks_and_keeps_directives(tmp_path):
     rc, _ = _apply(m)
     assert rc == 0
     imported = _read(m)
-    assert len(imported) <= 6000
+    assert len(imported) <= sm.CHECK_LIMIT
     assert "<!-- machines-split:pointer -->" in imported
     assert "<!-- machines-split:prod-safety -->" in imported
     assert "without my explicit word" in imported and "never" in imported
@@ -296,3 +296,30 @@ def test_dry_run_writes_nothing(tmp_path):
     rc, msgs = _apply(m, dry=True)
     assert rc == 0 and any("would move" in x for x in msgs)
     assert m.read_bytes() == before and not m.with_name(sm.JOURNAL_NAME).exists()
+
+
+# --- final-fix 7: the imported part meets the plan row (1,300 tok = 5,200 ch) ---------------------
+def test_default_budget_meets_the_plan_row():
+    assert sm.CHECK_LIMIT == 5200 and sm.DEFAULT_BUDGET <= 650
+
+
+def test_live_machines_file_fits_the_plan_row():
+    live = Path.home() / ".claude" / sm.MACHINES_NAME
+    if not live.is_file():
+        pytest.skip("no machines file")
+    assert len(live.read_text(encoding="utf-8")) <= sm.CHECK_LIMIT
+
+
+def test_reapply_with_a_smaller_budget_roundtrips(tmp_path):
+    """Split at 800, then apply again at the smaller default: the imported part shrinks, every
+    directive key stays imported, and undo restores the original byte for byte."""
+    m = _copy(tmp_path)
+    original = _read(m)
+    assert _apply(m, budget=800)[0] == 0
+    at_800 = len(_read(m))
+    rc, _ = _apply(m)
+    assert rc == 0 and len(_read(m)) <= at_800
+    n = sm.norm(_read(m))
+    assert all(key in n for key in sm._KEEP_FALLBACK)
+    assert any("unchanged" in x for x in _apply(m)[1])
+    assert sm.undo(m, None, False)[0] == 0 and _read(m) == original

@@ -319,6 +319,22 @@ def test_explicit_fable_with_the_users_phrase(tmp_path):
 
 
 @node_required
+def test_ask_only_opus_needs_the_phrase_inline(tmp_path):
+    script = "agent('a', {model: 'opus'});\n"
+    tr = tmp_path / "t.jsonl"
+    tr.write_text(json.dumps({"type": "user", "message": {"content": "run it, use opus for this"},
+                              "timestamp": "2026-10-29T10:00:00Z"}) + "\n", encoding="utf-8")
+    TF.set_tier("max5")
+    assert run_in_node(rewritten_script(run_hook({"script": script})))[0][1]["model"] == "sonnet"
+    out = run_hook({"script": script}, payload_extra={"transcript_path": str(tr)})
+    assert run_in_node(rewritten_script(out))[0][1]["model"] == "opus"
+    TF.set_tier("max20")
+    assert run_in_node(rewritten_script(run_hook({"script": script})))[0][1]["model"] == "opus"
+    TF.set_usage(90.0, time.time() + 3600)
+    assert run_in_node(rewritten_script(run_hook({"script": script})))[0][1]["model"] == "sonnet"
+
+
+@node_required
 def test_usage_guard_applies_inside_the_wrapper():
     TF.set_usage(90.0, time.time() + 3600)
     script = ("agent('a', {agentType: 'implementation-engineer'});\nagent('b', {agentType: 'santa-reviewer'});\n"

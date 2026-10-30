@@ -491,8 +491,9 @@ def main() -> int:
             gate_state["failed_gates"] = failed_labels
             gate_state["override_ts"] = datetime.now(timezone.utc).isoformat()
             _save_gate_state(cid, gate_state)
+            verb = "was" if len(failed_labels) == 1 else "were"
             _to_model(cid, "Completion gate override: " + ", ".join(failed_labels)
-                      + " were left open last turn; close them now unless the user said to skip them.")
+                      + f" {verb} left open last turn; close them now unless the user said to skip them.")
             sys.stdout.write("{}")
             return 0
 

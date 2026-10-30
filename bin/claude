@@ -27,15 +27,49 @@ fi
 unattended=0
 bare=0
 has_settings=0
+has_model=0
 for a in "$@"; do
   case "$a" in
     -p|--print) unattended=1 ;;
     --bare) bare=1 ;;
     --settings|--settings=*) has_settings=1 ;;
+    --model|--model=*) has_model=1 ;;
   esac
 done
+case "${1:-}" in  # subcommands take no session model (`claude --help` Commands list, 2.1.3xx)
+  agents|attach|auth|auto-mode|config|doctor|gateway|import|install|kill|logs|mcp|migrate-installer|plugin|plugins|purge|respawn|rm|setup-token|stop|ultrareview|update|upgrade) has_model=1 ;;
+esac
 if [ "$unattended" = 1 ]; then
   export CLAUDE_WORKBENCH_UNATTENDED=1
+fi
+state="${CLAUDE_HOOK_STATE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/state}"
+
+# tier main model (docs/MODEL-ROUTING.md §6), interactive launches only, when nothing else chose one:
+# no --model, no ANTHROPIC_MODEL, no saved /model pick in settings.json. Claude Code deletes a
+# user-settings `model` whenever the org default changes, so that key is not a reliable carrier.
+tier_model=""
+if [ "$has_model" = 0 ] && [ "$unattended" = 0 ] && [ "$bare" = 0 ] && [ -z "${ANTHROPIC_MODEL:-}" ] \
+   && [ -z "${CLAUDECODE:-}" ] && [ "${CLAUDE_WORKBENCH_SCOPE:-}" != 1 ]; then
+  cfg="${CLAUDE_CONFIG_DIR:-$HOME/.claude}"
+  # a /login or `claude auth login` since the last SessionStart rewrote .credentials.json after
+  # state/plan-tier.json: re-detect now (lib/plan_tier, ~30 ms), else a stale tier picks the model
+  detect="$(dirname "$self")/../hooks/plan-tier-detect.py"
+  if [ -f "$cfg/.credentials.json" ] && [ -f "$detect" ] && ! [ "$state/plan-tier.json" -nt "$cfg/.credentials.json" ]; then
+    python3 "$detect" --state "$state/plan-tier.json" --quiet >/dev/null 2>&1 || true
+  fi
+  ucfg=$(cat "$cfg/settings.json" 2>/dev/null || true)
+  # --model outranks every settings file: a project's own model pick (cwd or repo root) stops the injection
+  for d in "$PWD" "$(git rev-parse --show-toplevel 2>/dev/null || true)"; do
+    [ -n "$d" ] && ucfg+=$(cat "$d/.claude/settings.json" "$d/.claude/settings.local.json" 2>/dev/null || true)
+  done
+  tier=$(cat "$state/plan-tier.json" 2>/dev/null || true)
+  if ! [[ $ucfg =~ \"model\"[[:space:]]*: ]] && [[ $tier =~ \"main\":[[:space:]]*\"([a-z0-9.-]+)\" ]]; then
+    tier_model=${BASH_REMATCH[1]}
+  fi
+fi
+if [ "${CLAUDE_LAUNCHER_PRINT_ARGV:-}" = 1 ]; then  # the doctor's probe: the decision, no side effects
+  printf '%s\n' "$real" ${tier_model:+--model "$tier_model"} "$@"
+  exit 0
 fi
 
 passthrough=0
@@ -49,7 +83,7 @@ elif ! command -v systemd-run >/dev/null 2>&1; then
   passthrough=1
 fi
 if [ "$passthrough" = 1 ]; then
-  exec "$real" "$@"
+  exec "$real" ${tier_model:+--model "$tier_model"} "$@"
 fi
 
 # --- launch caps from MemAvailable (the same /proc field as hooks/lib/platform.mem_probe) ---
@@ -73,16 +107,17 @@ export CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS="${CLAUDE_CODE_WORKFLOW_MAX_CO
 export CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS="${CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS:-$sub}"
 if [ "$avail_gib" -lt 8 ]; then size=small; elif [ "$avail_gib" -lt 16 ]; then size=medium; else size=large; fi
 
-state="${CLAUDE_HOOK_STATE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/state}"
 mkdir -p "$state/launch-caps" 2>/dev/null || true
 printf '{"mem_available_mb":%s,"workflow_agents":%s,"subagents":%s,"size_guideline":"%s","ts":%(%s)T}\n' \
   "$(( avail_kb / 1024 ))" "$CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS" "$CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS" \
   "$size" -1 > "$state/launch-caps/$$.json" 2>/dev/null || true
 
-set -- "$real" "$@"
+set -- "$real" ${tier_model:+--model "$tier_model"} "$@"
 if [ "$has_settings" = 0 ]; then
   sfile="$state/launch-settings-$$.json"
-  if printf '{"workflowSizeGuideline":"%s"}\n' "$size" > "$sfile" 2>/dev/null; then
+  # the launch-settings env block beats the user settings file's env, so the RAM-derived caps are in force
+  if printf '{"workflowSizeGuideline":"%s","env":{"CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS":"%s","CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS":"%s"}}\n' \
+       "$size" "$CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS" "$CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS" > "$sfile" 2>/dev/null; then
     set -- "$real" --settings "$sfile" "${@:2}"
   fi
 fi

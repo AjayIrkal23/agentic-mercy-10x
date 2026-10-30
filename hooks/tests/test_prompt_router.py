@@ -277,7 +277,7 @@ def test_script_dir_never_shadows_stdlib():
 def _pushed_actions(prompt: str, tag: str) -> list[tuple[str, str]]:
     import re
     out = _ac({"prompt": prompt, "session_id": _uid(tag), "cwd": "/nonexistent-dir"})
-    return re.findall(r"^- \*\*([\w:.-]+)\*\* \((?:MUST|SHOULD)-READ\).*\n  (ACTION: .*)$",
+    return re.findall(r"^- \*\*([\w:.-]+)\*\* \((?:MUST|SHOULD)-READ\).*?\b(ACTION: .*)$",
                       out, re.M)
 
 

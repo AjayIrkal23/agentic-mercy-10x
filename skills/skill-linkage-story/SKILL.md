@@ -55,7 +55,7 @@ per Claude Code event) or in native skill/rule frontmatter. Skill names everywhe
 ## 2. UserPromptSubmit — `prompt_router/router.py` (single process)
 
 classify (word-boundary intents) → surface (repo stack fingerprint + prompt paths) →
-rank ≤4 skills (`max_skill_pushes` in `router.config.json`) from `skills-index.json` (metadata keywords, aliases collapsed, plugin
+rank ≤3 skills (`max_skill_pushes` in `router.config.json`) from `skills-index.json` (metadata keywords, aliases collapsed, plugin
 skills as `plugin:skill`) → ≤1 deep body → MCP routes → agent suggestion → model advice →
 `hookSpecificOutput.additionalContext`.
 

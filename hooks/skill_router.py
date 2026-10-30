@@ -40,7 +40,8 @@ def _load_hidden() -> frozenset:
     """User-only skills (index `hidden`) are never pushed on a write (audit NEW-07,
     same rule as the prompt router's C-09 filter)."""
     try:
-        idx = json.loads((_HOOK_DIR / "skills-index.json").read_text(encoding="utf-8"))
+        from lib import skills_index as _si  # noqa: PLC0415  (tracked index + plugin sidecar)
+        idx = _si.load(_HOOK_DIR)
         return frozenset(n for n, m in (idx.get("skills") or {}).items()
                          if isinstance(m, dict) and m.get("hidden"))
     except Exception:  # noqa: BLE001 — fail-open: nothing hidden

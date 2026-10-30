@@ -31,7 +31,7 @@ except Exception:  # noqa: BLE001 — replica without hooks/lib on path
 MACHINES_NAME = "CLAUDE.machines.local.md"
 JOURNAL_NAME = "CLAUDE.machines.journal.local.md"
 TERMS_NAME = "grep_gates.machine_terms.json"
-DEFAULT_BUDGET, CHECK_LIMIT = 800, 6000
+DEFAULT_BUDGET, CHECK_LIMIT = 550, 5200  # plan §5 row: 1,300 tok = 5,200 ch (final-fix 7; 550 leaves room for the prod-safety block)
 UNIT_RE = re.compile(r"^\s{0,2}- \*\*")
 HEADER_RE = re.compile(r"^<!-- machines-split v1 journal=(\S+) -->$")
 CUT_RE = re.compile(r"^<!-- machines-split:cut id=(\d+) lifted=(\d+) -->$")

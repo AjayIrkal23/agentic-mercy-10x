@@ -1,7 +1,5 @@
 # Lifecycle (phases 0–7)
 
-Skill bodies load on demand.
-
 0. **Orient** — jcodemunch first; graphify when a graph exists; root `CLAUDE.md` → the
    target dir's `CLAUDE.md` (+ `CODEX.md`). Unclear spec → `ASSUMPTIONS I'M MAKING:`.
 1. **Plan** (>2 files or a new domain) — 3–5 sharpening questions, vertical slices, a
@@ -19,13 +17,8 @@ Skill bodies load on demand.
 7. **Docs** — repo docs, then the local `CLAUDE.md` of every changed dir (`dox-doc-tree`).
    ADR only when hard to reverse + surprising + a real trade-off.
 
-## `/invoke`
-
-`/invoke <acts...> [-- task]` runs one specialist per act in canonical order; closers
-(clean, review, docs, verify; security on sensitive paths) run after code-mutating acts.
-Artifacts land in `.claude/runs/<ts>-<slug>/`. Size >= L or two or more acts in order: the
-router's WORKFLOW line names a saved workflow under `workflows/`; run it instead of
-chaining acts by hand.
+`/invoke <acts...> [-- task]`: one specialist per act, closers after code-mutating acts,
+artifacts in `.claude/runs/<ts>-<slug>/`; a router WORKFLOW line → run that saved workflow.
 
 ## Stop gates (`hard-completion-gate`)
 

@@ -2,7 +2,8 @@
 
 * Negation: a keyword preceded within 3 words by "no need for/to", "don't", "do not"
   or "without" is not a task word ("no need for a security review" is not SECURITY).
-* Phrase intents the flat keyword list cannot express: "write <x> tests" -> TEST.
+* Phrase intents the flat keyword list cannot express: "write <x> tests" -> TEST; "port X from A
+  to B" -> IMPLEMENT, unless the prompt is a question.
 * LARGE needs a scale phrase; a lone noun ("websocket", "streaming", "sse") is a
   topic, not a size, and used to put "consider /model opus" on small bug fixes.
 
@@ -17,7 +18,15 @@ import re
 _NEG = re.compile(r"(?:\bno need (?:for|to)|\bdon[’']?t|\bdo not|\bwithout)(?:\W+\w+){0,3}\W*$")
 _PHRASES = {
     "TEST": re.compile(r"\b(?:write|add|create) (?:\w+ ){1,3}?tests?\b"),
+    # "migrate|port|convert|rewrite|move|switch <thing> from A to B": an implementation, whatever A/B are
+    "IMPLEMENT": re.compile(r"\b(?:migrat(?:e|ing)|port(?:ing)?|convert(?:ing)?|rewrit(?:e|ing)|mov(?:e|ing)"
+                            r"|switch(?:ing)?)\b(?:\W+\w+){0,8}?\W+from\W+(?:\w+\W+){1,4}?to\b"),
+    "LARGE": re.compile(r"\b(?:migrate|port|convert|rewrite) the (?:whole|entire|complete) \w+"),
 }
+# a question ("how do I convert this date from UTC to IST", "why did the port change from 3000 to 3001?")
+# asks, it does not order an implementation: the IMPLEMENT phrase cue skips it
+_QUESTION_RE = re.compile(r"^\s*(?:how|why|what|when|where|which|who|should|can|could|would|is|are|does|do|did)\b"
+                          r"|\?\s*$", re.I)
 # Single nouns in the LARGE list: they name a topic, not the size of the change.
 LARGE_NOUNS = frozenset({"websocket", "sse", "streaming", "real-time", "microservices",
                          "everything", "everywhere"})
@@ -43,6 +52,8 @@ def refine(hits: dict[str, list[str]], text: str) -> dict[str, list[str]]:
         if kws:
             out[g] = list(kws)
     for cat, rx in _PHRASES.items():
+        if cat == "IMPLEMENT" and _QUESTION_RE.search(text):
+            continue
         for m in rx.finditer(text):
             if not negated(text, m.start()):
                 g = out.setdefault(f"act:{cat}", [])

@@ -20,7 +20,7 @@ import pytest
 _HOOKS = Path(__file__).resolve().parents[1]
 if str(_HOOKS) not in sys.path:
     sys.path.insert(0, str(_HOOKS))
-DOX = "Read the repo root CLAUDE.md, then the CLAUDE.md of every directory you edit"
+DOX = "Read the root CLAUDE.md and each edited dir's CLAUDE.md first"
 CAP_RE = re.compile(r"TURN CAP (\d+): by turn (\d+) ")
 
 
@@ -56,14 +56,14 @@ def _build(m, agent_type, tmp_path) -> str:
 TYPES = ["deadcode-reaper", "docs-sync-agent", "qa-verifier", "general-purpose", None]
 
 
-def test_block_fits_1800_without_truncation(sc, monkeypatch, tmp_path):
+def test_block_fits_1200_without_truncation(sc, monkeypatch, tmp_path):
     monkeypatch.setattr(sc, "_memory_line", lambda: "m" * 90)
     monkeypatch.setattr(sc, "_forced_mode", lambda cwd: "opus")
     for t in TYPES:
         text = _build(sc, t, tmp_path)
-        assert len(text) <= 1800, (t, len(text))
+        assert len(text) <= 1200, (t, len(text))
         assert text.endswith(sc._SKILLS)
-    assert len(sc.build({})) <= 1800
+    assert len(sc.build({})) <= 1200
 
 
 def test_contract_lines_present(sc, tmp_path):
@@ -90,7 +90,7 @@ def test_turn_cap_line_survives_shedding(sc, monkeypatch, tmp_path):
     monkeypatch.setattr(sc, "_memory_line", lambda: "m" * 120)
     monkeypatch.setattr(sc, "_forced_mode", lambda cwd: "opus")
     text = _build(sc, "deadcode-reaper", tmp_path)  # dox + memory + mode + cap: the worst case
-    assert len(text) <= 1800 and text.endswith(sc._SKILLS) and "TURN CAP 30" in text
+    assert len(text) <= 1200 and text.endswith(sc._SKILLS) and "TURN CAP 30" in text
 
 
 def test_reserve_falls_back_when_policy_lacks_the_block(sc, monkeypatch, tmp_path):
@@ -134,7 +134,7 @@ def test_memory_line_at_warn_and_absent_at_ok(sc, monkeypatch, tmp_path):
     from lib import memwatch_state as mws
     mws.write_atomic(mws.State(level="warn", mem_available_mb=6200, swap_free_pct=1.0, ts=time.time()))
     text = _build(sc, "general-purpose", tmp_path)
-    assert "memory warn: 6.1 GB free" in text and "do not fan out agents" in text
+    assert "memory warn: 6.1 GB free" in text and "no agent fan-out" in text
     mws.write_atomic(mws.State(level="ok", ts=time.time()))
     assert "GB free" not in _build(sc, "general-purpose", tmp_path)
     mws.write_atomic(mws.State(level="warn", mem_available_mb=6200, ts=time.time() - 300))

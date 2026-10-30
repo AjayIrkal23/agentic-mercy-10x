@@ -9,7 +9,7 @@ replica setup detail). The script keeps the imported part short and moves the re
 
 - **Units**: every bullet with a bold name (`- **Name**`, top level or nested two spaces).
   Lines before the first unit stay whole.
-- **Keeps** the first ~800 chars of each unit (cut at a line boundary) and lifts back every
+- **Keeps** the first ~650 chars of each unit (cut at a line boundary) and lifts back every
   tail line that carries a standing-directive key: the `sentence_key` of each
   `docs/DIRECTIVES.md` row whose source is `machines` (sudo, laptop sleep, full
   performance, no local ollama fallback, read-only prod VM, the prod-safety block).
@@ -19,7 +19,9 @@ replica setup detail). The script keeps the imported part short and moves the re
   (directive 30): no prod edits, cutover or rollback without the user's word in that turn;
   the GCP VM is read-only; servers run IST.
 
-Result on this PC: the imported file drops from about 22,400 to about 5,800 chars.
+Result on this PC: the imported file drops from about 22,400 to 5,032 chars (budget 650;
+it was 5,752 at budget 800, over the plan's 5,200-char row). A smaller budget on an already
+split file cuts the kept heads again; `--undo` still restores the original exactly.
 
 ## Markers (HTML comments, one per line)
 
@@ -34,8 +36,8 @@ that grew again get a new cut id, and make `--undo` exact (byte-identical restor
 ## Commands
 
 - `--apply` split; no action flag = dry run; `--dry-run` with `--apply` = dry run.
-- `--check` exits 1 with `NOT SPLIT` when the file is over 6,000 chars and has no marker;
-  over 6,000 with a marker it only warns (`WARN over 6000, run --apply`).
+- `--check` exits 1 with `NOT SPLIT` when the file is over 5,200 chars and has no marker;
+  over 5,200 with a marker it only warns (`WARN over 5200, run --apply`); selfheal-daily applies it.
 - `--undo` puts every tail back; a missing tail block → `UNDO REFUSED`, exit 2.
 - `--terms` rewrites only the G7 terms file.
 - A missing file prints `SKIP` and exits 0 (CI, a fresh replica).

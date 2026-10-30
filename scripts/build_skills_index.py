@@ -48,6 +48,7 @@ except Exception:  # noqa: BLE001 — never crash a session-start hook
 
 FLOOR = _HOOKS / "trigger-floor.json"
 INDEX = _HOOKS / "skills-index.json"
+SIDECAR = sl.CLAUDE_DIR / "state" / "skills-index.plugins.json"  # gitignored: plugin skills, per machine
 ALIASES = _HOOKS / "skill-aliases.json"
 INSTALLED_PLUGINS = sl.CLAUDE_DIR / "plugins" / "installed_plugins.json"
 TEMPLATE = sl.CLAUDE_DIR / "settings.template.json"
@@ -253,14 +254,47 @@ def build() -> dict:
     }
 
 
+def _split(payload: dict) -> tuple[dict, dict]:
+    """(tracked local-only index, per-machine plugin sidecar). The tracked file never names a plugin
+    skill: plugin inventories differ per machine (Windows replica), and an install must not dirty git."""
+    skills = payload.get("skills") or {}
+    local = {k: v for k, v in skills.items() if v.get("source") != "plugin"}
+    plug = {k: v for k, v in skills.items() if v.get("source") == "plugin"}
+
+    def _sum(d: dict) -> str:
+        return hashlib.sha256(json.dumps(d, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
+    meta = dict(payload["_meta"], plugin_count=0, checksum=_sum(local),
+                plugin_sidecar=f"state/{SIDECAR.name} (gitignored, per machine)")
+    tracked = {"_meta": meta, "aliases": payload.get("aliases") or {}, "skills": local}
+    side = {"_meta": {"generator": "build_skills_index.py", "plugin_count": len(plug), "checksum": _sum(plug)},
+            "skills": plug}
+    return tracked, side
+
+
+def _write_if_changed(path: Path, data: dict) -> None:
+    text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
+    try:
+        if path.read_text(encoding="utf-8") == text:
+            return
+    except OSError:
+        pass
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8", newline="\n")
+
+
 def write_index() -> dict:
+    """Write both files; returns the merged payload (local + plugin), as before."""
     payload = build()
-    INDEX.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8", newline="\n")
+    tracked, side = _split(payload)
+    _write_if_changed(INDEX, tracked)
+    _write_if_changed(SIDECAR, side)
+    if INDEX.exists():
+        INDEX.touch()  # the staleness check compares this mtime, also when the bytes were unchanged
     return payload
 
 
 def _is_stale() -> bool:
-    if not INDEX.exists():
+    if not INDEX.exists() or not SIDECAR.exists():
         return True
     try:
         idx_mtime = INDEX.stat().st_mtime

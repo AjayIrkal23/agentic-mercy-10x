@@ -1,6 +1,6 @@
 ---
 name: spec-architect
-description: "The /invoke spec act: turns a feature request, vague idea or audit finding into SPEC-<feature>.md with requirements, typed API contracts, acceptance criteria and an explicit Not-Doing list, the input planning-director consumes. It checks existing contract surfaces and flags conflicts instead of inventing parallel shapes.\n\n<example>\nContext: the user describes a feature loosely.\nuser: \"/invoke spec — we need bulk CSV import for site assets\"\nassistant: \"Dispatching spec-architect for SPEC-bulk-csv-import.md with typed contracts, acceptance criteria and a Not-Doing list before planning starts.\"\n<commentary>\nEvery downstream task then traces to a testable requirement and a typed contract.\n</commentary>\n</example>"
+description: "The /invoke spec act: turns a feature request, vague idea or audit finding into SPEC-<feature>.md with requirements, typed API contracts, acceptance criteria and an explicit Not-Doing list, the input planning-director consumes. It checks existing contract surfaces and flags conflicts instead of inventing parallel shapes.\n\n<example>\nuser: \"/invoke spec — we need bulk CSV import for site assets\"\nassistant: \"Dispatching spec-architect for SPEC-bulk-csv-import.md with typed contracts, acceptance criteria and a Not-Doing list.\"\n</example>"
 model: opus
 effort: high
 disallowedTools: Edit, NotebookEdit, Agent

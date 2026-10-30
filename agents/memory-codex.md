@@ -1,6 +1,6 @@
 ---
 name: memory-codex
-description: "Append one dated entry to the project's CODEX.md — an architecture decision, a pattern we use, a thing we tried that failed, a known fragile area, or a naming rule. Use when the user or orchestrator says 'capture this decision / pattern in CODEX' or when a session settles an architectural choice worth keeping. Manual only: no hook invokes it. Not for session status, PR numbers, or anything derivable from the code in under a minute.\n\n<example>\nContext: a session settled an architectural choice.\nuser: \"capture in CODEX: we chose AppError over native Error for route handlers\"\nassistant: \"Dispatching memory-codex to append a dated line under ## Patterns We Use (and WHY).\"\n<commentary>\nCODEX.md is the project's long-lived decision log; the agent reads, finds the section and makes one surgical Edit.\n</commentary>\n</example>"
+description: "Append one dated entry to the project's CODEX.md: an architecture decision, a pattern we use, a failed attempt, a fragile area or a naming rule. Use when the user or orchestrator says 'capture this decision / pattern in CODEX' or a session settles an architectural choice worth keeping. Manual only (no hook invokes it). Not for session status, PR numbers or what the code shows.\n\n<example>\nuser: \"capture in CODEX: we chose AppError over native Error for route handlers\"\nassistant: \"Dispatching memory-codex to append a dated line under ## Patterns We Use (and WHY).\"\n</example>"
 model: haiku
 effort: medium
 tools: Read, Edit, Grep, Glob

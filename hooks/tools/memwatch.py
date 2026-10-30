@@ -52,6 +52,11 @@ VICTIM_COMMS = ["Isolated Web Co", "Web Content", "WebExtensions", "WebKitWebPro
 BROWSER_PARENTS = ["firefox", "firefox-bin", "chrome", "chromium", "chromium-browser", "brave", "electron", "code",
                    "msedge"]
 BUILD_RE = r"(^|/)(tsserver|tsc|vitest|jest|esbuild|vite|webpack|cargo|rustc|gradle|gopls)(\.m?js|\.cjs)?(\s|$)"
+# The native installer's binary has a version string as comm (`2.1.312`); the npm cli runs as node/bun.
+# Their command line decides whether they are a Claude session.
+CLAUDE_CMD_RE = (r"(^|/)claude(\s|$)|/claude/versions/\d|\bclaude bg-pty-host\b|--bg-pty-host\b"
+                 r"|@anthropic-ai/claude-code/|(^|/)claude-code/cli\.js\b")
+_VERSION_COMM = re.compile(r"^\d+\.\d+(\.\d+)?$")
 CHILD_TYPE_RE = re.compile(r"--type=(renderer|gpu-process|utility)\b")
 OWN_SCOPE_RE = re.compile(r"^claude(-safe)?-[^/]*\.scope$")  # scopes bin/claude made; stage 3 stops only these
 PROTECTED = ["claude", "tmux", "tmux: server", "gnome-shell", "mutter", "Xwayland", "pipewire", "wireplumber",
@@ -67,7 +72,8 @@ DEFAULT_CFG = {
     "notify": {"quiet_hours": "", "mod_flag_fresh_s": 60},
     "kill_policy": {"enabled": True, "stage_holdoff_s": 20, "emergency_mb": 1500, "idle_min": 10,
                     "victim_interval_s": 10, "stage3_after_s": 40, "victims": VICTIM_COMMS,
-                    "victim_cmd_re": BUILD_RE, "browser_parents": BROWSER_PARENTS, "protected": PROTECTED},
+                    "victim_cmd_re": BUILD_RE, "claude_cmd_re": CLAUDE_CMD_RE, "browser_parents": BROWSER_PARENTS,
+                    "protected": PROTECTED},
     "stuck": {"scan_s": 60, "pending_bash_s": 1800},
     "restore": {"ok_hold_s": 60, "lock_stale_s": 600,
                 "args": ["--only-if-ok", "--max-age", "7200", "--max", "6", "--per-window", "2"]},
@@ -363,20 +369,32 @@ def _mtime(path) -> float:
         return 0.0
 
 
+def _readable(path) -> bool:
+    try:
+        return bool(path) and os.path.isfile(path)
+    except (TypeError, ValueError):
+        return False
+
+
 def idle_session(ledger: list[dict], now: float, idle_min: float, by_pid: dict, fg_pid: int | None = None):
-    """(sid, pid, scope) of the most idle live ledger session, or None. Never the foreground one (newest
-    activity, or the pid owning the tmux pane in focus), never one with a Bash call still running."""
+    """(sid, pid, scope) of the most idle live ledger session, or None. Activity is per PID (max over every
+    entry sharing it): a stale sibling entry never makes a live session "idle" (O5). Never the foreground pid
+    (newest activity, or the pid owning the tmux pane in focus), never an entry without a readable
+    transcript (a replayed fixture, a session we cannot see), never one with a Bash call still running."""
     live = [e for e in ledger if e.get("pid") in by_pid]
     if not live:
         return None
-    last = {e["sid"]: max(_mtime(e.get("transcript")), float(e.get("seen") or 0)) for e in live}
-    fg = max(live, key=lambda e: last[e["sid"]])["sid"]
+    last_sid = {e["sid"]: max(_mtime(e.get("transcript")), float(e.get("seen") or 0)) for e in live}
+    last_pid: dict = {}
+    for e in live:
+        last_pid[e["pid"]] = max(last_pid.get(e["pid"], 0.0), last_sid[e["sid"]])
+    fg = max(live, key=lambda e: last_sid[e["sid"]])["pid"]
     cands = []
     for e in live:
         focused = bool(fg_pid) and fg_pid in _chain(e["pid"], by_pid)  # pane_pid is the shell; claude sits below it
-        if e["sid"] == fg or focused or now - last[e["sid"]] < idle_min * 60:
+        if e["pid"] == fg or focused or now - last_pid[e["pid"]] < idle_min * 60:
             continue
-        if pending_bash_since(e.get("transcript")) is not None:
+        if not _readable(e.get("transcript")) or pending_bash_since(e.get("transcript")) is not None:
             continue
         cands.append(e)
     if not cands:
@@ -431,6 +449,10 @@ class Ladder:
             self.victim_re = re.compile(kp.get("victim_cmd_re") or BUILD_RE)
         except re.error:
             self.victim_re = re.compile(BUILD_RE)
+        try:
+            self.claude_re = re.compile(kp.get("claude_cmd_re") or CLAUDE_CMD_RE)
+        except re.error:
+            self.claude_re = re.compile(CLAUDE_CMD_RE)
         self.shed_done: set = set()
         self.killed: dict = {}
         self.stopped_sids: set = set()
@@ -441,14 +463,24 @@ class Ladder:
             self._cmd[pid] = cmdline_of(pid, self.proc_root)
         return self._cmd[pid]
 
+    def is_claude(self, p: dict) -> bool:
+        name = p.get("name") or ""
+        if name == "claude":
+            return True
+        # cmdline read lazily, only for these (node 24 names an npm Claude's main thread "MainThread")
+        if _VERSION_COMM.match(name) or name in ("node", "bun", "MainThread"):
+            return bool(self.claude_re.search(self.cmd(p["pid"])))
+        return False
+
     def in_claude_tree(self, p: dict, by_pid: dict) -> bool:
         if str(p.get("unit") or "").startswith("claude-"):
             return True
-        return any(by_pid[a]["name"] == "claude" for a in _chain(p.get("ppid"), by_pid))
+        return any(self.is_claude(by_pid[a]) for a in _chain(p.get("ppid"), by_pid))
 
     def classify(self, p: dict, by_pid: dict) -> str:
         name = p["name"]
-        if name in self.protected or name.startswith("systemd") or self.in_claude_tree(p, by_pid):
+        if (name in self.protected or name.startswith("systemd") or self.is_claude(p)
+                or self.in_claude_tree(p, by_pid)):
             return "protected"
         if name in self.victims_extra:
             return "victim"
@@ -512,7 +544,7 @@ class Ladder:
                 if cur in seen:
                     continue
                 seen.add(cur)
-                if by_pid.get(cur, {}).get("name") == "claude":
+                if cur in by_pid and self.is_claude(by_pid[cur]):
                     return True
                 stack.extend(children.get(cur, ()))
             return False
@@ -606,7 +638,8 @@ class Ctx:
         self.kill = kill or (os.kill if self.live else (lambda pid, sig: None))
         self.spawn = spawn or (plat.spawn_detached if self.live else (lambda cmd: None))
         replay = bool(getattr(args, "journal_cmd", None))  # replayed journal lines are history: no toasts
-        self.notify = notify or (plat.notify if self.live and not replay else (lambda *a, **k: False))
+        # a --dry-run rehearsal never pops desktop toasts
+        self.notify = notify or (plat.notify if self.live and not replay and not self.dry else (lambda *a, **k: False))
         prev = mws.read(path=self.state_path, stale_s=10 ** 9)
         self.level = prev.raw_level if prev.ts else "ok"
         self.level_ts = prev.ts or 0.0
@@ -733,7 +766,9 @@ class Ctx:
                                 "unit": p.get("unit"), "source": "memwatch", "stage": stage,
                                 "cmd": self.ladder.cmd(p["pid"])[:100], "signal": "SIGTERM", "dry_run": self.dry,
                                 "ok": ok, "ts": round(now, 3)})
-                    if ok:
+                    if ok and self.dry:  # a rehearsal: the journal says it, no desktop toast
+                        _err(f"OOM guard stage {stage}: DRY-RUN would kill {p['name']} ({p['rss_mb']} MB)")
+                    elif ok:
                         self.announce("kill", f"OOM guard stage {stage}: killed {p['name']} ({p['rss_mb']} MB)",
                                       "critical", now)
                     elif stage == 2:  # a refused signal must not spend the kill slot
@@ -749,10 +784,12 @@ class Ctx:
                                 "scope_stopped": bool(scope and OWN_SCOPE_RE.match(scope)), "ts": round(now, 3)})
                     if self._restore_allowed():
                         self.restore_pending = True
-                    if not self.dry:
+                    if self.dry:
+                        _err(f"OOM guard stage 3: DRY-RUN would stop idle session {sid[:8]}")
+                    else:
                         self._stop_session(pid, scope)
-                    self.announce("kill", f"OOM guard stage 3: stopped idle session {sid[:8]} (restored later)",
-                                  "critical", now)
+                        self.announce("kill", f"OOM guard stage 3: stopped idle session {sid[:8]} (restored later)",
+                                      "critical", now)
             except Exception as exc:  # noqa: BLE001
                 _err(f"act {a[0]}: {type(exc).__name__}: {exc}")
 

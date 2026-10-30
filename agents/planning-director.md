@@ -1,6 +1,6 @@
 ---
 name: planning-director
-description: "The /invoke plan act: turns a SPEC or a well-shaped request into an executable plan-YYYY-MM-DD-slug.md of dependency-ordered tasks with exact file paths, complete code per step and a TDD cycle per task, which the implementors execute. A plan another Claude could not run without clarifying questions is not done; it never writes source.\n\n<example>\nContext: a SPEC exists and needs decomposition.\nuser: \"/invoke plan — plan the bulk CSV import from SPEC-bulk-csv-import.md\"\nassistant: \"Dispatching planning-director for a dependency-ordered plan with exact paths, code per step and a goal-backward checker pass.\"\n<commentary>\nPlans follow writing-plans discipline and survive a checker pass before anyone codes.\n</commentary>\n</example>"
+description: "The /invoke plan act: turns a SPEC or a well-shaped request into an executable plan-YYYY-MM-DD-slug.md of dependency-ordered tasks with exact file paths, complete code per step and a TDD cycle per task, which the implementors execute. A plan another Claude could not run without clarifying questions is not done; it never writes source.\n\n<example>\nuser: \"/invoke plan — plan the bulk CSV import from SPEC-bulk-csv-import.md\"\nassistant: \"Dispatching planning-director for a dependency-ordered plan with exact paths, code per step and a checker pass.\"\n</example>"
 model: opus
 effort: high
 disallowedTools: Edit, NotebookEdit, Agent

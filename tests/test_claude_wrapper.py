@@ -67,8 +67,12 @@ def test_interactive_runs_in_a_scope_with_caps(box):
     wf = int(re.search(r"CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS=(\d+)", out)[1])
     sub = int(re.search(r"CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS=(\d+)", out)[1])
     assert 1 <= wf <= 8 and 2 <= sub <= 6
-    size = json.loads(sfile.read_text(encoding="utf-8"))["workflowSizeGuideline"]
+    launch = json.loads(sfile.read_text(encoding="utf-8"))
+    size = launch["workflowSizeGuideline"]
     assert size == _meminfo_size()
+    # the launch-settings env block carries both caps (it beats the user settings file's env)
+    assert launch["env"] == {"CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS": str(wf),
+                             "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": str(sub)}
     caps = json.loads((tmp / ".claude" / "state" / "launch-caps" / f"{pid}.json").read_text(encoding="utf-8"))
     assert set(caps) == {"mem_available_mb", "workflow_agents", "subagents", "size_guideline", "ts"}
     gib = caps["mem_available_mb"] // 1024  # the wrapper's own reading: the formula, race-free
@@ -95,6 +99,135 @@ def test_print_and_bare_pass_through(box, argv, unattended):
     assert ("CLAUDE_WORKBENCH_UNATTENDED=1" in out) is unattended
     assert "CLAUDE_WORKBENCH_SCOPE" not in out and "MAX_CONCURRENT" not in out
     assert not (tmp / ".claude" / "state" / "launch-caps").exists()
+
+
+# --- final-fix 4: the tier's main model rides on --model when nothing else chose one ---------------
+def _tier(tmp, main="opus", settings="{}"):
+    (tmp / ".claude" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp / ".claude" / "state" / "plan-tier.json").write_text(
+        json.dumps({"schema": 1, "tier": "max20", "main": main, "source": "credentials", "detected_at": 1}),
+        encoding="utf-8")
+    if settings is not None:
+        (tmp / ".claude" / "settings.json").write_text(settings, encoding="utf-8")
+
+
+def _real(out: str) -> str:
+    return next((x for x in out.splitlines() if x.startswith("REAL")), "")
+
+
+def test_tier_main_model_is_passed_when_nothing_else_sets_it(box):
+    tmp, env = box
+    _tier(tmp)
+    assert "--model opus --resume abc" in _real(_run(env, "--resume", "abc").stdout)
+    # the no-bus passthrough is interactive too
+    assert _real(_run(env, XDG_RUNTIME_DIR=str(tmp / "nobus")).stdout) == "REAL --model opus"
+
+
+def test_user_model_flag_wins(box):
+    tmp, env = box
+    _tier(tmp)
+    for argv in (["--model", "sonnet"], ["--model=sonnet"]):
+        line = _real(_run(env, *argv).stdout)
+        assert line.endswith(" ".join(argv)) and "opus" not in line, line
+
+
+def test_anthropic_model_env_wins(box):
+    tmp, env = box
+    _tier(tmp)
+    assert "--model" not in _real(_run(env, ANTHROPIC_MODEL="claude-x").stdout)
+
+
+@pytest.mark.parametrize("name", ["settings.json", "settings.local.json"])
+def test_project_settings_model_wins(box, name):
+    """SANTA-GATE 4: --model outranks every settings file, so a project's own model pick must stop the injection."""
+    tmp, env = box
+    _tier(tmp)
+    proj = tmp / "proj" / "sub"
+    (tmp / "proj" / ".claude").mkdir(parents=True)
+    proj.mkdir()
+    subprocess.run(["git", "init", "-q", str(tmp / "proj")], check=True, capture_output=True, timeout=20)
+    (tmp / "proj" / ".claude" / name).write_text('{\n  "model": "sonnet"\n}\n', encoding="utf-8")
+    out = subprocess.run([str(WRAPPER)], capture_output=True, text=True, env=env, cwd=proj, timeout=20)
+    assert "--model" not in _real(out.stdout), out.stdout
+    (tmp / "proj" / ".claude" / name).write_text('{\n  "theme": "dark"\n}\n', encoding="utf-8")
+    out = subprocess.run([str(WRAPPER)], capture_output=True, text=True, env=env, cwd=proj, timeout=20)
+    assert "--model opus" in _real(out.stdout), out.stdout
+
+
+def test_saved_slash_model_choice_wins(box):
+    tmp, env = box
+    _tier(tmp, settings='{\n  "fallbackModel": ["sonnet"],\n  "model": "sonnet"\n}\n')
+    assert "--model" not in _real(_run(env).stdout)
+    _tier(tmp, settings='{\n  "fallbackModel": ["sonnet", "haiku"]\n}\n')  # fallbackModel is not a model pick
+    assert "--model opus" in _real(_run(env).stdout)
+
+
+def test_print_bare_nested_and_subcommands_get_no_model(box):
+    tmp, env = box
+    _tier(tmp)
+    assert _real(_run(env, "-p", "x").stdout) == "REAL -p x"
+    assert _real(_run(env, "--bare").stdout) == "REAL --bare"
+    assert "--model" not in _real(_run(env, CLAUDECODE="1").stdout)
+    assert "--model" not in _real(_run(env, "mcp", "list").stdout)  # subcommands take no session model
+    for argv in (["logs", "abc"], ["stop", "x"], ["rm", "x"], ["attach", "x"], ["respawn", "x"],
+                 ["purge", "."], ["agents"], ["kill", "x"]):
+        assert "--model" not in _real(_run(env, *argv).stdout), argv
+
+
+def _real_claude() -> str | None:
+    """The real CLI on PATH, never this launcher (the fixture and ~/.claude/bin put bin/ first)."""
+    import os  # noqa: PLC0415
+    for d in os.environ.get("PATH", "").split(os.pathsep):
+        cand = shutil.which("claude", path=d) if d else None
+        if not cand:
+            continue
+        with open(os.path.realpath(cand), "rb") as fh:
+            if b"agentic-mercy oomguard launcher" not in fh.read(512):
+                return cand
+    return None
+
+
+@pytest.mark.skipif(_real_claude() is None, reason="no real claude binary on PATH")
+def test_subcommand_list_matches_the_real_cli():
+    """Rot guard: every `claude --help` subcommand is in the launcher's no-model case branch."""
+    out = subprocess.run([_real_claude(), "--help"], capture_output=True, text=True, timeout=60).stdout
+    cmds = out.split("Commands:", 1)[1] if "Commands:" in out else ""
+    words = {w for line in cmds.splitlines() if re.match(r"^  [a-z]", line)
+             for w in line.split()[0].split("|")} - {"help"}
+    assert words, out[-500:]
+    branch = re.search(r'case "\$\{1:-\}" in[^\n]*\n\s*([^)]+)\)', WRAPPER.read_text(encoding="utf-8"))
+    listed = set(branch[1].split("|")) if branch else set()
+    assert words <= listed, sorted(words - listed)
+
+
+def test_stale_plan_tier_is_redetected_from_newer_credentials(box):
+    tmp, env = box
+    _tier(tmp)  # max20 / opus, detected long ago
+    (tmp / ".claude" / ".credentials.json").write_text(
+        json.dumps({"claudeAiOauth": {"subscriptionType": "pro", "rateLimitTier": "default_claude_pro"}}),
+        encoding="utf-8")
+    state = tmp / ".claude" / "state"
+    # the state-dir env keeps the detector from spawning a render
+    out = _real(_run(env, CLAUDE_HOOK_STATE_DIR=str(state)).stdout)
+    assert "--model sonnet" in out and "opus" not in out, out
+    assert json.loads((state / "plan-tier.json").read_text(encoding="utf-8"))["tier"] == "pro"
+
+
+def test_missing_plan_tier_or_main_adds_nothing(box):
+    tmp, env = box
+    assert "--model" not in _real(_run(env).stdout)
+    (tmp / ".claude" / "state").mkdir(parents=True, exist_ok=True)
+    (tmp / ".claude" / "state" / "plan-tier.json").write_text('{"schema": 1, "tier": "max20"}', encoding="utf-8")
+    assert "--model" not in _real(_run(env).stdout)
+
+
+def test_print_argv_shows_the_decision_without_side_effects(box):
+    tmp, env = box
+    _tier(tmp)
+    out = _run(env, "--version", CLAUDE_LAUNCHER_PRINT_ARGV="1").stdout.splitlines()
+    assert out[1:] == ["--model", "opus", "--version"] and out[0].endswith("/fakebin/claude"), out
+    assert not (tmp / ".claude" / "state" / "launch-caps").exists()
+    assert "SYSTEMD-RUN" not in "\n".join(out)
 
 
 def test_nested_no_bus_no_systemd_run_pass_through(box):
@@ -142,23 +275,27 @@ def test_claude_tmux(box):
         assert out == "TMUX ls\n"
 
 
-@pytest.mark.parametrize("shell,rc,which", [("zsh", ".zshrc", "whence -p claude"), ("bash", ".bashrc", "type -P claude")])
-def test_shell_rc_resolves_the_launcher(box, shell, rc, which):
+@pytest.mark.parametrize("shell,rc,which,flag", [("zsh", ".zshrc", "whence -p claude", "-ic"),
+                                                  ("bash", ".bashrc", "type -P claude", "-ic"),
+                                                  ("bash", ".profile", "type -P claude", "-lc")])
+def test_shell_rc_resolves_the_launcher(box, shell, rc, which, flag):
     tmp, env = box
     real_rc = Path.home() / rc
     if not shutil.which(shell) or not real_rc.is_file():
         pytest.skip(f"{shell} or ~/{rc} missing")
+    if rc == ".profile" and (Path.home() / ".bashrc").is_file():
+        shutil.copy(Path.home() / ".bashrc", tmp / ".bashrc")  # ~/.profile sources it, then prepends ~/.local/bin
     shutil.copy(real_rc, tmp / rc)
     with open(tmp / rc, "a", encoding="utf-8") as fh:
         fh.write(f'\n# >>> claude-workbench >>>\nexport PATH="{ROOT / "bin"}:$PATH"\n# <<< claude-workbench <<<\n')
     fake = tmp / "fakebin" / "claude"
-    p = subprocess.run([shell, "-ic", f"type claude; {which}; claude --version"], capture_output=True, text=True,
+    p = subprocess.run([shell, flag, f"type claude; {which}; claude --version"], capture_output=True, text=True,
                        timeout=30, env={**env, "PATH": f"{tmp / 'fakebin'}:/usr/bin:/bin", "CLAUDE_REAL_BIN": str(fake)},
                        stdin=subprocess.DEVNULL)
     out = p.stdout
     real_line = next((x for x in out.splitlines() if x.startswith("REAL")), "")
     assert str(ROOT / "bin" / "claude") in out and real_line.endswith(" --version"), (out, p.stderr[-500:])
-    if "alias claude" in real_rc.read_text(encoding="utf-8", errors="replace"):
+    if flag == "-ic" and "alias claude" in real_rc.read_text(encoding="utf-8", errors="replace"):
         assert "claude is an alias" in out or "claude is aliased" in out
 
 

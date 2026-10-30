@@ -86,9 +86,17 @@ def test_suggest_compact_is_gone():
 
 
 def test_dead_helpers_deleted():
+    # the tracked tree decides: a gitignored local leftover (lean-ctx/SKILL.md.bak) is the user's file
+    import subprocess
+    cp = subprocess.run(["git", "-c", "safe.directory=*", "-C", str(ROOT), "ls-files", "skills"],
+                        capture_output=True, text=True)
+    tracked = set(cp.stdout.split()) if cp.returncode == 0 else set()
     for rel in ("design/scripts/logo/generate.py", "design/scripts/cip/generate.py",
                 "design/scripts/icon/generate.py", "plan-mode-gate/scripts", "lean-ctx/SKILL.md.bak"):
-        assert not (SKILLS / rel).exists(), rel
+        if tracked:
+            assert not any(t == f"skills/{rel}" or t.startswith(f"skills/{rel}/") for t in tracked), rel
+        else:  # no git checkout: fall back to the disk
+            assert not (SKILLS / rel).exists(), rel
     for rel in ("design/scripts/logo/search.py", "design/scripts/cip/search.py",
                 "design/scripts/logo/core.py", "design/scripts/cip/core.py"):
         assert (SKILLS / rel).exists(), rel

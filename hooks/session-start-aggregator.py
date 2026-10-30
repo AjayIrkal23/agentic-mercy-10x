@@ -183,7 +183,8 @@ def _core_skill_digests(budget: int = MAX_AGGREGATED_CHARS, bodies_ok: bool = Tr
         return ""
     idx = {}
     try:
-        idx = json.loads((HOOK_DIR / "skills-index.json").read_text(encoding="utf-8")).get("skills") or {}
+        from lib import skills_index as _si  # noqa: PLC0415  (tracked index + plugin sidecar)
+        idx = _si.skills(HOOK_DIR)
     except Exception:  # noqa: BLE001
         pass
     header = ("[Always-active core skills] — load a pointer with the Skill tool when it "

@@ -76,14 +76,17 @@ def inventory(root: Path) -> dict:
         fm = fm if isinstance(fm, dict) else {}
         local[str(fm.get("name") or p.parent.name)] = fm
     plugins = {}
-    try:
-        idx = json.loads((root / "hooks" / "skills-index.json").read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        idx = {}
-    for block in (idx, idx.get("skills") if isinstance(idx.get("skills"), dict) else {}):
-        for k, v in block.items():
-            if ":" in k and not k.startswith("_"):
-                plugins[k] = str((v or {}).get("description", "")) if isinstance(v, dict) else ""
+    # the tracked index (local) and the per-machine plugin sidecar (state/skills-index.plugins.json)
+    for rel in ("hooks/skills-index.json", "state/skills-index.plugins.json"):
+        try:
+            idx = json.loads((root / rel).read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            idx = {}
+        idx = idx if isinstance(idx, dict) else {}
+        for block in (idx, idx.get("skills") if isinstance(idx.get("skills"), dict) else {}):
+            for k, v in block.items():
+                if ":" in k and not k.startswith("_"):
+                    plugins.setdefault(k, str((v or {}).get("description", "")) if isinstance(v, dict) else "")
     return {"local": local, "plugins": plugins}
 
 
@@ -196,6 +199,10 @@ def overrides_doc(data: dict, root: Path | None = None) -> dict:
         if ov.get(name) == "name-only":  # the aggregator pointer needs the description
             ov[name] = "on"
             warnings.append(f"{name}: in hooks/core-skill-set.json, kept on")
+    # settings.json may never contain the string lean-ctx (render.FORBIDDEN_SUBSTRING): the shipped
+    # list leaves it out, so this file must not count it either
+    if ov.pop("lean-ctx", None) is not None:
+        warnings.append("lean-ctx: left out (settings.json must not name it; render.FORBIDDEN_SUBSTRING)")
     doc = {"_about": ABOUT, "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
            "window_sessions": data["window_sessions"],
            "telemetry_rule_applied": data["window_sessions"] >= MIN_WINDOW,

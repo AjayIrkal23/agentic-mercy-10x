@@ -157,10 +157,25 @@ def global_flags(policy: dict | None = None) -> list[str]:
     return out
 
 
+# a negation or question opener up to 3 words before the phrase, same sentence: "don't use fable",
+# "why did you use opus", "never use opus", "stop using fable" are not requests (cues._NEG + question words)
+# the apostrophe is required ("want", "agent", "important" end in n+t); common apostrophe-less spellings are listed
+_PHRASE_NEG = re.compile(r"(?:\b\w+n[’']t|\b(?:dont|cant|wont|didnt|doesnt|shouldnt|isnt|arent|wasnt)\b"
+                         r"|\bdo not|\bno need (?:for|to)|\bwithout|\bnever|\bstop|\bwhy(?: did you)?)"
+                         r"(?:\W+\w+){0,3}\W*$")
+
+
+def _negated(low: str, start: int) -> bool:
+    head = re.split(r"[.!?;\n]", low[max(0, start - 60):start])[-1]
+    return bool(_PHRASE_NEG.search(head))
+
+
 def user_phrase(model: str, transcript_path, phrases: dict | None) -> str | None:
     """The override phrase for ``model`` (policy ``override_phrases``) found in the user's
-    last real prompt of the transcript, or None. Meta rows, tool results and task
-    notifications are not the user's words (lib.turns). Any error -> None."""
+    last real prompt of the transcript, not preceded in the same sentence by a negation or
+    question opener (don't / do not / never / stop / why did you / without), or None. Meta
+    rows, tool results and task notifications are not the user's words (lib.turns). Any
+    error -> None."""
     if not transcript_path or not isinstance(phrases, dict):
         return None
     try:
@@ -170,8 +185,11 @@ def user_phrase(model: str, transcript_path, phrases: dict | None) -> str | None
         return None
     low = (text or "").lower()
     for p in phrases.get(model) or []:
-        if isinstance(p, str) and p and p.lower() in low:
-            return p
+        if not (isinstance(p, str) and p):
+            continue
+        for m in re.finditer(re.escape(p.lower()), low):
+            if not _negated(low, m.start()):
+                return p
     return None
 
 
@@ -265,8 +283,9 @@ def resolve(policy: dict, subagent_type: str, *, asked: str | None, phrase_for, 
     """-> (model, reason). ``asked`` = explicit model param or [label] (lowercase) or None;
     ``phrase_for(model)`` -> the user's override phrase for that model this turn, or None;
     ``flags`` = active global flags in precedence order; ``pin`` = per-project mode.
-    Order: flags > pin > explicit (+phrase for guarded roles / fable) > role route (escalation,
-    planned-small, size bump, judge phrase lift) > usage step-down > tier cap."""
+    Order: flags > pin > explicit (+phrase for guarded roles / fable / the tier's ask_only) > role route (escalation,
+    planned-small, size bump) > the user's phrase inside the ceiling (any role; not stepped down) > usage
+    step-down > tier cap."""
     try:
         from lib import plan_tier, usage_guard  # noqa: PLC0415
     except Exception:  # noqa: BLE001
@@ -296,11 +315,16 @@ def resolve(policy: dict, subagent_type: str, *, asked: str | None, phrase_for, 
         if pin:
             return finish(pin, "per-project model mode")
         if asked and asked in order:
-            if asked != "fable" and not is_guarded(policy, subagent_type, label):
+            ask_only = {str(m) for m in (blk.get("ask_only") or [])}
+            if asked != "fable" and asked not in ask_only and not is_guarded(policy, subagent_type, label):
+                # honoured on an unguarded role, but it is the caller's choice, not the user's words:
+                # the usage guard still steps it down
                 return finish(asked, "explicit model param" if asked_src == "param" else "description label",
-                              user_said=True)
+                              user_said=bool(phrase_for(asked)))
             p = phrase_for(asked)
-            if p:
+            # an over-ceiling request (max5 "use fable") falls to the role route: a silent tier-cap to
+            # Opus would skip the "use opus" that max5 Opus needs (rules/04)
+            if p and (plan_tier is None or plan_tier.cap(asked, tier) == asked):
                 return finish(asked, f"explicit {asked} (user said '{p}')", user_said=True)
         roles = blk.get("roles") or {}
         model = roles.get(role) or roles.get("default") or "sonnet"
@@ -322,17 +346,26 @@ def resolve(policy: dict, subagent_type: str, *, asked: str | None, phrase_for, 
             if prof is not None and prof.size in bumps:
                 model = bumps[prof.size]
                 reason += f"; size bump {prof.size} -> {model}"
-        said = False  # the user's own phrase this turn: the usage guard does not step it down
+        # the user's own phrase this turn names a model inside the ceiling: it wins for every role and
+        # the usage guard does not step it down (MODEL-ROUTING §1, §5). An over-ceiling phrase (Pro
+        # "use opus") is not honoured: the role route stands and the guard applies.
+        said = False
         lift = blk.get("judge_phrase_lift")
-        if role == "judge" and lift and not asked:
-            p = phrase_for(lift)
-            if p:
-                model, said = lift, True
-                reason += f"; phrase lift (user said '{p}')"
+        for cand in reversed(order):  # highest first: "use fable" beats "use sonnet"
+            p = phrase_for(cand)
+            if p and (plan_tier is None or plan_tier.cap(cand, tier) == cand):
+                if role == "judge" and cand == lift:
+                    reason += f"; phrase lift (user said '{p}')"
+                else:
+                    reason += f"; user said '{p}'" + (f" -> {cand}" if cand != model else "")
+                model, said = cand, True
+                break
         if asked == "fable" and order.index(model) < order.index("sonnet"):
             model = "sonnet"  # an unauthorised fable request still lands on sonnet, never below
         if asked and asked != model:
-            reason += f"; explicit '{asked}' ignored (no '{asked}' override phrase in the user's turn)"
+            why = (f"over the {tier} ceiling" if phrase_for(asked)
+                   else f"no '{asked}' override phrase in the user's turn")
+            reason += f"; explicit '{asked}' ignored ({why})"
         return finish(model, reason, user_said=said)
     except Exception as exc:  # noqa: BLE001 - routing must never raise
         m = plan_tier.cap("sonnet", tier) if plan_tier is not None else "sonnet"

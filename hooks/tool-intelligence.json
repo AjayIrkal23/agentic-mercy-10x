@@ -25,14 +25,14 @@
       "server": ["sequential-thinking"],
       "when": {"intents": ["PLAN", "SPEC", "AUDIT", "DEBUG", "DESIGN", "REFACTOR", "SECURITY"], "regex": "\\b(should (?:i|we)|which (?:approach|option|one|is better)|trade-?offs?|pros and cons|compare|decide|best way to|how should|architect\\w*)\\b"},
       "tools": ["sequentialthinking"],
-      "text": "Non-trivial reasoning → call mcp__sequential-thinking__sequentialthinking now (one thought per step) before deciding or answering."
+      "text": "Non-trivial reasoning → call mcp__sequential-thinking__sequentialthinking now, one thought per step."
     },
     {
       "id": "semgrep",
       "server": ["semgrep"],
       "when": {"intents": ["SECURITY"], "regex": "\\b(auth(?:entication|orization|n|z)?|session (?:token|cookie|handling)|jwt|oauth|csrf|xss|injection|sanitiz\\w+|middleware|passwords?|input validation|rate[- ]limit\\w*)\\b"},
       "tools": ["semgrep_scan", "semgrep_scan_with_custom_rule"],
-      "text": "Security-sensitive → call mcp__semgrep__semgrep_scan on the changed files now with an explicit config (p/default, p/owasp-top-ten, p/secrets; auto fails when metrics are off) — satisfies Gate 3; project-specific pattern → semgrep_scan_with_custom_rule; owasp-security for the checklist."
+      "text": "Security-sensitive → call mcp__semgrep__semgrep_scan on the changed files now with an explicit config (p/default + p/owasp-top-ten + p/secrets; auto fails when metrics are off)."
     },
     {
       "id": "db-supabase",

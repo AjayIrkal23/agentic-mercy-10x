@@ -79,12 +79,12 @@ def test_doctor_runs_without_override_dir_record_nothing(tmp_path, monkeypatch):
 # --------------------------------------------------------------------------- C-11
 def test_skill_tool_line_has_no_description_or_boilerplate():
     line = P.skill_line("santa-review", "MUST-READ", None)
-    assert line == '- **santa-review** (MUST-READ)\n  ACTION: Skill("santa-review")'
+    assert line == '- **santa-review** (MUST-READ) ACTION: Skill("santa-review")'
 
 
 def test_paths_scoped_skill_line_names_the_file():
     line = P.skill_line("frontend-standards-always-follow", "SHOULD-READ", "/x/SKILL.md")
-    assert line == "- **frontend-standards-always-follow** (SHOULD-READ)\n  ACTION: Read /x/SKILL.md"
+    assert line == "- **frontend-standards-always-follow** (SHOULD-READ) ACTION: Read /x/SKILL.md"
 
 
 # --------------------------------------------------------------------------- C-14
@@ -224,7 +224,7 @@ def test_deep_inject_replaces_the_must_read_line(monkeypatch):
     monkeypatch.setattr(S, "rank_skills", lambda *a, **k: [("debug-investigation", 9.0), ("owasp-security", 3.0)])
     monkeypatch.setattr(R, "_skill_excerpt", lambda name, n=3000: "BODY")
     prof = TaskProfile(text="debug the crash", intents={"DEBUG": 3}, surfaces=set())
-    ctx = {"config": {"auto_dispatch_threshold": 3}}
+    ctx = {"config": {"auto_dispatch_threshold": 3, "deep_inject_chars": 600}}   # opt-in since FIX-r3 T7
     items = R._skill_items(prof, ctx)
     ids = [it["id"] for it in items]
     assert "deep:debug-investigation" in ids and not any(i.startswith("skill:debug-investigation:") for i in ids)

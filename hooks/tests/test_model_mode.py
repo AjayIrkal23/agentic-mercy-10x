@@ -97,7 +97,15 @@ def test_escalation_reason_keeps_its_signature_and_membership():
     ("api", "santa-reviewer", None, "use opus", "review", True, "opus", "phrase lift"),
     ("max5", "santa-reviewer", None, None, "review", True, "sonnet", "role judge"),
     ("pro", "santa-reviewer", None, "use opus", "review", True, "haiku", "usage-guard"),
-    ("pro", "santa-reviewer", "opus", "use opus", "review", False, "sonnet", "tier-cap"),
+    # final-fix 3: the user's phrase wins inside the ceiling on every tier and role, guard on or off
+    ("max20", "santa-reviewer", None, "use opus", "review", True, "opus", "user said"),
+    ("max20", "implementation-engineer", None, "use opus", "build it", True, "opus", "user said"),
+    ("pro", "implementation-engineer", None, "use sonnet", "build it", True, "sonnet", "user said"),
+    ("pro", "santa-reviewer", None, "use sonnet", "review", True, "sonnet", "user said"),
+    ("pro", "implementation-engineer", None, "use opus", "build it", True, "haiku", "role impl -> haiku"),  # over the ceiling: no lift
+    ("max20", "explore", None, "use haiku", "look", False, "haiku", "user said"),
+    ("max5", "implementation-engineer", None, "use opus", "build it", True, "opus", "user said"),
+    ("pro", "santa-reviewer", "opus", "use opus", "review", False, "sonnet", "over the pro ceiling"),
     ("pro", "implementation-engineer", None, None, "build it", False, "haiku", "role impl"),
     ("pro", "implementation-engineer", None, None, "Previous attempt failed", False, "sonnet", "escalated"),
     ("pro", "implementation-engineer", None, None, "Previous attempt failed", True, "haiku", "usage-guard"),
@@ -143,6 +151,58 @@ def test_resolve_fail_open_on_empty_policy():
                       tier="pro", usage_active=False, flags=[], pin=None)[0] == "sonnet"
     assert mm.resolve({}, "explore", asked=None, phrase_for=lambda m: None, text="x", cwd=None,
                       tier="max20", usage_active=False, flags=[], pin=None)[0] == "sonnet"
+
+
+# --- negated / questioned phrases are not requests (SANTA-FINAL fix 1) --------------------
+def _one_row(tmp_path, text):
+    t = tmp_path / "t.jsonl"
+    t.write_text(json.dumps({"type": "user", "message": {"role": "user", "content": text},
+                             "timestamp": "2026-10-30T10:00:00Z"}) + "\n", encoding="utf-8")
+    return t
+
+
+SANTA_PROMPTS = ("why did you use opus for this? that burned my quota",
+                 "don't use fable for this, it is a small fix")
+
+
+@pytest.mark.parametrize("text,model,expected", [
+    (SANTA_PROMPTS[0], "opus", None),
+    (SANTA_PROMPTS[1], "fable", None),
+    ("never use opus here", "opus", None),
+    ("use opus for this", "opus", "use opus"),
+    ("I was unsure. use fable", "fable", "use fable"),
+    # SANTA-GATE 2: "want", "agent", "important" end in n+t but are not contractions
+    ("I want you to use opus for this", "opus", "use opus"),
+    ("this agent should use opus", "opus", "use opus"),
+    ("important: use fable here", "fable", "use fable"),
+    ("dont use opus for this", "opus", None),
+    ("you can't use fable here", "fable", None)])
+def test_user_phrase_skips_negation_and_questions(tmp_path, text, model, expected):
+    assert mm.user_phrase(model, _one_row(tmp_path, text), POL["override_phrases"]) == expected
+
+
+@pytest.mark.parametrize("tier", ["max5", "max20"])
+@pytest.mark.parametrize("text", SANTA_PROMPTS)
+def test_santa_prompts_keep_the_role_route(tmp_path, tier, text):
+    t = _one_row(tmp_path, text)
+
+    def said(m):
+        return mm.user_phrase(m, t, POL["override_phrases"])
+
+    for agent in ("explore", "general-purpose", "docs-sync-agent"):
+        kw = dict(asked=None, text=text, cwd=None, tier=tier, usage_active=False, flags=[], pin=None)
+        got = mm.resolve(POL, agent, phrase_for=said, **kw)[0]
+        assert got == mm.resolve(POL, agent, phrase_for=lambda m: None, **kw)[0], (agent, got)
+        assert got != "fable" and (agent != "explore" or got == "haiku"), (agent, got)
+
+
+def test_max5_use_fable_is_not_a_silent_opus():
+    # SANTA-FINAL D4: on max5 an explicit fable + "use fable" is over the ceiling; Opus needs "use opus"
+    kw = dict(asked="fable", text="x", cwd=None, tier="max5", usage_active=False, flags=[], pin=None)
+    assert mm.resolve(POL, "general-purpose", phrase_for=lambda m: "use fable" if m == "fable" else None,
+                      **kw)[0] == "sonnet"
+    both = {"fable": "use fable", "opus": "use opus"}
+    assert mm.resolve(POL, "general-purpose", phrase_for=both.get, **kw)[0] == "opus"
 
 
 # --- scripts/model-mode.py (first CLI test, audit I-11) ------------------------------------

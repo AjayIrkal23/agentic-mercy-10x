@@ -2,14 +2,15 @@
 
 Reads ``<claude_dir>/workflows/index.json`` (written by scripts/build_workflows.py):
 ``[{"name", "file", "triggers", "acts", "min_size", "phases", "args_schema"}]``.
-Missing or invalid -> no line. Never generates scripts; never runs anything except an
+Missing -> the tracked ``workflows/src/index.src.json`` (the render is per machine, I10); invalid -> no line. Never generates scripts; never runs anything except an
 optional ``git diff --name-only HEAD`` for REVIEW prompts (0.4 s cap). One line per
 prompt, first rule wins:
 
   invoke   two or more acts at size M/L, two acts scoring >= auto_dispatch_threshold at any
-           size, or size L with an act -> the acts in canonical order
+           size, or size L with one act and no corpus trigger (below) -> the acts in canonical order
   review   REVIEW intent and >= 3 changed files (prompt paths or the git diff)
-  other    a trigger hit + a named corpus (path, URL, "this repo") + size >= min_size
+  other    a trigger hit + a named corpus (path, URL, "this repo") + size >= min_size; it beats a
+           single-act size-L invoke, never a multi-act one
 
 ``tier_hint: "escalate"`` rides along when lib.model_mode.escalation_reason applies.
 The line is a model instruction, never a command for the user. Fail-open to [].
@@ -39,6 +40,8 @@ _CORPUS_RX = re.compile(r"\b(?:this|the|our|my) (?:repo(?:sitory)?|codebase|proj
                         re.I)
 _URL_RX = re.compile(r"https?://\S+", re.I)
 _BUDGET_MS = 80
+# FIX-r3 T7: the model already has the prompt; it fills this in instead of the router echoing up to 240 chars.
+TASK_PLACEHOLDER = "<the prompt, verbatim>"
 
 
 def _claude_dir() -> Path:
@@ -47,11 +50,27 @@ def _claude_dir() -> Path:
     return Path(os.environ.get("CLAUDE_CONFIG_DIR") or "~/.claude").expanduser()
 
 
+def _source_index(wf: Path) -> list[dict]:
+    """The tracked ``src/index.src.json`` ({name: {triggers, acts, min_size, args_schema}}) as index rows:
+    the render is per machine and untracked (I10), so a fresh clone before its first render still routes."""
+    data = json.loads((wf / "src" / "index.src.json").read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        return []
+    return [{**v, "name": k, "file": f"{k}.js"} for k, v in sorted(data.items())
+            if not k.startswith("_") and isinstance(v, dict)]
+
+
 @lru_cache(maxsize=1)
 def _index() -> list[dict]:
+    wf = _claude_dir() / "workflows"
     try:
-        data = json.loads((_claude_dir() / "workflows" / "index.json").read_text(encoding="utf-8"))
+        data = json.loads((wf / "index.json").read_text(encoding="utf-8"))
         return [e for e in data if isinstance(e, dict) and e.get("name")] if isinstance(data, list) else []
+    except FileNotFoundError:
+        try:
+            return _source_index(wf)
+        except Exception:  # noqa: BLE001
+            return []
     except Exception:  # noqa: BLE001
         return []
 
@@ -109,31 +128,45 @@ def _pick(profile, raw: str, root, by: dict, idx: list[dict], threshold: int = 3
     # two score-1 intents on a small task ("fix the failing test") stay inline (REVIEW2 Fix 4)
     strong = _strong_acts(profile, threshold)
     multi = len(strong) >= 2 or (len(acts) >= 2 and profile.size != "S")
-    if inv is not None and (multi or (profile.size == "L" and acts)):
+    url = _URL_RX.search(raw)
+    corpus = bool(profile.paths) or bool(url) or bool(_CORPUS_RX.search(raw))
+    size = _SIZE_RANK.get(profile.size, 2)
+
+    def _trigger_entry():
+        for e in idx:
+            if e["name"] in ("invoke", "review"):
+                continue
+            need = _SIZE_RANK.get(str(e.get("min_size", "S")).upper(), 1)
+            if size >= need and _trigger_hits(e, profile.text) >= 1:
+                return e
+        return None
+
+    hit = _trigger_entry() if corpus else None
+    # final-fix 5: a triggered workflow on a named corpus beats a single-act size-L invoke
+    # ("research the changelog of <url>" used to become invoke {acts: [impl, docs]})
+    if inv is not None and (multi or (profile.size == "L" and acts and hit is None)):
         allowed = inv.get("acts") or acts
         use = strong if len(strong) >= 2 else acts
-        return inv, {"acts": [a for a in use if a in allowed], "task": raw[:240],
+        if profile.size == "L" and "impl" in acts and not ({"impl", "refactor"} & set(use)) \
+                and {"test", "docs", "clean"} & set(use):
+            # a size-L chain that writes (tests, docs) and whose profile named impl, but whose strong set
+            # dropped it, gets impl back in canonical order. A chain that never asked for code
+            # (docs-only, tests-only, audit / review / security) stays as is.
+            use = use + ["impl"]
+        # canonical order (the entry's `acts`), the order invoke.js runs them in anyway
+        return inv, {"acts": [a for a in allowed if a in set(use)], "task": TASK_PLACEHOLDER,
                      "run": _run_dir(raw, root, cwd), "slug": _slug(raw)}
     rev = by.get("review")
     if rev is not None and "REVIEW" in profile.intents:
         if max(len(profile.paths), _changed_files(root)) >= 3:
             return rev, {"run": _run_dir(raw, root, cwd), "paths": list(profile.paths[:20])}
-    url = _URL_RX.search(raw)
-    corpus = bool(profile.paths) or bool(url) or bool(_CORPUS_RX.search(raw))
-    if not corpus:
-        return None, None
-    size = _SIZE_RANK.get(profile.size, 2)
-    for e in idx:
-        if e["name"] in ("invoke", "review"):
-            continue
-        need = _SIZE_RANK.get(str(e.get("min_size", "S")).upper(), 1)
-        if size >= need and _trigger_hits(e, profile.text) >= 1:
-            args = {"run": _run_dir(raw, root, cwd), "task": raw[:240]}
-            if profile.paths:
-                args["corpus"] = list(profile.paths[:10])
-            if url:
-                args["url"] = url.group(0)
-            return e, args
+    if hit is not None:
+        args = {"run": _run_dir(raw, root, cwd), "task": TASK_PLACEHOLDER}
+        if profile.paths:
+            args["corpus"] = list(profile.paths[:10])
+        if url:
+            args["url"] = url.group(0)
+        return hit, args
     return None, None
 
 

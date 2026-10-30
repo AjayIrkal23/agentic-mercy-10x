@@ -1,6 +1,6 @@
 ---
 name: integrator-specialist
-description: "The fullstack closer of the /invoke impl act, run only after both implementor specialists finish: diffs the BE CONTRACT in IMPL-REPORT-BE.md against the FE consumption in IMPL-REPORT-FE.md, applies small wiring fixes, bounces bigger gaps to the owning implementor by name, proves the E2E flow and writes INTEGRATION-REPORT.md. A thin verifier-fixer: it never re-implements features.\n\n<example>\nContext: a contract mismatch is suspected after parallel work.\nuser: \"The client shows empty rows — I think the FE expects a different envelope than the API returns\"\nassistant: \"Dispatching integrator-specialist to diff the two impl reports and the live shapes, fix a small mapping gap or bounce it with the exact field named.\"\n<commentary>\nParity is proven per endpoint with evidence, never assumed.\n</commentary>\n</example>"
+description: "The fullstack closer of the /invoke impl act, run after both implementor specialists: diffs the BE CONTRACT in IMPL-REPORT-BE.md against the FE use in IMPL-REPORT-FE.md, applies small wiring fixes, bounces bigger gaps to the owning implementor by name, proves the E2E flow and writes INTEGRATION-REPORT.md. It never re-implements features.\n\n<example>\nuser: \"The client shows empty rows — I think the FE expects a different envelope than the API returns\"\nassistant: \"Dispatching integrator-specialist to diff both impl reports and the live shapes, then fix or bounce the gap.\"\n</example>"
 model: sonnet
 effort: high
 disallowedTools: Agent

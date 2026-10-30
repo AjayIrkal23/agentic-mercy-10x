@@ -133,8 +133,9 @@ def test_live_tree_overrides_run(tmp_path):
             assert ov.get(name) == "name-only", name
     assert "invoke" not in ov
     for name in sh.NAME_ONLY_STATIC:
-        if name in local:
+        if name in local and name != "lean-ctx":
             assert ov.get(name) == "name-only", name
+    assert "lean-ctx" not in ov  # FIX-r2 T6: settings.json may never name it
 
 
 def test_never_writes_settings(tmp_path):

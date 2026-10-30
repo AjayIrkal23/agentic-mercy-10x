@@ -73,6 +73,15 @@ def test_usage_guard_arrow(run, state):
     assert "◆ Opus 4.7 (xhigh) ↓" in _out(run, state)
 
 
+def test_usage_guard_arrow_follows_the_same_reading(run, state):
+    def pl(sid, pct):
+        return {"session_id": sid, "model": {"display_name": "Opus"},
+                "rate_limits": {"five_hour": {"used_percentage": pct, "resets_at": "2099-01-01T00:00:00Z"}}}
+    assert "↓" in _out(run, state, pl("ug-1", 85))
+    time.sleep(0.02)  # the newest bridge (by mtime) is the reading the guard takes
+    assert "↓" not in _out(run, state, pl("ug-2", 65))
+
+
 def test_bridge_written_and_throttled(run, state, repo):
     pl = {**full_payload(repo), "session_id": "sess-1"}
     _out(run, state, pl)

@@ -1,7 +1,8 @@
 ---
 name: codebase-intel-first
-description: 'Code intelligence first: build a structural model with the jcodemunch symbol index and graphify graph before reading files, grepping, or spawning Explore agents. Defines the precedence between jcodemunch/graphify (discovery) and lean-ctx (residual file I/O).'
-when_to_use: 'Use at the start of any codebase task: planning, auditing, review, implementing, refactoring, debugging, or ''help me understand X''.'
+description: 'Code intelligence first: build a structural model with the jcodemunch symbol index and graphify
+  graph before reading files, grepping, or spawning Explore agents. Defines the precedence between jcodemunch/graphify
+  (discovery) and lean-ctx (residual file I/O).'
 metadata:
   schema: 1
   category: intel
@@ -11,7 +12,7 @@ metadata:
   - linux
   - darwin
   - windows
-  token-cost: 935
+  token-cost: 1313
   triggers:
     keywords:
     - jcodemunch
@@ -32,6 +33,8 @@ metadata:
     paths: []
     intents:
     - intel
+when_to_use: 'Use at the start of any codebase task: planning, auditing, review, implementing, refactoring,
+  debugging, or ''help me understand X''.'
 ---
 # Codebase Intel First
 

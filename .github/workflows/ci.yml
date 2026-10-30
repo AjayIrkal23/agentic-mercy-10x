@@ -81,6 +81,7 @@ jobs:
           python hooks/gen-invoke-skills.py --check
           python hooks/gen-agent-skill-blocks.py --check
           python scripts/build_library_index.py --check
+          python scripts/build_workflows.py --tier max20 --usage off --quiet
           python scripts/build_workflows.py --check
 
       - name: Portability grep-gates (no sys.platform outside platform.py; no home/drive literals; no new .sh)

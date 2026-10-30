@@ -157,9 +157,11 @@ PATH_BLOCK = re.compile(r"\n<!-- path-skills -->\n.*?<!-- /path-skills -->\n", r
 
 
 def _path_scoped() -> set[str]:
+    sys.path.insert(0, str(HOOKS))
     try:
-        idx = json.loads((HOOKS / "skills-index.json").read_text(encoding="utf-8")).get("skills") or {}
-    except (OSError, ValueError):
+        from lib import skills_index as _si  # tracked index + plugin sidecar
+        idx = _si.skills(HOOKS)
+    except Exception:  # noqa: BLE001
         return set()
     return {name for name, ent in idx.items() if (ent or {}).get("paths")}
 

@@ -111,6 +111,12 @@ settings.local.json
 settings.json
 settings.user.json
 settings.json.lock
+# the saved-workflow library is rendered per machine for its plan tier (FIX-r3 I10):
+# scripts/build_workflows.py writes these from workflows/src/ (tracked) on install,
+# the render post step and self-heal; `build_workflows.py --check` proves the render
+/workflows/*.js
+/workflows/index.json
+/workflows/.rendered.json
 # Plugin manifests point at this machine's absolute cache paths + list private
 # project roots; the target reinstalls via `claude plugin install` (see install.sh)
 plugins/installed_plugins.json

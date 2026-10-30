@@ -123,11 +123,45 @@ def _link_bins(names: list, env, dry_run: bool) -> str:
     return f" ({', '.join(done)})" if done else ""
 
 
+_NPM_ROOT_G: list = []  # memo: [Path | None]
+
+
+def _npm_prefix_args() -> list[str]:
+    """A sandbox-HOME rehearsal (AGENTIC_MERCY_SANDBOX=1) installs npm globals under $HOME/.npm-global,
+    never into the real nvm / system prefix."""
+    if os.environ.get("AGENTIC_MERCY_SANDBOX") == "1":
+        return ["--prefix", str(Path.home() / ".npm-global")]
+    return []
+
+
+def npm_root_g() -> Path | None:
+    """`npm root -g` (with the sandbox prefix when set); None when npm is absent or fails. Memoised."""
+    if not _NPM_ROOT_G:
+        root = None
+        try:
+            cp = plat.run(["npm", "root", "-g", *_npm_prefix_args()], timeout=15)
+            out = (cp.stdout or "").strip() if cp.returncode == 0 else ""
+            root = Path(out.splitlines()[-1]) if out else None
+        except Exception:  # noqa: BLE001
+            root = None
+        _NPM_ROOT_G.append(root)
+    return _NPM_ROOT_G[0]
+
+
+def npm_pkg_present(pkg: str | None) -> bool:
+    """A global npm package that ships no bin (`which` cannot see it): its package.json under npm root -g."""
+    if not pkg:
+        return False
+    root = npm_root_g()
+    return bool(root and (root / pkg / "package.json").is_file())
+
+
 def _run_install(argv: list):
     """Run an install argv; an ``&&`` element splits it into steps, run in order until one fails."""
     steps: list[list] = [[]]
     for a in argv:
         steps.append([]) if a == "&&" else steps[-1].append(a)
+    steps = [s + _npm_prefix_args() if s[:3] == ["npm", "install", "-g"] else s for s in steps]
     for step in steps:
         cp = npm_pack.install(step) if npm_pack.needs_pack(step) else plat.run(step, timeout=600)
         if cp.returncode != 0:
@@ -149,7 +183,7 @@ def install_deps(env, *, ci: bool = False, dry_run: bool = False,
         imp = dep.get("import")
         exists = dep.get(f"exists_{env.os_name}") or dep.get("exists")
         if ((which and winutil.which(which)) or (imp and _importable(imp, env))
-                or (exists and Path(exists).expanduser().exists())):
+                or (exists and Path(exists).expanduser().exists()) or npm_pkg_present(dep.get("npm_pkg"))):
             results.append((did, "PRESENT" + _link_bins(dep.get("link_bins", []), env, dry_run)))
             continue
         install_cmd = dep.get(f"install_{env.os_name}") or dep.get("install")

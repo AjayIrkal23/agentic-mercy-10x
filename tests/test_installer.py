@@ -102,6 +102,7 @@ def test_doctor_deterministic_checks_pass(monkeypatch, tmp_path):
     monkeypatch.setenv("HOME", str(tmp_path))
     monkeypatch.setenv("USERPROFILE", str(tmp_path))  # Path.home() on Windows (A7-13)
     monkeypatch.setenv("CLAUDE_HOOK_DOCTOR", "1")
+    live_interpreter.pin_tier(tmp_path, monkeypatch)  # FIX-r2 S3: this machine's tier, not a fallback
     # never depend on the installed claude CLI / tsc (same as test_doctor.py, I-17)
     real_which = shutil.which
     monkeypatch.setattr(shutil, "which", lambda n, *a, **k: None if n in ("claude", "tsc") else real_which(n, *a, **k))

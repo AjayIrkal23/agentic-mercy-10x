@@ -27,7 +27,7 @@ aggregator sample. `docs/**` is never searched.
 | 16 | Every new app and website is a PWA | `Every new app and every new website is a PWA` | CLAUDE.md §8, rules/frontend | text | TEXT |
 | 17 | Style: caveman + no-ai-slop + ponytail reply shape | `full technical accuracy || smallest complete change || no banned words` | CLAUDE.md §9, output-styles/caveman.md | `hooks/session-start-aggregator.py` STYLE_DIRECTIVE; output style | SOFT |
 | 18 | Machines file is private, never committed | `never commit it` | CLAUDE.md §10 | `.gitignore`, `scripts/grep_gates.py` G6/G7 | HOOK |
-| 19 | Autonomy: the user only prompts and develops | `I only prompt and develop` | CLAUDE.md §11 | `hooks/tools/selfheal-daily.py`, `tests/test_autonomy_wpd.py` | SOFT |
+| 19 | Autonomy: the user only prompts and develops | `I only prompt and develop || Never end a turn with "run X" || Ask me only for human-only steps` | CLAUDE.md §11 | `hooks/tools/selfheal-daily.py`, `tests/test_autonomy_wpd.py` | SOFT |
 | 20 | Run sudo yourself, never ask the user | `never ask me to run sudo` | machines | `scripts/sudo-askpass.sh` (gitignored) | TEXT |
 | 21 | Dev PC #2 never sleeps; full performance | `NEVER let the laptop sleep || Full performance always` | machines | text | TEXT |
 | 22 | Ubuntu + Windows parity | — | memory `cross-platform-ubuntu-windows` | `hooks/lib/platform.py`, `scripts/grep_gates.py`, CI | HOOK |

@@ -87,6 +87,25 @@ def test_the_check_still_catches_real_drift_next_to_user_additions(r, live):
     assert not ok and "enabledPlugins" in msg
 
 
+def test_a_model_key_the_user_removed_stays_removed_and_is_not_drift(r, live):
+    p, data = live
+    assert "model" in json.loads(r.render(user_path=None))
+    data.pop("model", None)
+    p.write_text(json.dumps(data), encoding="utf-8")
+    ok, msg = r.check_equivalence(live_path=p, user_path=None)
+    assert ok, msg
+    out = json.loads(r.carry_managed(r.render(user_path=None), p))
+    assert "model" not in out and "fallbackModel" in out
+
+
+def test_a_wrong_model_value_is_still_drift(r, live):
+    p, data = live
+    data["model"] = "haiku" if data.get("model") != "haiku" else "sonnet"
+    p.write_text(json.dumps(data), encoding="utf-8")
+    ok, msg = r.check_equivalence(live_path=p, user_path=None)
+    assert not ok and "model" in msg
+
+
 def test_settings_safety_does_not_fail_on_a_user_added_deny_rule(live):
     import doctor_checks
     p, _ = live

@@ -20,9 +20,6 @@ Never re-implement the denied tool's job in the shell, and never batch edits int
 script because it is faster — take the N `Edit` calls. If there is genuinely no
 sanctioned path, stop and say so.
 
-`bash-write-gate` detects these patterns; its hard-deny layer is off by default
-(`BASH_WRITE_GATE_DENY_SHELL_WRITES=1` arms it), so this rule is carried by instruction.
-
-Repo-scoped never/always rules are hookify files
-(`<repo>/.claude/hookify.<name>.local.md`, skill `hookify-rules`); Claude writes them
-when I say "never do X in this repo", and the `hookify-gate` link enforces them.
+`bash-write-gate` advises once per kind per session (deny only with
+`BASH_WRITE_GATE_DENY_SHELL_WRITES=1`). "Never do X in this repo" → a hookify rule
+(skill `hookify-rules`).

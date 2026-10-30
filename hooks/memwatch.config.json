@@ -10,6 +10,7 @@
   "kill_policy": {"enabled": true, "stage_holdoff_s": 20, "emergency_mb": 1500, "idle_min": 10, "victim_interval_s": 10, "stage3_after_s": 40,
                   "victims": ["Isolated Web Co", "Web Content", "WebExtensions", "WebKitWebProcess", "WebKitNetworkProcess"],
                   "victim_cmd_re": "(^|/)(tsserver|tsc|vitest|jest|esbuild|vite|webpack|cargo|rustc|gradle|gopls)(\\.m?js|\\.cjs)?(\\s|$)",
+                  "claude_cmd_re": "(^|/)claude(\\s|$)|/claude/versions/\\d|\\bclaude bg-pty-host\\b|--bg-pty-host\\b|@anthropic-ai/claude-code/|(^|/)claude-code/cli\\.js\\b",
                   "browser_parents": ["firefox", "firefox-bin", "chrome", "chromium", "chromium-browser", "brave", "electron", "code", "msedge"],
                   "protected": ["claude", "tmux", "tmux: server", "gnome-shell", "mutter", "Xwayland", "pipewire", "wireplumber", "ptyxis", "ptyxis-agent", "gnome-terminal-", "kitty", "alacritty", "sshd", "systemd", "(sd-pam)", "dbus-daemon", "dbus-broker", "ollama"]},
   "stuck": {"scan_s": 60, "pending_bash_s": 1800},
