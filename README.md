@@ -6,7 +6,7 @@
 
 ### One install, and every Claude Code prompt gets the right skill, tool, model and check.
 
-![Version](https://img.shields.io/badge/version-4.3.1-2E7D32?style=flat-square)
+![Version](https://img.shields.io/badge/version-5.0.0-2E7D32?style=flat-square)
 ![Claude Code](https://img.shields.io/badge/Claude_Code-2.1.288%2B_%C2%B7_tested_2.1.314-D97757?style=flat-square)
 ![Models](https://img.shields.io/badge/models-Haiku_5.5_%C2%B7_Sonnet_5.5_%C2%B7_Opus_5.5-D97757?style=flat-square)
 ![Platform](https://img.shields.io/badge/platform-Ubuntu%20%C2%B7%20macOS%20%C2%B7%20Windows-E95420?style=flat-square)

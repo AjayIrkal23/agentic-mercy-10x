@@ -1,6 +1,34 @@
 # Changelog
 
-## v4.3.1 2026-10-30 audit2 fix pass (not yet released)
+## v5.0.0 2026-10-30 ECC merge, autonomous OOM guard, plan-tier routing, dynamic workflows
+
+The first release since v4.2.0. It bundles v4.3.0 (the merge), v4.3.1 (the audit2 fix pass) and
+v4.3.2 (fixes from a live install on a second machine); their detail follows below.
+
+- **ECC merged without duplicates**: 1,846 components inventoried (696 workbench, 1,150 ECC), each
+  given one action (keep, optimize, merge, adopt, library, skip); 32 ECC items adopted as core
+  (hookify, config protection, context monitor, strategic compact, continuous learning), 356 merged
+  into existing skills, hooks and agents, 596 in a zero-cost `library/ecc/` the router loads on demand.
+- **Autonomous OOM guard**: `claude-memwatch` (PSI + MemAvailable, kill ladder that never picks the
+  active session), session ledger and restore, `bin/claude` scopes with `OOMPolicy=continue`,
+  lingering, zram; every cap follows RAM (MemTotal minus 4 GiB, never below half; memwatch warn 15 %,
+  crit 8 %); installs and heals itself.
+- **Plan-tier model routing**: Pro, Max 5x, Max 20x and API detected at session start; Haiku-first
+  role matrix; Opus and Fable only within the tier ceiling and on request; 80 % usage guard; the
+  launcher sets the tier's main model.
+- **Dynamic workflows**: seven saved workflows (invoke, invoke-fullstack, review, audit, research,
+  migrate, build) rendered per tier; the router's WORKFLOW line picks them; turn budgets with a
+  report reserve.
+- **Router accuracy**: misroutes on 616 live prompts down from 29.2 % to 1.1 %, with a replay test.
+- **Gates**: settings, config and wiring protection (incl. mv/rm/dd/git checkout), git hook bypass
+  and staged-secret scans, last-known-good dispatcher config.
+- **Second-machine installer**: remote ollama per machine, npm CLIs linked from npm's prefix,
+  lean-ctx from a pinned, checksummed release without its npm scripts, tailored per-machine files,
+  doctor rows for PATH, lean-ctx runtime, linger and memory-cap kills.
+- Verified: full suite 3,673 passed on the owner PC and 3,671 on a fresh 16 GB Ubuntu 24.04 install;
+  doctor 0 FAIL on both; gitleaks and the known-values scan clean on every pushed range.
+
+## v4.3.1 – v4.3.2 2026-10-30 audit2 fix pass and second-machine fixes
 
 Why: a six-report audit (router quality, fresh install on a 15 GiB headless box, security,
 runtime, static integrity, docs) found misroutes on 29 % of live prompts, an install that
