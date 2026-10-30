@@ -85,3 +85,5 @@ is fine.
 Browser end-to-end flows (`webapp-testing`), TDD discipline itself
 (`test-driven-development`), suites that pass while the app is broken
 (`false-green-tests`).
+
+ECC graft: `references/ecc-coverage-tiers.md` — coverage tiers by file type, role queries, one behavior per test.

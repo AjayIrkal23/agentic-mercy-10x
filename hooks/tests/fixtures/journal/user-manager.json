@@ -1,0 +1,2 @@
+{"__REALTIME_TIMESTAMP":"1761700002000000","_TRANSPORT":"journal","SYSLOG_IDENTIFIER":"systemd","_SYSTEMD_UNIT":"user@1000.service","PRIORITY":"4","USER_UNIT":"ptyxis-spawn-aaaa.scope","MESSAGE":"ptyxis-spawn-aaaa.scope: The kernel OOM killer killed some processes in this unit."}
+{"__REALTIME_TIMESTAMP":"1761700002500000","_TRANSPORT":"journal","SYSLOG_IDENTIFIER":"systemd","_SYSTEMD_UNIT":"user@1000.service","PRIORITY":"6","USER_UNIT":"ptyxis-spawn-aaaa.scope","MESSAGE_ID":"9d1aaa27d60140bd96365438aad20286","MESSAGE":"Stopped ptyxis-spawn-aaaa.scope."}

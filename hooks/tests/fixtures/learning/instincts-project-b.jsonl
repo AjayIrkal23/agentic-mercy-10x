@@ -1,0 +1,3 @@
+{"id": "promote-me", "text": "Run the type checker before every commit in this repository", "domain": "workflow", "confidence": 0.85, "seen": 6, "first": "__TS__", "last": "__TS__", "promoted": false, "source": "ollama"}
+{"id": "docstrings-b", "text": "Write docstrings for every public function in the services layer", "domain": "docs", "confidence": 0.6, "seen": 3, "first": "__TS__", "last": "__TS__", "promoted": false, "source": "ollama"}
+{"id": "commits-b", "text": "Prefer small focused commits with descriptive messages", "domain": "git", "confidence": 0.7, "seen": 4, "first": "__TS__", "last": "__TS__", "promoted": false, "source": "ollama"}

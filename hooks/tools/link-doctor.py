@@ -33,11 +33,13 @@ from pathlib import Path
 _HOOKS = Path(__file__).resolve().parents[1]
 _CONFIG = _HOOKS / "dispatch.config.json"
 
-_EVENT_TOKEN_TO_NAME = {
-    "session-start": "SessionStart", "user-prompt-submit": "UserPromptSubmit",
-    "pre-tool-use": "PreToolUse", "post-tool-use": "PostToolUse", "stop": "Stop",
-    "subagent-stop": "SubagentStop", "pre-compact": "PreCompact", "session-end": "SessionEnd",
-}
+try:
+    if str(_HOOKS) not in sys.path:
+        sys.path.insert(0, str(_HOOKS))
+    from dispatch import _EVENT_NAME as _EVENT_TOKEN_TO_NAME  # one map, owned by dispatch.py
+except Exception:  # noqa: BLE001  a broken dispatcher must not hide the doctor
+    _EVENT_TOKEN_TO_NAME = {"session-start": "SessionStart", "user-prompt-submit": "UserPromptSubmit",
+                            "pre-tool-use": "PreToolUse", "post-tool-use": "PostToolUse", "stop": "Stop"}
 
 
 def _sample_tool(tools: str | None) -> str:
@@ -56,9 +58,7 @@ def _sample_tool(tools: str | None) -> str:
 
 
 def _resolve_cmd(cmd: list) -> list:
-    import os
-    import shutil
-    py = sys.executable or shutil.which("python3") or "python3"
+    py =sys.executable or shutil.which("python3") or "python3"
     node = shutil.which("node") or shutil.which("nodejs") or "node"
     subs = {"{PY}": py, "{NODE}": node, "{HOOKS}": str(_HOOKS), "{HOME}": os.path.expanduser("~")}
     out = []
@@ -87,6 +87,20 @@ def _payload_for(event_token: str, link: dict) -> dict:
             p["tool_input"] = {"file_path": "/tmp/link_doctor_probe.py"}
         else:
             p["tool_input"] = {}
+    claude_home = Path.home() / ".claude"
+    extras = {
+        "user-prompt-submit": {"prompt": "add a paginated GET /products endpoint", "cwd": tempfile.gettempdir()},
+        "stop-failure": {"error": "rate_limit", "error_details": "", "last_assistant_message": ""},
+        "instructions-loaded": {"file_path": str(claude_home / "CLAUDE.md"), "memory_type": "User",
+                                "load_reason": "session_start", "globs": []},
+        "post-tool-use-failure": {"tool_name": tool or "Bash", "tool_input": {"command": "false"},
+                                  "error": "exit 1"},
+        "subagent-start": {"agent_type": "qa-verifier", "agent_id": "a1"},
+        "teammate-idle": {"teammate_name": "t", "team_name": "x"},
+        "config-change": {"source": "user_settings", "file_path": str(claude_home / "settings.json")},
+        "pre-compact": {"trigger": "auto"},
+    }
+    p.update(extras.get(event_token, {}))
     return p
 
 
@@ -98,6 +112,8 @@ def _child_env(scratch: str) -> dict:
     for var in ("CLAUDE_HOOK_DOTSTATE_DIR", "CLAUDE_HOOK_STATE_DIR", "CLAUDE_HOOK_TELEMETRY_DIR"):
         if not env.get(var):
             env[var] = os.path.join(scratch, var.lower())
+    # dry-fire flag: the router records no pushed-skills and writes no manifest
+    env.setdefault("CLAUDE_HOOK_DOCTOR", "1")
     return env
 
 

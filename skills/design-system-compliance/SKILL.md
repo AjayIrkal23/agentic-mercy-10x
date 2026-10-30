@@ -34,6 +34,8 @@ when_to_use: 'After building or restyling a component: check computed styles in 
 
 > **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted.
 
+> **ECC graft (ecc:skills/design-system@25278e7d):** extract tokens in this order: color, type, space, radius, shadow. Report a 0–100 adherence score = the share of computed styles that resolve to a token.
+
 # Does the rendered UI actually use the design system?
 
 Reading the source tells you what the component _asks_ for. It cannot tell you what the browser resolved: a token overridden three layers up, a hardcoded `#3b82f6` that happens to look close, a dark-theme scope that never applied. That answer only exists in the running page.

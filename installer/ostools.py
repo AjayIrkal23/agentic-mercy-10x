@@ -27,6 +27,11 @@ def missing_tools(manifest: dict, which: Callable = shutil.which) -> list[dict]:
     return [t for t in (manifest.get("user_space") or {}).get("os_tools", []) if not which(t["bin"])]
 
 
+def apt_available(which: Callable = shutil.which, system: str | None = None) -> bool:
+    """Linux with apt-get on PATH (used by golive.py before the zram step; never calls sudo)."""
+    return (system or _pf.system()) == "Linux" and which("apt-get") is not None
+
+
 def _geteuid() -> int:
     return os.geteuid() if hasattr(os, "geteuid") else 1
 

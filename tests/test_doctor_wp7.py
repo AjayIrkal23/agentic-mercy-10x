@@ -236,3 +236,80 @@ def test_leanctx_note_names_unmanaged_shell_keys(tmp_path):
     note = doctor_host.leanctx_unmanaged_note(cfg, {"top": {"shadow_mode": False}})
     assert "shell_security=off" in note and "shell_allowlist_extra(2)" in note and "shadow_mode" not in note
     assert doctor_host.leanctx_unmanaged_note(tmp_path / "absent.toml", {}) == ""
+
+
+# --- hooks-hygiene-mod step 17: links.py is a symlink scan only ------------------- #
+def test_links_only_scans_symlinks(tmp_path):
+    import links
+    assert not hasattr(links, "materialize") and not hasattr(links, "_materialize_one")
+    assert not hasattr(links, "_junction")
+    (tmp_path / "a").mkdir()
+    if os.name != "nt":
+        (tmp_path / "b").symlink_to(tmp_path / "a", target_is_directory=True)
+    assert links.find_symlinks(tmp_path) == ([tmp_path / "b"] if os.name != "nt" else [])
+
+
+# --- step 18: judges come from model-policy.json roles ---------------------------- #
+def _routing(tmp_path, policy):
+    (tmp_path / "model-policy.json").write_text(json.dumps(policy), encoding="utf-8")
+    rows = []
+    doctor_checks.check_model_routing(rows, tmp_path, tmp_path, lambda r, n, s, d: r.append((n, s, d)),
+                                      None, sys.executable, "PASS", "FAIL", "WARN")
+    return next((s, d) for n, s, d in rows if n == "model-routing")
+
+
+def test_judges_come_from_policy_roles(tmp_path):
+    p = json.loads((_ROOT / "hooks" / "model-policy.json").read_text(encoding="utf-8"))
+    assert _routing(tmp_path, p)[0] == "PASS"
+    p["roles"]["agents"]["new-judge"] = "judge"                 # declared judge, not pinned → FAIL
+    st, det = _routing(tmp_path, p)
+    assert st == "FAIL" and "new-judge" in det
+
+
+def test_legacy_policy_without_roles_uses_the_known_judges(tmp_path):
+    p = json.loads((_ROOT / "hooks" / "model-policy.json").read_text(encoding="utf-8"))
+    p.pop("roles")
+    p.pop("tiers", None)
+    st, det = _routing(tmp_path, p)
+    assert st == "PASS" and "(no tiers block)" in det
+
+
+# --- step 19: unpinned / @latest live launchers ----------------------------------- #
+def test_roster_warns_on_unpinned_or_latest_live_launchers():
+    m = _manifest(_srv("a", "@a/a@1.0.0"), _srv("b", "@b/b@2.0.0"))
+    live = {"a": {"command": "npx", "args": ["-y", "@a/a"]}, "b": {"command": "npx", "args": ["-y", "@b/b@latest"]}}
+    st, det = doctor_mcp.roster_status(m, live, set())
+    assert st == "WARN" and "unpinned" in det and "a @a/a" in det and "@latest" in det
+    assert doctor_mcp.unpinned_live({"c": {"command": "uvx", "args": ["tool==1.2.3"]},
+                                     "d": {"url": "https://x"}}) == []
+
+
+# --- step 20: mcp_inventory --md / --json, LF stdout ------------------------------ #
+def test_mcp_inventory_md_and_json(tmp_path):
+    (tmp_path / ".claude.json").write_text(json.dumps(
+        {"mcpServers": {"semgrep": {"command": "semgrep", "args": ["mcp"]}}, "projects": {}}), encoding="utf-8")
+    (tmp_path / ".claude").mkdir()
+    env = {**os.environ, "HOME": str(tmp_path), "USERPROFILE": str(tmp_path)}
+    script = str(_ROOT / "scripts" / "mcp_inventory.py")
+    md = subprocess.run([sys.executable, script, "--md"], capture_output=True, env=env, timeout=30)
+    out = md.stdout.decode("utf-8")
+    assert md.returncode == 0 and out.startswith("| Server |") and "`semgrep`" in out
+    assert out.endswith("\n") and not out.endswith("\n\n") and "\r" not in out
+    js = subprocess.run([sys.executable, script, "--json"], capture_output=True, text=True, env=env, timeout=30)
+    assert json.loads(js.stdout)[0]["name"] == "semgrep"
+
+
+# --- step 21: add-db-mcp writes LF and finds the checkout template ---------------- #
+def test_add_db_mcp_writes_lf_and_finds_the_repo_template(tmp_path):
+    repo = tmp_path / "app"
+    repo.mkdir()
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    (repo / "package.json").write_text('{"dependencies": {"mongoose": "^8"}}', encoding="utf-8")
+    home = tmp_path / "home"
+    home.mkdir()
+    cp = subprocess.run([sys.executable, str(_ROOT / "scripts" / "add-db-mcp.py"), "--mongodb"], cwd=repo,
+                        capture_output=True, text=True,
+                        env={**os.environ, "HOME": str(home), "USERPROFILE": str(home)}, timeout=30)
+    assert cp.returncode == 0, cp.stderr
+    raw = (repo / ".mcp.json").read_bytes()
+    assert b"\r\n" not in raw and raw.endswith(b"\n") and b'"mongodb"' in raw

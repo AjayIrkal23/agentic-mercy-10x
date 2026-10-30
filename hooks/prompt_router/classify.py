@@ -31,7 +31,7 @@ _AUTON_CONFIG = _HOOKS / "autonomous-skill-router.config.json"
 # Short tokens (<= 3 chars) that are unambiguous enough to keep as keywords.
 _SHORT_ALLOW = frozenset({
     "api", "ui", "ux", "sql", "css", "tdd", "e2e", "a11y", "seo", "glb", "r3f",
-    "ci", "cd", "go", "tsx", "3d",
+    "ci", "cd", "go", "tsx", "3d", "5x", "20x",
     # high-precision whole words (word-boundary matched): without "bug"/"fix",
     # "fix the login bug" routed to nothing
     "bug", "fix", "404", "xss", "jwt", "csp", "pii", "tls", "ssl", "adr", "prd", "rfc", "uat",
@@ -69,6 +69,18 @@ _HEAVY_SIGNALS = (
     "new architecture", "system design", "across the codebase", "multi-module",
     "infra", "orchestration", "state machine", "many interdependent",
 )
+# whole-word match (M1): "infrastructure" no longer counts as "infra"
+_HEAVY_RX = re.compile(r"(?<!\w)(?:" + "|".join(
+    re.escape(s) for s in sorted(_HEAVY_SIGNALS, key=len, reverse=True)) + r")(?!\w)")
+
+# R3.6 UI veto defaults (router.config.json additions.ui_veto overrides)
+_VETO_DEFAULT = {
+    "words": ["redesign", "design", "selector", "picker", "switcher", "restyle"],
+    "ui_nouns": ["page", "pages", "component", "components", "screen", "screens", "layout", "button",
+                 "buttons", "css", "form", "forms", "modal", "landing", "hero", "ui", "ux", "frontend",
+                 "dashboard", "widget", "panel", "view", "menu", "navbar", "sidebar"],
+    "window": 6,
+}
 
 
 def _auton_categories() -> dict:
@@ -264,7 +276,40 @@ def _matcher() -> KeywordMatcher:
     groups["ui"] = idx["ui"]
     groups["ui_exclude"] = idx["ui_exclude"]
     groups["arch"] = idx["arch"]
+    weak = _router_additions().get("model_routing_weak")
+    groups["mr_weak"] = [str(k).lower() for k in weak] if isinstance(weak, list) else []
     return KeywordMatcher(groups)
+
+
+@lru_cache(maxsize=1)
+def _veto_cfg() -> tuple[frozenset, frozenset, int]:
+    """(veto words, UI nouns, window) from ``additions.ui_veto`` (R3.6)."""
+    v = _router_additions().get("ui_veto") or {}
+    if not isinstance(v, dict):
+        v = {}
+    vw = frozenset(str(w).lower() for w in (v.get("words") or _VETO_DEFAULT["words"]))
+    nouns = frozenset(str(n).lower() for n in (v.get("ui_nouns") or _VETO_DEFAULT["ui_nouns"]))
+    try:
+        win = int(v.get("window", _VETO_DEFAULT["window"]))
+    except (TypeError, ValueError):
+        win = _VETO_DEFAULT["window"]
+    return vw, nouns, win
+
+
+def _word_positions(text_words: tuple[str, ...], word: str) -> list[int]:
+    """Start indexes of ``word`` (a phrase) in the prompt; the last word may carry s/es,
+    as act keywords match plurals."""
+    parts = words(word)
+    if not parts:
+        return []
+    n, last = len(parts), parts[-1]
+    forms = {last, last + "s", last + "es"}
+    return [i for i in range(len(text_words) - n + 1)
+            if text_words[i:i + n - 1] == parts[:-1] and text_words[i + n - 1] in forms]
+
+
+def _noun_near(text_words: tuple[str, ...], positions: list[int], nouns, window: int) -> bool:
+    return any(w in nouns for i in positions for w in text_words[max(0, i - window): i + window + 1])
 
 
 # --------------------------------------------------------------------------- #
@@ -376,15 +421,24 @@ def _classify_impl(payload: dict) -> TaskProfile:
         if g.startswith("act:"):
             prof.intents[g[4:]] = len(kws)
             prof.keywords_hit.extend(kws)
+    # a bare model name ("use opus for this: ...") is the override phrase, not routing
+    # talk: weak tokens raise MODEL_ROUTING only in pairs (REVIEW2 Fix 1)
+    weak = set(hits.get("mr_weak", []))
+    mr_weak_only = "MODEL_ROUTING" not in prof.intents and len(weak) >= 2
+    if mr_weak_only:
+        prof.intents["MODEL_ROUTING"] = len(weak)
+        prof.keywords_hit.extend(sorted(weak))
 
     # --- arch / explore ---
     prof.arch_hit = list(hits.get("arch", []))
     prof.is_arch = bool(prof.arch_hit)
 
     # --- surfaces: prompt paths + vocab, cwd, repo stack (modules/surface.py) ---
+    named: set[str] = set()   # surfaces the prompt itself names ("react", a .tsx path)
     try:
         from prompt_router.modules import surface as _surface  # noqa: PLC0415
         surfs, source, weak = _surface.detect(payload, text=text)
+        named = set(surfs) - set(weak) if source == "prompt" else set()
         prof.surfaces |= surfs
         prof.surface_source = source
         prof.weak_surfaces = set(weak)
@@ -395,8 +449,24 @@ def _classify_impl(payload: dict) -> TaskProfile:
     # A UI signal needs real weight (one non-vague keyword, or several vague ones:
     # "page"/"table"/"form" alone are not a UI task) and must not contradict a
     # prompt that is explicitly backend-only ("endpoint … with pagination").
+    # R3.6 veto: "redesign"/"selector"/... score UI only with a UI noun within `window`
+    # words; with a MODEL_ROUTING hit the same rule drops them from DESIGN too.
+    vw, nouns, win = _veto_cfg()
+    tw = words(text)
+    mr = "MODEL_ROUTING" in prof.intents
+    noun_anywhere = bool(nouns & set(tw))
+
+    def _vetoed(kw: str) -> bool:
+        return kw in vw and not _noun_near(tw, _word_positions(tw, kw), nouns, win)
+
+    if mr:
+        design = [k for k in hits.get("act:DESIGN", []) if not _vetoed(k)]
+        if design:
+            prof.intents["DESIGN"] = len(design)
+        else:
+            prof.intents.pop("DESIGN", None)
     if not hits.get("ui_exclude"):
-        prof.ui_hit = list(hits.get("ui", []))
+        prof.ui_hit = [k for k in hits.get("ui", []) if not _vetoed(k)]
     ui_weight = sum(idx["ui_w"].get(k, 1.0) for k in prof.ui_hit)
     backend_only = (prof.surface_source == "prompt" and "backend" in prof.surfaces
                     and "frontend" not in prof.surfaces)
@@ -426,8 +496,24 @@ def _classify_impl(payload: dict) -> TaskProfile:
     if {"frontend", "backend"} <= prof.surfaces:
         prof.surfaces.add("fullstack")
 
+    # --- model-routing talk is claude-infra work, not frontend (R3.6) ---
+    if mr:
+        prof.surfaces.add("claude-infra")
+        # "use opus to build the checkout in react" stays frontend: the prompt named it;
+        # so does a UI task that only names models ("opus or sonnet for the data table").
+        # A routing noun ("subagent model routing") keeps the strict rule: "switch" there is a verb.
+        if (not noun_anywhere and "frontend" not in named
+                and not (mr_weak_only and prof.is_ui)):
+            fe = {"frontend", "ui", "fullstack"}
+            prof.surfaces -= fe
+            prof.weak_surfaces -= fe
+            prof.is_ui = False
+            prof.path_suffixes = []
+        if not prof.surface_source:
+            prof.surface_source = "prompt"
+
     # --- heavy signal scan (size/risk ONLY — never the keyword trigger surface) ---
-    heavy_count = sum(1 for s in _HEAVY_SIGNALS if s in text)
+    heavy_count = len({m.group(0) for m in _HEAVY_RX.finditer(text)})
 
     # --- size ---
     if "LARGE" in prof.intents or heavy_count >= 2:

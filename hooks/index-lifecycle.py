@@ -46,6 +46,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import itertools
 import json
 import os
 import re
@@ -109,6 +110,11 @@ _DEFAULT_CONFIG = {
     "relax_read_gate_while_building": True,
     # no "url": the probe follows OLLAMA_HOST (plat.ollama_url), like the MCP env the installer writes
     "summarizer_healthcheck": {"enabled": True, "timeout_ms": 800, "wait_s": 90},
+    # L6 OOM guard: tier from state/mem-pressure.json (memwatch); missing/stale = ok
+    "memory": {"tier_stale_s": 30, "defer_at": "warn", "fallback_min_avail_mb": 12288,
+               "memory_high": "3G", "memory_max": "5G", "swap_max": "0", "cpu_weight": 20,
+               "io_weight": 20, "nice": 19, "ionice_class": 3,
+               "defer_surfaces": ["jcodemunch", "jdocmunch", "graphify"]},
 }
 
 NEUTRAL_DEFER_LINE = "summarizer unavailable; index refresh deferred, retrying automatically"
@@ -122,6 +128,9 @@ _GIT_MOVES_RE = re.compile(
     r"(?![\w-])")
 _sleep = time.sleep  # indirection so tests never really wait
 _LAST_ERR = [""]  # the last builder failure tail, read by mode_build for the build_fail row
+# [cause, detail]: cause "memory" | "summarizer" says why the last builder returned "DEFERRED"
+# (mode_build names its row after it); detail is the memory reason ("tier warn", "mem_available N")
+_LAST_DEFER = ["", ""]
 
 
 # --------------------------------------------------------------------------- #
@@ -776,12 +785,16 @@ def _build_jcodemunch(root: Path, incremental: bool, paths, cfg: dict):
     and the next probe retries."""
     if not _which("jcodemunch-mcp"):
         return False
+    reason = _memory_defer_reason("jcodemunch", cfg)
+    if reason:
+        return _defer(reason)
     db = _index_db_for(root)
     no_ai = False
     if not _wait_summarizer(cfg):
         if incremental or db is not None:
             _telem("summarizer_down_build_deferred", surface="jcodemunch",
                    key=_repo_key(root), incremental=bool(incremental))
+            _LAST_DEFER[0] = "summarizer"
             return "DEFERRED"
         no_ai = True
     env = _mcp_env("jcodemunch")
@@ -799,14 +812,15 @@ def _build_jcodemunch(root: Path, incremental: bool, paths, cfg: dict):
             return True
         failed = 0
         for pth in code_paths:
-            cp = _run(["jcodemunch-mcp", "index-file", str(pth)], timeout=to, env=env)
+            cp = _run_build("jcodemunch", root, ["jcodemunch-mcp", "index-file", str(pth)], cfg,
+                            timeout=to, env=env)
             if not _ok(cp):
                 failed += 1
                 _telem("index_file_fail", surface="jcodemunch", path=str(pth)[-120:],
                        rc=cp.returncode, err=_LAST_ERR[0][-200:])
-        return failed < len(code_paths)
+        return failed == 0  # one missing file is a stale index, not a FRESH one
     cmd = ["jcodemunch-mcp", "index"] + (["--no-ai-summaries"] if no_ai else []) + [str(root)]
-    return _ok(_run(cmd, timeout=to, env=env))
+    return _ok(_run_build("jcodemunch", root, cmd, cfg, timeout=to, env=env))
 
 
 def _doc_vectors(root: Path) -> bool:
@@ -826,10 +840,14 @@ def _build_jdocmunch(root: Path, incremental: bool, paths, cfg: dict):
         return False
     name = _doc_name_for(root)
     embed = _doc_vectors(root)
+    reason = _memory_defer_reason("jdocmunch", cfg, embed=embed)
+    if reason:
+        return _defer(reason)
     if embed and not _wait_summarizer(cfg):
         # a lexical save now leaves those sections without vectors until they change again
         _telem("summarizer_down_build_deferred", surface="jdocmunch", key=_repo_key(root),
                incremental=bool(incremental))
+        _LAST_DEFER[0] = "summarizer"
         return "DEFERRED"
     env = _mcp_env("jdocmunch")  # its provider, and the manifest's telemetry-off flag
     to = cfg["build_timeouts_s"]["jdocmunch_embed" if embed else "jdocmunch"]
@@ -844,15 +862,17 @@ def _build_jdocmunch(root: Path, incremental: bool, paths, cfg: dict):
         listing = STATE_DIR / f".jdoc-paths-{os.getpid()}-{int(time.time())}.txt"
         try:
             listing.write_text("\n".join(docs) + "\n", encoding="utf-8")
-            return _ok(_run(["jdocmunch-mcp", "index-local", "--path", str(root), "--name", name,
-                             "--paths-from", str(listing)] + flags, timeout=to, env=env))
+            return _ok(_run_build("jdocmunch", root,
+                                  ["jdocmunch-mcp", "index-local", "--path", str(root), "--name", name,
+                                   "--paths-from", str(listing)] + flags, cfg, timeout=to, env=env))
         finally:
             try:
                 listing.unlink()
             except OSError:
                 pass
-    return _ok(_run(["jdocmunch-mcp", "index-local", "--path", str(root), "--name", name] + flags,
-                    timeout=to, env=env))
+    return _ok(_run_build("jdocmunch", root,
+                          ["jdocmunch-mcp", "index-local", "--path", str(root), "--name", name] + flags,
+                          cfg, timeout=to, env=env))
 
 
 _BACKUP_DIR_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
@@ -874,10 +894,6 @@ def _prune_graph_backups(root: Path) -> None:
         pass
 
 
-GRAPHIFY_MIN_AVAIL_MB = 12288  # graphify peaks ~4.4 GB on site-sync-vista, agents' vitest ~3 GB more
-GRAPHIFY_MEMORY_MAX = "5G"
-
-
 def _mem_available_mb():
     """MemAvailable in MB, or None where /proc/meminfo does not exist (Windows, macOS)."""
     try:
@@ -890,25 +906,118 @@ def _mem_available_mb():
     return None
 
 
-def _graphify_cmd(root: Path) -> list:
-    cmd = ["graphify", "update", str(root)]
+_TIERS = ("ok", "warn", "crit")
+
+
+def _mem_tier_fresh(cfg: dict) -> str | None:
+    """ok|warn|crit from a live memwatch reading; None when the file is missing, stale
+    (older than tier_stale_s) or unreadable, i.e. no sentinel is speaking right now."""
+    if not _LIBS_OK:
+        return None
+    stale = float(cfg["memory"].get("tier_stale_s", 30))
+    try:
+        from lib import memwatch_state  # oom-sentinel; optional
+        st = memwatch_state.read(stale_s=stale)
+        if getattr(st, "stale", False):
+            return None
+        lvl = getattr(st, "level", "ok")
+        return lvl if lvl in _TIERS else "ok"
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        d = json.loads((plat.state_dir() / "mem-pressure.json").read_text(encoding="utf-8"))
+        if time.time() - float(d.get("ts", 0)) > stale:
+            return None
+        return d["level"] if d.get("level") in _TIERS else "ok"
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _mem_tier(cfg: dict) -> str:
+    """ok|warn|crit from the memwatch state; anything missing, stale or odd is ok (fail-open)."""
+    return _mem_tier_fresh(cfg) or "ok"
+
+
+def _tier_blocks(level: str, cfg: dict) -> bool:
+    at = cfg["memory"].get("defer_at", "warn")
+    return level in _TIERS and _TIERS.index(level) >= _TIERS.index(at if at in _TIERS else "warn")
+
+
+def _memory_defer_reason(surface: str, cfg: dict, *, embed: bool | None = None) -> str:
+    """'' when the build may run; else 'tier warn|crit' or 'mem_available <mb>'. jdocmunch is
+    gated only when it embeds (embed=False skips it); dox never. The MemAvailable floor applies
+    to graphify only and only while no fresh tier reading exists (memwatch not installed, or
+    down with its last file left behind)."""
+    mem = cfg["memory"]
+    if surface not in mem.get("defer_surfaces", ()) or (surface == "jdocmunch" and embed is False):
+        return ""
+    fresh = _mem_tier_fresh(cfg)
+    if fresh is not None and _tier_blocks(fresh, cfg):
+        return f"tier {fresh}"
+    if surface == "graphify" and fresh is None:
+        avail = _mem_available_mb()  # graphify peaks ~4.4 GB on a large repo
+        if avail is not None and avail < int(mem.get("fallback_min_avail_mb", 12288)):
+            return f"mem_available {avail}"
+    return ""
+
+
+def _defer(reason: str) -> str:
+    """Memory deferral: "DEFERRED" (STALE, no failure count); the next probe retries."""
+    _LAST_DEFER[0], _LAST_DEFER[1] = "memory", reason  # mode_build writes the one telemetry row
+    return "DEFERRED"
+
+
+def _tier_defer(surface: str, root, cfg: dict) -> str:
+    """The tier reason ('tier warn|crit') that holds `surface` back at probe/flush time, else ''.
+    Only the tier gates here; the MemAvailable fallback stays inside the graphify builder."""
+    try:
+        embed = _doc_vectors(Path(root)) if surface == "jdocmunch" else None
+        reason = _memory_defer_reason(surface, cfg, embed=embed)
+    except Exception:  # noqa: BLE001 - fail open: build
+        return ""
+    return reason if reason.startswith("tier") else ""
+
+
+_SCOPE_SEQ = itertools.count()
+
+
+def _scoped(surface: str, root: Path, cmd: list, cfg: dict) -> list:
+    """Wrap a builder command in its own transient scope (capped memory, low CPU/IO weight)
+    when systemd-run and the user bus exist; the plain command on Windows or without them.
+    Own cgroup: an OOM kill of a builder (graphify, 2026-10-26) then never stops the caller's
+    scope, which takes every Claude session and tmux server in it (OOMPolicy=stop). The unit
+    name is unique per call (surface, repo, pid, sequence): systemd removes a finished scope
+    asynchronously, so a reused name failed back-to-back index-file runs with "Unit ... was
+    already loaded". The `claude-index-` prefix is what memwatch's shed matcher keys on."""
     bus = Path(os.environ.get("XDG_RUNTIME_DIR", "/nonexistent")) / "bus"
-    if _which("systemd-run") and bus.exists():
-        # Own cgroup: an OOM kill of graphify (2026-10-26 03:34, 16:58) then never stops the
-        # caller's scope, which takes every Claude session and tmux server in it (OOMPolicy=stop).
-        cmd = ["systemd-run", "--user", "--scope", "--quiet",
-               "-p", f"MemoryMax={GRAPHIFY_MEMORY_MAX}", "-p", "MemorySwapMax=0"] + cmd
-    return cmd
+    if not _LIBS_OK or plat.IS_WINDOWS or not _which("systemd-run") or not bus.exists():
+        return list(cmd)
+    mem = cfg["memory"]
+    pre = ["systemd-run", "--user", "--scope", "--quiet", "--collect",
+           "--unit", f"claude-index-{surface}-{_repo_key(root)[-8:]}-{os.getpid()}-{next(_SCOPE_SEQ)}",
+           "-p", f"MemoryHigh={mem['memory_high']}", "-p", f"MemoryMax={mem['memory_max']}",
+           "-p", f"MemorySwapMax={mem['swap_max']}", "-p", f"CPUWeight={mem['cpu_weight']}",
+           "-p", f"IOWeight={mem['io_weight']}"]
+    if _which("nice"):
+        pre += ["nice", "-n", str(mem["nice"])]
+    if _which("ionice"):
+        pre += ["ionice", "-c", str(mem["ionice_class"])]
+    return pre + list(cmd)
 
 
-def _build_graphify(root: Path, incremental: bool, paths, cfg: dict) -> bool:
+def _run_build(surface: str, root: Path, cmd, cfg: dict, timeout, env=None):
+    return _run(_scoped(surface, root, cmd, cfg), timeout=timeout, env=env)
+
+
+def _build_graphify(root: Path, incremental: bool, paths, cfg: dict):
+    """True/False, or "DEFERRED" under memory pressure (no failure count)."""
     if not _which("graphify"):
         return False
-    avail = _mem_available_mb()
-    if avail is not None and avail < GRAPHIFY_MIN_AVAIL_MB:
-        _telem("build_deferred", surface="graphify", key=_repo_key(root), mem_available_mb=avail)
-        return False  # FAILED backoff; the next probe retries when memory is back
-    ok = _ok(_run(_graphify_cmd(root), timeout=cfg["build_timeouts_s"]["graphify"]))
+    reason = _memory_defer_reason("graphify", cfg)
+    if reason:
+        return _defer(reason)
+    ok = _ok(_run_build("graphify", root, ["graphify", "update", str(root)], cfg,
+                        timeout=cfg["build_timeouts_s"]["graphify"]))
     if ok:
         _prune_graph_backups(root)
     return ok
@@ -927,8 +1036,8 @@ def _build_dox(root: Path, incremental: bool, paths, cfg: dict) -> bool:
             return True
     except OSError:
         pass
-    return _ok(_run([_python_exe(), str(HOOK_DIR / "dox_engine.py"), "sweep", str(root)],
-                    timeout=cfg["build_timeouts_s"]["dox"]))
+    return _ok(_run_build("dox", root, [_python_exe(), str(HOOK_DIR / "dox_engine.py"), "sweep", str(root)],
+                          cfg, timeout=cfg["build_timeouts_s"]["dox"]))
 
 
 _BUILD = {
@@ -990,6 +1099,13 @@ def _flush(ctx, state: dict, cfg: dict) -> None:
     enabled = [s for s in SURFACES if cfg["surfaces_enabled"].get(s, True)
                and not (recs.get(s, {}).get("state") == FAILED
                         and int(recs.get(s, {}).get("failures", 0) or 0) >= cfg["max_build_failures"])]
+    # memory tier warn+: the heavy surfaces wait (no lock claimed); the next probe sees them STALE
+    held = [s for s in enabled if _tier_defer(s, ctx.root, cfg)]
+    if held:
+        enabled = [s for s in enabled if s not in held]
+        _telem("flush_deferred_memory", key=ctx.key, pending=len(paths), surfaces=held)
+        if not enabled:
+            return  # keep the journal: the next flush retries
     ttl = cfg["lock_ttl_minutes"]
     claimed = [s for s in enabled
                if not _lock_is_live(ctx.key, s, ttl)
@@ -1051,6 +1167,15 @@ def _apply_probes(ctx, state: dict, probes: dict, cfg: dict) -> tuple:
                     and _summarizer_down(cfg))
             if down:
                 rec["fingerprint"] = prior.get("fingerprint", {})
+            mem = _tier_defer(surface, ctx.root, cfg)
+            if mem:  # memory tier warn+: no lock, no spawn; retried when pressure clears
+                rec["state"] = st
+                rec["fingerprint"] = prior.get("fingerprint", {})
+                lines.append(f"{surface} index: {st} — refresh deferred (memory {mem.split()[1]}); "
+                             f"retries when pressure clears")
+                _telem("build_deferred_memory", surface=surface, key=ctx.key, reason=mem, stage="probe")
+                state.setdefault("surfaces", {})[surface] = rec
+                continue
             failures = prior.get("failures", 0)
             backed_off = (prior.get("state") == FAILED
                           and failures >= maxf
@@ -1266,6 +1391,7 @@ def mode_build(args, cfg: dict) -> int:
         _rewrite_lock(ctx.key, surface, f"build {surface}")
         ok = False
         _LAST_ERR[0] = ""
+        _LAST_DEFER[0] = _LAST_DEFER[1] = ""
         try:
             ok = _BUILD[surface](root, args.incremental, paths, cfg)
         except Exception as exc:  # noqa: BLE001
@@ -1280,17 +1406,20 @@ def mode_build(args, cfg: dict) -> int:
         state = _load_state(ctx)
         prior = state.get("surfaces", {}).get(surface, {})
         if ok == "DEFERRED":
-            # Summarizer down — index left intact. NOT a failure (no backoff): keep
-            # the prior fingerprint/failures so the next probe re-probes STALE and
-            # retries once ollama is back. The dirty-tree hash is poisoned so edits
+            # Memory or summarizer deferral — index left intact. NOT a failure (no backoff):
+            # keep the prior fingerprint/failures so the next probe re-probes STALE and
+            # retries once pressure clears / ollama is back. The dirty-tree hash is poisoned so edits
             # that never reached the index still probe STALE (not "unchanged").
             state.setdefault("surfaces", {})[surface] = {
                 "state": STALE,
                 "fingerprint": dict(prior.get("fingerprint") or {}, dirty_sha="deferred"),
                 "checked_at": int(time.time()), "built_at": prior.get("built_at"),
                 "failures": prior.get("failures", 0)}
-            _telem("build_deferred", surface=surface, key=ctx.key,
-                   reason="summarizer_down")
+            if _LAST_DEFER[0] == "memory":
+                _telem("build_deferred_memory", surface=surface, key=ctx.key, stage="build",
+                       reason=_LAST_DEFER[1] or "memory")
+            else:
+                _telem("build_deferred_summarizer", surface=surface, key=ctx.key, stage="build")
         elif ok:
             try:
                 st, fp, _ = _PROBE[surface](root, prior, cfg)

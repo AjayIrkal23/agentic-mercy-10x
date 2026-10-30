@@ -114,3 +114,5 @@ Rules:
 ## References
 
 - Use `references/full-guide.md` for the longer strict version with class patterns and more detailed rules.
+
+ECC graft: `references/ecc-silent-failures.md` — Result pattern, capped retry with jitter, silent-failure hunt list.

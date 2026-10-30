@@ -119,6 +119,34 @@ def test_inner_grep_timeout_is_below_the_link_timeout(bwg):
     assert bwg._GREP_TIMEOUT_S * 1000 < link["timeout_ms"] - 1000
 
 
+# PKG gates: one importer counter (lib/blast_radius) shared with gateguard; pure Python, no grep
+@pytest.fixture()
+def tsrepo(tmp_path_factory):
+    root = tmp_path_factory.mktemp("bwgrepo")
+    (root / ".git").mkdir()
+    files = {"src/components/Widget.tsx": "export const W = 1\n",
+             **{f"src/u{i}.ts": "import { W } from './components/Widget'\n" for i in range(5)}}
+    for rel, body in files.items():
+        p = root / rel
+        p.parent.mkdir(parents=True, exist_ok=True)
+        p.write_text(body, encoding="utf-8")
+    return root
+
+
+def test_count_references_needs_no_grep_binary(bwg, tsrepo, monkeypatch):
+    monkeypatch.setenv("PATH", "")
+    assert bwg._count_references(str(tsrepo / "src" / "components" / "Widget.tsx")) == 5
+
+
+def test_existing_file_without_importers_gets_no_new_file_advisory(bwg, tsrepo, monkeypatch):
+    (tsrepo / "src" / "orphanmodule.ts").write_text("export const x = 1\n", encoding="utf-8")
+    payload = {**_bash("echo x > src/orphanmodule.ts"), "cwd": str(tsrepo)}
+    monkeypatch.chdir(tsrepo)
+    assert _main(bwg, payload, monkeypatch) == {}
+    payload = {**_bash("echo x > src/newmodule.ts"), "cwd": str(tsrepo)}
+    assert "newmodule.ts" in _main(bwg, payload, monkeypatch)["hookSpecificOutput"]["additionalContext"]
+
+
 # ---- blocking-doc-enforcer (B1-10) ---------------------------------------- #
 def _git(repo: Path, *args: str) -> None:
     subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True,

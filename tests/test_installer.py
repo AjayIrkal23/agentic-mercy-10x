@@ -175,3 +175,27 @@ def test_manifest_github_has_windows_launcher():
     gh = next(s for s in m["mcp_servers"] if s["name"] == "github")
     assert gh["windows_add"][-1] == "{CLAUDE_DIR}/scripts/github-mcp-launcher.py"
     assert (_ROOT / "scripts" / "github-mcp-launcher.py").is_file()
+
+
+def test_always_load_reconcile_plans_then_skips_when_set(tmp_path, monkeypatch):
+    deps = _load("deps", "installer/deps.py")
+    cfg = tmp_path / ".claude.json"
+    cfg.write_text(json.dumps({"mcpServers": {"sequential-thinking": {"command": "npx", "args": ["x"]},
+                                              "memory": {"command": "npx", "args": ["y"]}}}), encoding="utf-8")
+    monkeypatch.setattr(deps, "user_config_file", lambda: cfg)
+    assert deps.reconcile_mcp_always_load(dry_run=True) == [("sequential-thinking", "WOULD-SET-ALWAYS-LOAD true")]
+    cfg.write_text(json.dumps({"mcpServers": {"sequential-thinking": {"command": "npx", "args": ["x"], "alwaysLoad": True}}}),
+                   encoding="utf-8")
+    assert deps.reconcile_mcp_always_load(dry_run=True) == []
+
+
+def test_always_load_reconcile_goes_through_replace_entry(tmp_path, monkeypatch):
+    deps = _load("deps", "installer/deps.py")
+    cfg = tmp_path / ".claude.json"
+    cfg.write_text(json.dumps({"mcpServers": {"sequential-thinking": {"command": "npx", "args": ["x"]}}}), encoding="utf-8")
+    monkeypatch.setattr(deps, "user_config_file", lambda: cfg)
+    monkeypatch.setattr(deps.winutil, "which", lambda n: "/x/claude")
+    seen = {}
+    monkeypatch.setattr(deps.mcp_restore, "replace_entry", lambda name, new, old, ok: seen.update(new=new) or ok)
+    assert deps.reconcile_mcp_always_load() == [("sequential-thinking", "ALWAYS-LOAD true")]
+    assert seen["new"] == {"command": "npx", "args": ["x"], "alwaysLoad": True}

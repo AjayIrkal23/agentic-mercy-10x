@@ -8,6 +8,7 @@
                    mode: allows out-of-project files, downgrades blocks to
                    advisories; never pauses).
   Inactive repo -> exit 0 immediately (allow, ZERO validation/LLM cost).
+  Dormant repo  -> auto-managed sidecar with no ``runners``: exit 0 (stack_detected).
   $HOME / non-git cwd -> exit 0 immediately. HOME is a container, never a project
                    (the old `<cwd>/.claude/tdd-guard` lookup made every session
                    started in `~` pay an LLM round-trip per write — A03-B2).
@@ -64,6 +65,20 @@ def _repo_relative(target: str, root: str) -> str:
     return target if rel.startswith("..") else "/" + rel.replace(os.sep, "/")
 
 
+def stack_detected(root) -> bool:
+    """Does the repo have a test runner worth a validator call? The init guard's sidecar
+    (``.autoinit.json``) lists ``runners``: an auto-managed repo with none is dormant.
+    No sidecar = a hand-written config: the human declared the stack → True. Never raises."""
+    side = Path(root) / ".claude" / "tdd-guard" / "data" / ".autoinit.json"
+    try:
+        if not side.is_file():
+            return True
+        data = json.loads(side.read_text(encoding="utf-8", errors="replace"))
+    except (OSError, ValueError):
+        return True
+    return bool(data.get("runners")) if isinstance(data, dict) else True
+
+
 def main() -> int:
     try:
         stdin_data = sys.stdin.read()
@@ -97,8 +112,8 @@ def main() -> int:
         except OSError:
             active = False
 
-    if not active:
-        return 0  # inactive project -> allow silently
+    if not active or not stack_detected(root):
+        return 0  # inactive or dormant (no test runner) project -> allow silently
 
     gate = _HOOKS / "tdd-guard-gate.py"
     if not gate.is_file():

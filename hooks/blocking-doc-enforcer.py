@@ -15,6 +15,15 @@ message are not commits/amends — audit 2026-10-05 B1-10):
     writes, as before.
 
 Committing ~/.claude after touching another repo is never blocked (A03-B12).
+
+Before the docs rule, every commit (amends included) is scanned for secret material it would ADD
+(PKG gates; ECC pre-bash-commit-quality + codex pre-commit): AWS / GitHub / Anthropic / OpenAI /
+Slack / Google keys, private key headers and a staged `.env` deny (hard hits). Quoted credential
+assignments whose value looks like a secret (no spaces, 16+ chars, two of letters / digits / symbols)
+and staged `.env.*` files (not `.env.example`; Vite commits `.env.development`) are soft hits: they
+ask interactively and deny when nobody can confirm (lib/gate_mode; REVIEW2 Fix 5). A placeholder
+filter (EXAMPLE, REPLACE_ME, `<...>`, `${...}`, process.env) applies to both. Messages name
+`file:line (kind)` only, never the value. Fail-open on any git error.
 """
 from __future__ import annotations
 
@@ -24,7 +33,7 @@ import re
 import sys
 from pathlib import Path
 
-from commit_docs_check import git_commits, missing_docs, repo_root
+from commit_docs_check import _all_flag, _git, git_commits, missing_docs, repo_root
 from tool_compat import is_shell_tool, tool_name
 
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -90,8 +99,94 @@ def _deny(reason: str) -> None:
     }))
 
 
+_PENDING_ASK = ""  # a soft secret hit's ask: printed instead of an allow, so a later deny still wins
+
+
 def _allow() -> None:
+    if _PENDING_ASK:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask",
+                                                 "permissionDecisionReason": _PENDING_ASK}}))
+        return
     print("{}")
+
+
+def _decide(payload) -> tuple:
+    try:
+        from lib import gate_mode
+        return gate_mode.decide(payload, "ask")
+    except Exception:  # noqa: BLE001 - gate_mode absent or broken: plain ask
+        return "ask", "interactive"
+
+
+# --- staged-secret scan (ECC pre-bash-commit-quality.js + codex-git-hooks/pre-commit) -------------------
+_SECRET_PATTERNS = (
+    ("AWS access key", re.compile(r"(?<![A-Z0-9])AKIA[0-9A-Z]{16}(?![A-Z0-9])")),
+    ("private key", re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |DSA |ENCRYPTED |PGP )?PRIVATE[ ]KEY")),
+    ("GitHub token", re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9]{36}\b|\bgithub_pat_[A-Za-z0-9_]{20,}")),
+    ("Anthropic API key", re.compile(r"\bsk-ant-[A-Za-z0-9_-]{20,}")),
+    ("OpenAI-style key", re.compile(r"(?<![\w-])sk-(?!ant-)[A-Za-z0-9]{20,}")),
+    ("Slack token", re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}")),
+    ("Google API key", re.compile(r"\bAIza[0-9A-Za-z_-]{35}\b")),
+)
+_CRED = re.compile(r"(?i)\b(?:api[_-]?key|secret|password|passwd|token)\b\s*[:=]\s*['\"]([^'\"]{12,})['\"]")
+_SOFT_KINDS = frozenset({"credential assignment", ".env.* file staged"})  # ask, never a silent deny
+_SECRETISH = re.compile(r"^\S{16,}$")
+
+
+def _looks_secret(val: str) -> bool:
+    """No spaces, 16+ chars, two of letters / digits / symbols: UI text and short seeds are not secrets."""
+    classes = (any(c.isalpha() for c in val), any(c.isdigit() for c in val), any(not c.isalnum() for c in val))
+    return bool(_SECRETISH.match(val)) and sum(classes) >= 2
+_PLACEHOLDER = re.compile(r"(?i)replace[_-]?me|change[_-]?me|your[_-]|example|sample|placeholder|dummy|fake"
+                          r"|redacted|xxxx|<[^>]+>|\$\{|process\.env|os\.environ|\bTODO\b|\bTBD\b")
+_SKIP_EXT = frozenset({".png", ".jpg", ".jpeg", ".gif", ".svg", ".pdf", ".zip", ".gz", ".lock", ".woff", ".woff2",
+                       ".ico", ".mp4"})
+_SKIP_NAMES = frozenset({"package-lock.json", "pnpm-lock.yaml", "yarn.lock", "bun.lockb", "Cargo.lock", "poetry.lock"})
+_ENV_FILE = re.compile(r"^\.env(?:$|\.(?!example$|sample$|template$|test$|dist$))", re.IGNORECASE)
+_HUNK = re.compile(r"\+(\d+)")
+_MAX_LINES = 20000  # beyond this the diff is judged on its first 20k lines (fail-open on the rest)
+_MAX_HITS = 10
+
+
+def _staged_secret_hits(root: str, commit_args: list, add_seen: bool) -> list:
+    """[('file:line', kind), ...] for secrets ADDED by this commit (staged; plus tracked working-tree changes
+    for `-a` or a same-line `git add`). Never the value. [] on any git error (fail-open)."""
+    try:
+        diff = _git(root, "diff", "--cached", "-U0", "--no-color", "--diff-filter=ACMR")
+        if add_seen or _all_flag(commit_args):
+            diff += _git(root, "diff", "-U0", "--no-color", "--diff-filter=ACMR")
+    except Exception:  # noqa: BLE001 - OSError, timeout, undecodable output: nothing to check
+        return []
+    hits: list = []
+    file, line_no, skip = "", 0, False
+    for raw in diff[:_MAX_LINES]:
+        if raw.startswith("+++ "):
+            path = raw[4:].strip()
+            file = path[2:] if path.startswith("b/") else path
+            base = file.rsplit("/", 1)[-1]
+            skip = base in _SKIP_NAMES or os.path.splitext(base)[1].lower() in _SKIP_EXT
+            if _ENV_FILE.match(base):  # `.env` is hard; `.env.development` etc. (Vite commits them) ask
+                hits.append((file, ".env file staged" if base.lower() == ".env" else ".env.* file staged"))
+                skip = True
+            continue
+        if raw.startswith("@@"):
+            m = _HUNK.search(raw)
+            line_no = int(m.group(1)) - 1 if m else 0
+            continue
+        if not raw.startswith("+") or skip:
+            continue
+        line_no += 1  # `_git` drops blank lines: a pointer ("about line"), exact for -U0 added text
+        text = raw[1:]
+        if _PLACEHOLDER.search(text):
+            continue
+        kind = next((k for k, rx in _SECRET_PATTERNS if rx.search(text)), None)
+        if kind is None and any(_looks_secret(m.group(1)) for m in _CRED.finditer(text)):
+            kind = "credential assignment"
+        if kind:
+            hits.append((f"{file}:{line_no}", kind))
+        if len(hits) >= _MAX_HITS:
+            break
+    return hits[:_MAX_HITS]
 
 
 def main() -> int:
@@ -110,8 +205,34 @@ def main() -> int:
         _allow()  # cheap pre-filter; the tokenised parse below decides
         return 0
 
+    global _PENDING_ASK
     base = str(payload.get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd())
     commits, add_seen = git_commits(command, base)
+    # Staged-secret scan first, amends included: newly staged content is new content.
+    soft: list = []
+    for args, directory in commits:
+        root = repo_root(directory)
+        if not root:
+            continue
+        hits = _staged_secret_hits(root, args, add_seen)
+        listing = "\n".join(f"  - {where} ({kind})" for where, kind in hits)
+        if any(kind not in _SOFT_KINDS for _, kind in hits):
+            _deny("BLOCKED: this commit would add secret material (about line):\n\n" + listing
+                  + "\n\nUnstage or scrub these lines (keep secrets in a gitignored .env or a secret store), then "
+                  "commit again. A test fixture must be marked as such (EXAMPLE / placeholder) so the scanner "
+                  "can tell.")
+            return 0
+        if hits:
+            soft.append(listing)
+    if soft:
+        text = ("This commit adds credential-looking lines or an `.env.*` file (about line):\n\n" + "\n".join(soft)
+                + "\n\nConfirm to commit if these are not secrets (UI text, a committed Vite `.env.development`); "
+                "otherwise unstage them and keep the values in a gitignored .env or a secret store.")
+        decision, why = _decide(payload)
+        if decision != "ask":
+            _deny(text + f"\n\nNo one can confirm in this {why} session: leave the commit for the user.")
+            return 0
+        _PENDING_ASK = text  # every allow below becomes this ask; a docs deny still wins
     # amends were committed once already; `--amend` must be a real argument (B1-10)
     commits = [(args, d) for args, d in commits if "--amend" not in args]
     if not commits:

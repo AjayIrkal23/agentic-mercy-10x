@@ -10,7 +10,7 @@ import { depsRows, lastSessionLine, portsRows } from '../lib/auto'
 import { brainSection, emptyFacts, storeKey } from '../lib/brain'
 import { sparkCells } from '../lib/deck'
 import type { Row } from '../lib/deckviews'
-import { ciRows, gitRows, todoRows, usageRows } from '../lib/deckviews'
+import { ciRows, gitRows, memRows, todoRows, usageRows } from '../lib/deckviews'
 import { duration } from '../lib/format'
 import { dropResume, noteError, resumeKey, rt, ui } from '../lib/runtime'
 import { snapshot } from '../lib/snap'
@@ -37,8 +37,8 @@ async function press($: EngineInterface, a: BandAction): Promise<void> {
     else if (a.command === 'open-pane') await $.ui.open({ id: PANE_ID, title: 'mercy pulse' })
     else if (a.command === 'cancel-resume') await cancelResume($)
     else if (a.command === 'compact') await $.session.compact()
-    else if (a.command === 'open-ci') {
-      await update($, VIEW, () => 'ci')
+    else if (a.command === 'open-ci' || a.command === 'open-mem') {
+      await update($, VIEW, () => (a.command === 'open-ci' ? 'ci' : 'memory'))
       await $.ui.open({ id: PANE_ID, title: 'mercy pulse' })
     }
   } catch (err) {
@@ -64,6 +64,7 @@ function statusReport(now: number): string {
     `session: turn ${rt.ledger.turn}, ${Object.keys(rt.ledger.files).length} files edited, ${rt.ledger.commands.length} commands, ${rt.ledger.agents.length} subagents, context ${Math.round(rt.contextPct)}%`,
     `repo: ${rt.repoRoot ?? '(none)'}${rt.branch ? ` @ ${rt.branch}` : ''} · brain: ${rt.brain ? `${Object.keys(rt.brain.commands).length} commands, ${rt.brain.notes.length} notes` : 'off'}`,
     s.resumeLabel ? `auto-resume scheduled for ${s.resumeLabel}` : 'auto-resume: idle',
+    `model caps: ${rt.modelCaps.applied} applied${rt.modelCaps.last ? ` (last: ${rt.modelCaps.last})` : ''}`,
     `health: ${rt.health.errors} hook errors${rt.health.lastError ? ` (last: ${rt.health.lastError})` : ''}`,
   ].join('\n')
 }
@@ -76,6 +77,7 @@ function viewRows(view: PulseView, s: Snapshot, width: number): Row[] {
   if (view === 'ports') return portsRows(s.deck?.ports, width, s.deck?.portsError)
   if (view === 'deps') return depsRows(s.deck?.deps, s.now, width)
   if (view === 'today') return []
+  if (view === 'memory') return memRows(s.deck?.mem, s.now, width)
   const last = view === 'overview' ? lastSessionLine(s.deck?.lastSession, s.now) : undefined
   return [...paneRows(view, s, width).map(text => ({ text })), ...(last ? [{ text: last, dim: true }] : [])]
 }

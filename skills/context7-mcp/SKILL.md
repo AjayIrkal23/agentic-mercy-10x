@@ -5,3 +5,5 @@ when_to_use: Not model-invoked; the always-on rules/00-tool-precedence.md alread
 disable-model-invocation: true
 ---
 Library, framework, SDK, or CLI question → `mcp__context7__resolve-library-id` (name + the user's question) → `mcp__context7__query-docs` (one concept per call). Prefer this over web search and over training-data recall.
+
+ECC graft: `references/ecc-note.md` — provenance note; the resolve-then-query route already covers it.

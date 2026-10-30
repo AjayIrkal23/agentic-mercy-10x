@@ -34,6 +34,8 @@ when_to_use: The suite is green but the user says the feature is broken; a test 
 
 > **Local guard (vendor patch, ~/.claude):** attach only to the app the user already runs. Never run `reticle init`/`setup`, never start a dev server, never open a browser, never call `reticle_feedback` unprompted.
 
+> **ECC graft (ecc:agents/pr-test-analyzer.md@25278e7d):** rate each coverage gap 1–10 by the blast radius of the untested branch; report the top three, each with the missing assertion.
+
 # The suite is green and the app is broken
 
 A green test is evidence about the test, not about the app. This skill separates the two by running the real app and comparing what it _does_ against what the test _claims_.

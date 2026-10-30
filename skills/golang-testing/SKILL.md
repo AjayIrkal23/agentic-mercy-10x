@@ -747,3 +747,5 @@ test:
 ```
 
 **Remember**: Tests are documentation. They show how your code is meant to be used. Write them clearly and keep them up to date.
+
+ECC graft: `references/ecc-go-testing.md` — table-driven subtests with `t.Parallel()`, fuzz targets, `-race`, golden files.

@@ -1,0 +1,14 @@
+[Unit]
+Description=agentic-mercy oomguard: restore Claude sessions that died with the machine
+After=claude-memwatch.service
+
+[Service]
+Type=oneshot
+KillMode=process
+ExecStartPre=/bin/sleep 60
+ExecStart={PY} {CLAUDE_DIR}/scripts/restore_sessions.py --only-if-ok --max-age 7200 --max 6 --per-window 2
+OOMPolicy=continue
+ManagedOOMPreference=omit
+
+[Install]
+WantedBy=default.target

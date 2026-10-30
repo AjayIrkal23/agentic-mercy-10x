@@ -6,6 +6,14 @@
 Stdlib only, Python >= 3.10, any OS. Segments hide when their data is missing; bad input
 prints ``◆ Claude`` and exits 0. Env: NO_COLOR, COLUMNS (drops segments right-to-left),
 CLAUDE_STATUSLINE_CACHE_DIR (git cache, 5 s per directory; default $XDG_RUNTIME_DIR / temp).
+
+OOM guard (docs/OOM-GUARD.md): ``mem 11G sw99% wf4`` from state/mem-pressure.json (droppable, hidden
+when stale), a plan-tier suffix (``20x``) and ``↓`` while the usage guard is active. Every 10 s it
+writes state/session-bridge/<sid>.json and refreshes ``seen`` in state/live-sessions/<sid>.json.
+The heartbeat replaces the whole ledger dict atomically instead of taking hooks/lib's locked_update:
+importing hooks/lib would cost import time on every refresh, and the only other ledger writer is
+hooks/session-ledger.py at session start/end (its SessionEnd delete wins either way). State dir:
+CLAUDE_HOOK_STATE_DIR, else CLAUDE_CONFIG_DIR/state, else ~/.claude/state.
 """
 
 from __future__ import annotations
@@ -22,6 +30,8 @@ GIT_STALE = 60.0  # a timed-out git may fall back on the last good summary for t
 GIT_TIMEOUT = 1.5 if os.name == "nt" else 0.5  # Windows git on NTFS is 3-5x slower
 GIT_ARGV = ["git", "--no-optional-locks", "status", "--porcelain=v2", "--branch"]  # a module constant: a test seam
 GREEN, YELLOW, RED, CYAN, PURPLE, DIM = 78, 220, 203, 117, 141, 245
+MEM_STALE = 30.0  # state/mem-pressure.json older than this hides the memory segment
+BRIDGE_EVERY = 10.0  # session bridge + ledger heartbeat refresh period
 
 
 def _num(x):
@@ -50,10 +60,54 @@ def _level(pct: float) -> int:
     return GREEN if pct < 50 else YELLOW if pct < 80 else RED
 
 
+def _state_dir() -> str:
+    env = os.environ.get("CLAUDE_HOOK_STATE_DIR")
+    if env:
+        return env
+    return os.path.join(os.environ.get("CLAUDE_CONFIG_DIR") or os.path.expanduser("~/.claude"), "state")
+
+
+def _load_json(path):
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except (OSError, ValueError):
+        return None
+
+
+_TIER = {"pro": "pro", "max5": "5x", "max20": "20x", "api": "api"}
+
+
 def seg_model(d, c):
     name = _text(_get(d, "model", "display_name"), 40) or "Claude"
     eff = _text(_get(d, "effort", "level"), 12)
-    return c(CYAN, f"◆ {name}" + (f" ({eff})" if eff else "")), True
+    bits = [f"◆ {name}" + (f" ({eff})" if eff else "")]
+    tier = _load_json(os.path.join(_state_dir(), "plan-tier.json"))
+    short = _TIER.get(tier.get("tier")) if isinstance(tier, dict) else None
+    if short:
+        bits.append(short)
+    guard = _load_json(os.path.join(_state_dir(), "usage-guard.json"))
+    if isinstance(guard, dict) and guard.get("active") is True:
+        bits.append("↓")
+    return c(CYAN, " ".join(bits)), True
+
+
+def seg_mem(d, c):
+    """OOM guard: `mem 11G sw99% wf4` from state/mem-pressure.json (hidden when stale or missing) and
+    this launch's caps (state/launch-caps/<ppid>.json, written by bin/claude)."""
+    st = _load_json(os.path.join(_state_dir(), "mem-pressure.json"))
+    if not isinstance(st, dict) or st.get("unsupported"):
+        return None
+    ts, avail = _num(st.get("ts")), _num(st.get("mem_available_mb"))
+    if ts is None or avail is None or time.time() - ts > MEM_STALE:
+        return None
+    sw = _num(st.get("swap_free_pct"))
+    txt = f"mem {avail / 1024:.0f}G" + (f" sw{100 - sw:.0f}%" if sw is not None else "")
+    caps = _load_json(os.path.join(_state_dir(), "launch-caps", f"{os.getppid()}.json"))
+    wf = _num(caps.get("workflow_agents")) if isinstance(caps, dict) else None
+    if wf:
+        txt += f" wf{int(wf)}"
+    return c({"crit": RED, "warn": YELLOW}.get(st.get("level"), GREEN), txt), False
 
 
 def seg_context(d, c):
@@ -254,7 +308,33 @@ def seg_mode(d, c):
     return (c(DIM, " ".join(bits)), False) if bits else None
 
 
-SEGMENTS = (seg_model, seg_context, seg_cost, seg_limits, seg_git, seg_duration, seg_lines, seg_mode)
+SEGMENTS = (seg_model, seg_context, seg_cost, seg_mem, seg_limits, seg_git, seg_duration, seg_lines, seg_mode)
+
+
+def _bridge(d) -> None:
+    """Every BRIDGE_EVERY s: state/session-bridge/<sid>.json (context, cost, five-hour numbers for the usage
+    guard and context monitor) and a `seen` heartbeat in state/live-sessions/<sid>.json when that ledger
+    entry exists. Never raises, never adds imports."""
+    sid = _text(d.get("session_id"), 80)
+    if not sid:
+        return
+    safe = "".join(ch if ch.isalnum() or ch in "-_" else "_" for ch in sid)
+    base = _state_dir()
+    path = os.path.join(base, "session-bridge", f"{safe}.json")
+    try:
+        if time.time() - os.stat(path).st_mtime < BRIDGE_EVERY:
+            return
+    except OSError:
+        pass
+    _store(path, {"context_pct": _num(_get(d, "context_window", "used_percentage")),
+                  "cost_usd": _num(_get(d, "cost", "total_cost_usd")),
+                  "five_hour_pct": _num(_get(d, "rate_limits", "five_hour", "used_percentage")),
+                  "five_hour_resets_at": _get(d, "rate_limits", "five_hour", "resets_at"), "ts": time.time()})
+    ledger = os.path.join(base, "live-sessions", f"{safe}.json")
+    cur = _load_json(ledger)
+    if isinstance(cur, dict):
+        cur["seen"] = time.time()
+        _store(ledger, cur)
 
 
 def _width(s: str) -> int:
@@ -298,6 +378,11 @@ def main() -> int:
         cols = os.environ.get("COLUMNS", "")
         line = render(d if isinstance(d, dict) else {}, not os.environ.get("NO_COLOR"),
                       int(cols) if cols.isdigit() else None)
+        if isinstance(d, dict):
+            try:
+                _bridge(d)
+            except Exception:  # noqa: BLE001 - the bridge never blanks the line
+                pass
     except Exception:  # noqa: BLE001
         line = ""
     sys.stdout.write((line or "◆ Claude") + "\n")

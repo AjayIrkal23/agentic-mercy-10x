@@ -25,6 +25,12 @@ Tokens:
 The equivalence gate is SEMANTIC (parsed JSON, Claude-managed keys ignored), and a
 write carries the existing Claude-managed keys (theme, tui, voice …) over.
 
+``render()`` merges ``lib/plan_tier.render_overrides()`` (model, ``env.CLAUDE_CODE_SUBAGENT_MODEL``,
+``fallbackModel``) between the template and the user overlay; a write runs ``run_post_steps()``
+(plan-tier, oomguard, machines-split, workflows), each isolated, idempotent, SKIP off-Linux, never
+under ``--dry-run``/``--check``, only when ``--out`` is the live settings.json, and never under pytest or
+doctor mode (``RENDER_POST_STEPS_ALLOW_TEST=1`` lets a test that stubs the steps through).
+
 CLI:
     render.py                      # render template(+overlay) -> settings.json
     render.py --check              # prove render(template) semantically == live settings.json
@@ -129,6 +135,7 @@ def render(
     data = json.loads(rendered)  # fail loud on a broken template
     if plat.IS_WINDOWS and isinstance(data.get("env"), dict):  # semgrep-core has no posix backend there
         data["env"].pop("EIO_BACKEND", None)
+    data = deep_merge(data, _tier_overrides())  # R3.3: tier keys under the user overlay
     if user_path and Path(user_path).exists():
         overlay = json.loads(Path(user_path).read_text(encoding="utf-8"))
         own_hooks = overlay.pop("hooks", None)  # the user's hooks go AFTER the workbench's, never twice
@@ -145,6 +152,71 @@ def render(
     return text
 
 
+def _tier_overrides() -> dict:
+    """R3.3 enforcement point 4: tier-derived keys; {} when the lib is missing or odd (template literals stay)."""
+    try:
+        import importlib  # noqa: PLC0415
+        _pt = importlib.import_module("lib.plan_tier")  # honours sys.modules (a None entry = import fails)
+        out = _pt.render_overrides(_pt.read()["tier"])
+        return out if isinstance(out, dict) else {}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def _ensure_oomguard() -> list[str]:
+    import oomguard_setup  # type: ignore  # noqa: PLC0415  (installer/ is on sys.path)
+    return oomguard_setup.ensure(False)
+
+
+_POST = (("plan-tier", ("hooks", "plan-tier-detect.py"), ["--quiet"], 10),
+         ("oomguard", None, [], 60),
+         ("machines-split", ("scripts", "split_machines_file.py"), ["--apply"], 20),
+         ("workflows", ("scripts", "build_workflows.py"), ["--quiet"], 30))
+
+
+def _post_steps_blocked(out: Path = _LIVE) -> bool:
+    """Post-steps belong to the live install: a render to another ``--out`` (CI's temp file) or a
+    sandboxed one (pytest, doctor mode) must never install units or write state on this machine."""
+    if os.environ.get("RENDER_POST_STEPS_ALLOW_TEST"):
+        return False
+    if os.environ.get("PYTEST_CURRENT_TEST") or os.environ.get("CLAUDE_HOOK_DOCTOR"):
+        return True
+    if _ROOT.resolve() != plat.claude_dir().resolve():
+        return True  # a worktree or clone render never installs its own paths into the user's units
+    return Path(out).resolve() != _LIVE.resolve()
+
+
+def run_post_steps(root: Path = _ROOT) -> list[str]:
+    """After a successful write (plan 0.11): every step isolated, idempotent, SKIP cleanly off-Linux."""
+    rows: list[str] = []
+    py = plat.python_exe()
+    for name, rel, args, timeout in _POST:
+        try:
+            if rel is None:
+                rows += [f"{name}: {r}" for r in _ensure_oomguard()]
+                continue
+            script = Path(root).joinpath(*rel)
+            if not script.is_file():
+                rows.append(f"{name}: SKIP(absent)")
+                continue
+            cp = plat.run([py, str(script), *args], timeout=timeout)
+            tail = ((cp.stdout or cp.stderr or "").strip().splitlines() or ["no output"])[-1][:120]
+            rows.append(f"{name}: {'OK' if cp.returncode == 0 else f'WARN(rc={cp.returncode})'} {tail}")
+        except Exception as exc:  # noqa: BLE001 - a post step never fails the render
+            rows.append(f"{name}: SKIP({type(exc).__name__}: {str(exc)[:80]})")
+    return rows
+
+
+def _detect_tier_first(root: Path = _ROOT) -> None:
+    """The first render on a fresh machine is tier-correct: detect before rendering (post-step re-run is a no-op)."""
+    script = Path(root) / "hooks" / "plan-tier-detect.py"
+    try:
+        if script.is_file():
+            plat.run([plat.python_exe(), str(script), "--quiet"], timeout=10)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def carry_managed(text: str, existing: Path) -> str:
     """Keep Claude-managed keys from an existing settings.json (user /config choices) and
     what the user added: permission allow/deny/ask rules, plugins enabled through /plugin and
@@ -157,8 +229,12 @@ def emit_template(live_path: Path = _LIVE, out_path: Path = _TEMPLATE) -> str:
     text = tokenize(Path(live_path).read_text(encoding="utf-8"))
     data = json.loads(text)
     env = data.get("env")
+    tier_keys = [k for k in ("model", "fallbackModel") if k in data]  # tier-derived at render time
+    for k in tier_keys:
+        data.pop(k)
     if isinstance(env, dict) and PLUGIN_DIRS_KEY in env:
         env[PLUGIN_DIRS_KEY] = "{{MOD_DIRS}}"  # machine paths never enter the template
+    if tier_keys or (isinstance(env, dict) and PLUGIN_DIRS_KEY in env):
         text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     Path(out_path).write_text(text, encoding="utf-8", newline="\n")
     return text
@@ -225,6 +301,9 @@ def main(argv: list[str]) -> int:
         print(("OK   " if ok else "FAIL ") + msg)
         return 0 if ok else 1
 
+    post = not args.dry_run and not _post_steps_blocked(args.out)
+    if post:
+        _detect_tier_first()
     text = render(args.template, args.user, machine_subs())
     old = args.out.read_text(encoding="utf-8") if args.out.exists() else None
     if old is not None:
@@ -243,6 +322,9 @@ def main(argv: list[str]) -> int:
         if os.path.exists(tmp):
             os.unlink(tmp)
     print(f"rendered -> {args.out}")
+    if post:
+        for row in run_post_steps():
+            print(f"post {row}")
     return 0
 
 

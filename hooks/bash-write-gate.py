@@ -38,14 +38,12 @@ from __future__ import annotations
 import json
 import os
 import re
-import subprocess
 import sys
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
 # Config
 # ---------------------------------------------------------------------------
-THRESHOLD = 5  # same as gateguard-write-gate.py
 HARD_BLOCK = os.environ.get("BASH_WRITE_GATE_HARD_BLOCK", "").strip() == "1"
 
 # Layer 1 is OPT-IN and OFF by default (2026-07-19, user decision).
@@ -75,6 +73,9 @@ STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or SCRIPT_DIR / ".st
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 from tool_compat import is_shell_tool  # noqa: E402
+from lib import blast_radius as br  # noqa: E402 - the one importer counter (shared with gateguard)
+
+THRESHOLD = br.THRESHOLD  # same as gateguard-write-gate.py (and for the same reason: one constant)
 
 # Source file extensions to monitor (Layer 2 only). Layer 1 covers every extension.
 SOURCE_EXTENSIONS = frozenset({
@@ -82,12 +83,6 @@ SOURCE_EXTENSIONS = frozenset({
     ".py", ".go", ".rs", ".java", ".kt",
     ".rb", ".php", ".c", ".cpp", ".h", ".hpp",
     ".sh", ".bash",
-})
-
-# Stems too common to bother checking blast radius for
-_SHORT_STEMS = frozenset({
-    "app", "main", "index", "types", "routes",
-    "gorm", "db", "api", "lib", "util",
 })
 
 
@@ -370,67 +365,19 @@ def _is_source_file(file_path: str) -> bool:
     return ext in SOURCE_EXTENSIONS
 
 
-def _stem_is_short(file_path: str) -> bool:
-    stem = os.path.splitext(os.path.basename(file_path))[0].lower()
-    return stem in _SHORT_STEMS or len(stem) < 6
-
-
 # ---------------------------------------------------------------------------
 # Blast-radius check (mirrors gateguard-write-gate.py)
 # ---------------------------------------------------------------------------
 
-def _find_project_root(file_path: str) -> str:
-    """HOME-guarded git root (lib.code_files); falls back to the file's own dir so a
-    ~-rooted target never greps the whole home tree."""
-    try:
-        from lib.code_files import git_root, is_home
-        root = git_root(file_path)
-        if root is not None and not is_home(root):
-            return str(root)
-    except Exception:
-        pass
-    return os.path.dirname(os.path.abspath(file_path))
+_find_project_root = br.project_root
 
 
 def _count_references(file_path: str) -> int:
-    """Count how many other files import/reference this file."""
-    if _stem_is_short(file_path):
-        return 0
-
-    basename = os.path.basename(file_path)
-    stem = os.path.splitext(basename)[0]
-    search_root = _find_project_root(file_path)
-    ext = os.path.splitext(basename)[1].lower()
-
+    """How many other files import this file: the one counter in lib/blast_radius (shared with
+    gateguard-write-gate; pure Python, so Windows counts too). Over budget -> 0 (fail-open)."""
     try:
-        if ext == ".go":
-            pattern = f'".*/{stem}"|package {stem}'
-            result = subprocess.run(
-                ["grep", "-rl", "--include=*.go",
-                 "--exclude-dir=node_modules", "--exclude-dir=.git",
-                 "--exclude-dir=dist", "--exclude-dir=build",
-                 "-E", pattern, search_root],
-                capture_output=True, text=True, timeout=_GREP_TIMEOUT_S,
-            )
-        else:
-            pattern = "from.*/" + stem + "|require.*/" + stem
-            result = subprocess.run(
-                ["grep", "-rl",
-                 "--include=*.ts", "--include=*.tsx",
-                 "--include=*.js", "--include=*.jsx",
-                 "--exclude-dir=node_modules", "--exclude-dir=.git",
-                 "--exclude-dir=dist", "--exclude-dir=build",
-                 "-E", pattern, search_root],
-                capture_output=True, text=True, timeout=_GREP_TIMEOUT_S,
-            )
-        if result.returncode != 0:
-            return 0
-        files = [
-            f for f in result.stdout.strip().split("\n")
-            if f and os.path.abspath(f) != os.path.abspath(file_path)
-        ]
-        return len(files)
-    except (subprocess.TimeoutExpired, OSError):
+        return br.count(file_path, budget_s=_GREP_TIMEOUT_S)
+    except Exception:  # noqa: BLE001
         return 0
 
 
@@ -571,8 +518,11 @@ def main() -> int:
         state = _load_state(cid)
         acked = set(state.get("acked_files") or [])
 
+        cwd = str(payload.get("cwd") or "")
         for file_path in source_targets:
-            abs_path = os.path.abspath(file_path)
+            if cwd and not os.path.isabs(os.path.expanduser(file_path)):
+                file_path = os.path.join(cwd, file_path)  # the shell resolves it against ITS cwd
+            abs_path = os.path.abspath(os.path.expanduser(file_path))
 
             # Already acked — skip
             if abs_path in acked:
@@ -599,9 +549,10 @@ def main() -> int:
                     _emit_advisory(file_path, ref_count, cmd_preview)
                 return 0
 
-            if ref_count == 0:
-                # New file (zero importers) — emit lower-severity advisory
-                # without denying, so new-module heredoc writes are flagged.
+            if ref_count == 0 and not os.path.isfile(abs_path):
+                # New file (zero importers, not on disk yet) — emit lower-severity advisory
+                # without denying, so new-module heredoc writes are flagged. An existing file
+                # with no importers is not new (audit 07 issue 8): it falls through to `{}`.
                 acked.add(abs_path)
                 state["acked_files"] = list(acked)
                 _save_state(cid, state)

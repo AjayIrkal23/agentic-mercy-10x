@@ -132,6 +132,7 @@ def test_tdd_link_is_deferred_in_the_live_config():
 
 # ---- connector-ask-gate (G-02) -------------------------------------------- #
 def _conn(tool: str, monkeypatch) -> dict:
+    monkeypatch.delenv("CLAUDE_WORKBENCH_UNATTENDED", raising=False)  # PKG gates: asks downgrade when unattended
     mod = _load("conn_gate", "connector-ask-gate.py")
     return _main(mod, {"session_id": "c", "tool_name": tool, "tool_input": {}}, monkeypatch)
 

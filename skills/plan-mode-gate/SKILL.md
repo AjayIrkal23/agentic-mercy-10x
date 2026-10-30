@@ -47,7 +47,7 @@ Skipping any gate produces incomplete plans, incorrect implementations, and wast
 
 - **Canonical first router:** read **`workflow-orchestrator`** before this gate so lifecycle routing stays single-source.
 - **jcodemunch / blast-radius:** code intelligence first for all code work (skill `codebase-intel-first`) — run the jcodemunch symbol index + graphify graph BEFORE reading/grepping. Use the MCP tools (plan_turn / assemble_task_context / get_blast_radius), then Superpowers discipline.
-- **Manual checks:** from the repo root, `node ~/.claude/skills/plan-mode-gate/scripts/plan-mode-check.js` (plan gate JSON) and `node ~/.claude/skills/plan-mode-gate/scripts/code-mode-check.js` (post-edit reminder). Neither is wired to a hook by default.
+- **Manual checks:** none — the pre-flight (jcodemunch, sequential-thinking, Context7) is pushed by the prompt router's MCP routes; this skill is the checklist.
 
 ## Purpose
 

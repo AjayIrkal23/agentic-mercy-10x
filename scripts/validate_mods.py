@@ -11,6 +11,9 @@ Static checks (stdlib, every OS, CI included) for each id in
   M4  the declared ``types`` contract exists                                          [HARD]
   M5  at least one ``*.test.ts[x]``                                                   [WARN]
   M6  no file of the engine-laid ``.claude-plugin/types/`` is tracked by git          [HARD]
+  M7  monitors (``experimental.monitors`` or ``monitors/monitors.json``) are well formed:
+      name/command/description, optional ``when``, no unknown keys, unique names, no
+      ``${user_config``; an ``oomguard`` monitor filters with ``grep -E '"kind": ?"tier"'`` [HARD]
 
 Then, unless ``--static`` or the ``claude`` CLI is absent: ``claude plugin validate
 --json [--strict] <dir>`` must report success, and ``claude plugin test <dir>`` must
@@ -32,6 +35,7 @@ MANIFEST = ROOT / "installer" / "manifest.json"
 SUFFIXES = {".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".mts", ".cts"}
 FORBIDDEN = re.compile(r"\bimport\s*\(|\brequire\s*\(|\bconsole\.|\bset(?:Timeout|Interval)\s*\(")
 ROLLOUT_OFF = "hooks modules are turned off"  # `claude plugin test` when the remote switch is off
+TIER_FILTER = '"kind": ?"tier"'  # grep -E; memwatch_state writes json.dumps' "kind": "tier"
 
 
 def enabled_mods(manifest: Path = MANIFEST) -> list[str]:
@@ -81,7 +85,62 @@ def static_problems(mod_id: str, root: Path = ROOT) -> tuple[list[str], list[str
     tracked = _git_tracked(folder / ".claude-plugin" / "types", root)
     if tracked:
         hard.append(f"M6 engine-laid types are tracked by git: {tracked[:3]}")
+    hard += monitor_problems(folder, plugin)
     return hard, warn
+
+
+_MON_KEYS = {"name", "command", "description", "when"}
+_MON_WHEN = re.compile(r"^(?:always|on-skill-invoke:.+)$")
+
+
+def _monitors(folder: Path, plugin: dict):
+    """The plugin's monitor entries: ``experimental.monitors`` inline (a list) or a path
+    relative to the folder (a string), else ``monitors/monitors.json``, else []. A parse
+    error returns the M7 line (a str)."""
+    decl = (plugin.get("experimental") or {}).get("monitors") if isinstance(plugin.get("experimental"), dict) else None
+    if isinstance(decl, list):
+        return decl
+    path = folder / decl if isinstance(decl, str) else folder / "monitors" / "monitors.json"
+    if not path.is_file():
+        return f"M7 monitors file {decl!r} not found" if isinstance(decl, str) else []
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return f"M7 {path.relative_to(folder)}: {type(exc).__name__}"
+    return data if isinstance(data, list) else "M7 monitors must be a JSON list"
+
+
+def monitor_problems(folder: Path, plugin: dict) -> list[str]:
+    """M7: each monitor has string name/command/description, an optional ``when``
+    (``always`` | ``on-skill-invoke:<skill>``), no other key (the engine fails the plugin
+    load on unknown keys), a unique name and no ``${user_config`` in ``command``. A monitor
+    named ``oomguard`` must filter to tier lines with ``grep -E`` and ``TIER_FILTER``."""
+    mons = _monitors(folder, plugin)
+    if isinstance(mons, str):
+        return [mons]
+    out, seen = [], set()
+    for i, m in enumerate(mons):
+        if not isinstance(m, dict):
+            out.append(f"M7 monitor #{i} is not an object")
+            continue
+        name = m.get("name")
+        for key in ("name", "command", "description"):
+            if not isinstance(m.get(key), str) or not m.get(key):
+                out.append(f"M7 monitor {name or i!r}: {key} must be a non-empty string")
+        extra = sorted(set(m) - _MON_KEYS)
+        if extra:
+            out.append(f"M7 monitor {name or i!r}: unknown keys {extra}")
+        if "when" in m and not (isinstance(m["when"], str) and _MON_WHEN.match(m["when"])):
+            out.append(f"M7 monitor {name or i!r}: when must be always or on-skill-invoke:<skill>")
+        if name in seen:
+            out.append(f"M7 duplicate monitor name {name!r}")
+        seen.add(name)
+        cmd = str(m.get("command") or "")
+        if "${user_config" in cmd:
+            out.append(f"M7 monitor {name!r}: command uses ${{user_config}}")
+        if name == "oomguard" and not (TIER_FILTER in cmd and "grep -E" in cmd):
+            out.append(f"M7 oomguard monitor lacks the tier filter (grep -E '{TIER_FILTER}')")
+    return out
 
 
 def _git_tracked(path: Path, root: Path) -> list[str]:

@@ -15,6 +15,12 @@ file form supports git worktrees/submodules). Return ``RepoCtx`` or ``None``.
 
 ``RepoCtx.key`` is ``<dirname>-<sha1(abspath)[:8]>`` — stable per checkout,
 collision-resistant, filesystem-safe (reused for per-repo state filenames).
+
+Key schemes: ``repo_key(root, digits=8)`` is the one hashing function. Width 8 is
+``RepoCtx.key`` and every per-repo state file; width 12 is the
+``state/model-modes/<key>`` scheme of ``lib.model_mode`` (the user's pins, e.g.
+``.claude-4edfd57ed6ce``), which is expected to import this function. Never change
+a stored width.
 """
 
 from __future__ import annotations
@@ -49,11 +55,19 @@ class RepoCtx:
         return Path(self.root)
 
 
+def repo_key(root: str | os.PathLike, *, digits: int = 8) -> str:
+    """``<dirname>-<sha1(realpath)[:digits]>``. 8 digits = ``RepoCtx.key`` / per-repo
+    state files; 12 digits = the ``state/model-modes/<key>`` scheme ``lib.model_mode``
+    keeps for the user's pins. One hashing function; callers choose the width. Never
+    change an existing width."""
+    ap = os.path.realpath(str(Path(root)))
+    digest = hashlib.sha1(ap.encode("utf-8", "replace")).hexdigest()[:digits]
+    return f"{Path(ap).name or 'root'}-{digest}"
+
+
 def _repo_key(root: Path) -> str:
-    ap = str(root.resolve())
-    digest = hashlib.sha1(ap.encode("utf-8", "replace")).hexdigest()[:8]
-    name = root.name or "root"
-    return f"{name}-{digest}"
+    """Private alias kept for in-file callers (8 digits)."""
+    return repo_key(root)
 
 
 def _start_dir(payload: Mapping[str, Any] | None, cwd: str | os.PathLike | None) -> Path | None:
@@ -227,6 +241,7 @@ def git_remote_identity(root: str | os.PathLike) -> str | None:
 __all__ = [
     "RepoCtx",
     "active_repo",
+    "repo_key",
     "is_inside",
     "sanitize_name",
     "git_root",

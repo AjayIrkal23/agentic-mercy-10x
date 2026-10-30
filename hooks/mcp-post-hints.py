@@ -10,6 +10,8 @@ registered and not waiting on auth — same check as the prompt router):
   FE component edit inside a repo, AND a dev server is listening   → reticle / playwright verify
   migration or .sql                                                → postgres-patterns checklist
   more than 3 distinct code files touched this session (once)      → jcodemunch blast radius
+  placeholder/stock image URL newly written in a FE file (once)    → Higgsfield connector
+    (always offered: the claude.ai connector is the live asset path)
 
 Advisory only, fast (no network; the dev-port probe is `ss -ltn`, 1 s cap), fail-open:
 any error prints {}. State: hooks/.state/<sid>.mcp-post-hints.json (no-op write when
@@ -31,7 +33,16 @@ if str(_HOOKS) not in sys.path:
     sys.path.insert(0, str(_HOOKS))
 
 STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or _HOOKS / ".state")
-WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
+try:
+    from tool_compat import WRITE_TOOLS as _COMPAT_WRITE_TOOLS
+except Exception:  # noqa: BLE001
+    _COMPAT_WRITE_TOOLS = frozenset({"Write", "Edit", "MultiEdit"})
+# shortcut: tool_compat lacks NotebookEdit (the dispatch matcher has it); INTEGRATE adds it there, then drop the union
+WRITE_TOOLS = frozenset(_COMPAT_WRITE_TOOLS) | {"NotebookEdit"}
+_ASSET_URL = re.compile(
+    r"https?://(?:[\w.-]*\.)?(?:placeholder\.com|placehold\.co|picsum\.photos|loremflickr\.com|"
+    r"dummyimage\.com|unsplash\.com|pexels\.com|pixabay\.com)\b", re.I)
+_ASSET_EXT = (".tsx", ".jsx", ".vue", ".svelte", ".html", ".astro", ".mdx", ".css", ".scss")
 BLAST_THRESHOLD = 3
 MAX_CHARS = 900
 
@@ -209,6 +220,13 @@ def hints(payload: dict, state: dict) -> list[str]:
         if port:
             out.append(f"FE component edited and your app is running on :{port} → verify with {how}. "
                        "Never start a server.")
+
+    if low.endswith(_ASSET_EXT):
+        new, old = _texts(ti)
+        if _ASSET_URL.search(new) and not _ASSET_URL.search(old) and once("asset"):
+            out.append("Placeholder/stock asset URL written → make the real asset with the Higgsfield "
+                       "connector (mcp__claude_ai_higgsfield__generate_image / generate_video; "
+                       "rules/frontend.md), never a placeholder.")
 
     if is_code and fp not in files:
         files.append(fp)

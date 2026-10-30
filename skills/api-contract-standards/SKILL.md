@@ -133,3 +133,5 @@ If a contract changes in a way that can break consumers, version it or plan a mi
 ## References
 
 - Use `references/full-guide.md` for the longer strict version with more detailed endpoint intent and examples.
+
+ECC graft: `references/ecc-api-design.md` — consumer-first contracts, cursor pagination, error envelope, versioning rule.

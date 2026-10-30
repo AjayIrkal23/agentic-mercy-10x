@@ -1,15 +1,29 @@
-"""opus-guard: an explicit `model` (or [label]) may not override a pin or escalation unless
-the user's own turn names that model (audit 2026-10-05 E-04, B1-21). Fable always needs
-that phrase; a model outside the policy (haiku) is replaced with a logged reason."""
+"""opus-guard: an explicit `model` (or [label]) may not override a guarded role (judge, executor)
+or escalation unless the user's own turn names that model (audit 2026-10-05 E-04, B1-21). Fable
+always needs that phrase; every result is capped to the plan tier (R3.3), and the usage guard
+pauses fable. The tier is pinned per test (default max20) through tier_fixture."""
 from __future__ import annotations
 
 import json
 import os
 import subprocess
 import sys
+import time
 from pathlib import Path
 
+import pytest
+
 HOOK = Path(__file__).resolve().parent.parent / "opus-guard.py"
+sys.path.insert(0, str(HOOK.parent.parent / "tests" / "fixtures" / "plan-tier"))
+import tier_fixture as TF  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _max20_default():
+    TF.set_tier("max20")
+    TF.set_usage(None)
+    yield
+    TF.clear()
 
 
 def _transcript(tmp: Path, user_text: str | None) -> str:
@@ -97,12 +111,46 @@ def test_meta_rows_and_older_turns_are_not_the_users_phrase(tmp_path):
     assert model(run(ti, tmp_path, "now review it")[0], ti) == "opus"
 
 
-def test_haiku_is_replaced_with_a_visible_reason(tmp_path):
+def test_haiku_is_a_policy_model_now(tmp_path):
     ti = {"description": "tests", "subagent_type": "test-author", "model": "haiku"}
     out, rows = run(ti, tmp_path)
-    assert model(out, ti) == "sonnet"
-    assert "haiku" in rows[-1]["reason"]
+    assert model(out, ti) == "sonnet"  # test-author is guarded: no phrase, the request is ignored
+    assert "ignored" in rows[-1]["reason"] and "haiku" in rows[-1]["reason"]
     assert "haiku" in out["hookSpecificOutput"]["additionalContext"]
+    assert model(run(ti, tmp_path, "write the tests, use haiku")[0], ti) == "haiku"
+
+
+def test_opus_phrase_lifts_a_judge_on_max5_but_not_on_pro(tmp_path):
+    TF.set_tier("max5")
+    ti = {"description": "review", "subagent_type": "santa-reviewer"}
+    assert model(run(ti, tmp_path, "review it")[0], ti) == "sonnet"
+    assert model(run(ti, tmp_path, "review it, use opus")[0], ti) == "opus"  # the phrase alone lifts
+    ti2 = {**ti, "model": "opus"}
+    assert model(run(ti2, tmp_path, "review it, use opus")[0], ti2) == "opus"
+    TF.set_tier("pro")
+    out, rows = run(ti2, tmp_path, "review it, use opus")
+    assert model(out, ti2) == "sonnet" and "tier-cap" in rows[-1]["reason"]
+
+
+def test_fable_phrase_only_counts_on_max20(tmp_path):
+    ti = {"description": "special", "subagent_type": "general-purpose", "model": "fable"}
+    assert model(run(ti, tmp_path, "use fable for this")[0], ti) == "fable"
+    TF.set_tier("max5")
+    out, rows = run(ti, tmp_path, "use fable for this")
+    assert model(out, ti) == "opus" and "tier-cap" in rows[-1]["reason"]
+
+
+def test_fable_paused_under_usage_guard(tmp_path):
+    TF.set_usage(88.0, time.time() + 3600)
+    ti = {"description": "special", "subagent_type": "general-purpose", "model": "fable"}
+    out, rows = run(ti, tmp_path, "use fable for this")
+    assert model(out, ti) == "sonnet" and "usage-guard" in rows[-1]["reason"]
+
+
+def test_explicit_opus_with_phrase_survives_usage_guard(tmp_path):  # the user's word wins over the guard
+    TF.set_usage(88.0, time.time() + 3600)
+    ti = {"description": "build", "subagent_type": "implementation-engineer", "model": "opus"}
+    assert model(run(ti, tmp_path, "build it, use opus")[0], ti) == "opus"
 
 
 def test_no_transcript_means_no_phrase(tmp_path):

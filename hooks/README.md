@@ -1,9 +1,9 @@
 # Hooks — dispatch architecture
 
 **Registry:** `settings.template.json` (rendered to `settings.json` by
-`installer/render.py`). It registers `dispatch.py <event>` once for each of 12 events,
-plus `prompt_router/router.py` for UserPromptSubmit — 13 hook events in total. Every hook
-still lives in its own file; `dispatch.py` only orchestrates.
+`installer/render.py`). It registers `dispatch.py <event>` once for each of 13
+events (15 chains; `subagent-stop` and `post-compact` keep a disabled link and no
+registration). Every hook still lives in its own file; `dispatch.py` only orchestrates.
 
 ## Events and chains
 
@@ -11,17 +11,20 @@ still lives in its own file; `dispatch.py` only orchestrates.
 
 | Event (`dispatch.py` arg) | Links |
 |---|---|
-| `session-start` | settings-permissions-selfheal, state-cleanup (async), session-start-aggregator, memory-load-on-start, session-lifecycle-start, ponytail-session, skills-index-guard (async) |
-| `pre-tool-use` | dangerous-bash-gate, first-write-skill-gate, gateguard-write-gate, dox-write-gate-write, bash-write-gate, blocking-doc-enforcer, jcm-gate-read, jcm-gate-leanctx, jdoc-doc-steer, tdd-guard-launcher-pre, graphify-enforce, opus-guard, workflow-model-guard |
-| `post-tool-use` | skill-invocation-tracker, fullstack-post, codex-capture, post-write-aggregator, desloppify-cleanup, santa-method-writer, security-semgrep-tracker, jcm-mcp-used, mcp-post-hints |
-| `post-tool-use-failure` | tool-failure-hint |
-| `stop` | hard-completion-gate, invoke-suite-gate, index-flush (async), session-lifecycle-stop (async) |
+| `session-start` | settings-permissions-selfheal, state-cleanup (async), memwatch-ensure (async), session-ledger-start, plan-tier-detect, session-start-aggregator, memory-load-on-start, session-lifecycle-start, skills-index-guard (async), selfheal-daily (async) |
+| `user-prompt-submit` | router, hookify-prompt |
+| `pre-tool-use` | dangerous-bash-gate, connector-ask-gate, first-write-skill-gate, config-protection, gateguard-write-gate, dox-write-gate-write, bash-write-gate, blocking-doc-enforcer, hookify-gate, jcm-gate-read, jcm-gate-leanctx, jdoc-doc-steer, tdd-guard-launcher-pre, graphify-enforce, memwatch-brake, memwatch-brake-shell, opus-guard, workflow-model-guard |
+| `post-tool-use` | skill-invocation-tracker, fullstack-post, codex-capture, post-write-aggregator, desloppify-cleanup, gateguard-ack, santa-method-writer, security-semgrep-tracker, index-git-reprobe (async), jcm-mcp-used, mcp-post-hints, context-monitor, observe-log (async) |
+| `post-tool-use-failure` | tool-failure-hint, observe-log-failure (async) |
+| `stop` | hard-completion-gate, invoke-suite-gate, stop-format-typecheck, hookify-stop, index-flush (async), session-lifecycle-stop (async) |
+| `stop-failure` | stop-failure-log |
+| `instructions-loaded` | instructions-loaded-log (async) |
 | `subagent-start` | subagent-context |
-| `subagent-stop` | session-lifecycle-subagent |
-| `pre-compact` / `post-compact` | session-lifecycle-precompact / -postcompact |
+| `subagent-stop` | session-lifecycle-subagent (disabled, not registered) |
+| `pre-compact` / `post-compact` | session-lifecycle-precompact / -postcompact (disabled, not registered) |
 | `config-change` | permissions-deny-guard |
 | `teammate-idle` | teammate-idle-gate |
-| `session-end` | settings-permissions-selfheal-end, index-session-end |
+| `session-end` | settings-permissions-selfheal-end, index-session-end, session-ledger-end |
 
 ## Link taxonomy
 
@@ -37,12 +40,14 @@ in parallel. An advisory with `"defer": true` runs detached and lands on the ses
 PreToolUse/PostToolUse (`--only` keeps it synchronous). A deny ends the chain and carries
 the notes of earlier gates; an `ask` is held while later gates run. The char cap cuts on a
 line boundary and appends `[truncated]`, gate notes first. Raw stdout counts only on exit 0.
-A link with `"enabled": false` stays declared as a retired record (`weights-loop`,
-`session-lifecycle-subagent`, `session-lifecycle-postcompact`).
+A link with `"enabled": false` stays declared as a retired record
+(`session-lifecycle-subagent`, `session-lifecycle-postcompact`).
 
 Per-link fields: `id`, `type`, `cmd` (`{PY}`/`{HOOKS}`/`{NODE}` tokens), optional
-`tools` regex (full-match on `tool_name`), `priority` (0 = never dropped), `timeout_ms`,
-`enabled`.
+`tools` regex (full-match on `tool_name`), `command_re` (shell links run only when the
+command matches), `priority` (0 = never dropped), `timeout_ms`, `enabled`, `async`
+(detached exec), `defer` (advisory delivered on the next tool event), `crit_exempt`
+(survives the crit memory profile).
 
 ## Guarantees
 
@@ -54,7 +59,8 @@ Per-link fields: `id`, `type`, `cmd` (`{PY}`/`{HOOKS}`/`{NODE}` tokens), optiona
 
 ## Prompt router
 
-`prompt_router/router.py` classifies once, detects the surface, ranks ≤5 skills, adds
+`prompt_router/router.py` runs as the `router` link of `user-prompt-submit` (not its own
+registration). It classifies once, detects the surface, ranks ≤5 skills, adds
 availability-aware MCP lines and an agent suggestion, and emits
 `hookSpecificOutput.additionalContext`. Its trigger surface is frozen in
 `trigger-floor.json` (`build-trigger-floor.py --check` in CI). Details:

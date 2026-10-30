@@ -114,3 +114,15 @@ def test_cue_inside_a_code_fence_is_ignored(tmp_path):
 
 def test_mercy_remember_tool_counts_as_a_save(tmp_path):
     assert _run(tmp_path, [_user("remember that x"), _tool("mcp__mercy__remember", fact="x")]) == {}
+
+
+def test_memory_gate_reads_through_the_shared_tail_reader(monkeypatch):
+    import inspect
+    if str(_HOOKS) not in sys.path:
+        sys.path.insert(0, str(_HOOKS))
+    from lib import memory_gate
+    src = inspect.getsource(memory_gate)
+    assert "deque(" not in src and ".open(" not in src
+    monkeypatch.setattr(memory_gate._turns, "tail_entries", lambda *a, **k: None)
+    assert memory_gate.turn_saved_memory("x") is None
+    assert memory_gate.gate7_memory("x", "remember this") == (True, memory_gate.LABEL, "")

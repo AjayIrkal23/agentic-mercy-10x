@@ -158,3 +158,33 @@ def test_unknown_turn_key_gets_no_same_turn_override(hcg, tmp_path, monkeypatch)
     assert _hcg_run(mod, payload, monkeypatch).get("decision") == "block"
     assert _hcg_run(mod, payload, monkeypatch).get("decision") == "block"
     assert _hcg_run(mod, dict(payload, stop_hook_active=True), monkeypatch) == {}
+
+
+# --------------------------------------------------------------------------- gate_state (hygiene step 13)
+def test_gate_state_is_written_under_lock(hcg, tmp_path, monkeypatch):
+    mod, state = hcg
+    _files(state, [f"/w/CODE_FILES/app/src/{n}.ts" for n in "abc"])   # three code files → a gate blocks
+    out = _hcg_run(mod, {"session_id": "s", "cwd": str(tmp_path), "transcript_path": ""}, monkeypatch)
+    assert out.get("decision") == "block"
+    assert (state / "s.completion-gate.json.lock").exists()
+    assert json.loads((state / "s.completion-gate.json").read_text(encoding="utf-8"))["blocked_this_turn"] is True
+
+
+def test_suite_gate_state_lives_in_telemetry_dir_under_lock(tmp_path):
+    cid = f"wp4-lock-{os.getpid()}"
+    push = {"skills": ["react-hooks-patterns"]}
+    out = _isg(tmp_path, cid, push, ["/app/src/hooks/useThing.ts"])
+    try:
+        assert out.get("decision") == "block"
+        assert (_tel() / f"{cid}.suite-gate.json").exists()
+        assert (_tel() / f"{cid}.suite-gate.json.lock").exists()
+    finally:
+        for suffix in (".suite-gate.json", ".suite-gate.json.lock", ".pushed-skills.jsonl"):
+            (_tel() / f"{cid}{suffix}").unlink(missing_ok=True)
+
+
+def test_shared_helpers_come_from_gate_state():
+    for name in ("hard-completion-gate.py", "invoke-suite-gate.py"):
+        src = (_HOOKS / name).read_text(encoding="utf-8")
+        assert "from lib import gate_state" in src or "lib.gate_state" in src
+        assert "def _safe_cid" not in src

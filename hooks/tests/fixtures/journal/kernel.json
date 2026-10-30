@@ -1,0 +1,1 @@
+{"__REALTIME_TIMESTAMP":"1761700000000000","_TRANSPORT":"kernel","SYSLOG_IDENTIFIER":"kernel","PRIORITY":"3","MESSAGE":"Out of memory: Killed process 67860 (MainThread) total-vm:5256208kB, anon-rss:3930228kB, file-rss:148kB, shmem-rss:0kB, UID:1000 pgtables:111084kB oom_score_adj:200"}

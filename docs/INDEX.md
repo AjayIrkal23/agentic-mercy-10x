@@ -20,5 +20,9 @@ local `CLAUDE.md`.
 | [`docs/CLAUDE.md`](CLAUDE.md) | this folder |
 | [`agents/README.md`](../agents/README.md) | agents, acts, models, teams |
 | [`hooks/README.md`](../hooks/README.md) | dispatch architecture |
+| [`workflows/CLAUDE.md`](../workflows/CLAUDE.md) | generated saved workflow library |
+| [`mods/mercy/hooks/features/CLAUDE.md`](../mods/mercy/hooks/features/CLAUDE.md) | the mercy mod's feature modules |
+| [`mods/mercy/hooks/lib/CLAUDE.md`](../mods/mercy/hooks/lib/CLAUDE.md) | the mercy mod's shared library |
+| [`mods/mercy/tests/CLAUDE.md`](../mods/mercy/tests/CLAUDE.md) | the mercy mod's tests |
 
-Other docs: [CHANGELOG](CHANGELOG.md) · [ADRs](adr/) · [skill precedence](SKILL-HARMONIZATION.md) · [archive](archive/).
+Other docs: [CHANGELOG](CHANGELOG.md) · [ADRs](adr/) · [skill precedence](SKILL-HARMONIZATION.md) · [archive](archive/) · [directives](DIRECTIVES.md) · [token budget](TOKEN-BUDGET.md) · [model routing](MODEL-ROUTING.md) · [OOM guard](OOM-GUARD.md) · [workflows](WORKFLOWS.md) · [learning](LEARNING.md).

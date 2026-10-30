@@ -122,3 +122,5 @@ ONLY when a guard prints STALE/MISSING:
 | "I'll reason it through inline" (plan/debug/design) | `mcp__sequential-thinking__sequentialthinking` |
 
 See also: `graphify`, `references/jcodemunch-toolbox.md`, `references/rules-codebase-intel-first.md` (precedence rule).
+
+ECC graft: `references/ecc-explorer.md` — trace-first exploration and searching the repo before the web.

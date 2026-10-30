@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'claude-code/testing'
 
-import { dayKey, depsDue, depsRows, isDevPort, lastSessionLine, portChanges, portsRows, sessionSummary, shouldCompact, standupDays, withCard } from '../hooks/lib/auto'
+import { compactThreshold, dayKey, depsDue, depsRows, isDevPort, lastSessionLine, portChanges, portsRows, sessionSummary, shouldCompact, standupDays, withCard } from '../hooks/lib/auto'
 import { emptyLedger, recordCommand, recordEdit } from '../hooks/lib/ledger'
 
 describe('autonomous jobs: pure rules', () => {
@@ -85,5 +85,16 @@ describe('autonomous jobs: pure rules', () => {
     expect(kept[1]?.text).toContain('5173')
     expect(portsRows(undefined, 80)[0]?.text).not.toContain('ss -ltnpH')
     expect(portsRows([], 80)[0]?.text).toBe('Nothing is listening on TCP.')
+  })
+})
+
+describe('compaction threshold', () => {
+  test('never exceeds the native autoCompactWindow share of the context window', () => {
+    expect(compactThreshold(85, 900_000, 1_000_000)).toBe(85) // native fires later → keep the user's %
+    expect(compactThreshold(85, 150_000, 200_000)).toBe(75) // native would fire at 75 % → agree
+    expect(compactThreshold(85, undefined, 200_000)).toBe(85)
+    expect(compactThreshold(85, 0, 200_000)).toBe(85)
+    expect(compactThreshold(0, 150_000, 200_000)).toBe(0)
+    expect(compactThreshold(85, 40_000, 200_000)).toBe(50) // floor
   })
 })

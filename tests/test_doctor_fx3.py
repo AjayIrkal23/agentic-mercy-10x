@@ -102,6 +102,7 @@ def test_stale_when_the_pinned_status_line_interpreter_is_gone(tmp_path, monkeyp
 
 def test_not_stale_when_the_interpreter_exists_or_is_a_bare_launcher(tmp_path, monkeypatch):
     monkeypatch.setattr(selfheal, "_render_sources", lambda: [])
+    monkeypatch.setattr(selfheal, "_tier_drift", lambda st: False)  # these files hold no model keys
     st = tmp_path / "settings.json"
     for command in (f'"{Path(sys.executable).as_posix()}" /x/s.py', "py -3 /x/dispatch.py pre", "python3 /x/s.py", ""):
         _write(tmp_path, command)
@@ -111,6 +112,7 @@ def test_not_stale_when_the_interpreter_exists_or_is_a_bare_launcher(tmp_path, m
 def test_daily_settings_step_rerenders_when_the_interpreter_is_gone(tmp_path, monkeypatch):
     import importlib.util
     monkeypatch.setattr(selfheal, "_render_sources", lambda: [])
+    monkeypatch.setattr(selfheal, "_tier_drift", lambda st: False)  # these files hold no model keys
     spec = importlib.util.spec_from_file_location("selfheal_daily_fx3", _ROOT / "hooks" / "tools" / "selfheal-daily.py")
     sd = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(sd)  # type: ignore[union-attr]

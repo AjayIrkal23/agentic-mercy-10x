@@ -60,10 +60,12 @@ def _load_doc_config() -> None:
 
 _load_doc_config()
 
-SKIP_PATTERNS = [
-    ".claude/", "node_modules/", ".git/", "dist/", "build/",
-    "__pycache__", ".state/", "graphify-out/", "plan-",
-]
+# Skips beyond lib.code_files' anchored list (which covers .claude/hooks, .claude/scripts,
+# node_modules, .git, dist, build, __pycache__, .state, docs): graph output and plan files.
+_EXTRA_DIRS = ("graphify-out",)
+_EXTRA_NAMES = ("plan-",)
+_FALLBACK_SKIP = (".claude/", "node_modules/", ".git/", "dist/", "build/",
+                  "__pycache__", ".state/", "graphify-out/", "plan-")
 
 BE_INDICATORS = ["/server/", "/internal/", "/cmd/", "/pkg/", ".go"]
 FE_INDICATORS = ["/client/", "/src/", ".tsx", ".ts", ".jsx", ".js"]
@@ -134,8 +136,16 @@ def _is_doc_file(fp: str) -> bool:
 
 
 def _should_skip(fp: str) -> bool:
+    try:
+        from lib import code_files as _cf
+        if _cf.is_skipped(fp, extra_dirs=_EXTRA_DIRS, extra_names=_EXTRA_NAMES):
+            return True
+        # "plan-x/" as a directory prefix (the old substring list matched it anywhere).
+        return any(seg.startswith("plan-") for seg in fp.replace("\\", "/").lower().split("/")[:-1])
+    except Exception:  # noqa: BLE001
+        pass
     norm = fp.replace("\\", "/")  # Windows sends `a\b`
-    return any(skip in norm for skip in SKIP_PATTERNS)
+    return any(skip in norm for skip in _FALLBACK_SKIP)
 
 
 def _dir_of(fp: str) -> str:

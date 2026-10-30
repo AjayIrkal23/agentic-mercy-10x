@@ -1,0 +1,2 @@
+The ECC validator's own placeholders stay clean: /home/user/x and /home/username/x.
+Angle placeholders too: /home/<user>/x and /Users/<you>/x.

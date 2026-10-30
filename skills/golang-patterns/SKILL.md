@@ -704,3 +704,5 @@ func (c *Counter) Increment() { c.n++ }        // Pointer receiver
 ```
 
 **Remember**: Go code should be boring in the best way - predictable, consistent, and easy to understand. When in doubt, keep it simple.
+
+ECC graft: `references/ecc-go-rules.md` — `%w` wrapping, context first, no package state, vet/staticcheck hook.

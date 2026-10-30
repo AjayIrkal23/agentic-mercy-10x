@@ -35,7 +35,9 @@ OLD = {
     "curl": re.compile(r"\b(?:curl|wget)\b[^\n;&]*\|\s*(?:sudo\s+)?(?:ba|z|da|k)?sh\b", I),
     "mongo": re.compile(r"\bdropDatabase\s*\(|\bdb\.\S*\.drop\s*\(\s*\)", I),
     "rmvar": re.compile(r"\brm\s+(?:\$\w+|\$\{[^}]+\})", I),
-    "push": re.compile(GIT + r"push\s+(?:\S+\s+)*(?:--force(?![-\w])|-f\b)", I),
+    # PKG gates (audit 07 issue 3): bundled `-fu` and a `+refspec` are force pushes too
+    "push": re.compile(GIT + r"push\s+(?:\S+\s+)*(?:--force(?![-\w])|-[a-zA-Z]*f[a-zA-Z]*(?![\w-])"
+                       r"|\+[\w./-]+(?::[\w./-]*)?)", I),
     "clean": re.compile(GIT + r"clean\s+(?:\S+\s+)*?(?:-[a-zA-Z]*f[a-zA-Z]*|--force)(?![\w-])", I),
 }
 OLD_HEREDOC = re.compile(r"<<-?\s*(['\"]?)(\w+)\1[^\n]*\n.*?^\s*\2\s*$", re.S | re.M)
@@ -107,6 +109,8 @@ def test_git_rows_agree_with_the_old_regex_inside_one_segment(gate, name):
     new = gate._GIT_PUSH_RE if name == "push" else gate._GIT_CLEAN_RE
     rng = random.Random(f"sec1-01-{name}")
     vocab = [w for w in WORDS if w not in SEP] + ["--force", "-f", "-fdx", "-n", "-x", "-d", "-fd"]
+    if name == "push":
+        vocab += ["-fu", "+main", "+x:y", "-u"]
     hits = 0
     for _ in range(60000):
         words = [rng.choice(vocab) for _ in range(rng.randint(0, 6))]
@@ -147,6 +151,10 @@ ORDINARY = {
     "ls x | sort": "allow", "cat f | xargs rm": "allow", "ls x | rm": "allow", "echo a |\n rd": "allow",
     "echo `date`": "allow", "echo a `\n -Recurse": "allow", "echo a \\\n | Remove-Item -Force x": "deny",
     "ls x | Remove-Item -Force": "deny", "ls /tmp/x | Remove-Item -Force": "allow",
+    # PKG gates: force-push spellings, git hook bypass, dev-server ask, heredoc bodies that execute
+    "git push -fu origin main": "deny", "git push origin +main": "deny", "git commit --no-verify -m x": "deny",
+    "git commit -n -m x": "deny", "git commit -uno -m x": "allow", "npm run dev": "ask", "npm run build": "allow",
+    "bash <<EOF\nrm -rf ~/x\nEOF": "deny",
 }
 
 

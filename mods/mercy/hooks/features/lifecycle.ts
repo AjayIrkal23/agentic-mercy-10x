@@ -10,11 +10,12 @@ import { parseConfig } from '../lib/dispatch'
 import { duration } from '../lib/format'
 import { hiddenFrom, hooksDirFrom, pythonFrom } from '../lib/hostconfig'
 import { addUsage, beginTurn, emptyLedger, recordAgentEnd } from '../lib/ledger'
-import { join } from '../lib/paths'
+import { join, statePathFrom } from '../lib/paths'
 import { defaultPython, isWindowsEnv } from '../lib/os'
 import { busy, idle } from '../lib/queue'
 import { clockLabel, RESUME_PROMPT, resumeAt } from '../lib/resume'
-import { dropResume, featureHealth, hostOffsetMinutes, noteError, resumeKey, rt, ui, withErrors } from '../lib/runtime'
+import { decideResumeLock, flagBody, lockBody } from '../lib/resumelock'
+import { dropResume, dropTimers, featureHealth, hostOffsetMinutes, keepTimer, noteError, resumeKey, rt, ui, withErrors } from '../lib/runtime'
 import { snapshot } from '../lib/snap'
 import { COMMAND_SPECS, TOOL_SPECS } from '../lib/specs'
 import { isScratchRoot, sweepStore } from '../lib/storekeys'
@@ -82,12 +83,59 @@ function scheduleResume($: EngineInterface, at: number, now: number): void {
   })
 }
 
+/**
+ * Takes `state/resume-lock/<sid>`, shared with scripts/restore_sessions.py. `$.fs` has no
+ * exclusive create, so this is write-then-verify: write our body, wait 250 ms, read it back.
+ * Python takes the lock with O_EXCL and only runs when the mod flag is absent, so the race is
+ * theoretical. Returns the holder when a fresh foreign lock wins; any fs error → proceed.
+ */
+async function takeResumeLock($: EngineInterface): Promise<string | undefined> {
+  if (!rt.hooksDir || !rt.sessionId) return undefined
+  try {
+    const path = join(statePathFrom(rt.hooksDir, 'resume-lock'), rt.sessionId)
+    const now = await $.clock.now()
+    const existing = (await $.fs.exists(path)) ? await $.fs.read(path).catch(() => undefined) : undefined
+    const d = decideResumeLock(existing, now)
+    if (!d.take) return d.reason.slice('held:'.length)
+    const body = lockBody(now)
+    await $.fs.write(path, body)
+    await $.clock.sleep(250)
+    const after = await $.fs.read(path).catch(() => undefined)
+    if (after !== undefined && after !== body) {
+      const again = decideResumeLock(after, await $.clock.now())
+      if (!again.take) return again.reason.slice('held:'.length)
+    }
+  } catch {
+    // fail open: the resume goes ahead as it always did
+  }
+  return undefined
+}
+
 async function fireResume($: EngineInterface): Promise<void> {
   rt.resumeTimer = undefined
   rt.resumeAt = undefined
   rt.resumeAttempts += 1
   await $.store.delete(resumeKey(rt.sessionId))
+  const holder = await takeResumeLock($)
+  if (holder !== undefined) {
+    $.ui.toast(`mercy: auto-resume skipped, resume lock held by ${holder} (restore service is bringing this session back)`, { timeoutMs: 12000 })
+    return
+  }
   await $.prompt.submit({ text: RESUME_PROMPT })
+}
+
+/** `state/mercy-mod.active.d/<sid>.json`, one file per session: while fresh (< 60 s), restore_sessions.py
+ * and the compaction nudge leave this session's auto-resume and nudge to the mod, and memwatch.py records
+ * that a mod toasts in-pane. `ended` writes ts 0 (stale at once): `$.fs` has no unlink or mkdir, so the
+ * Python side creates the directory. Best-effort and silent: a missing state dir is not a hook error. */
+async function writeFlag($: EngineInterface, ended = false): Promise<void> {
+  if (!rt.hooksDir || !rt.sessionId) return
+  try {
+    const path = join(statePathFrom(rt.hooksDir, 'mercy-mod.active.d'), rt.sessionId + '.json')
+    await $.fs.write(path, flagBody(rt.sessionId, await $.clock.now(), ended))
+  } catch {
+    // the Python side then keeps notifications and restores, exactly as without the mod
+  }
 }
 
 /** Drops stale resumes and stale or scratch repo brains; re-arms this session's saved resume (J-10). */
@@ -122,6 +170,10 @@ async function init($: EngineInterface, interactive: boolean): Promise<void> {
   await loadBrain($, now, reload)
   await $.env.set('MERCY_MOD_LOADED', '1') // Python's "mod off" notice reads it, bridge on or off
   await claimLinks($)
+  if (interactive) {
+    await writeFlag($)
+    keepTimer('mod-flag', $.clock.every(30_000, () => void writeFlag($)))
+  }
   for (const spec of TOOL_SPECS) await $.tool.register({ name: spec.name, description: spec.description, inputSchema: JSON.parse(JSON.stringify(spec.inputSchema)) })
   for (const spec of COMMAND_SPECS) await $.command.register({ ...spec }).catch(err => noteError(`/${spec.name}`, err))
   if (rt.repoRoot) {
@@ -150,12 +202,14 @@ export function registerLifecycle(on: On): void {
       if (e.source === 'clear' || e.session_id !== rt.sessionId) {
         // /clear or an in-process /resume: another conversation in this process
         if (dropResume()) await $.store.delete(resumeKey(rt.sessionId))
+        if (rt.interactive) await writeFlag($, true) // the old id's flag goes stale at once
         rt.sessionId = e.session_id || (await $.session.id())
         rt.ledger = emptyLedger(rt.sessionId, await $.clock.now())
         rt.governor = { blocks: {}, skills: {} }
         rt.pending = []
         rt.deck = { ...rt.deck, sessionId: rt.sessionId, todos: [], turns: [] }
         await claimLinks($)
+        if (rt.interactive) await writeFlag($)
         await $.state.set(LEDGER, rt.ledger)
         await $.state.set(DECK, rt.deck)
       } else if (e.source === 'compact') {
@@ -230,6 +284,12 @@ export function registerLifecycle(on: On): void {
       // H-11: the last write's post-write runs write state later sessions read; give them up to 3 s
       if (busy('fast')) await Promise.race([idle('fast'), $.clock.sleep(3000, { signal: next.signal })])
       await saveBrain($)
+      // /clear and an in-process resume end the conversation, not the process: no session.start
+      // follows, so the pollers stay and classic.SessionStart rewrites the flag under the new id
+      if (e.reason !== 'clear' && e.reason !== 'resume') {
+        dropTimers() // ports, memwatch and mod-flag pollers
+        if (rt.interactive) await writeFlag($, true)
+      }
     } catch (err) {
       noteError('session.end', err)
     }

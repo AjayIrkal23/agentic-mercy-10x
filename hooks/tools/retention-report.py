@@ -11,6 +11,8 @@ Reports:
   ~/.doc-index/local/<name>.json          recorded source_root no longer exists
   ~/.code-index/<name>.db                 recorded source_root no longer exists
   (projects/ dirs holding memory/ are never listed)
+  ~/.doc-index, ~/.code-index whole-store sizes   informational, not reclaimable
+Commands are plain sentences (what to delete), never a ready-to-paste ``rm -rf``.
 
 Usage: python3 hooks/tools/retention-report.py [--keep-days N]
 """
@@ -77,11 +79,13 @@ def report(claude: Path, docs: Path, code: Path, keep_days: int = 30) -> list:
         for ver in sorted(cache.glob("*/*/*")):
             if ver.is_dir() and not ver.parent.parent.name.startswith("temp_git_") \
                     and os.path.realpath(ver) not in live:
-                add(ver, "plugin version not installed", f"rm -rf {shlex.quote(str(ver))}")
+                add(ver, "plugin version not installed",
+                    f"review, then delete the directory: {shlex.quote(str(ver))}")
 
     graph = claude / "graphify-out"
     if graph.is_dir():
-        add(graph, "frozen graph under ~/.claude (no writer)", f"rm -rf {shlex.quote(str(graph))}")
+        add(graph, "frozen graph under ~/.claude (no writer)",
+            f"delete the directory after checking nothing reads it: {shlex.quote(str(graph))}")
 
     cutoff = time.time() - keep_days * 86400
     for proj in sorted((claude / "projects").glob("*")):
@@ -89,7 +93,8 @@ def report(claude: Path, docs: Path, code: Path, keep_days: int = 30) -> list:
             continue  # never suggest deleting a project's auto-memory
         transcripts = [f for f in proj.rglob("*.jsonl") if f.is_file()]
         if transcripts and max(f.stat().st_mtime for f in transcripts) < cutoff:
-            add(proj, f"no transcript newer than {keep_days} d", f"rm -rf {shlex.quote(str(proj))}")
+            add(proj, f"no transcript newer than {keep_days} d",
+                f"delete the project dir (holds no memory/): {shlex.quote(str(proj))}")
 
     for man in sorted(docs.glob("*.json")) if docs.is_dir() else []:
         name = man.name[:-5]
@@ -110,7 +115,12 @@ def report(claude: Path, docs: Path, code: Path, keep_days: int = 30) -> list:
             continue
         if root and _dead(root):
             add(db, f"code index for missing root {root}",
-                f"rm -rf {shlex.quote(str(db))}* {shlex.quote(str(db)[:-3])}")
+                f"remove {shlex.quote(str(db))} and its sidecar files ({shlex.quote(db.stem)}*)")
+
+    # Informational: whole index-store sizes (no command, not counted as reclaimable).
+    for store, label in ((docs.parent, "~/.doc-index"), (code, "~/.code-index")):
+        if store.is_dir():
+            add(store, f"index store: {label} (informational)", "")
     return rows
 
 
@@ -123,14 +133,20 @@ def main(argv=None) -> int:
     ap.add_argument("--keep-days", type=int, default=30)
     a = ap.parse_args(argv)
     rows = report(Path(a.claude_dir), Path(a.doc_index), Path(a.code_index), a.keep_days)
-    total = sum(r[0] for r in rows)
-    print(f"=== retention-report: {len(rows)} item(s), {total / 1e6:.1f} MB reclaimable (nothing deleted) ===")
-    for size, path, reason, _ in sorted(rows, key=lambda r: -r[0]):
+    items = sorted((r for r in rows if r[3]), key=lambda r: -r[0])
+    sizes = sorted((r for r in rows if not r[3]), key=lambda r: -r[0])
+    total = sum(r[0] for r in items)
+    print(f"=== retention-report: {len(items)} item(s), {total / 1e6:.1f} MB reclaimable (nothing deleted) ===")
+    for size, path, reason, _ in items:
         print(f"  {size / 1e6:9.1f} MB  {path}  — {reason}")
-    if rows:
-        print("To reclaim, review then run:")
-        for *_, cmd in sorted(rows, key=lambda r: -r[0]):
+    if items:
+        print("To reclaim (review each first):")
+        for *_, cmd in items:
             print(f"  {cmd}")
+    if sizes:
+        print("Sizes:")
+        for size, path, reason, _ in sizes:
+            print(f"  {size / 1e6:9.1f} MB  {path}  — {reason}")
     return 0
 
 

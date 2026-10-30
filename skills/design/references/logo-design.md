@@ -7,7 +7,6 @@ AI-powered logo design with 55+ styles, 30 color palettes, 25 industry guides. U
 | Script | Purpose |
 |--------|---------|
 | `scripts/logo/search.py` | Search styles, colors, industries; generate design briefs |
-| `scripts/logo/generate.py` | Generate logos via Higgsfield `generate_image` |
 | `scripts/logo/core.py` | BM25 search engine for logo data |
 
 ## Commands
@@ -33,14 +32,8 @@ python3 ~/.claude/skills/design/scripts/logo/search.py "healthcare medical" --do
 
 ### Generate Logo
 
-**ALWAYS** use white background for output logos.
-
-```bash
-python3 ~/.claude/skills/design/scripts/logo/generate.py --brand "TechFlow" --style minimalist --industry tech
-python3 ~/.claude/skills/design/scripts/logo/generate.py --prompt "coffee shop vintage badge" --style vintage
-```
-
-Options: `--style`, `--industry`, `--prompt`
+**ALWAYS** use white background for output logos. Pass the design brief to
+`mcp__higgsfield__generate_image` (one call per variation).
 
 ## Available Styles
 
@@ -74,7 +67,7 @@ Options: `--style`, `--industry`, `--prompt`
 ## Workflow
 
 1. Generate design brief → `scripts/logo/search.py --design-brief`
-2. Generate logo variations → `scripts/logo/generate.py --brand --style --industry`
+2. Generate logo variations → Higgsfield `generate_image` with the brief
 3. Ask user about HTML preview → `AskUserQuestion` tool
 4. If yes, invoke `/` for HTML gallery
 
@@ -88,5 +81,5 @@ Options: `--style`, `--industry`, `--prompt`
 
 ```bash
 # No API key and no install needed — image generation goes through the Higgsfield MCP
-# connector; scripts/logo/generate.py is legacy and must not be run.
+# connector (the legacy Gemini generator was removed on 2026-10-29).
 ```

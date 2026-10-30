@@ -266,3 +266,5 @@ Before starting implementation, confirm:
 - [ ] No task touches more than ~5 files
 - [ ] Checkpoints exist between major phases
 - [ ] The human has reviewed and approved the plan
+
+ECC graft: `references/ecc-blueprint.md` — SOURCE-cited tasks and multi-PR dependency graphs.

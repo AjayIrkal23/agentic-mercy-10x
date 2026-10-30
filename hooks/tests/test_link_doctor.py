@@ -40,3 +40,22 @@ def test_crash_nonzero_and_missing_script_fail(tmp_path, monkeypatch):
     assert st["crash"].startswith("FAIL")
     assert st["seven"] == "FAIL(rc=7)"
     assert st["gone"] == "FAIL(missing-script)"
+
+
+def test_event_names_come_from_dispatch_and_new_events_have_payloads(tmp_path, monkeypatch):
+    import importlib as _il
+    import sys as _sys
+    spec = importlib.util.spec_from_file_location("ld2", HOOKS / "tools" / "link-doctor.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    _sys.path.insert(0, str(HOOKS))
+    dispatch = _il.import_module("dispatch")
+    assert m._EVENT_TOKEN_TO_NAME == dispatch._EVENT_NAME
+    p = m._payload_for("user-prompt-submit", {"id": "router", "type": "advisory"})
+    assert p["hook_event_name"] == "UserPromptSubmit" and p["prompt"] and p["cwd"]
+    p = m._payload_for("stop-failure", {"id": "x", "type": "exec"})
+    assert p["hook_event_name"] == "StopFailure" and p["error"] == "rate_limit"
+    p = m._payload_for("instructions-loaded", {"id": "x", "type": "exec"})
+    assert p["load_reason"] == "session_start" and p["file_path"].endswith("CLAUDE.md")
+    env = m._child_env(str(tmp_path))
+    assert env.get("CLAUDE_HOOK_DOCTOR") == "1"

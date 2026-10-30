@@ -2,11 +2,11 @@
 """Set/clear/show the subagent model mode for the CURRENT repo (per-repo, not global).
 
 Usage (run from inside the repo):
-  model-mode.py sonnet | opus | fable   # pin this model for THIS repo only
-  model-mode.py clear | off | smart      # remove this repo's pin -> smart routing
-  model-mode.py show | status            # show this repo's pin + the global flags
+  model-mode.py haiku | sonnet | opus | fable   # pin this model for THIS repo only (capped to the plan tier)
+  model-mode.py clear | off | smart              # remove this repo's pin -> smart routing
+  model-mode.py show | status                    # this repo's pin, the global flags, plan tier, usage guard
 
-Global kill-switch (every repo, wins over the per-repo pin):
+Global kill-switch (every repo, wins over the per-repo pin; capped to the plan tier too):
   touch ~/.claude/state/<mode>-only-mode   /   rm ~/.claude/state/<mode>-only-mode
 """
 from __future__ import annotations
@@ -14,6 +14,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 _HOOKS = Path(__file__).resolve().parent.parent / "hooks"
@@ -27,6 +28,24 @@ except Exception as exc:  # pragma: no cover
 _CLEAR = ("clear", "off", "smart", "none", "reset", "auto")
 
 
+def _tier_rows() -> list[str]:
+    try:
+        from lib import plan_tier, usage_guard
+
+        t = plan_tier.read()
+        tier = f"{t['tier']} ({t.get('source', 'none')}; ceiling {plan_tier.ceiling(t['tier'])})"
+        u = usage_guard.state()
+        if u.get("active"):
+            until = time.strftime("%H:%M", time.localtime(u["resets_at"])) if u.get("resets_at") else "reset"
+            pct = f"{u['pct']:.0f}% " if u.get("pct") is not None else ""
+            usage = f"active {pct}until {until}"
+        else:
+            usage = "inactive"
+    except Exception:  # noqa: BLE001
+        tier, usage = "(unknown)", "inactive"
+    return [f"plan tier           : {tier}", f"usage guard         : {usage}"]
+
+
 def main(argv: list[str]) -> int:
     arg = argv[0].lower() if argv else "show"
     cwd = os.getcwd()
@@ -36,7 +55,11 @@ def main(argv: list[str]) -> int:
         if not mm.set_mode(cwd, arg):
             print("[model-mode] could not write the mode file", file=sys.stderr)
             return 1
-        print(f"[model-mode] {key} -> {arg}  (this repo only; other repos unaffected)")
+        why = mm.cap_reason(arg)
+        if why:
+            print(f"[model-mode] {why}")
+        else:
+            print(f"[model-mode] {key} -> {arg}  (this repo only; other repos unaffected)")
         return 0
     if arg in _CLEAR:
         mm.set_mode(cwd, None)
@@ -52,6 +75,8 @@ def main(argv: list[str]) -> int:
         print(f"repo key            : {key}")
         print(f"this-repo pin       : {pin or '(none)'}")
         print(f"global kill-switch  : {', '.join(flags) or '(none)'}")
+        for row in _tier_rows():
+            print(row)
         print(f"EFFECTIVE (guards)  : {flags[0] if flags else (pin or 'smart routing')}")
         return 0
 

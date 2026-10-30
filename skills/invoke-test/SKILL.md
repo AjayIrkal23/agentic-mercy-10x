@@ -13,3 +13,5 @@ This is `/invoke test` without the closers; `~/.claude/skills/invoke/SKILL.md` g
 2. Set `run.json.expected_artifacts["test-author"] = "TEST-REPORT.md"`.
 3. `Agent(subagent_type="test-author", description="test: <task>", prompt=...)`. The prompt names `$RUN/BRIEF.md`, every artifact already in `$RUN/`, and the exact output path `$RUN/TEST-REPORT.md`. No `model=`: opus-guard routes it (pins, escalation, per-project mode). Artifact missing or the act failed → re-dispatch once with the prompt prefixed `Previous attempt failed: <one-line reason>.`
 4. Append `test` to `run.json.done`, then report the artifact path and a one-paragraph verdict.
+
+After the RED run, add a coverage note: which changed symbols have no failing test yet and why (ecc:commands/test-coverage.md@25278e7d).

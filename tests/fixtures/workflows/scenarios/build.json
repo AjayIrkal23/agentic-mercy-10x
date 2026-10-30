@@ -1,0 +1,19 @@
+{
+  "args": {"packages_file": "plan/PACKAGES.json", "run": "/tmp/r/20261029T1200-build", "worktree": "/tmp/wt", "max_parallel": 2},
+  "default": {"spec_file": "steps.md", "summary": "s", "status": "done", "files_changed": [], "notes": "n", "pass": true, "failures": [], "findings": [], "go": true, "gaps": []},
+  "replies": [
+    {"label": "^explore:packages$", "value": {"packages": [
+      {"id": "pkg-a", "title": "A", "risk": "med", "depends_on": ["pkg-b"], "owned_paths": ["a.py"]},
+      {"id": "pkg-b", "title": "B", "risk": "low", "depends_on": [], "owned_paths": ["b.py", "tests/test_b.py"]},
+      {"id": "pkg-c", "title": "C", "risk": "low", "depends_on": [], "owned_paths": ["c1.py", "c2.py", "c3.py", "c4.py", "c5.py", "c6.py", "c7.py", "c8.py"]}]}},
+    {"label": "^verify:pkg-a$", "value": {"pass": false, "failures": [{"check": "pytest", "output": "1 failed"}], "summary": "red"}},
+    {"label": "^santa:pkg-b:1$", "value": {"findings": [{"severity": "high", "file": "b.py", "line": 4, "issue": "crash on empty", "fix": "guard"}]}},
+    {"label": "^santa:pkg-c:1$", "value": null},
+    {"label": "^santa:pkg-c:1a$", "value": null},
+    {"label": "^santa:pkg-c:1b$", "value": {"findings": [], "incomplete": true, "uncovered": ["c6.py"]}},
+    {"label": "^santa:pkg-a:1$", "value": null},
+    {"label": "^santa:pkg-a:1:retry$", "value": {"findings": []}},
+    {"label": "^verify:pkg-b$", "value": null},
+    {"label": "^verify:pkg-b:retry$", "value": {"pass": true, "failures": [], "summary": "ok on retry"}}
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "args": {"run": "/tmp/r/20261029T1200-research", "question": "which hooks exist", "sources": ["docs/hooks.md", "changelog 2.1"]},
+  "default": {"path": "p", "summary": "s", "count": 3},
+  "replies": []
+}

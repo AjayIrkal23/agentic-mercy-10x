@@ -23,6 +23,8 @@ metadata:
     - design
 ---
 
+> **Local guard (vendor patch, ~/.claude):** the default engine is the claude.ai Higgsfield connector (`mcp__claude_ai_higgsfield__generate_image` / `generate_video` / `generate_3d` / `generate_audio`, `models_explore`, `upscale_*`, `remove_background`); this skill's prompt craft applies to those tools. Use the `higgsfield` CLI only when the user asks for it by name, never run its installer, and never `higgsfield auth login` on the user's behalf — ask once.
+
 # Higgsfield Video Explainer
 
 Run the MCP video-explainer workflow through Higgsfield CLI. Lock one visual style key, write one narration line and one matching visual prompt per 10-second block, generate every voice take first, generate every clip second, then immediately assemble the ordered pairs with `explainer_video`.
@@ -49,7 +51,7 @@ Never use the monolithic `video_explainer` job in this skill.
 1. If `higgsfield` is unavailable, install it:
 
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/higgsfield-ai/cli/main/install.sh | sh
+   (CLI installer: never run it yourself; if the CLI is missing, say so and use the connector tools)
    ```
 
 2. If `higgsfield account status` fails, ask the user to run `higgsfield auth login`, then wait.

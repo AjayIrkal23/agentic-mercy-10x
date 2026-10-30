@@ -1,13 +1,33 @@
-"""lib/model_mode.py — per-project subagent model mode (D4)."""
+"""lib/model_mode.py — per-project subagent model mode (D4), tier caps, the shared resolver
+(role -> tier -> escalation -> usage -> cap) and the scripts/model-mode.py CLI (MERGE-PLAN R3.3)."""
 from __future__ import annotations
 
+import json
+import os
+import subprocess
 import sys
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+HOOKS = Path(__file__).resolve().parent.parent
+ROOT = HOOKS.parent
+sys.path.insert(0, str(HOOKS))
+sys.path.insert(0, str(ROOT / "tests" / "fixtures" / "plan-tier"))
 from lib import model_mode as mm  # noqa: E402
+import tier_fixture as TF  # noqa: E402
+
+POL = json.loads((HOOKS / "model-policy.json").read_text(encoding="utf-8"))
+HEAVY = ("Rebuild the whole notification system end-to-end: real-time websocket "
+         "event-driven pipeline across the codebase, frontend and backend.")
+
+
+@pytest.fixture(autouse=True)
+def _max20_default():
+    TF.set_tier("max20")
+    TF.set_usage(None)
+    yield
+    TF.clear()
 
 
 @pytest.fixture
@@ -34,7 +54,120 @@ def test_set_get_clear(repo):
 
 
 def test_subdir_shares_mode_when_git_repo(repo):
-    import subprocess
     subprocess.run(["git", "init", "-q", str(repo)], check=True)
     assert mm.set_mode(str(repo / "sub"), "fable")
     assert mm.forced_mode(str(repo)) == "fable"
+
+
+def test_modes_include_haiku_and_set_mode_caps_to_the_tier(repo):
+    assert mm.MODES == ("haiku", "sonnet", "opus", "fable")
+    TF.set_tier("pro")
+    assert mm.set_mode(str(repo), "opus") and mm.forced_mode(str(repo)) == "sonnet"  # stored capped
+    assert mm.cap_reason("opus") == "opus exceeds the pro ceiling (sonnet); stored sonnet"
+    TF.set_tier("max20")
+    assert mm.set_mode(str(repo), "fable") and mm.forced_mode(str(repo)) == "fable"
+    assert mm.cap_reason("fable") is None
+    TF.set_tier("max5")
+    assert mm.forced_mode(str(repo)) == "opus"  # an over-ceiling pin is capped on READ too
+    assert mm.forced_mode(str(repo), cap=False) == "fable"  # the file itself is untouched
+
+
+def test_escalation_signal_text_only():
+    assert mm.escalation_signal(POL, "Previous attempt failed: still red", None) == "previous attempt failed"
+    assert mm.escalation_signal(POL, "Execute plan-2026-10-29-x.md task 3", None) is None
+    assert mm.escalation_signal(POL, "fix the typo in README", None) is None
+    assert "large task with no plan" in (mm.escalation_signal(POL, HEAVY, None) or "")
+    assert mm.escalation_signal({"escalation": {"enabled": True, "retry_markers": ["("]}}, "x", None) is None
+
+
+def test_escalation_reason_keeps_its_signature_and_membership():
+    assert mm.escalation_reason(POL, "implementation-engineer", "Previous attempt failed", None)
+    assert mm.escalation_reason(POL, "test-author", "Previous attempt failed", None)  # role test escalates on pro/max5
+    assert mm.escalation_reason(POL, "explore", "Previous attempt failed", None) is None
+    assert mm.escalation_reason(POL, "santa-reviewer", "Previous attempt failed", None) is None
+
+
+@pytest.mark.parametrize("tier,agent,asked,phrase,text,usage,want,why", [
+    ("max20", "santa-reviewer", None, None, "review", False, "opus", "role judge"),
+    ("pro", "santa-reviewer", None, None, "review", False, "sonnet", "role judge"),
+    ("max5", "santa-reviewer", None, None, "review", False, "sonnet", "role judge"),
+    ("max5", "santa-reviewer", None, "use opus", "review", False, "opus", "phrase lift"),
+    # the user's own phrase is not stepped down by the usage guard (REVIEW2 fix 5)
+    ("max5", "santa-reviewer", None, "use opus", "review", True, "opus", "phrase lift"),
+    ("api", "santa-reviewer", None, "use opus", "review", True, "opus", "phrase lift"),
+    ("max5", "santa-reviewer", None, None, "review", True, "sonnet", "role judge"),
+    ("pro", "santa-reviewer", None, "use opus", "review", True, "haiku", "usage-guard"),
+    ("pro", "santa-reviewer", "opus", "use opus", "review", False, "sonnet", "tier-cap"),
+    ("pro", "implementation-engineer", None, None, "build it", False, "haiku", "role impl"),
+    ("pro", "implementation-engineer", None, None, "Previous attempt failed", False, "sonnet", "escalated"),
+    ("pro", "implementation-engineer", None, None, "Previous attempt failed", True, "haiku", "usage-guard"),
+    ("max5", "implementation-engineer", None, None,
+     "Add a column. Execute docs/superpowers/plans/plan-2026-10-29-x.md", False, "haiku", "planned small"),
+    ("max5", "implementation-engineer", None, None, HEAVY, False, "sonnet", "escalated"),
+    ("max20", "implementation-engineer", None, None, HEAVY, False, "opus", "escalated"),
+    ("max20", "implementation-engineer", None, None, HEAVY, True, "sonnet", "usage-guard"),
+    ("max20", "qa-verifier", None, None, HEAVY, False, "sonnet", "size bump"),
+    ("max20", "qa-verifier", None, None, "check it", False, "haiku", "role verify"),
+    ("max20", "general-purpose", "opus", None, "research", False, "opus", "explicit model param"),
+    ("pro", "general-purpose", "opus", None, "research", False, "sonnet", "tier-cap"),
+    ("max20", "general-purpose", "fable", None, "x", False, "sonnet", "ignored"),
+    ("max20", "general-purpose", "fable", "use fable", "x", False, "fable", "user said"),
+    ("max20", "general-purpose", "fable", "use fable", "x", True, "sonnet", "usage-guard"),
+    ("max20", "unknown-agent", None, None, "x", False, "sonnet", "role default"),
+    ("pro", "unknown-agent", None, None, "x", False, "haiku", "role default")])
+def test_resolve_matrix(tier, agent, asked, phrase, text, usage, want, why):
+    model, reason = mm.resolve(POL, agent, asked=asked,
+                               phrase_for=(lambda m: phrase if phrase and m in phrase else None),
+                               text=text, cwd=None, tier=tier, usage_active=usage, flags=[], pin=None)
+    assert model == want and why in reason, (model, reason)
+
+
+def test_resolve_flags_and_pins_then_cap():
+    r = mm.resolve(POL, "explore", asked=None, phrase_for=lambda m: None, text="x", cwd=None, tier="pro",
+                   usage_active=False, flags=["fable"], pin=None)
+    assert r == ("sonnet", "fable-only-mode active; tier-cap: fable -> sonnet (pro)")
+    r = mm.resolve(POL, "explore", asked=None, phrase_for=lambda m: None, text="x", cwd=None, tier="max20",
+                   usage_active=True, flags=[], pin="opus")
+    assert r[0] == "sonnet" and "per-project model mode" in r[1] and "usage-guard" in r[1]
+    # the guard never raises a judge: a haiku pin stays haiku (REVIEW2 fix 1)
+    r = mm.resolve(POL, "santa-reviewer", asked=None, phrase_for=lambda m: None, text="x", cwd=None,
+                   tier="max20", usage_active=True, flags=[], pin="haiku")
+    assert r[0] == "haiku", r
+
+
+def test_resolve_fail_open_on_empty_policy():
+    # literal tables: six judges -> judge, everyone else default
+    assert mm.resolve({}, "santa-reviewer", asked=None, phrase_for=lambda m: None, text="x", cwd=None,
+                      tier="max20", usage_active=False, flags=[], pin=None)[0] == "opus"
+    assert mm.resolve({}, "santa-reviewer", asked=None, phrase_for=lambda m: None, text="x", cwd=None,
+                      tier="pro", usage_active=False, flags=[], pin=None)[0] == "sonnet"
+    assert mm.resolve({}, "explore", asked=None, phrase_for=lambda m: None, text="x", cwd=None,
+                      tier="max20", usage_active=False, flags=[], pin=None)[0] == "sonnet"
+
+
+# --- scripts/model-mode.py (first CLI test, audit I-11) ------------------------------------
+CLI = ROOT / "scripts" / "model-mode.py"
+
+
+def _cli(args, cwd, env_extra=None):
+    return subprocess.run([sys.executable, str(CLI), *args], cwd=cwd, capture_output=True, text=True,
+                          env={**os.environ, **(env_extra or {})})
+
+
+def test_cli_pin_is_capped_with_a_reason(tmp_path):
+    home = tmp_path / "home"
+    (home / ".claude").mkdir(parents=True)
+    env = {"HOME": str(home), "USERPROFILE": str(home), "CLAUDE_CONFIG_DIR": str(home / ".claude")}
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    TF.set_tier("pro")
+    cp = _cli(["opus"], repo, env)
+    assert cp.returncode == 0 and "stored sonnet" in cp.stdout and "pro ceiling" in cp.stdout
+    cp = _cli(["show"], repo, env)
+    assert "this-repo pin       : sonnet" in cp.stdout and "plan tier           : pro" in cp.stdout
+    assert "usage guard         : inactive" in cp.stdout
+    cp = _cli(["haiku"], repo, env)
+    assert cp.returncode == 0 and "-> haiku" in cp.stdout
+    cp = _cli(["clear"], repo, env)
+    assert "pin cleared" in cp.stdout
+    assert _cli(["gpt"], repo, env).returncode == 2

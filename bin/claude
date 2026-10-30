@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+# agentic-mercy oomguard launcher: every interactive `claude` runs in its own systemd scope that
+# survives one OOM victim, with RAM-derived agent caps. Hook helpers (-p/--print/--bare), nested
+# launches (CLAUDECODE / CLAUDE_WORKBENCH_SCOPE) and hosts without a user bus exec the real binary
+# untouched. Design: docs/OOM-GUARD.md (layer L1).
+set -u
+
+self=$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || printf '%s' "${BASH_SOURCE[0]}")
+is_wrapper() { head -c 512 "$1" 2>/dev/null | grep -q 'agentic-mercy oomguard launcher'; }
+
+real=${CLAUDE_REAL_BIN:-}
+if [ -z "$real" ]; then
+  while IFS= read -r cand; do
+    [ -z "$cand" ] && continue
+    resolved=$(readlink -f "$cand" 2>/dev/null || printf '%s' "$cand")
+    [ "$resolved" = "$self" ] && continue
+    is_wrapper "$resolved" && continue   # another copy of this launcher: never exec ourselves
+    real=$cand
+    break
+  done < <(type -aP claude 2>/dev/null)
+fi
+if [ -z "$real" ] || [ ! -x "$real" ]; then
+  echo "claude: real binary not found (set CLAUDE_REAL_BIN)" >&2
+  exit 127
+fi
+
+unattended=0
+bare=0
+has_settings=0
+for a in "$@"; do
+  case "$a" in
+    -p|--print) unattended=1 ;;
+    --bare) bare=1 ;;
+    --settings|--settings=*) has_settings=1 ;;
+  esac
+done
+if [ "$unattended" = 1 ]; then
+  export CLAUDE_WORKBENCH_UNATTENDED=1
+fi
+
+passthrough=0
+if [ "$unattended" = 1 ] || [ "$bare" = 1 ]; then
+  passthrough=1
+elif [ -n "${CLAUDECODE:-}" ] || [ "${CLAUDE_WORKBENCH_SCOPE:-}" = 1 ]; then
+  passthrough=1
+elif [ ! -e "${XDG_RUNTIME_DIR:-/nonexistent}/bus" ]; then
+  passthrough=1
+elif ! command -v systemd-run >/dev/null 2>&1; then
+  passthrough=1
+fi
+if [ "$passthrough" = 1 ]; then
+  exec "$real" "$@"
+fi
+
+# --- launch caps from MemAvailable (the same /proc field as hooks/lib/platform.mem_probe) ---
+avail_kb=0
+if [ -r /proc/meminfo ]; then
+  while IFS=': ' read -r key val _; do
+    if [ "$key" = MemAvailable ]; then avail_kb=$val; break; fi
+  done < /proc/meminfo
+fi
+case "$avail_kb" in ''|*[!0-9]*) avail_kb=0 ;; esac
+avail_gib=$(( avail_kb / 1048576 ))
+clamp() {
+  local v=$1 lo=$2 hi=$3
+  [ "$v" -lt "$lo" ] && v=$lo
+  [ "$v" -gt "$hi" ] && v=$hi
+  printf '%s' "$v"
+}
+wf=$(clamp $(( avail_gib / 3 )) 1 8)
+sub=$(clamp $(( avail_gib / 2 )) 2 6)
+export CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS="${CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS:-$wf}"
+export CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS="${CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS:-$sub}"
+if [ "$avail_gib" -lt 8 ]; then size=small; elif [ "$avail_gib" -lt 16 ]; then size=medium; else size=large; fi
+
+state="${CLAUDE_HOOK_STATE_DIR:-${CLAUDE_CONFIG_DIR:-$HOME/.claude}/state}"
+mkdir -p "$state/launch-caps" 2>/dev/null || true
+printf '{"mem_available_mb":%s,"workflow_agents":%s,"subagents":%s,"size_guideline":"%s","ts":%(%s)T}\n' \
+  "$(( avail_kb / 1024 ))" "$CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS" "$CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS" \
+  "$size" -1 > "$state/launch-caps/$$.json" 2>/dev/null || true
+
+set -- "$real" "$@"
+if [ "$has_settings" = 0 ]; then
+  sfile="$state/launch-settings-$$.json"
+  if printf '{"workflowSizeGuideline":"%s"}\n' "$size" > "$sfile" 2>/dev/null; then
+    set -- "$real" --settings "$sfile" "${@:2}"
+  fi
+fi
+
+export CLAUDE_WORKBENCH_SCOPE=1
+# --scope runs the command in this environment, so the exported caps reach the real binary.
+exec systemd-run --user --scope --quiet --collect --unit "claude-$$" \
+  -p OOMPolicy=continue -p ManagedOOMPreference=avoid -p "MemoryHigh=${CLAUDE_SCOPE_MEMORY_HIGH:-12G}" -- "$@"

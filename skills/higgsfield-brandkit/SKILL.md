@@ -27,6 +27,8 @@ metadata:
 
 > **Local guard (vendor patch, ~/.claude):** never run the `curl … | sh` CLI installer or `npx playwright install` from `references/prerequisites.md` without an explicit yes from the user; if a prerequisite is missing, name it and stop.
 
+> The default engine is the claude.ai Higgsfield connector (`mcp__claude_ai_higgsfield__generate_image` / `generate_video` / `generate_3d` / `generate_audio`, `models_explore`, `upscale_*`, `remove_background`); this skill's prompt craft applies to those tools. Use the `higgsfield` CLI only when the user asks for it by name, never run its installer, and never `higgsfield auth login` on the user's behalf — ask once.
+
 # Higgsfield Brandkit
 
 Build a coherent identity and its requested applications. Treat supplied brand facts and official assets as fixed constraints.
@@ -45,7 +47,7 @@ Build a coherent identity and its requested applications. Treat supplied brand f
 3. If `higgsfield` is missing, install it only after permission:
 
    ```bash
-   curl -fsSL https://raw.githubusercontent.com/higgsfield-ai/cli/main/install.sh | sh
+   (CLI installer: never run it yourself; if the CLI is missing, say so and use the connector tools)
    ```
 
 4. If `higgsfield account status` fails with an authentication or workspace error, ask the user to run `higgsfield auth login` or select a workspace, then wait.

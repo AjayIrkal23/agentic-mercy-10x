@@ -367,6 +367,29 @@ def reconcile_mcp_env(*, dry_run: bool = False) -> list[tuple[str, str]]:
     return out
 
 
+def reconcile_mcp_always_load(*, dry_run: bool = False) -> list[tuple[str, str]]:
+    """Manifest servers that declare ``alwaysLoad`` (sequential-thinking only, plan 4) get the key in the live
+    ~/.claude.json entry: remove + add-json of the SAME entry (mcp_restore.replace_entry). Servers the
+    manifest does not mention, or that are not registered, are left alone."""
+    try:
+        live = json.loads(user_config_file().read_text(encoding="utf-8")).get("mcpServers") or {}
+    except (OSError, ValueError):
+        return []
+    out: list[tuple[str, str]] = []
+    for srv in _load_manifest().get("mcp_servers", []):
+        if "alwaysLoad" not in srv or srv["name"] not in live:
+            continue
+        want, entry = bool(srv["alwaysLoad"]), live[srv["name"]]
+        if entry.get("alwaysLoad") is want:
+            continue
+        if dry_run or not winutil.which("claude"):
+            out.append((srv["name"], f"WOULD-SET-ALWAYS-LOAD {str(want).lower()}"))
+            continue
+        out.append((srv["name"], mcp_restore.replace_entry(
+            srv["name"], {**entry, "alwaysLoad": want}, entry, f"ALWAYS-LOAD {str(want).lower()}")))
+    return out
+
+
 def reconcile_mcp_pins(*, dry_run: bool = False, run=None) -> list[tuple[str, str]]:
     """Re-register user-scope npx/uvx MCP servers whose live package spec differs from the
     manifest's exact pin: remove + ``add-json`` of the SAME entry with only the spec in

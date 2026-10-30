@@ -34,7 +34,7 @@ def env(tmp_path, monkeypatch):
     (idx / "repo.json").write_text("{}", encoding="utf-8")
     monkeypatch.setattr(m, "INDEX_DIR", idx)
     monkeypatch.setattr(m, "STATE_DIR", tmp_path / "state")
-    monkeypatch.setattr(m, "_repo_root", lambda: repo)
+    monkeypatch.setattr(m, "_repo_root", lambda payload=None: repo)
     return m, repo
 
 
@@ -78,3 +78,23 @@ def test_codex_md_is_read_directly(env, monkeypatch):
 def test_non_doc_noop_prints_empty_object(env, monkeypatch):
     m, repo = env
     assert run(m, monkeypatch, {"file_path": str(repo / "app.py")}) == {}
+
+
+def test_repo_root_prefers_payload_cwd_over_env(tmp_path, monkeypatch):
+    m = _mod()
+    launch = tmp_path / "home"
+    repo = tmp_path / "proj"
+    (repo / ".git").mkdir(parents=True)
+    (repo / "docs").mkdir()
+    launch.mkdir()
+    monkeypatch.setenv("CLAUDE_PROJECT_DIR", str(launch))
+    assert m._repo_root({"cwd": str(repo / "docs")}) == repo
+    assert m._repo_root({}) == launch            # env, then os.getcwd()
+
+
+def test_reminder_state_is_saved_under_lock(env, monkeypatch, tmp_path):
+    m, repo = env
+    big = repo / "docs" / "guide.md"
+    big.write_text("# h\n" + "x" * 20000, encoding="utf-8")
+    run(m, monkeypatch, {"file_path": str(big)})
+    assert (tmp_path / "state" / "t-jde.jdocmunch-enforce.json.lock").exists()

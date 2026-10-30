@@ -468,3 +468,105 @@ def test_migration_in_sql_repo_is_sql(tmp_path):
 def test_explicit_postgres_is_sql_even_in_mongo_repo(tmp_path):
     root = _node_repo(tmp_path, "mongo2", {"mongoose": "^8"})
     assert "sql" in _tags("add a postgres index for the report query", root)
+
+
+# --------------------------------------------------------------------------- #
+# ECC stack indicators + package-manager tag (router.config.json additions.stack_indicators)
+# --------------------------------------------------------------------------- #
+def _active(root: pathlib.Path):
+    from lib import repo_context as RC
+    return RC.active_repo({"cwd": str(root)})
+
+
+def test_stack_indicators_add_language_and_pm_tags_weakly(tmp_path):
+    root = _repo(tmp_path, "rs", react=True)
+    (root / "Cargo.toml").write_text("[package]\nname='x'\n", encoding="utf-8")
+    (root / "pnpm-lock.yaml").write_text("lockfileVersion: 9\n", encoding="utf-8")
+    (root / "Dockerfile").write_text("FROM node\n", encoding="utf-8")
+    p = _classify("rename the label in the header", str(root))
+    assert {"rust", "docker", "pm:pnpm"} <= p.surfaces and {"rust", "docker", "pm:pnpm"} <= p.weak_surfaces
+    fp = SF.stack_fingerprint(_active(root))
+    assert "rust" in fp["tags"] and fp["pm"] == "pnpm"
+
+
+def test_a_prompt_naming_the_stack_tag_makes_it_strong(tmp_path):
+    root = _repo(tmp_path, "rs2", react=True)
+    (root / "Cargo.toml").write_text("[package]\nname='x'\n", encoding="utf-8")
+    p = _classify("add a rust handler for the upload server", str(root))
+    assert "rust" in p.surfaces and "rust" not in p.weak_surfaces
+
+
+def test_contains_indicator_reads_the_file(tmp_path):
+    root = _repo(tmp_path, "dj", go=False)
+    (root / "requirements.txt").write_text("django==5.0\n", encoding="utf-8")
+    p = _classify("add a view", str(root))
+    assert {"python", "django"} <= p.surfaces and "backend" in p.surfaces
+
+
+def test_package_manager_field_beats_lockfile(tmp_path):
+    root = _repo(tmp_path, "pm", react=True)
+    (root / "package.json").write_text(json.dumps({"packageManager": "bun@1.2.0", "dependencies": {"react": "19"}}),
+                                       encoding="utf-8")
+    (root / "yarn.lock").write_text("", encoding="utf-8")
+    assert SF.stack_fingerprint(_active(root))["pm"] == "bun"
+
+
+def test_react_native_package_json_is_not_a_react_web_stack(tmp_path):
+    root = _node_repo(tmp_path, "rn", {"expo": "^53", "react-native": "0.79", "react": "^19"})
+    fp = SF.stack_fingerprint(_active(root))
+    assert "mobile" in fp["tags"] and "react" not in fp["tags"] and "frontend" not in fp["surfaces"]
+
+
+# REVIEW2 Fix 2: a stock RN app ships a Gemfile and android/build.gradle; neither is a server
+def _rn_app(tmp_path, name: str = "rnapp") -> pathlib.Path:
+    root = _node_repo(tmp_path, name, {"expo": "^53", "react-native": "0.79", "react": "^19"})
+    (root / "Gemfile").write_text("source 'https://rubygems.org'\ngem 'cocoapods'\n", encoding="utf-8")
+    (root / "android").mkdir()
+    (root / "android" / "build.gradle").write_text("apply plugin: 'com.android.application'\n"
+                                                   "apply plugin: 'kotlin-android'\n", encoding="utf-8")
+    (root / "ios").mkdir()
+    (root / "ios" / "Podfile").write_text("platform :ios, '15.1'\n", encoding="utf-8")
+    return root
+
+
+def test_react_native_app_is_not_a_backend_repo(tmp_path):
+    root = _rn_app(tmp_path)
+    assert "backend" not in SF.stack_fingerprint(_active(root))["surfaces"]
+    p = _classify("fix the crash on startup in the app", str(root))
+    assert "backend" not in p.surfaces, p.surfaces
+    assert "backend-standards-always-follow" not in [n for n, _ in S.rank_skills(p)]
+
+
+def test_ndk_cmake_inside_android_is_not_a_server(tmp_path):
+    """The belt: a backend-side indicator under android/ (NDK CMakeLists.txt) stays tag-only."""
+    root = _rn_app(tmp_path, "rnndk")
+    (root / "android" / "app").mkdir()
+    (root / "android" / "app" / "CMakeLists.txt").write_text("cmake_minimum_required(VERSION 3.22)\n",
+                                                             encoding="utf-8")
+    assert "backend" not in SF.stack_fingerprint(_active(root))["surfaces"]
+
+
+def test_rails_repo_still_tags_ruby(tmp_path):
+    root = tmp_path / "rails"
+    (root / ".git").mkdir(parents=True)
+    (root / "Gemfile").write_text("gem 'rails'\n", encoding="utf-8")
+    (root / "config").mkdir()
+    (root / "config" / "routes.rb").write_text("Rails.application.routes.draw do\nend\n", encoding="utf-8")
+    assert "ruby" in SF.stack_fingerprint(_active(root))["tags"]
+
+
+def test_spring_repo_still_gets_backend(tmp_path):
+    root = tmp_path / "spring"
+    (root / ".git").mkdir(parents=True)
+    (root / "pom.xml").write_text("<project><parent><artifactId>spring-boot-starter-parent</artifactId>"
+                                  "</parent></project>\n", encoding="utf-8")
+    fp = SF.stack_fingerprint(_active(root))
+    assert "springboot" in fp["tags"] and "backend" in fp["surfaces"]
+
+
+def test_monorepo_server_next_to_rn_app_keeps_backend(tmp_path):
+    """The belt is per marker, not per repo: a Spring server beside an Expo app is still backend."""
+    root = _rn_app(tmp_path, "mono")
+    (root / "server").mkdir()
+    (root / "server" / "pom.xml").write_text("<project>spring-boot</project>\n", encoding="utf-8")
+    assert "backend" in SF.stack_fingerprint(_active(root))["surfaces"]

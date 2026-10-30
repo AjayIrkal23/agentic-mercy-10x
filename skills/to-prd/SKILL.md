@@ -103,3 +103,5 @@ A description of the things that are out of scope for this PRD.
 Any further notes about the feature.
 
 </prd-template>
+
+ECC graft: `references/ecc-grounded-prd.md` — grounded PRD sections with codebase grounding and rollout.

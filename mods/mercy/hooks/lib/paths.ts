@@ -61,3 +61,13 @@ export function dirname(path: string): string {
   const cut = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'))
   return cut > 0 ? path.slice(0, cut) : ''
 }
+
+/** `<claude_dir>` from the hooks dir (`<claude_dir>/hooks`). */
+export function claudeDirFrom(hooksDir: string): string {
+  return dirname(hooksDir)
+}
+
+/** `<claude_dir>/state/<name>`: the OOM guard's and the model policy's shared state files. */
+export function statePathFrom(hooksDir: string, name: string): string {
+  return join(join(claudeDirFrom(hooksDir), 'state'), name)
+}

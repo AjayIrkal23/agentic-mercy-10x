@@ -292,3 +292,5 @@ Recommended thresholds:
 - `.claude/evals/<feature>.md` definition
 - `.claude/evals/<feature>.log` run history
 - `docs/releases/<version>/eval-summary.md` release snapshot
+
+ECC graft: `references/ecc-pass-at-k.md` — pass@k versus pass^k, offline receipt format, what is not evidence.

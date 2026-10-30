@@ -6,7 +6,7 @@ Home of: front-matter parse/emit, distinctive-trigger-word tokenisation +
 token-diff (the trigger-law proof), directory content hashing (R10),
 vendored-git family derivation (from hooks/skills-sources.json), and skill
 enumeration. Imported by validate_skills.py, build_skills_index.py,
-build_provenance.py, vendor_skill.py, migrate_frontmatter.py.
+build_provenance.py, vendor_skill.py.
 
 Pure stdlib + PyYAML. No network, no external state.
 """

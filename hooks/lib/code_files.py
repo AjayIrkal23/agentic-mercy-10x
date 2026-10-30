@@ -4,7 +4,8 @@ Seven hooks used to carry their own (disagreeing) extension lists and eight
 carried private ``.git`` walkers that ignored the ``$HOME`` ceiling. Every gate
 imports from here instead:
 
-  is_code_file(path)  -> bool   union of the old extension sets, minus skip segments
+  is_skipped(path, *, extra_dirs=(), extra_names=()) -> bool   the ONE anchored skip list
+  is_code_file(path)  -> bool   union of the old extension sets, minus skipped paths
   git_root(path)      -> Path|None  (= lib.repo_context.git_root, HOME-guarded)
   is_home(root)       -> bool   True when ``root`` IS ``$HOME`` (a container, never a repo)
 
@@ -32,48 +33,54 @@ CODE_EXTENSIONS = frozenset({
     ".vue", ".svelte",
 })
 
-# Path fragments (matched case-insensitively against the "/"-normalised path)
-# that mark a write as NOT application code: infra, scratch, deps, docs, config.
-SKIP_SEGMENTS = (
-    "/tmp/",
-    "scratchpad/",
-    ".claude/hooks/",    # hooks are infra, not application code
-    ".claude/scripts/",
-    "node_modules/",
-    ".state/",
-    ".telemetry/",
-    ".planning/",
-    ".git/",
-    "/dist/",
-    "/build/",
-    "__pycache__/",
-    "/vendor/",
-    "server_docs/",
-    "frontend_docs/",
-    "docs/",
-    "migrations/",       # procedural, not orientation-requiring
-    ".env",
-    ".config.",
-    "package.json",
-    "tsconfig",
-    "eslint",
-    "jest.config",
-    "vite.config",
-    "tailwind.config",
-    "postcss.config",
-)
+# What marks a write as NOT application code: infra, scratch, deps, docs, config.
+# Directory entries match WHOLE path components (``docs`` skips ``/r/docs/x`` but not
+# ``/r/mydocs/x``); multi-component entries (``.claude/hooks``) match consecutive ones.
+SKIP_DIRS = frozenset({
+    "scratchpad", ".claude/hooks", ".claude/scripts", "node_modules", ".state", ".telemetry",
+    ".planning", ".git", "dist", "build", "__pycache__", "vendor", "server_docs",
+    "frontend_docs", "docs", "migrations",
+})
+# Anchored at the path start only (``/r/tmp/a.py`` is a repo dir, not scratch).
+SKIP_ROOTS = ("/tmp/", "/private/tmp/")
+# Substrings of the BASENAME only (a dir named ``.envs`` is not a dotenv file).
+SKIP_NAMES = (".env", ".config.", "package.json", "tsconfig", "eslint", "jest.config",
+              "vite.config", "tailwind.config", "postcss.config")
+# Frozen view kept for old importers (read by nobody today).
+SKIP_SEGMENTS = tuple(sorted(f"{d}/" for d in SKIP_DIRS)) + SKIP_NAMES
 
 
-def is_code_file(path: "str | os.PathLike | None") -> bool:
-    """True iff ``path`` has a code extension and no skip segment. Never raises."""
+def _norm(path: "str | os.PathLike") -> str:
+    return str(path).replace("\\", "/").lower()
+
+
+def is_skipped(path: "str | os.PathLike | None", *, extra_dirs=(), extra_names=()) -> bool:
+    """True when ``path`` sits under a skip dir/root or its basename carries a skip
+    marker. ``extra_dirs`` / ``extra_names`` add a caller's own markers. Never raises."""
     if not path:
         return False
     try:
-        fp = str(path).replace("\\", "/")
+        low = _norm(path)
+        if any(low.startswith(r) for r in SKIP_ROOTS):
+            return True
+        padded = "/" + low.strip("/") + "/"
+        if any(f"/{str(d).lower().strip('/')}/" in padded for d in (*SKIP_DIRS, *extra_dirs)):
+            return True
+        base = low.rstrip("/").rsplit("/", 1)[-1]
+        return any(str(m).lower() in base for m in (*SKIP_NAMES, *extra_names))
     except Exception:
         return False
-    low = fp.lower()
-    if any(seg in low for seg in SKIP_SEGMENTS):
+
+
+def is_code_file(path: "str | os.PathLike | None") -> bool:
+    """True iff ``path`` has a code extension and is not skipped. Never raises."""
+    if not path:
+        return False
+    try:
+        low = _norm(path)
+    except Exception:
+        return False
+    if is_skipped(low):
         return False
     return os.path.splitext(low)[1] in CODE_EXTENSIONS
 
@@ -101,5 +108,5 @@ def is_infra_root(root: "str | os.PathLike | None") -> bool:
         return False
 
 
-__all__ = ["CODE_EXTENSIONS", "SKIP_SEGMENTS", "is_code_file", "git_root", "is_home",
-           "is_infra_root"]
+__all__ = ["CODE_EXTENSIONS", "SKIP_DIRS", "SKIP_ROOTS", "SKIP_NAMES", "SKIP_SEGMENTS",
+           "is_skipped", "is_code_file", "git_root", "is_home", "is_infra_root"]

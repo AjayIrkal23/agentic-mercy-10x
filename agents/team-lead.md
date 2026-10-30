@@ -43,6 +43,12 @@ Spawn each teammate WITH `name` and without `model` (opus-guard routes it; the e
 
 Teammates do **not** get the agent file's `skills:` preload, so tell each one in its prompt which two baseline skills to `Skill()` first (table above), the absolute run folder path and its artifact path. The `SubagentStart` hook injects the write protocol (read-then-edit, no shell rewrites, no commits, no servers) for teammates too.
 
+## Delegation completion contract (ecc:skills/team-agent-orchestration, skills/parallel-execution-optimizer, the-longform-guide.md#parallelization-cascade @25278e7d)
+
+Every teammate prompt carries four things: the **owner** (its name), its **file scope** (the write surface it may touch), its **artifact path**, and its **merge gate** (the exact check that lets its work integrate, e.g. "integrator's parity matrix all MATCH/FIXED"). The teammate's final message is the deliverable: integrated results, what was skipped, and "turn cap hit" when it was. No two teammates write the same surface without the integrator.
+
+Parallelization cascade: **minimum viable parallelism**. Add a lane only when its write surface is disjoint from every live lane and it sits on the critical path; at most 3–4 live lanes. Sweep lanes oldest to newest. A blocker in one lane pauses its dependents and updates the lane table (owner, scope, artifact, gate, state) before anything else spawns.
+
 ## The contract handoff (fullstack)
 
 1. **impl-be** builds contract-first, writes `$RUN/IMPL-REPORT-BE.md` with `## CONTRACT` as its first section, then `SendMessage({to: "impl-fe", message: "CONTRACT ready: $RUN/IMPL-REPORT-BE.md"})`.

@@ -10,4 +10,4 @@ description: Use when you need to resolve an in-progress git merge/rebase confli
 
 4. Discover the project's **automated checks** and run them — typically typecheck, then tests, then format. Fix anything the merge broke.
 
-5. **Finish the merge/rebase.** Stage everything and commit. If rebasing, continue the rebase process until all commits are rebased.
+5. **Finish the merge/rebase.** Stage ONLY the files you resolved (`git add <file>`), show `git status`, and stop: the user commits or runs `git rebase --continue` (commit only when asked, CLAUDE.md §3). Never `--abort`.

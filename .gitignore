@@ -98,6 +98,11 @@ image-cache/
 settings.local.json
 # Private per-machine doctrine (hosts, SSH, sudo) imported by CLAUDE.md §10 — public repo
 /CLAUDE.machines.local.md
+# its journal (split_machines_file.py --apply: moved tails, never imported) and machine-data terms for G7
+/CLAUDE.machines.journal.local.md
+/scripts/grep_gates.machine_terms.json
+# per-machine OOM guard opt-out / overrides (hooks/lib/oomguard_config.py)
+/oomguard.local.json
 /scripts/sudo-askpass.sh
 # settings.json is a RENDERED artifact (P6-T3): installer/render.py generates it
 # from settings.template.json (tracked source of truth) ⊕ settings.user.json
@@ -105,6 +110,7 @@ settings.local.json
 # never shared; a fresh clone runs `python install.py` to render them.
 settings.json
 settings.user.json
+settings.json.lock
 # Plugin manifests point at this machine's absolute cache paths + list private
 # project roots; the target reinstalls via `claude plugin install` (see install.sh)
 plugins/installed_plugins.json

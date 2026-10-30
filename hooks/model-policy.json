@@ -1,41 +1,77 @@
 {
-  "version": 1,
-  "_about": "Single source of truth for subagent/workflow/invoke model selection (2026-09-29, Sonnet 5.5 remap). Sonnet 5.5 EXECUTES (default; env CLAUDE_CODE_SUBAGENT_MODEL=sonnet sets only the DEFAULT); Opus 5.5 JUDGES — review, UI/UX, plan, spec, debug (agent_pins + invoke_categories); escalation lifts execution agents to Opus on a failed previous attempt or large unplanned work; Fable is explicit opt-in only. Guard precedence: session flag > per-project mode (state/model-modes) > explicit model param or [label] > agent pin > escalation > default, where a request for a pinned agent, an escalation executor, or fable counts only when the user's own last prompt carries an override_phrases entry for that model (opus-guard, audit 2026-10-05 E-04); otherwise it is ignored and the reason is logged. model_ids are the Agent-tool ALIASES (the valid-model set), not API ids. Evidence: ~/reports/Sonnet 5 5 release feedback.md.",
-  "model_ids": {
-    "sonnet": "sonnet",
-    "opus": "opus",
-    "fable": "fable"
-  },
+  "version": 2,
+  "_about": "Single routing truth (2026-10-29, plan tiers around Haiku 5.5). state/plan-tier.json picks a column of `tiers`, the agent's role the row; escalation, usage guard and ceiling adjust it; the user's /model and per-turn phrases win. Haiku is the default worker; above 100K prompt tokens it costs 5x, so Haiku roles keep autoCompactWindow at 120000. Merged from ECC the-longform-guide.md#model-routing-table, commands/model-route.md, rules/common/performance.md (the hooks enforce it). model_ids are Agent-tool aliases. Doc: docs/MODEL-ROUTING.md.",
+  "model_ids": {"haiku": "haiku", "sonnet": "sonnet", "opus": "opus", "fable": "fable"},
+  "model_order": ["haiku", "sonnet", "opus", "fable"],
   "default": "sonnet",
+  "roles": {
+    "_comment": "subagent_type (lowercased) -> role; unknown -> `default`. `labels`: Workflow opts.label substring -> role when agentType is absent. `guarded`: an explicit model moves these only with the user's phrase (E-04).",
+    "agents": {
+      "explore": "explore", "claude-code-guide": "explore",
+      "docs-sync-agent": "docs", "deadcode-reaper": "docs", "memory-codex": "docs",
+      "qa-verifier": "verify",
+      "test-author": "test",
+      "implementation-engineer": "impl", "backend-implementor-specialist": "impl",
+      "frontend-implementor-specialist": "impl", "refactor-specialist": "impl",
+      "integrator-specialist": "integrate",
+      "security-sentinel": "security",
+      "santa-reviewer": "judge", "frontend-uiux-designer": "judge", "planning-director": "judge",
+      "spec-architect": "judge", "debug-detective": "judge", "audit-specialist": "judge", "plan": "judge"
+    },
+    "labels": {"spec": "judge", "plan": "judge", "review": "judge", "santa": "judge", "design": "judge", "debug": "judge",
+               "audit": "judge", "backend": "impl", "frontend": "impl", "impl": "impl", "refactor": "impl",
+               "integrat": "integrate", "security": "security", "docs": "docs", "clean": "docs", "memory": "docs",
+               "qa": "verify", "verify": "verify", "test": "test", "explore": "explore", "research": "explore"},
+    "default": "default",
+    "guarded": ["judge", "impl", "integrate", "security", "test"]
+  },
+  "tiers_comment": "Kept outside `tiers`. ceiling = hardest model any path yields; main = settings `model`; subagent_env = CLAUDE_CODE_SUBAGENT_MODEL; fallback = fallbackModel; escalate = role's model on escalation; usage_guard = executor ceiling after one step down + fixed judge model while >= 80 %; judge_phrase_lift = judge model when the user's turn says that model's phrase; impl_planned_small = impl model with a plan marker and size <= M; size_bumps = role -> {size: model}. `api` copies `max5`.",
+  "tiers": {
+    "pro": {"ceiling": "sonnet", "main": "sonnet", "subagent_env": "haiku", "fallback": ["haiku"],
+            "roles": {"explore": "haiku", "docs": "haiku", "verify": "haiku", "test": "haiku", "impl": "haiku",
+                      "integrate": "haiku", "security": "haiku", "judge": "sonnet", "default": "haiku"},
+            "escalate": {"test": "sonnet", "impl": "sonnet", "integrate": "sonnet", "security": "sonnet"},
+            "usage_guard": {"ceiling": "haiku", "judge": "haiku"},
+            "judge_phrase_lift": null, "impl_planned_small": null, "size_bumps": {}},
+    "max5": {"ceiling": "opus", "main": "sonnet", "subagent_env": "sonnet", "fallback": ["haiku"],
+             "roles": {"explore": "haiku", "docs": "haiku", "verify": "haiku", "test": "sonnet", "impl": "sonnet",
+                       "integrate": "sonnet", "security": "sonnet", "judge": "sonnet", "default": "sonnet"},
+             "escalate": {"test": "sonnet", "impl": "sonnet", "integrate": "sonnet", "security": "sonnet"},
+             "usage_guard": {"ceiling": "sonnet", "judge": "sonnet"},
+             "judge_phrase_lift": "opus", "impl_planned_small": "haiku", "size_bumps": {}},
+    "max20": {"ceiling": "fable", "main": "opus", "subagent_env": "sonnet", "fallback": ["sonnet", "haiku"],
+              "roles": {"explore": "haiku", "docs": "haiku", "verify": "haiku", "test": "sonnet", "impl": "sonnet",
+                        "integrate": "sonnet", "security": "sonnet", "judge": "opus", "default": "sonnet"},
+              "escalate": {"impl": "opus", "integrate": "opus", "security": "opus"},
+              "usage_guard": {"ceiling": "sonnet", "judge": "sonnet"},
+              "judge_phrase_lift": null, "impl_planned_small": null, "size_bumps": {"verify": {"L": "sonnet"}}},
+    "api": {"ceiling": "opus", "main": "sonnet", "subagent_env": "sonnet", "fallback": ["haiku"],
+            "roles": {"explore": "haiku", "docs": "haiku", "verify": "haiku", "test": "sonnet", "impl": "sonnet",
+                      "integrate": "sonnet", "security": "sonnet", "judge": "sonnet", "default": "sonnet"},
+            "escalate": {"test": "sonnet", "impl": "sonnet", "integrate": "sonnet", "security": "sonnet"},
+            "usage_guard": {"ceiling": "sonnet", "judge": "sonnet"},
+            "judge_phrase_lift": "opus", "impl_planned_small": "haiku", "size_bumps": {}}
+  },
   "agent_pins": {
-    "_comment": "subagent_type -> forced model. Opus = judgment roles (Opus 5.5 leads on review, factual accuracy, ambiguous work). Execution agents are NOT pinned: they default to sonnet and go through `escalation`. Fable is never auto-pinned.",
-    "opus": [
-      "frontend-uiux-designer",
-      "santa-reviewer",
-      "planning-director",
-      "spec-architect",
-      "debug-detective"
-    ],
-    "sonnet": [
-      "explore",
-      "claude-code-guide"
-    ],
+    "_comment": "Legacy view of tiers.max20 (doctor_checks, docs). The guards read roles+tiers; the consistency test pins this to max20.",
+    "opus": ["audit-specialist", "debug-detective", "frontend-uiux-designer", "plan", "planning-director", "santa-reviewer", "spec-architect"],
+    "haiku": ["claude-code-guide", "deadcode-reaper", "docs-sync-agent", "explore", "memory-codex", "qa-verifier"],
+    "sonnet": [],
     "fable": []
   },
   "task_matrix": {
-    "_comment": "TaskProfile intent -> model, read only by the router's main-session model_advice (/invoke per-act models come from invoke_categories; opus-guard has no TaskProfile and skips this). Anything unlisted -> default (sonnet). Fable never appears here.",
-    "DESIGN": "opus",
-    "HEAVY_ARCHITECTURE": "opus",
-    "DEEP_DEBUG": "opus",
-    "IMPLEMENT_SUITE": "opus"
+    "_comment": "TaskProfile intent -> model named by the main-session advice, per tier (api uses max5). Read by model_advice.py only.",
+    "pro": {"DESIGN": "sonnet", "HEAVY_ARCHITECTURE": "sonnet", "DEEP_DEBUG": "sonnet", "IMPLEMENT_SUITE": "sonnet"},
+    "max5": {"DESIGN": "sonnet", "HEAVY_ARCHITECTURE": "sonnet", "DEEP_DEBUG": "sonnet", "IMPLEMENT_SUITE": "sonnet"},
+    "max20": {"DESIGN": "opus", "HEAVY_ARCHITECTURE": "opus", "DEEP_DEBUG": "opus", "IMPLEMENT_SUITE": "opus"}
   },
   "heavy_qualifiers": {
-    "_comment": "HEAVY_ARCHITECTURE / DEEP_DEBUG main-session advice and the opus-guard `escalation` size rule fire only when size:L AND risk>=2 in the TaskProfile — a keyword alone never promotes.",
+    "_comment": "HEAVY_ARCHITECTURE / DEEP_DEBUG main-session advice and the escalation size rule fire only when size:L AND risk>=2 in the TaskProfile — a keyword alone never promotes.",
     "min_size": "L",
     "min_risk": 2
   },
   "invoke_categories": {
-    "_comment": "Judgment acts run on opus (they match the opus agent_pins); IMPLEMENT and every other act inherit the Sonnet default, and the guard's escalation still applies to /invoke impl dispatches (no model= is passed).",
+    "_comment": "max20 wording in the generated /invoke skills; the guards' tier routing still applies at dispatch.",
     "REVIEW": "opus",
     "DESIGN": "opus",
     "PLAN": "opus",
@@ -43,16 +79,11 @@
     "DEBUG": "opus"
   },
   "escalation": {
-    "_comment": "opus-guard step after agent_pins: lifts an execution agent to `to` when (1) a retry_marker matches (a previous attempt failed), or (2) no plan_marker matches AND prompt_router.classify gives size >= heavy_qualifiers.min_size AND risk >= heavy_qualifiers.min_risk. A referenced plan/spec/contract means the work is well-scoped: Opus planned, Sonnet executes. An explicit model param or a session/project mode wins over escalation. Regexes are case-insensitive; any error -> no escalation (fail-open).",
+    "_comment": "Triggers: a retry_marker, or no plan_marker AND classify size>=min_size AND risk>=min_risk. Target per tier: tiers.<tier>.escalate.<role>. `to`/`agents` = max20 legacy view (doctor_checks). Case-insensitive; any error -> no escalation.",
     "enabled": true,
     "to": "opus",
-    "agents": [
-      "implementation-engineer",
-      "backend-implementor-specialist",
-      "frontend-implementor-specialist",
-      "integrator-specialist",
-      "refactor-specialist"
-    ],
+    "agents": ["implementation-engineer", "backend-implementor-specialist", "frontend-implementor-specialist",
+               "integrator-specialist", "refactor-specialist", "security-sentinel", "test-author"],
     "retry_markers": [
       "\\b(previous|prior|last|earlier|first)\\s+(attempt|run|try|pass)\\s+(failed|did not work|didn't work|was rejected|broke)"
     ],
@@ -66,46 +97,52 @@
       "docs/superpowers/(plans|specs)/"
     ]
   },
+  "usage_guard": {
+    "_comment": "5-hour window from the statusline bridge (state/session-bridge/*.json, newest, < max_age_s). Active when pct >= on_pct; clears when pct < off_pct or now >= resets_at. Per-tier step-down models: tiers.<tier>.usage_guard.",
+    "on_pct": 80,
+    "off_pct": 70,
+    "max_age_s": 600
+  },
   "effort_defaults": {
-    "_comment": "Documentation of the effort tiers (agent `effort:` frontmatter is the source; test_model_policy_consistency checks it). Frontmatter is the ONLY lever: Claude Code (checked through 2.1.285) reads no subagent-effort env var — CLAUDE_CODE_SUBAGENT_EFFORT is not in the binary — so built-ins (general-purpose, Explore, Plan) run at Claude Code's own default. Executors stay at high because Sonnet 5.5 at xhigh is very verbose (~2.5x the cost of high for ~10% more score). `max` burns tokens and times out, so it is banned.",
+    "_comment": "Documentation only: agent `effort:` frontmatter is the one lever (Claude Code reads no subagent-effort env var). `max` is banned.",
     "executors": "high",
     "judges": "high (santa-reviewer, frontend-uiux-designer, debug-detective: xhigh)",
     "closers": "medium (deadcode-reaper, docs-sync-agent, qa-verifier); santa-reviewer xhigh and security-sentinel high",
     "banned": ["max"]
   },
+  "turn_caps": {
+    "_comment": "Agent frontmatter `maxTurns` (the ONLY cap a Workflow agent runs under: agent() has no maxTurns opt). `agents` is the table the frontmatter must equal; `schema_floor` is the minimum per role for every agentType a saved workflow template calls (judges/verifiers/security write a report AND spend one turn on StructuredOutput); `report_reserve` = turns kept for the artifact + StructuredOutput: subagent-context.py tells each agent `deliver by turn max(cap - reserve, cap // 2)`. Sized 2026-10-30 from wf_47c4310f: 8/9 santa-reviewer runs died at exactly 40 turns; the one that returned used 35.",
+    "report_reserve": 6,
+    "schema_floor": {"judge": 60, "verify": 50, "security": 50, "impl": 40, "integrate": 40, "test": 40, "docs": 30, "default": 30},
+    "agents": {
+      "santa-reviewer": 80, "debug-detective": 80,
+      "spec-architect": 60, "planning-director": 60, "audit-specialist": 60, "qa-verifier": 60, "frontend-uiux-designer": 60,
+      "implementation-engineer": 60, "backend-implementor-specialist": 60, "frontend-implementor-specialist": 60,
+      "security-sentinel": 50,
+      "refactor-specialist": 40, "test-author": 40, "integrator-specialist": 40,
+      "docs-sync-agent": 30, "deadcode-reaper": 30,
+      "memory-codex": 10
+    }
+  },
   "override_phrases": {
-    "_comment": "Explicit user phrases that force a model for that turn. opus-guard reads them from the user's last real prompt (lib/model_mode.user_phrase): only then may an explicit model / [label] move a pinned agent, an escalation executor, or select fable. model_advice reads them to stay silent.",
-    "opus": [
-      "use opus",
-      "on opus",
-      "opus for this"
-    ],
-    "sonnet": [
-      "use sonnet",
-      "on sonnet",
-      "cheap mode"
-    ],
-    "fable": [
-      "use fable",
-      "on fable",
-      "fable for this"
-    ]
+    "_comment": "User phrases (last real prompt, lib/model_mode.user_phrase) that let an explicit model move a guarded agent, select fable, or (max5) lift a judge. model_advice stays silent on them.",
+    "haiku": ["use haiku", "on haiku", "haiku for this"],
+    "opus": ["use opus", "on opus", "opus for this"],
+    "sonnet": ["use sonnet", "on sonnet", "cheap mode"],
+    "fable": ["use fable", "on fable", "fable for this"]
   },
   "session_flags": {
-    "_comment": "Flag files under ~/.claude/<dir>/; presence forces that model on every subagent/workflow agent. Precedence sonnet > opus > fable (sonnet is the kill-switch).",
+    "_comment": "~/.claude/<dir>/<flag> forces that model on every subagent, capped to the tier ceiling. Cheapest flag wins.",
     "dir": "state",
+    "haiku": "haiku-only-mode",
     "sonnet": "sonnet-only-mode",
     "opus": "opus-only-mode",
     "fable": "fable-only-mode",
-    "precedence": [
-      "sonnet",
-      "opus",
-      "fable"
-    ]
+    "precedence": ["haiku", "sonnet", "opus", "fable"]
   },
   "main_session_advice": {
     "enabled": true,
-    "_comment": "Heavy-task line, addressed to the main model (the user never types a model switch): when the TaskProfile hits an opus row of task_matrix AND heavy_qualifiers pass, the line says to dispatch the Opus judge agent in `agents` (opus-guard pins it) for the heavy part. Otherwise silent. Consumed by prompt_router/modules/model_advice.py.",
+    "_comment": "Heavy-task line for the main model: a task_matrix row of the tier's column + heavy_qualifiers -> dispatch the judge agent in `agents` (pro sonnet; max5 sonnet, 'use opus' lifts; max20 Opus). Else silent. Read by model_advice.py.",
     "agents": {
       "DESIGN": "frontend-uiux-designer",
       "HEAVY_ARCHITECTURE": "planning-director",

@@ -30,10 +30,7 @@ Strategic compaction at logical boundaries:
 
 ## How It Works Here
 
-The upstream bundle shipped a `suggest-compact.js` PreToolUse hook that counted tool
-calls and suggested `/compact` past a threshold. It was not ported to this workbench
-(and `settings.json` is generated from `settings.template.json`, never hand-edited), so
-apply the decision guide below yourself.
+The upstream bundle shipped a `suggest-compact.js` PreToolUse hook that counted tool calls. Here the nudge is real: `hooks/context-monitor.py` (PostToolUse link `context-monitor`) reads the transcript size and loop signals and emits one compaction advisory at the thresholds in `hooks/dispatch.config.json`; the decision guide below is for the cases it cannot see (phase changes).
 
 ## Compaction Decision Guide
 

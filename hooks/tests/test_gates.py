@@ -8,7 +8,6 @@
   * invoke-suite-gate normalises naive timestamps to UTC.
   * security-scan-gate matches basename TOKENS, not substrings.
   * dangerous-bash-gate ignores quoted text and fingerprints the FULL command.
-  * dox_cleanup only classifies the untouched template as a stub.
 
 Pure stdlib + pytest. `python3 -m pytest hooks/tests/test_gates.py -q`.
 """
@@ -466,49 +465,6 @@ def test_dangerous_bash_gate_strips_quotes_and_hashes_full_command():
     assert dbg._fingerprint("cd /very/long/path/here && rm -rf A", "rm") != \
         dbg._fingerprint("cd /very/long/path/here && rm -rf B", "rm")
     assert dbg._fingerprint("rm  -rf   A", "rm") == dbg._fingerprint("rm -rf A", "rm")
-
-
-# --------------------------------------------------------------------------- #
-# dox_cleanup — only the untouched template is a stub
-# --------------------------------------------------------------------------- #
-def test_dox_cleanup_stub_detection(tmp_path):
-    spec = importlib.util.spec_from_file_location(
-        "dox_cleanup_ut", _HOOKS.parent / "scripts" / "dox_cleanup.py")
-    dc = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(dc)
-    stub = tmp_path / "a" / "CLAUDE.md"
-    stub.parent.mkdir()
-    stub.write_text("<!-- dox:child v1 -->\n# `a/`\n\n## What lives here\n\n<One or two lines: ...>\n")
-    edited = tmp_path / "b" / "CLAUDE.md"
-    edited.parent.mkdir()
-    edited.write_text("<!-- dox:child v1 -->\n# `b/`\n\n## What lives here\n\nThe real thing.\n")
-    assert dc.is_untouched_stub(stub)
-    assert not dc.is_untouched_stub(edited)
-    found = [d for d, _ in dc.find_candidates(tmp_path)]
-    assert found == [stub]
-
-
-def test_dox_cleanup_keeps_hand_edited_agents_md(tmp_path):
-    """Santa P6: a stub CLAUDE.md's sibling AGENTS.md is deleted only if it is the
-    untouched pointer template."""
-    spec = importlib.util.spec_from_file_location(
-        "dox_cleanup_ut2", _HOOKS.parent / "scripts" / "dox_cleanup.py")
-    dc = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(dc)
-    import dox_engine
-    stub_text = "<!-- dox:child v1 -->\n# `x/`\n\n## What lives here\n\n<One or two lines: ...>\n"
-    for name, ptr_text in (("plain", dox_engine.pointer_text({})),
-                           ("legacy", dox_engine.pointer_text({}).replace(
-                               dox_engine.POINTER_MARKER + "\n", "")),
-                           ("edited", "# Codex rules\n\nReal hand-written instructions.\n")):
-        d = tmp_path / name
-        d.mkdir()
-        (d / "CLAUDE.md").write_text(stub_text)
-        (d / "AGENTS.md").write_text(ptr_text)
-    pairs = {doc.parent.name: ptr for doc, ptr in dc.find_candidates(tmp_path)}
-    assert set(pairs) == {"plain", "legacy", "edited"}
-    assert pairs["plain"] is not None and pairs["legacy"] is not None
-    assert pairs["edited"] is None
 
 
 def test_tdd_guard_timeouts_nest_above_validator_latency():

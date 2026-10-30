@@ -63,6 +63,23 @@ def test_path_scoped_core_pointer_names_its_skill_file():
             assert f"skills/{name}/SKILL.md" in line, line
 
 
+def test_new_lines_fit(monkeypatch, tmp_path):
+    """OOM-guard, worktree and instinct notices (oom-sentinel, session-stop, learning) are clipped by
+    CAPS['notices'] and never push the style block or the core-skill header out of the cap."""
+    agg = _load_aggregator()
+    sn = agg._notices_module()
+    monkeypatch.setattr(sn, "memwatch_line", lambda *a, **k: "M" * 300, raising=False)
+    monkeypatch.setattr(sn, "worktree_line", lambda *a, **k: "W" * 200, raising=False)
+    monkeypatch.setattr(sn, "instinct_lines", lambda *a, **k: ["I" * 90] * 3, raising=False)
+    monkeypatch.setenv("CLAUDE_HOOK_DOCTOR", "1")
+    payload = {"hook_event_name": "SessionStart", "session_id": "budget-new-lines", "source": "startup",
+               "cwd": str(tmp_path)}
+    ctx = agg._full_context(payload, json.dumps(payload))
+    assert "M" * 50 in ctx                     # the stubs reached the notices block
+    assert "ALWAYS-ON STYLE" in ctx and "[Always-active core skills]" in ctx
+    assert len(ctx) <= 5500          # room for the 1,500-char breadcrumb + memory line under 7,800 (dispatch merges them)
+
+
 def test_core_skills_use_full_bodies_when_they_fit():
     agg = _load_aggregator()
     roomy = agg._core_skill_digests(budget=200000)

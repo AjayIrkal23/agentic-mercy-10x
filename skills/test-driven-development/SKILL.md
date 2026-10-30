@@ -416,3 +416,5 @@ After completing any implementation:
 - [ ] Coverage hasn't decreased (if tracked)
 
 **Note:** Run each test command after a change that could affect the result. After a clean run, don't repeat the same command unless the code has changed since — re-running on unchanged code adds no confidence.
+
+ECC graft: `references/ecc-tdd.md` — Arrange/Act/Assert, one assertion focus, behavior names, red before green.

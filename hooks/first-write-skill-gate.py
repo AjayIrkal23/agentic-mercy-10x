@@ -40,6 +40,10 @@ except Exception:  # pragma: no cover - fail-open (nothing is a code file → al
         return False
 from lib.platform import locked_update  # noqa: E402
 try:
+    from tool_compat import WRITE_TOOLS as _WRITE_TOOLS  # noqa: E402
+except Exception:  # noqa: BLE001
+    _WRITE_TOOLS = frozenset({"Write", "Edit", "MultiEdit", "StrReplace"})
+try:
     from lib.skill_aliases import canonical as _canonical  # noqa: E402  (WP-3 lib)
 except Exception:  # pragma: no cover
     def _canonical(name):  # type: ignore
@@ -173,7 +177,7 @@ def main() -> int:
 
     try:
         tool = str(payload.get("tool_name") or payload.get("tool") or "")
-        if tool not in ("Write", "Edit", "MultiEdit", "StrReplace"):
+        if tool not in _WRITE_TOOLS:
             print("{}")
             return 0
 

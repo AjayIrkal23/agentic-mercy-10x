@@ -4,9 +4,12 @@ waiting on OAuth (autonomy plan 2026-10-05, WP-C item 3).
 The always-on rules push Higgsfield for every raster/video/3D/audio asset; while
 ``mcp-needs-auth-cache.json`` lists it, the model either fails the tool or stalls. For an
 asset-looking prompt this emits ONE line (the router manifest dedups the id per session):
-ask the user once, batched with any other pending login, authenticate through the MCP
-tools, say assets are pending meanwhile, never fall back to placeholders. Cache and
-registry are read through ``mcp_routes`` (key names only). Pure stdlib; fail-open to [].
+ask the user once, batched with any other pending login, to connect the Higgsfield
+connector in claude.ai (OpenArt stays a user-scope server: its authenticate tool), say
+assets are pending meanwhile, never fall back to placeholders. The rule fires only while
+the user-scope ``higgsfield`` is registered AND needs auth; once it is removed the line
+retires itself. Cache and registry are read through ``mcp_routes`` (key names only).
+Pure stdlib; fail-open to [].
 """
 from __future__ import annotations
 
@@ -18,7 +21,7 @@ _ASSET = re.compile(
     r"audio|sound effects?|sfx|music|og image|hero (?:image|video|section)|"
     r"background (?:image|video|loop)|assets?)\b", re.IGNORECASE)
 _SERVERS = ("higgsfield", "openart")
-_AUTH_TOOL = {"higgsfield": "mcp__higgsfield__authenticate", "openart": "mcp__openart__authenticate"}
+_AUTH_TOOL = {"openart": "mcp__openart__authenticate"}  # higgsfield: the claude.ai connector
 
 
 def _waiting(needs: set, avail: set) -> list[str]:
@@ -37,8 +40,8 @@ def item(profile, ctx: dict | None = None) -> list[dict]:
         if "higgsfield" not in waiting:
             return []
         text = ("Higgsfield needs a one-time login: ask the user once (batched with any other "
-                "login) and use mcp__higgsfield__authenticate; until then say assets are pending, "
-                "no placeholders.")
+                "login) to connect the Higgsfield connector in claude.ai (tools "
+                "mcp__claude_ai_higgsfield__*); until then say assets are pending, no placeholders.")
         if "openart" in waiting:
             text += f" OpenArt waits too: {_AUTH_TOOL['openart']} in the same ask."
         return [{"id": "route:higgsfield-auth", "tier": 3, "section": "ROUTING", "text": text}]

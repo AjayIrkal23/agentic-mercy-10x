@@ -218,7 +218,7 @@ Agent fixes → pushes → CI runs again
 **Key patterns:**
 
 ```
-Lint failure → Agent runs `npm run lint --fix` and commits
+Lint failure → Agent runs `npm run lint --fix` and leaves the fix in the working tree (the user commits; commit only when asked)
 Type error  → Agent reads the error location and fixes the type
 Test failure → Agent follows debug-investigation skill
 Build error → Agent checks config and dependencies

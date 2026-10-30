@@ -108,6 +108,60 @@ def _graph_from_dir(d: Path) -> Path | None:
     return g if g.is_file() else None
 
 
+def _first_workspace() -> str | None:
+    """``WORKSPACE_FOLDER_PATHS``: a JSON list (first entry) or a plain path."""
+    val = os.environ.get("WORKSPACE_FOLDER_PATHS")
+    if not val:
+        return None
+    if val.lstrip().startswith("["):
+        try:
+            parsed = json.loads(val)
+            return str(parsed[0]) if isinstance(parsed, list) and parsed else None
+        except Exception:
+            return None
+    return val
+
+
+def _cwd() -> str | None:
+    try:
+        return os.getcwd()
+    except OSError:
+        return None
+
+
+def _infra(root: Path) -> bool:
+    try:
+        from lib.code_files import is_infra_root
+        return is_infra_root(root)
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _candidates() -> list[Path]:
+    out: list[Path] = []
+    for raw in (os.environ.get("CLAUDE_PROJECT_DIR"), _first_workspace(), _cwd()):
+        if raw and Path(raw) not in out:
+            out.append(Path(raw))
+    return out
+
+
+def _open_root() -> Path | None:
+    """The OPEN repo: the first candidate (CLAUDE_PROJECT_DIR, WORKSPACE_FOLDER_PATHS[0],
+    cwd) inside a git repo that is neither ``$HOME`` nor an infra root
+    (``lib.code_files.is_infra_root``). The graph lookup and the background build both
+    ask this, so they always name the same repo (audit 09 item 21). None otherwise."""
+    if _git_root is None:
+        return None
+    for c in _candidates():
+        try:
+            root = _git_root(c)
+        except Exception:  # noqa: BLE001
+            root = None
+        if root is not None and not _infra(root):
+            return root
+    return None
+
+
 def _resolve_graph(argv: list[str]) -> str | None:
     # 1) an explicit *.json arg from the MCP client wins.
     for a in argv:
@@ -117,22 +171,12 @@ def _resolve_graph(argv: list[str]) -> str | None:
     env_graph = os.environ.get("GRAPHIFY_GRAPH")
     if env_graph and Path(env_graph).is_file():
         return env_graph
-    # 3) workspace env vars (Claude sets these).
-    for var in ("CLAUDE_PROJECT_DIR", "WORKSPACE_FOLDER_PATHS"):
-        val = os.environ.get(var)
-        if not val:
-            continue
-        cand = val
-        if var == "WORKSPACE_FOLDER_PATHS" and val.lstrip().startswith("["):
-            try:
-                parsed = json.loads(val)
-                cand = parsed[0] if isinstance(parsed, list) and parsed else ""
-            except Exception:
-                cand = ""
-        if cand:
-            g = _graph_from_dir(Path(cand))
-            if g is not None:
-                return str(g)
+    # 3) the open repo's own graph.
+    open_root = _open_root()
+    if open_root is not None:
+        g = _graph_from_dir(open_root)
+        if g is not None:
+            return str(g)
     # 4) walk up from CWD to the nearest graphify-out/graph.json — but only serve
     #    it if it belongs to the OPEN repo (same git root). A graph found in an
     #    ANCESTOR / foreign git repo is REFUSED (jcode-grade identity guard):
@@ -141,7 +185,6 @@ def _resolve_graph(argv: list[str]) -> str | None:
         cwd = Path(os.getcwd()).resolve()
     except OSError:
         cwd = None
-    open_root = _git_root(cwd) if (_git_root is not None and cwd is not None) else None
     cur = cwd
     for _ in range(40):
         if cur is None:
@@ -195,8 +238,7 @@ def _kick_graph_build() -> None:
     (`reprobe` claims the lock and spawns the detached builder; NEVER_INDEX roots and
     non-git dirs are refused there). Log only, never raises, never waits."""
     try:
-        cwd = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
-        root = _git_root(cwd) if _git_root is not None else None
+        root = _open_root()
         if root is None or _plat is None:
             return
         _plat.spawn_detached([_plat.python_exe(), str(_HOOKS / "index-lifecycle.py"),

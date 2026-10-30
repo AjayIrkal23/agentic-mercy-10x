@@ -36,8 +36,8 @@ export const TOOL_SPECS = [
 export const COMMAND_SPECS = [
   {
     name: 'pulse',
-    description: 'mercy: open the live pane (usage, git, CI, tasks, files, commands, agents, hooks, repo brain)',
-    argumentHint: '[overview|usage|git|ci|todo|files|commands|agents|hooks|brain]',
+    description: 'mercy: open the live pane (usage, git, CI, tasks, files, commands, agents, hooks, repo brain, memory)',
+    argumentHint: '[overview|usage|git|ci|todo|files|commands|agents|hooks|brain|memory]',
   },
   {
     name: 'mercy',

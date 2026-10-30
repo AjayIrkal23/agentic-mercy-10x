@@ -116,6 +116,13 @@ Follow the line; don't wait to be asked.
 `higgsfield`, `openart` (HTTP/OAuth): authorize via `/mcp` in an interactive session. A
 non-interactive session cannot run the OAuth flow — report it, don't ask for tokens.
 
+## Connector hygiene (audit lens; ecc:README.md#mcp-connector-policy, docs/MCP-CONNECTOR-POLICY.md, docs/capability-surface-selection.md, the-shortform-guide.md#mcp-hygiene @25278e7d)
+
+- Review connectors quarterly: unused tools, overlapping surfaces, servers nobody calls.
+- Prefer one surface per capability (one browser driver, one docs source, one memory store).
+- MCP-first stays mandatory here (`rules/00-tool-precedence.md`): this is an audit lens for
+  `workflow-audit`, never a reason to skip a connected server.
+
 ## Removed — do not re-add
 
 `fetch`, `ast-grep`, `figma`, `gbrain`; plugins `playwright`/`context7` (duplicates of the

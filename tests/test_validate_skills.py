@@ -115,3 +115,18 @@ def test_r13_warns_on_intents_the_router_never_matches(tmp_path, monkeypatch, ca
     assert validator.validate() == 0
     out = capsys.readouterr().out
     assert "R13 WARN" in out and "reference-test: ['design']" in out
+
+
+def test_r14_warns_on_block_scalar_description(tmp_path, monkeypatch, capsys):
+    """R14 (graft of ecc:scripts/ci/validate-skills.js@25278e7d rule 4): a `description: |`
+    block scalar breaks flat renderers that key off one line. Warn, never fail."""
+    validator = _load_validator()
+    skill_dir = tmp_path / "skills" / "reference-test"
+    skill_dir.mkdir(parents=True)
+    (skill_dir / "SKILL.md").write_text(
+        "---\nname: reference-test\ndescription: |\n  two\n  lines\n---\nbody\n", encoding="utf-8")
+    _isolate_validator(monkeypatch, validator, skill_dir, tmp_path / "skills")
+
+    assert validator.validate() == 0
+    out = capsys.readouterr().out
+    assert any(line.startswith("  R14 WARN") for line in out.splitlines()), out

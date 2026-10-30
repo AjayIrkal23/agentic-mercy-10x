@@ -1,0 +1,146 @@
+{
+ "command_titles": {
+  "aside": "Answer a quick side question without interrupting or losing context from the current task. Resume work automatically after answering.",
+  "checkpoint": "Create, verify, or list workflow checkpoints after running verification checks.",
+  "cpp-build": "Fix C++ build errors, CMake issues, and linker problems incrementally. Invokes the cpp-build-resolver agent for minimal, surgical fixes.",
+  "cpp-review": "Comprehensive C++ code review for memory safety, modern C++ idioms, concurrency, and security. Invokes the cpp-reviewer agent.",
+  "cpp-test": "Enforce TDD workflow for C++. Write GoogleTest tests first, then implement. Verify coverage with gcov/lcov.",
+  "evolve": "Analyze instincts and suggest or generate evolved structures",
+  "fastapi-review": "Review a FastAPI application for architecture, async correctness, dependency injection, Pydantic schemas, security, performance, and testability.",
+  "flutter-build": "Fix Dart analyzer errors and Flutter build failures incrementally. Invokes the dart-build-resolver agent for minimal, surgical fixes.",
+  "flutter-review": "Review Flutter/Dart code for idiomatic patterns, widget best practices, state management, performance, accessibility, and security. Invokes the flutter-reviewer agent.",
+  "flutter-test": "Run Flutter/Dart tests, report failures, and incrementally fix test issues. Covers unit, widget, golden, and integration tests.",
+  "gan-build": "Run a generator/evaluator build loop for implementation tasks with bounded iterations and scoring.",
+  "gan-design": "Run a generator/evaluator design loop for frontend or visual work with bounded iterations and scoring.",
+  "go-build": "Fix Go build errors, go vet warnings, and linter issues incrementally. Invokes the go-build-resolver agent for minimal, surgical fixes.",
+  "go-review": "Comprehensive Go code review for idiomatic patterns, concurrency safety, error handling, and security. Invokes the go-reviewer agent.",
+  "gradle-build": "Fix Gradle build errors for Android and KMP projects",
+  "jira": "Retrieve a Jira ticket, analyze requirements, update status, or add comments. Uses the jira-integration skill and MCP or REST API.",
+  "kotlin-build": "Fix Kotlin/Gradle build errors, compiler warnings, and dependency issues incrementally. Invokes the kotlin-build-resolver agent for minimal, surgical fixes.",
+  "kotlin-review": "Comprehensive Kotlin code review for idiomatic patterns, null safety, coroutine safety, and security. Invokes the kotlin-reviewer agent.",
+  "kotlin-test": "Enforce TDD workflow for Kotlin. Write Kotest tests first, then implement. Verify 80%+ coverage with Kover.",
+  "loop-start": "Prepare a managed autonomous loop pattern with safety defaults and explicit stop conditions, then print the commands to launch and monitor it. Use to set up sequential, continuous-pr, rfc-dag, or infinite loop patterns with safety gates before starting one; the continuous-agent-loop skill covers the same pattern selection and quality-gate guidance for in-conversation use (supersedes the deprecated autonomous-loops skill).",
+  "marketing-campaign": "Plan and execute a full marketing campaign. Accepts a product brief and returns positioning, landing page copy, email sequence, social posts, ad variants, video scripts, and a content calendar. Can also review existing copy for conversion quality. This is the slash-command entrypoint that delegates to the marketing-agent; prefer the marketing-campaign skill for the same end-to-end workflow in conversation.",
+  "pm2": "Analyze a project and generate PM2 service commands for detected frontend, backend, or database services.",
+  "projects": "List known projects and their instinct statistics",
+  "promote": "Promote project-scoped instincts to global scope",
+  "prune": "Delete pending instincts older than 30 days that were never promoted. Thin CLI wrapper for continuous-learning-v2's instinct-cli.py prune command; use to clean up stale pending instincts that were never reviewed or promoted.",
+  "python-review": "Comprehensive Python code review for PEP 8 compliance, type hints, security, and Pythonic idioms. Invokes the python-reviewer agent.",
+  "react-build": "Fix React build failures (Vite, webpack, Next.js, CRA, Parcel, esbuild, Bun) incrementally — JSX/TSX compile errors, hydration mismatches, server/client component boundary failures, missing types. Invokes the react-build-resolver agent for minimal, surgical fixes.",
+  "react-review": "Comprehensive React/JSX code review for hook correctness, render performance, server/client component boundaries, accessibility, and React-specific security. Invokes the react-reviewer agent (and typescript-reviewer alongside on TSX/JSX changes).",
+  "react-test": "Enforce TDD workflow for React. Write React Testing Library tests first (behavior-focused, accessibility-first), then implement components. Detects Vitest or Jest and verifies coverage targets.",
+  "rust-build": "Fix Rust build errors, borrow checker issues, and dependency problems incrementally. Invokes the rust-build-resolver agent for minimal, surgical fixes.",
+  "rust-review": "Comprehensive Rust code review for ownership, lifetimes, error handling, unsafe usage, and idiomatic patterns. Invokes the rust-reviewer agent.",
+  "rust-test": "Enforce TDD workflow for Rust. Write tests first, then implement. Verify 80%+ coverage with cargo-llvm-cov.",
+  "sessions": "Manage Claude Code session history, aliases, and session metadata.",
+  "skill-create": "Analyze local git history to extract coding patterns and generate SKILL.md files. Local version of the Skill Creator GitHub App. Use to generate new skills from local git history on demand; check the skill-scout skill first to avoid duplicating an existing local, marketplace, or GitHub skill.",
+  "token-card": "Render a token-usage stat card from local agent session logs and commit it to the repo. Invokes the token-card skill.",
+  "vue-review": "Comprehensive Vue.js code review for Composition API correctness, reactivity, composable patterns, template security, accessibility, and Vue-specific performance. Invokes the vue-reviewer agent (and typescript-reviewer alongside on .vue/.ts changes)."
+ },
+ "skill_triggers": {
+  "agent-runtime-gateway-smoke-test": [
+   "test local agent gateway",
+   "remote sandbox callback smoke test",
+   "agent task stuck after dispatch",
+   "verify gateway tunnel",
+   "restore web api after agent test"
+  ],
+  "api-connector-builder": [
+   "add api integration",
+   "new provider connector",
+   "match existing integration pattern"
+  ],
+  "canary-watch": [
+   "post deploy monitoring",
+   "smoke test url",
+   "production url check",
+   "console errors production",
+   "sse stream check",
+   "after deploy verification"
+  ],
+  "code-tour": [
+   "onboarding walkthrough",
+   "explain subsystem",
+   "architecture tour",
+   "pr walkthrough",
+   "rca tour"
+  ],
+  "content-hash-cache-pattern": [
+   "cache file processing",
+   "content addressed cache",
+   "sha256 hash cache"
+  ],
+  "django-patterns": [
+   "django orm",
+   "drf api",
+   "django rest framework",
+   "django caching",
+   "django signals",
+   "django middleware"
+  ],
+  "django-security": [
+   "django authentication",
+   "csrf protection",
+   "sql injection prevention",
+   "xss prevention",
+   "django deployment security",
+   "role based access control",
+   "authorization middleware",
+   "permissions checks"
+  ],
+  "evm-token-decimals": [
+   "token decimals",
+   "wei conversion",
+   "erc20 balance off",
+   "bridge token precision"
+  ],
+  "kubernetes-patterns": [
+   "kubernetes manifests",
+   "kubectl debugging",
+   "pod probes",
+   "k8s rbac",
+   "autoscaling config",
+   "configmap secrets"
+  ],
+  "python-patterns": [
+   "pythonic code",
+   "pep 8",
+   "type hints python",
+   "python code review",
+   "idiomatic python"
+  ],
+  "python-testing": [
+   "pytest fixtures",
+   "mocking python",
+   "parametrized tests",
+   "coverage python",
+   "tdd python"
+  ],
+  "redis-patterns": [
+   "cache aside pattern",
+   "distributed lock",
+   "redis rate limiting",
+   "cache invalidation"
+  ],
+  "regex-vs-llm-structured-text": [
+   "parse invoice",
+   "extract receipt data",
+   "text extraction pipeline",
+   "parse form fields",
+   "cheap document parser",
+   "extract table data",
+   "parse log lines",
+   "parse access logs",
+   "common log format",
+   "log line parsing"
+  ],
+  "rust-patterns": [
+   "rust ownership",
+   "borrow checker",
+   "rust error handling",
+   "traits rust",
+   "rust concurrency",
+   "idiomatic rust"
+  ]
+ }
+}

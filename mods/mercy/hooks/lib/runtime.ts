@@ -146,6 +146,10 @@ export type Runtime = {
   lastSoundAt: number // 3 s throttle
   /** Session cost when the current main turn started, for its per-turn cost. */
   turnCostBase: number
+  /** agent.spawn model caps applied this session (UI parity with opus-guard; Python stays the floor). */
+  modelCaps: { applied: number; last: string | undefined }
+  /** Repeating `$.clock.every` pollers by name (ports, memwatch, mod flag); session.end cancels them all. */
+  timers: Map<string, Timer>
 }
 
 export function freshRuntime(options: Options): Runtime {
@@ -188,7 +192,21 @@ export function freshRuntime(options: Options): Runtime {
     cardSeq: 0,
     lastSoundAt: 0,
     turnCostBase: 0,
+    modelCaps: { applied: 0, last: undefined },
+    timers: new Map(),
   }
+}
+
+/** Starts (or restarts) the named repeating poller; one per name. */
+export function keepTimer(name: string, timer: Timer): void {
+  rt.timers.get(name)?.cancel()
+  rt.timers.set(name, timer)
+}
+
+/** Cancels every named poller (session.end). */
+export function dropTimers(): void {
+  for (const t of rt.timers.values()) t.cancel()
+  rt.timers.clear()
 }
 
 /** The one runtime of this plugin environment; register() replaces its options. */
@@ -229,6 +247,7 @@ export function featureHealth(o: Options): Record<string, 'on' | 'off'> {
     bridge: on(o.bridge === 'on'), guard: on(o.guard === 'on'), brain: on(o.brain === 'on'), focus: on(o.focus === 'on'),
     verify: on(o.verifyGate !== 'off'), resume: on(o.autoResume === 'on'), pulse: on(o.pulse !== 'off'), governor: on(o.dedupeWindow > 0),
     sound: on(o.sound === 'on'), notify: on(o.notify === 'on'), ci: on(o.ci === 'on'),
+    memwatch: on(o.pulse !== 'off'), modelCaps: 'on',
   }
 }
 

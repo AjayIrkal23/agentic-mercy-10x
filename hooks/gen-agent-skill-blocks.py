@@ -37,6 +37,9 @@ AGENT_SKILLS: dict[str, list[str]] = {
     # BE ~32k). Stack- or task-specific skills (Go, Postgres, scaffold, OWASP, shadcn,
     # motion, design taste, Higgsfield) load on demand via Skill() or by file path; the
     # agent bodies name them. test_agents_wp5 caps the weight per spawn.
+    # Boilerplate (no commits, no servers, MCP-first) is not restated in bodies since
+    # 2026-10-29: it comes from the SubagentStart block. The 250-line cap stays in each
+    # executor body's OUTPUT CONTRACT (BE/FE also via the preloaded standards skills).
     "backend-implementor-specialist": [
         "backend-standards-always-follow", "backend-api-standards", "api-contract-standards",
         "service-layer-standards", "backend-error-handling", "test-driven-development",

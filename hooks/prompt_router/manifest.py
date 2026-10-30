@@ -2,7 +2,9 @@
 
 Suppresses VERBATIM re-injection of an advisory already surfaced this session,
 but NEVER suppresses a first fire. State lives at
-``~/.claude/state/<sid>.router-manifest.json``.
+``~/.claude/state/<sid>.router-manifest.json``; reset after compaction via
+``<sid>.router-reset`` written by dispatch.py SessionStart(source=compact|clear)
+(consumed by the next ``load``).
 
 An item is identified by its stable ``id`` (a semantic id like
 ``substrate:jcodemunch`` or ``skill:frontend-standards-always-follow``). The
@@ -30,18 +32,37 @@ except Exception:  # noqa: BLE001
     _plat = None  # type: ignore
 
 
-def _manifest_path(sid: str) -> Path:
+def _state_file(sid: str, suffix: str) -> Path:
     if _plat is not None:
         base = _plat.state_dir()
     else:
         base = Path("~/.claude/state").expanduser()
         base.mkdir(parents=True, exist_ok=True)
     safe = "".join(c if (c.isalnum() or c in "-_.") else "-" for c in (sid or "nosession"))
-    return base / f"{safe}.router-manifest.json"
+    return base / f"{safe}.{suffix}"
+
+
+def _manifest_path(sid: str) -> Path:
+    return _state_file(sid, "router-manifest.json")
+
+
+def _reset_path(sid: str) -> Path:
+    return _state_file(sid, "router-reset")
 
 
 def load(sid: str) -> set[str]:
-    """Return the set of ids already emitted this session (empty on any error)."""
+    """Return the set of ids already emitted this session (empty on any error).
+    A pending reset marker (post-compaction) is consumed and empties the set."""
+    try:
+        reset = _reset_path(sid)
+        if reset.is_file():
+            try:
+                reset.unlink()
+            except OSError:  # Windows: held open elsewhere; reset anyway
+                pass
+            return set()
+    except OSError:
+        pass
     try:
         raw = _manifest_path(sid).read_text(encoding="utf-8")
         data = json.loads(raw)

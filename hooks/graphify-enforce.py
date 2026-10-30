@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """graphify-enforce.py — Nudge graphify usage for architecture/dependency work.
 
-Modes (sys.argv[1]):
-  prompt-submit   → UserPromptSubmit: keyword-triggered graphify reminder
+One mode (sys.argv[1]):
   pre-tool-use    → PreToolUse on Agent|Bash: nudge before broad exploration
+Any other argv (an old ``prompt-submit`` caller) prints ``{"continue": true}``: the
+prompt-time reminder is the prompt router's job. Per-session state goes through
+``lib.gate_state`` (locked write).
 
 The reminder names the reachable graphify MCP tools AND a CLI/file fallback
 (`graphify query`, GRAPH_REPORT.md), so it stays actionable whether or not the
@@ -19,9 +21,25 @@ import subprocess
 import sys
 from pathlib import Path
 
-from tool_compat import is_agent_tool, is_shell_tool, tool_name as compat_tool_name
+HOOKS_DIR = Path(__file__).resolve().parent
+if str(HOOKS_DIR) not in sys.path:
+    sys.path.insert(0, str(HOOKS_DIR))
+try:
+    from tool_compat import is_agent_tool, is_shell_tool, tool_name as compat_tool_name
+except Exception:  # noqa: BLE001 - audit 09 item 10: a broken import must not kill the hook
+    def is_agent_tool(n):
+        return n in ("Task", "Agent")
 
-HOOKS_DIR = Path(__file__).parent
+    def is_shell_tool(n):
+        return n in ("Bash", "PowerShell", "Shell")
+
+    def compat_tool_name(p):
+        return str(p.get("tool_name") or p.get("tool") or "")
+try:
+    from lib import gate_state as _gs
+except Exception:  # noqa: BLE001
+    _gs = None
+
 CONFIG_PATH = HOOKS_DIR / "graphify-enforce.config.json"
 STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or HOOKS_DIR / ".state")
 
@@ -40,7 +58,6 @@ def _load_config():
 
 
 def _state_path(cid: str) -> Path:
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
     return STATE_DIR / f"{cid}.graphify-enforce.json"
 
 
@@ -53,7 +70,8 @@ def _load_state(cid: str) -> dict:
 
 
 def _save_state(cid: str, state: dict):
-    _state_path(cid).write_text(json.dumps(state))
+    if _gs is not None:
+        _gs.save_json(_state_path(cid), state)
 
 
 # Pre-tool reminders per session (the prompt-mode cap never applied here — A03-B21).
@@ -200,55 +218,6 @@ def _emit(ctx: str, event: str = "UserPromptSubmit"):
     }, sys.stdout)
 
 
-def handle_prompt_submit():
-    try:
-        hook_input = json.load(sys.stdin)
-    except Exception:
-        json.dump({"continue": True}, sys.stdout)
-        return
-
-    root, graph = _graph_root_and_path(hook_input)
-    if graph is None:
-        json.dump({"continue": True}, sys.stdout)
-        return
-
-    user_msg = ""
-    session_id = hook_input.get("session_id", "unknown")
-    try:
-        prompt = hook_input.get("prompt", {})
-        if isinstance(prompt, dict):
-            user_msg = prompt.get("content", "")
-            if isinstance(user_msg, list):
-                user_msg = " ".join(
-                    p.get("text", "") for p in user_msg if isinstance(p, dict)
-                )
-        elif isinstance(prompt, str):
-            user_msg = prompt
-    except Exception:
-        pass
-
-    config = _load_config()
-    state = _load_state(session_id)
-
-    if state["remind_count"] >= config.get("max_reminders_per_session", 8):
-        json.dump({"continue": True}, sys.stdout)
-        return
-
-    if _has_keywords(user_msg, config["arch_keywords"]):
-        state["match_count"] += 1
-        n = config.get("remind_every_n_matches", 2)
-        if state["match_count"] >= n:
-            state["match_count"] = 0
-            state["remind_count"] += 1
-            _save_state(session_id, state)
-            _emit(_reminder(root, graph), "UserPromptSubmit")
-            return
-
-        _save_state(session_id, state)
-
-    json.dump({"continue": True}, sys.stdout)
-
-
 def handle_pre_tool_use():
     try:
         hook_input = json.load(sys.stdin)
@@ -332,9 +301,7 @@ def handle_pre_tool_use():
 if __name__ == "__main__":
     mode = sys.argv[1] if len(sys.argv) > 1 else ""
     try:
-        if mode == "prompt-submit":
-            handle_prompt_submit()
-        elif mode == "pre-tool-use":
+        if mode == "pre-tool-use":
             handle_pre_tool_use()
         else:
             json.dump({"continue": True}, sys.stdout)

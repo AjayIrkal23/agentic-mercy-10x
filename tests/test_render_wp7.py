@@ -121,3 +121,75 @@ def test_failed_write_leaves_no_swap_file(tmp_path, monkeypatch):
     with pytest.raises(OSError):
         render.main(["--template", str(tmpl), "--user", str(user), "--out", str(out)])
     assert not list(root.glob(".settings-*.swap"))
+
+
+# --- integrate (plan R3.3, 0.11): tier overrides + post-steps -------------------------------
+def test_render_applies_tier_overrides_under_the_user_overlay(tmp_path, monkeypatch):
+    r = render
+    monkeypatch.setattr(r, "_tier_overrides", lambda: {"model": "opus", "env": {"CLAUDE_CODE_SUBAGENT_MODEL": "haiku"},
+                                                       "fallbackModel": ["sonnet"]})
+    user = tmp_path / "u.json"
+    user.write_text(json.dumps({"model": "sonnet"}), encoding="utf-8")
+    data = json.loads(r.render(r._TEMPLATE, user, None))
+    assert data["model"] == "sonnet"                       # settings.user.json still wins
+    assert data["env"]["CLAUDE_CODE_SUBAGENT_MODEL"] == "haiku" and data["fallbackModel"] == ["sonnet"]
+
+
+def test_tier_overrides_fail_open(monkeypatch):
+    monkeypatch.setitem(sys.modules, "lib.plan_tier", None)   # import fails -> {}
+    assert render._tier_overrides() == {}
+
+
+def test_post_steps_run_after_a_write_never_on_dry_run(tmp_path, monkeypatch):
+    r = render
+    calls = []
+    monkeypatch.setattr(r, "run_post_steps", lambda root=None: calls.append("post") or ["x: OK"])
+    monkeypatch.setattr(r, "_detect_tier_first", lambda root=None: calls.append("detect"))
+    out = tmp_path / "settings.json"
+    none = str(tmp_path / "none.json")
+    assert r.main(["--out", str(out), "--user", none, "--dry-run"]) == 0 and calls == []
+    assert r.main(["--out", str(out), "--user", none]) == 0 and calls == []          # pytest: blocked
+    monkeypatch.setenv("RENDER_POST_STEPS_ALLOW_TEST", "1")
+    assert r.main(["--out", str(out), "--user", none]) == 0 and calls == ["detect", "post"]
+
+
+def test_post_steps_belong_to_the_live_settings_only(tmp_path, monkeypatch):
+    monkeypatch.delenv("RENDER_POST_STEPS_ALLOW_TEST", raising=False)
+    monkeypatch.delenv("CLAUDE_HOOK_DOCTOR", raising=False)
+    monkeypatch.delenv("PYTEST_CURRENT_TEST", raising=False)
+    assert render._post_steps_blocked(tmp_path / "settings.json") is True     # CI's temp --out
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(render._ROOT))               # render.py runs from the installed tree
+    assert render._post_steps_blocked(render._LIVE) is False
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path))                    # a worktree / clone render
+    assert render._post_steps_blocked(render._LIVE) is True
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(render._ROOT))
+    monkeypatch.setenv("CLAUDE_HOOK_DOCTOR", "1")
+    assert render._post_steps_blocked(render._LIVE) is True
+
+
+def test_post_steps_are_isolated_and_skip_cleanly(monkeypatch):
+    r = render
+    seen = []
+
+    def fake_run(argv, timeout=None, **kw):
+        seen.append(Path(argv[1]).name)
+
+        class CP:
+            returncode = 0
+            stdout = "ok"
+            stderr = ""
+        return CP()
+    monkeypatch.setattr(r.plat, "run", fake_run)
+    monkeypatch.setattr(r, "_ensure_oomguard", lambda: (_ for _ in ()).throw(RuntimeError("boom")))
+    rows = r.run_post_steps(r._ROOT)
+    assert any("oomguard" in x and "SKIP" in x for x in rows)                   # the raise became a row
+    assert seen == ["plan-tier-detect.py", "split_machines_file.py", "build_workflows.py"]
+
+
+def test_emit_template_stays_tier_free(tmp_path):
+    live = tmp_path / "settings.json"
+    live.write_text(json.dumps({"model": "opus", "fallbackModel": ["sonnet"], "env": {"A": "1"}}), encoding="utf-8")
+    out = tmp_path / "t.json"
+    render.emit_template(live, out)
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert "model" not in data and "fallbackModel" not in data and data["env"] == {"A": "1"}

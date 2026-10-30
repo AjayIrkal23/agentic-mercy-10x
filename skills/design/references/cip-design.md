@@ -7,7 +7,6 @@ Corporate Identity Program design with 50+ deliverables, 20 styles, 20 industrie
 | Script | Purpose |
 |--------|---------|
 | `scripts/cip/search.py` | Search deliverables, styles, industries; generate CIP briefs |
-| `scripts/cip/generate.py` | Generate CIP mockups via Higgsfield `generate_image` (Flash/Pro) |
 | `scripts/cip/render-html.py` | Render HTML presentation from CIP mockups |
 | `scripts/cip/core.py` | BM25 search engine for CIP data |
 
@@ -37,22 +36,9 @@ python3 ~/.claude/skills/design/scripts/cip/search.py "office reception" --domai
 
 ### Generate Mockups
 
-```bash
-# With logo (RECOMMENDED - uses image editing)
-python3 ~/.claude/skills/design/scripts/cip/generate.py --brand "TopGroup" --logo /path/to/logo.png --deliverable "business card" --industry "consulting"
-
-# Full CIP set with logo
-python3 ~/.claude/skills/design/scripts/cip/generate.py --brand "TopGroup" --logo /path/to/logo.png --industry "consulting" --set
-
-# Pro model for 4K text rendering
-python3 ~/.claude/skills/design/scripts/cip/generate.py --brand "TopGroup" --logo logo.png --deliverable "business card" --model pro
-
-# Custom deliverables with aspect ratio
-python3 ~/.claude/skills/design/scripts/cip/generate.py --brand "GreenLeaf" --logo logo.png --industry "organic food" --deliverables "letterhead,packaging,vehicle" --ratio 16:9
-
-# Without logo (AI generates interpretation)
-python3 ~/.claude/skills/design/scripts/cip/generate.py --brand "TechFlow" --deliverable "business card" --no-logo-prompt
-```
+Call `mcp__higgsfield__generate_image` once per deliverable with the CIP brief, passing the
+logo as a reference image (recommended; upload it with `media_upload_widget` first). Without a
+logo the model generates its own interpretation. Use the Pro model for 4K text rendering.
 
 ### Render HTML Presentation
 
@@ -102,7 +88,7 @@ python3 ~/.claude/skills/design/scripts/cip/render-html.py --brand "TopGroup" --
 ## Workflow
 
 1. Generate CIP brief → `scripts/cip/search.py --cip-brief`
-2. Generate mockups with logo → `scripts/cip/generate.py --brand --logo --industry --set`
+2. Generate mockups with logo → Higgsfield `generate_image`, one call per deliverable
 3. Render HTML presentation → `scripts/cip/render-html.py --brand --industry --images`
 
 **Tip:** If no logo exists, use Logo Design (built-in) to generate one first.
@@ -117,5 +103,5 @@ python3 ~/.claude/skills/design/scripts/cip/render-html.py --brand "TopGroup" --
 
 ```bash
 # No API key and no install needed — image generation goes through the Higgsfield MCP
-# connector; scripts/cip/generate.py is legacy and must not be run.
+# connector (the legacy Gemini generator was removed on 2026-10-29).
 ```

@@ -1,0 +1,5 @@
+{
+  "args": {"run": "/tmp/r/20261029T1200-audit", "root": "repo", "surfaces": ["hooks", "scripts", "Installer UI"], "task": "dead code"},
+  "default": {"path": "p", "summary": "s", "count": 1},
+  "replies": [{"label": "^explore:slice:scripts$", "value": null}]
+}

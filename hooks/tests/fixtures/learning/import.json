@@ -1,0 +1,4 @@
+[
+  {"text": "Run vitest with --run, never watch mode.", "domain": "testing", "confidence": 0.6},
+  {"text": "Mock the network layer at the fetch boundary in unit tests", "domain": "testing", "confidence": 0.5}
+]

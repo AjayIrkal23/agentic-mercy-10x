@@ -3,6 +3,7 @@ I-06, I-08, I-16). HOME, CLAUDE_CONFIG_DIR and the target are tmp dirs; every su
 goes through a recorder (no network, no claude CLI, no npm); the doctor is stubbed."""
 from __future__ import annotations
 
+import json
 import os
 import subprocess
 import sys
@@ -102,6 +103,21 @@ def test_repair_routes_failed_rows(box, monkeypatch):
     assert rendered == [True]  # mods.enabled feeds CLAUDE_CODE_PLUGIN_DIRS: re-render
 
 
+def test_repair_routes_oomguard_rows_only_when_allowed(box, monkeypatch):
+    import types
+    seen, emit = _emits()
+    monkeypatch.delenv("OOMGUARD_REPAIR_ALLOW_TEST", raising=False)
+    monkeypatch.setitem(sys.modules, "oomguard_setup", None)       # importing it would raise
+    selfheal._repair(box["target"], {"memwatch-unit"}, None, emit)
+    assert seen == [("repair", "oomguard", "SKIP(pytest)")]
+    seen.clear()
+    monkeypatch.setenv("OOMGUARD_REPAIR_ALLOW_TEST", "1")
+    monkeypatch.setitem(sys.modules, "oomguard_setup",
+                        types.SimpleNamespace(ensure=lambda dry=False: ["memwatch: CREATED"]))
+    selfheal._repair(box["target"], {"memwatch-unit"}, None, emit)
+    assert ("repair", "oomguard", "memwatch: CREATED") in seen
+
+
 def test_forced_rerender_keeps_a_bounded_backup(box, monkeypatch):
     st = box["target"] / "settings.json"
     st.write_text("{}\n", encoding="utf-8")
@@ -126,6 +142,31 @@ def test_stale_settings_are_rerendered(box, monkeypatch, tmp_path):
     assert seen[-1][2].startswith("OK(rendered")
     seen.clear()
     selfheal._ensure_settings(box["target"], None, emit)  # now newer than its sources
+    assert seen[-1][2].startswith("PRESENT")
+
+
+def test_a_plan_tier_change_re_renders_the_tier_keys(box, monkeypatch, tmp_path):
+    """REVIEW2 integrate Fix 1: a tier change touches no render source, so the mtime check alone
+    kept model / fallbackModel / CLAUDE_CODE_SUBAGENT_MODEL from the old tier forever."""
+    state = tmp_path / "state"
+    state.mkdir()
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(state))
+    monkeypatch.setattr(selfheal, "_render_sources", lambda: [])
+    monkeypatch.setattr(selfheal, "interpreter_gone", lambda st: False)
+    st = box["target"] / "settings.json"
+    seen, emit = _emits()
+    selfheal._ensure_settings(box["target"], None, emit)        # missing: no tier file -> max20
+    selfheal._ensure_settings(box["target"], None, emit)
+    assert seen[-1][2].startswith("PRESENT")
+    (state / "plan-tier.json").write_text('{"tier": "pro"}\n', encoding="utf-8")
+    assert selfheal._stale(st)
+    selfheal._ensure_settings(box["target"], None, emit)
+    assert seen[-1][2].startswith("OK(rendered")
+    data = json.loads(st.read_text(encoding="utf-8"))
+    assert (data["model"], data["fallbackModel"], data["env"]["CLAUDE_CODE_SUBAGENT_MODEL"]) == \
+        ("sonnet", ["haiku"], "haiku")
+    assert not selfheal._stale(st)
+    selfheal._ensure_settings(box["target"], None, emit)
     assert seen[-1][2].startswith("PRESENT")
 
 

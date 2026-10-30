@@ -1,0 +1,3 @@
+cd /home/alice/projects/app
+open /Users/bob/code/repo
+set PATH=C:\Users\carol\x;%PATH%

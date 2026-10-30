@@ -15,6 +15,7 @@ session like graphify-enforce.
 Mode (sys.argv[1]):
   pre-tool-use    → PreToolUse on Read + lean-ctx ctx_read
 """
+from __future__ import annotations
 
 import json
 import os
@@ -23,9 +24,15 @@ from pathlib import Path
 
 HOME = Path.home()
 INDEX_DIR = HOME / ".doc-index" / "local"
-HOOKS_DIR = Path(__file__).parent
+HOOKS_DIR = Path(__file__).resolve().parent
 CONFIG_PATH = HOOKS_DIR / "jdocmunch-enforce.config.json"
 STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or HOOKS_DIR / ".state")
+if str(HOOKS_DIR) not in sys.path:
+    sys.path.insert(0, str(HOOKS_DIR))
+try:
+    from lib import gate_state as _gs
+except Exception:  # noqa: BLE001 - fail open: no state helper → no throttle state
+    _gs = None
 
 
 def _load_config() -> dict:
@@ -55,8 +62,8 @@ def _small_or_sliced(target: str, tool_input: dict, cfg: dict) -> bool:
 
 
 def _state_path(cid: str) -> Path:
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
-    return STATE_DIR / f"{cid}.jdocmunch-enforce.json"
+    safe = _gs.safe_cid(cid) if _gs is not None else cid
+    return STATE_DIR / f"{safe}.jdocmunch-enforce.json"
 
 
 def _load_state(cid: str) -> dict:
@@ -67,14 +74,13 @@ def _load_state(cid: str) -> dict:
 
 
 def _save_state(cid: str, state: dict):
-    try:
-        _state_path(cid).write_text(json.dumps(state))
-    except Exception:
-        pass
+    if _gs is not None:
+        _gs.save_json(_state_path(cid), state)
 
 
-def _repo_root() -> Path:
-    cwd = os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
+def _repo_root(payload: dict | None = None) -> Path:
+    """Payload ``cwd`` first: ``CLAUDE_PROJECT_DIR`` is the launch dir (often ``~``)."""
+    cwd = (payload or {}).get("cwd") or os.environ.get("CLAUDE_PROJECT_DIR") or os.getcwd()
     try:
         from lib.repo_context import git_root
         r = git_root(cwd)
@@ -153,7 +159,7 @@ def handle_pre_tool_use():
         _noop()
         return
 
-    root = _repo_root()
+    root = _repo_root(hook_input)
     if not _under(target, root) or not _has_doc_index(root):
         _noop()
         return

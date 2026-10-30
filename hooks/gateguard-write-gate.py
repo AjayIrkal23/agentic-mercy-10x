@@ -9,7 +9,14 @@ symbols of the target). The file is acknowledged only once the write actually ra
 from ``pending_ask`` to ``acked_files``, so a declined ask asks again (B1-08). TS/JS
 importers need a quoted specifier ending in ``/<stem>``; comment lines never count.
 
-Skips: new files, test files, docs, config, state files, lock files.
+Sensitive targets (PKG gates, lib/blast_radius.sensitivity) ask on their own, importers or not:
+auth / security / payment / billing / migrations / `.github/workflows` / Dockerfile ("sensitive",
+silenced by the blast-bypass marker, env var or typed token) and secret material (`.env*`, `*.pem`,
+`id_*`, secrets / credentials / keys: "secret", which NO bypass silences). Every ask goes through
+lib/gate_mode: a subagent, restored, `-p` or workflow run gets a logged advisory instead of a prompt
+nobody can answer; the pending -> acked flow shows that advisory once per file per session.
+
+Skips (importer walk only): new files, test files, docs, config, state files, lock files.
 """
 from __future__ import annotations
 
@@ -17,115 +24,45 @@ import json
 import os
 import re
 import sys
-import time
 from pathlib import Path
 
-from tool_compat import is_write_tool, tool_name
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
-THRESHOLD = 5  # files referencing target -> trigger prompt
+from lib import blast_radius as br  # noqa: E402
+from tool_compat import is_write_tool, tool_name  # noqa: E402
+
+THRESHOLD = br.THRESHOLD  # files referencing target -> trigger prompt
 MAX_IMPORTERS_LISTED = 40
 MAX_LINES_PER_IMPORTER = 2
 MAX_EXPORTS_LISTED = 20
 
-SKIP_PATTERNS = (
-    "_test.go", ".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx",
-    "test_", "tests/", "__tests__/",
-    ".md", ".mdx", ".json", ".yaml", ".yml", ".toml", ".env",
-    ".lock", "lock.json", "node_modules/", ".state/",
-    "server_docs/", "frontend_docs/", "docs/",
-    "plan-", ".css", ".svg", ".png", ".jpg",
-)
+# Segment-anchored (audit 07 issue 5): `latest_orders.ts` is not a test file, `docs_helper.ts` is not
+# under docs/. `.env` left this list: it is secret material, judged before any skip.
+_SKIP_DIRS = frozenset({"tests", "__tests__", "node_modules", ".state", "docs", "server_docs", "frontend_docs"})
+_SKIP_PREFIXES = ("test_", "plan-")
+_SKIP_SUFFIXES = ("_test.go", ".test.ts", ".test.tsx", ".spec.ts", ".spec.tsx", "lock.json")
+_SKIP_EXTS = frozenset({".md", ".mdx", ".json", ".yaml", ".yml", ".toml", ".lock", ".css", ".svg", ".png", ".jpg"})
 
-SCRIPT_DIR = Path(__file__).resolve().parent
 STATE_DIR = Path(os.environ.get("CLAUDE_HOOK_DOTSTATE_DIR") or SCRIPT_DIR / ".state")
 
 
 def _should_skip(file_path: str) -> bool:
     if not file_path:
         return True
-    fp_lower = file_path.lower().replace("\\", "/")  # Windows sends `a\b`
-    for pat in SKIP_PATTERNS:
-        if pat in fp_lower:
-            return True
-    if not os.path.isfile(file_path):
+    segs = file_path.lower().replace("\\", "/").split("/")  # Windows sends `a\b`
+    base = segs[-1]
+    if (any(d in _SKIP_DIRS for d in segs[:-1]) or base.startswith(_SKIP_PREFIXES)
+            or base.endswith(_SKIP_SUFFIXES) or os.path.splitext(base)[1] in _SKIP_EXTS):
         return True
-    return False
+    return not os.path.isfile(file_path)
 
 
-def _find_project_root(file_path: str) -> str:
-    """HOME-guarded git root (lib.code_files); falls back to the file's own dir so a
-    ~-rooted write never greps the whole home tree (A03-B17)."""
-    try:
-        from lib.code_files import git_root, is_home
-        root = git_root(file_path)
-        if root is not None and not is_home(root):
-            return str(root)
-    except Exception:
-        pass
-    return os.path.dirname(file_path)
-
-
-_EXCLUDE_DIRS = {"node_modules", ".git", "dist", "build", "__pycache__", ".venv", "venv"}
-_SCAN_BUDGET_S = 5.0  # stays under the 8 s dispatch link timeout: an over-budget scan fails open
-_COMMENT_HEADS = ("//", "/*", "*", "#")
-
-
-def _import_regex_for(file_path: str) -> tuple[re.Pattern, tuple[str, ...]]:
-    """(compiled per-line import regex, file suffixes to scan) for this target."""
-    basename = os.path.basename(file_path)
-    s = re.escape(os.path.splitext(basename)[0])
-    ext = os.path.splitext(basename)[1].lower()
-    if ext == ".go":
-        return re.compile(f'".*/{s}"|package {s}'), (".go",)
-    if ext == ".py":
-        # `from [pkg.|.|..x.]stem import`, or an `import` / `from X import` line
-        # naming stem as a whole word after `import`.
-        w = r"[^A-Za-z0-9_]"
-        return re.compile(rf"^\s*(from\s+([.A-Za-z0-9_]*[.])?{s}\s+import"
-                          rf"|(from\s+[.A-Za-z0-9_]+\s+)?import\s(.*{w})?{s}({w}|$))"), (".py",)
-    # A quoted module specifier ending in /<stem> (optional extension or /index): a
-    # comment like `// moved from ./Widget` or a sibling `./WidgetGroup` is no importer
-    # (B1-08). Covers `from '…'`, `require('…')`, `import('…')`, `export … from '…'`.
-    spec = rf"""['"][^'"\n]*/{s}(?:\.[A-Za-z]+|/index(?:\.[A-Za-z]+)?)?['"]"""
-    return (re.compile(rf"""(?:\bfrom\s*|\brequire\s*\(\s*|\bimport\s*\(\s*|^\s*import\s+){spec}"""),
-            (".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"))
-
-
-def _gather_importers(file_path: str, search_root: str) -> list[dict]:
-    """Return [{path, lines: [{lineno, text}]}] for files that import this target.
-    Pure Python, not grep: Windows has no grep on PATH, and grep's `path:line:text`
-    output cannot be split on ':' when paths start with a drive letter."""
-    basename = os.path.basename(file_path)
-    stem = os.path.splitext(basename)[0]
-    _SHORT_STEMS = {"app", "main", "index", "types", "routes", "gorm", "db", "api", "lib", "util"}
-    if not stem or len(stem) < 6 or stem.lower() in _SHORT_STEMS:
-        return []
-
-    rx, suffixes = _import_regex_for(file_path)
-    self_abs = os.path.abspath(file_path)
-    deadline = time.monotonic() + _SCAN_BUDGET_S
-    by_file: dict[str, list[dict]] = {}
-    for dirpath, dirnames, filenames in os.walk(search_root):
-        if time.monotonic() > deadline:
-            return []
-        dirnames[:] = [d for d in dirnames if d not in _EXCLUDE_DIRS]
-        for name in filenames:
-            if not name.endswith(suffixes):
-                continue
-            path = os.path.join(dirpath, name)
-            if os.path.abspath(path) == self_abs:
-                continue
-            try:
-                with open(path, encoding="utf-8", errors="replace") as fh:
-                    hits = [{"lineno": i, "text": line.rstrip("\r\n")}
-                            for i, line in enumerate(fh, 1)
-                            if not line.lstrip().startswith(_COMMENT_HEADS) and rx.search(line)]
-            except OSError:
-                continue
-            if hits:
-                by_file[path] = hits
-
-    return [{"path": p, "lines": lines} for p, lines in sorted(by_file.items())]
+# Moved to lib/blast_radius.py (shared with bash-write-gate); aliases keep the tests' names.
+_find_project_root = br.project_root
+_gather_importers = br.importers
+_EXCLUDE_DIRS = br.EXCLUDE_DIRS
 
 
 def _extract_exports(file_path: str) -> list[str]:
@@ -230,12 +167,30 @@ def _get_conversation_state(cid: str) -> dict:
 
 
 def _save_conversation_state(cid: str, state: dict) -> None:
+    """Locked read-merge-write (audit 07 issue 15: parallel tool calls lost `acked_files`). List keys
+    are unioned with what a parallel call wrote, except `pending_ask`, which this call owns."""
     if not cid:
         return
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
     safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
     state_file = STATE_DIR / f"{safe}.gateguard.json"
-    state_file.write_text(json.dumps(state), encoding="utf-8")
+
+    def _merge(d: dict) -> dict:
+        out = {**d, **state}
+        acked = list(d.get("acked_files") or [])
+        out["acked_files"] = acked + [p for p in (state.get("acked_files") or []) if p not in acked]
+        if isinstance(d.get("importer_cache"), dict) and isinstance(state.get("importer_cache"), dict):
+            out["importer_cache"] = {**d["importer_cache"], **state["importer_cache"]}
+        return out
+
+    try:
+        from lib import platform as plat
+        plat.locked_update(state_file, _merge, default={})
+    except Exception:  # noqa: BLE001 - the lock helper is missing or broken: plain write, as before
+        try:
+            STATE_DIR.mkdir(parents=True, exist_ok=True)
+            state_file.write_text(json.dumps(state), encoding="utf-8")
+        except OSError:
+            pass
 
 
 # ---------------------------------------------------------------------------
@@ -349,9 +304,8 @@ def main() -> int:
         return 0
 
     tool_input = payload.get("tool_input", {})
-    file_path = tool_input.get("file_path", "")
-
-    if _should_skip(file_path):
+    file_path = str(tool_input.get("file_path") or "")
+    if not file_path:
         print("{}")
         return 0
 
@@ -376,6 +330,27 @@ def main() -> int:
 
     abs_path = os.path.abspath(file_path)
     search_root = _find_project_root(file_path)
+    basename = os.path.basename(file_path)
+
+    # Sensitive branch: before _should_skip, so `.env` / `ci.yml` (skipped extensions) and NEW files
+    # are judged too. Classified on the repo-relative path: an ancestor dir above the repo is no role.
+    try:
+        rel = os.path.relpath(abs_path, search_root)
+    except ValueError:  # another Windows drive
+        rel = basename
+    sens = br.sensitivity(rel)
+    if sens and (sens == "secret" or not _bypass_active(payload, cid, state)):
+        if file_path not in pending:
+            state["pending_ask"] = pending + [file_path]
+        _save_conversation_state(cid, state)
+        reason = (f"`{basename}` is {sens} material ({br.sensitivity_label(rel)}): "
+                  + ("the .blast-bypass marker does not cover secrets or keys. " if sens == "secret" else "")
+                  + "Approve to proceed with this write; deny to re-scope.")
+        return _ask_or_advise(payload, cid, reason, basename)
+
+    if _should_skip(file_path):
+        print("{}")
+        return 0
 
     importer_cache = state.get("importer_cache", {})
     if isinstance(importer_cache, dict) and abs_path in importer_cache:
@@ -396,10 +371,9 @@ def main() -> int:
             state["pending_ask"] = pending + [file_path]
         _save_conversation_state(cid, state)
 
-        basename = os.path.basename(file_path)
         full_report = _build_impact_report(file_path, importers)
 
-        report_path = Path(os.path.expanduser("~/.claude/.gateguard-last-impact.md"))
+        report_path = _claude_dir() / ".gateguard-last-impact.md"  # honours CLAUDE_CONFIG_DIR (Windows too)
         try:
             report_path.parent.mkdir(parents=True, exist_ok=True)
             report_path.write_text(full_report + "\n", encoding="utf-8")
@@ -423,17 +397,49 @@ def main() -> int:
             f"saved to {report_path}. "
             f"Approve to proceed with this write; deny to re-scope."
         )
-        print(json.dumps({
-            "hookSpecificOutput": {
-                "hookEventName": "PreToolUse",
-                "permissionDecision": "ask",
-                "permissionDecisionReason": short_reason,
-            }
-        }))
-    else:
-        _save_conversation_state(cid, state)
-        print("{}")
+        return _ask_or_advise(payload, cid, short_reason, basename)
 
+    _save_conversation_state(cid, state)
+    print("{}")
+    return 0
+
+
+def _claude_dir() -> Path:
+    try:
+        from lib import platform as plat
+        return plat.claude_dir()
+    except Exception:  # noqa: BLE001
+        return Path(os.path.expanduser("~/.claude"))
+
+
+def _decide(payload) -> tuple:
+    try:
+        from lib import gate_mode
+        return gate_mode.decide(payload, "ask")
+    except Exception:  # noqa: BLE001 - oom-sentinel absent or broken: plain ask
+        return "ask", "interactive"
+
+
+def _telemetry(**fields) -> None:
+    try:
+        from lib import hook_telemetry
+        hook_telemetry.record("PreToolUse", "gateguard-write-gate", **fields)
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _ask_or_advise(payload: dict, cid: str, reason: str, basename: str) -> int:
+    """Ask, or (nobody can answer) a logged advisory. The pending -> acked flow (gateguard-ack) makes the
+    advisory once per file per session; once_per_file is NOT used: it would silence a declined ask."""
+    decision, why = _decide(payload)
+    if decision == "ask":
+        _telemetry(decision="ask", session=cid, file=basename)
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask",
+                                                 "permissionDecisionReason": reason}}))
+    else:
+        _telemetry(decision="ask_downgraded", reason=why, session=cid, file=basename)
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "additionalContext":
+                          reason + f" (ask downgraded: {why}; unattended session, continuing)"}}))
     return 0
 
 

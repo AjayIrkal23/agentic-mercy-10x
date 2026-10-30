@@ -108,8 +108,9 @@ tests) and bump the pin.
 
 ## The only things the installer can't do for you
 
-- **OAuth MCPs** — `higgsfield` and `openart` are registered as HTTP MCPs; run
-  `/mcp` inside Claude Code once to authorize them.
+- **OAuth MCPs** — `openart` is registered as an HTTP MCP; run `/mcp` inside Claude Code
+  once to authorize it. Higgsfield is the claude.ai connector (`mcp__claude_ai_higgsfield__*`),
+  enabled at claude.ai, not an MCP here.
 - **GitHub** — `gh auth login` once (the github MCP reads `gh auth token` at launch).
 - **Context7 key (optional)** — `export CONTEXT7_API_KEY=...` before installing.
 - **Semantic search (optional)** — install [ollama](https://ollama.com) and
@@ -119,6 +120,15 @@ tests) and bump the pin.
   `settings.user.json` (that server must listen beyond 127.0.0.1, e.g. `OLLAMA_HOST=0.0.0.0:11434`
   in its unit): the installer and the daily self-heal then install nothing locally, point the
   jcodemunch / jdocmunch MCP env and the doctor at that host, and pull missing models there.
+  The learning pipeline (`docs/LEARNING.md`) uses the same `OLLAMA_HOST` and defers when it is
+  down; it never spends Claude quota.
+- **OOM guard (Linux, optional but on by default)** — needs a systemd user manager
+  (`systemctl --user`); the installer writes `~/.config/systemd/user.conf.d/10-oom.conf`, two
+  user units and a PATH block, no sudo. `systemd-zram-generator` (apt, sudo) is the only
+  system package, installed by `scripts/golive.py` on the owner's machine only. Details:
+  `docs/OOM-GUARD.md`.
+- **Secrets scan before a push** — `gitleaks` 8.30.1 lands in `~/.local/bin` from the pinned
+  release (sha256-checked, no sudo); Windows skips it.
 - **Private files** — keep `.env*`, `CLAUDE.machines.local.md`, `.credentials.json` and
   `settings.user.json` at mode 600; the doctor's `secret-perms` row prints the `chmod`.
 - **Escape hatch** — if a hook ever misbehaves: `claude --safe-mode`.

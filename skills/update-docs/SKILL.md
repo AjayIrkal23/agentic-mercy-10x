@@ -110,3 +110,5 @@ If multiple packages exist (e.g. `client/` and `server/`), run the relevant comm
 
 - [examples/sample-monorepo-docs-map.md](references/examples/sample-monorepo-docs-map.md) — optional placeholder pattern for split layouts (project-specific trees belong in that repo's `.claude/`; see `~/.claude/docs/project-templates/`)
 - [upstream-nextjs/](references/upstream-nextjs/) — Next.js maintainer-oriented conventions (vendored)
+
+ECC graft: `references/ecc-living-docs.md` — four doc roles: reference, how-to, explanation, tutorial.

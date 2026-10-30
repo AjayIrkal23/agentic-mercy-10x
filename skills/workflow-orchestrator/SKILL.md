@@ -94,3 +94,5 @@ Use `mcp-usage-standards` when MCP selection or external verification affects th
 ## References
 
 - Use `references/full-guide.md` if you need the previous full strict guide.
+
+ECC graft: `references/ecc-feature-dev.md` — seven-phase guided feature flow as an optional mode.

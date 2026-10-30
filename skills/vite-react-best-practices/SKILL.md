@@ -13,6 +13,12 @@ paths:
 - '**/src/main.{tsx,jsx}'
 ---
 
+> **ECC graft (ecc:skills/react-performance, skills/vite-patterns, skills/nextjs-turbopack@25278e7d):** rule families to check:
+> - render count and memo boundaries; stable list keys;
+> - bundle splitting by route;
+> - Vite `optimizeDeps` / `manualChunks` pitfalls.
+> Next/Turbopack-only items are out of scope here.
+
 # Vite React Best Practices
 
 A senior-level guide for building production-ready React Single Page Applications (SPAs) with Vite.

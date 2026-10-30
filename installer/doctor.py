@@ -30,7 +30,8 @@ Rows (PASS / WARN / FAIL / SKIP; non-zero exit on any FAIL):
                        minimum; tsc + `claude plugin test`
 
 ``--ci``: machine-dependent rows (mcp-roster, lean-ctx, jcodemunch, ollama,
-plugins-installed, mods-runtime) → SKIP; hook-command and statusline run under it when a rendered
+plugins-installed, mods-runtime, and the OOM guard's oom-policy, memwatch-unit, restore-unit,
+claude-launcher, launch-caps, attach-live; those six also SKIP in doctor mode and under pytest) → SKIP; hook-command and statusline run under it when a rendered
 settings.json exists. Pure stdlib; importable and CLI.
 """
 
@@ -55,6 +56,7 @@ import doctor_hook  # noqa: E402
 import doctor_host  # noqa: E402
 import doctor_mcp  # noqa: E402
 import doctor_mods  # noqa: E402
+import doctor_oomguard  # noqa: E402
 
 PASS, WARN, FAIL, SKIP = "PASS", "WARN", "FAIL", "SKIP"
 
@@ -221,6 +223,11 @@ def run_doctor(*, ci: bool = False) -> list[tuple[str, str, str]]:
     doctor_checks.check_model_routing(rows, _ROOT, _HOOKS, _row, _run_with_stdin,
                                       plat.python_exe(), PASS, FAIL, WARN)
     doctor_checks.check_fixtures(rows, _ROOT, _row, PASS, FAIL, WARN)
+    # OOM guard rows (oom-sentinel): real probes only outside --ci, doctor mode and pytest; the
+    # sandboxed tests must never read this machine's user manager (plan 0.11, 8.3.2)
+    quiet = ci or bool(os.environ.get("CLAUDE_HOOK_DOCTOR")) or (
+        bool(os.environ.get("PYTEST_CURRENT_TEST")) and not os.environ.get("OOMGUARD_DOCTOR_ALLOW_TEST"))
+    rows.extend(doctor_oomguard.rows(_ROOT, ci=quiet))
     _row(rows, "secret-perms", *doctor_host.check_secret_perms(plat.claude_dir()))
     _row(rows, "mods", *doctor_mods.check_mods(_ROOT, mods, ci, _claude_version))
     enabled = [x for x in mods.get("enabled") or [] if isinstance(x, str)]

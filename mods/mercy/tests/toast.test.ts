@@ -98,3 +98,14 @@ describe('toastCmd elsewhere', () => {
     expect(toastCmd('t', 'x'.repeat(500), 'normal', false).argv.at(-1)?.length).toBe(240)
   })
 })
+
+describe('toastCmd on Linux (memwatch crit uses it)', () => {
+  test('notify-send with urgency, app name and a clipped body', () => {
+    const c = toastCmd('Claude Code: memory critical', 'x'.repeat(400), 'critical', false)
+    expect(c.argv[0]).toBe('notify-send')
+    expect(c.argv[c.argv.indexOf('-u') + 1]).toBe('critical')
+    expect(c.argv).toContain('Claude Code')
+    expect(c.argv.at(-1)?.length ?? 999).toBeLessThanOrEqual(241)
+    expect(c.env).toBeUndefined()
+  })
+})

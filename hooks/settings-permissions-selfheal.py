@@ -53,11 +53,37 @@ def _load(path: Path):
         return None
 
 
+def _lock_fn():
+    """lib.platform's lock primitive (private, but the one lock in the tree); None → no lock."""
+    try:
+        hooks = str(ROOT / "hooks")
+        if hooks not in sys.path:
+            sys.path.insert(0, hooks)
+        from lib.platform import _lock  # noqa: PLC0415
+        return _lock
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def _write_live(live: dict) -> None:
-    # Atomic replace so a concurrent reader never sees a half-written file.
-    tmp = LIVE.with_suffix(".json.selfheal.tmp")
-    tmp.write_text(json.dumps(live, indent=2) + "\n", encoding="utf-8")
-    tmp.replace(LIVE)
+    """Atomic replace under ``settings.json.lock`` so a concurrent reader never sees a
+    half-written file and two healers never interleave. Mode 0600 (it can hold env values)."""
+    lock = _lock_fn()
+    with open(LIVE.with_name(LIVE.name + ".lock"), "a+") as lk:
+        if lock is not None:
+            try:
+                lock(lk, timeout=2.0)
+            except OSError:
+                pass  # a stuck holder costs 2 s, never the repair
+        tmp = LIVE.with_suffix(".json.selfheal.tmp")
+        fd = os.open(str(tmp), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
+            fh.write(json.dumps(live, indent=2) + "\n")
+        try:
+            os.chmod(tmp, 0o600)
+        except OSError:
+            pass
+        os.replace(tmp, LIVE)
 
 
 def heal_from_template() -> int:

@@ -45,3 +45,9 @@ def test_windows_one_click_entry_is_rehearsed_in_a_sandboxed_profile():
 
 def test_mods_job_proves_the_pinned_cli_and_runs_on_windows_too():
     assert 'claude --version | grep -F "$ver"' in CI and "os: [ubuntu-latest, windows-latest]" in CI
+
+
+def test_ci_runs_import_hygiene_and_the_generated_library_and_workflows_checks():
+    assert "scripts/validate_imports.py library agents" in CI   # widened once the allowlist lands (G7)
+    assert "scripts/build_library_index.py --check" in CI and "scripts/build_workflows.py --check" in CI
+    assert "scripts/check_ownership.py" not in CI       # ownership is a merge-time check, not CI

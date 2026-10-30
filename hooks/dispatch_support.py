@@ -5,7 +5,8 @@
                           gates read (B1-04). Returns a list of payloads, or None.
   spawn_deferred(...)     run a ``"defer": true`` advisory detached; its context is queued
                           (B1-02: tdd-guard off the PreToolUse critical path).
-  drain(sid)              queued contexts for this session, removed on read.
+  drain(sid)              queued contexts for this session, removed on read; delivered by
+                          the user-prompt-submit chain (and the next Pre/PostToolUse).
   cap(text, limit)        cut on a line boundary with a ``[truncated]`` marker (B1-16).
 
 ``python3 dispatch_support.py run-deferred`` is the detached worker: stdin is

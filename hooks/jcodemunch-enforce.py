@@ -1,11 +1,8 @@
 #!/usr/bin/env python3
 """jCodeMunch enforcement hook — progressive blocking edition.
 
-Two roles, selected by argv[1]:
-
-  prompt-submit   -> UserPromptSubmit. Injects a system-additionalContext reminder
-                     that jcodemunch MCP tools must be used for code retrieval to
-                     save tokens. Cheap (no MCP probing), runs every turn.
+Two roles, selected by argv[1] (default ``pre-tool-use``; the UserPromptSubmit
+reminder is the prompt router's job, so an old ``prompt-submit`` argv is a no-op):
 
   pre-tool-use    -> PreToolUse. Inspects Read / Grep / Glob calls about to touch
                      a code file and applies progressive enforcement:
@@ -17,6 +14,11 @@ Two roles, selected by argv[1]:
 
                      State is persisted per conversation in
                      ~/.claude/hooks/.state/{conversation_id}.mcp-enforce.json
+                     (lib.gate_state: locked read-modify-write). A payload without
+                     a session id is never blocked.
+
+  mcp-used        -> PostToolUse on mcp__jcodemunch__*: counts calls, records the
+                     dead-code audit signal for the completion gate.
 
 Both modes fail OPEN: any unhandled error -> exit 0 with no output.
 """
@@ -27,6 +29,14 @@ import json
 import os
 import sys
 from pathlib import Path
+
+_HOOKS_DIR = Path(__file__).resolve().parent
+if str(_HOOKS_DIR) not in sys.path:
+    sys.path.insert(0, str(_HOOKS_DIR))
+try:
+    from lib import gate_state as _gs
+except Exception:  # noqa: BLE001 - fail open: no state helper → no state
+    _gs = None
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -278,42 +288,46 @@ def _check_index_exists(target_path: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def _state_path(conversation_id: str) -> Path:
-    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in conversation_id)
-    return STATE_DIR / f"{safe}.mcp-enforce.json"
+_DEFAULTS: dict = {"jcodemunch_calls": 0, "read_blocked_count": 0, "read_allowed_count": 0}
+
+
+def _state_path(conversation_id: str) -> Path | None:
+    if _gs is None or not conversation_id:
+        return None
+    return _gs.state_path(conversation_id, "mcp-enforce", base=STATE_DIR)
+
+
+def _well_typed(data: dict) -> bool:
+    """All counters must be non-negative ints (a hand-edited or torn file resets)."""
+    return all(isinstance(data.get(k), int) and data[k] >= 0 for k in _DEFAULTS)
 
 
 def _load_state(conversation_id: str) -> dict:
     """Load per-conversation enforcement state; reset to defaults on corruption."""
-    defaults: dict = {
-        "jcodemunch_calls": 0,
-        "read_blocked_count": 0,
-        "read_allowed_count": 0,
-    }
-    if not conversation_id:
-        return defaults
-    try:
-        path = _state_path(conversation_id)
-        if path.exists():
-            data = json.loads(path.read_text(encoding="utf-8"))
-            # Basic type-safety: all counts must be non-negative ints.
-            for key in ("jcodemunch_calls", "read_blocked_count", "read_allowed_count"):
-                if not isinstance(data.get(key), int) or data[key] < 0:
-                    return defaults
-            return data
-    except Exception:
-        pass
-    return defaults
+    p = _state_path(conversation_id)
+    if p is None:
+        return dict(_DEFAULTS)
+    data = _gs.load_json(p, default=_DEFAULTS)
+    return data if _well_typed(data) else dict(_DEFAULTS)
 
 
-def _save_state(conversation_id: str, state: dict) -> None:
-    if not conversation_id:
-        return
-    try:
-        STATE_DIR.mkdir(parents=True, exist_ok=True)
-        _state_path(conversation_id).write_text(json.dumps(state, indent=2), encoding="utf-8")
-    except Exception:
-        pass
+def _update(conversation_id: str, deltas: dict) -> dict:
+    """Locked read-modify-write: add ``deltas`` to the counters. Returns the new state."""
+    p = _state_path(conversation_id)
+    if p is None:
+        return dict(_DEFAULTS)
+
+    def _apply(d: dict) -> dict:
+        base = {**_DEFAULTS, **d} if _well_typed({**_DEFAULTS, **d}) else dict(_DEFAULTS)
+        for k, by in deltas.items():
+            base[k] = max(0, int(base.get(k, 0) or 0) + by)
+        return base
+
+    return _gs.update_json(p, _apply, default=_DEFAULTS)
+
+
+def _bump(conversation_id: str, key: str, by: int = 1) -> dict:
+    return _update(conversation_id, {key: by})
 
 
 def _fullstack_state_path(conversation_id: str) -> Path:
@@ -384,70 +398,6 @@ def _emit_block(message: str) -> None:
     }
     sys.stdout.write(json.dumps(out))
     sys.stdout.flush()
-
-
-# ---------------------------------------------------------------------------
-# Prompt-submit role (unchanged semantics, tightened wording)
-# ---------------------------------------------------------------------------
-
-REMINDER = (
-    "jCodeMunch MCP is INSTALLED and MANDATORY-FIRST for ALL code work — discovery "
-    "AND reading code. Before any Read/Grep/Glob OR lean-ctx ctx_read/ctx_search on "
-    "SOURCE files, use jcodemunch (~95% fewer tokens, no missed cross-module edges):\n"
-    "  • Locate  → search_symbols / search_ast / search_text\n"
-    "  • Read    → get_symbol_source / get_file_outline / assemble_task_context / get_context_bundle\n"
-    "  • Impact  → find_references / find_importers / get_blast_radius / get_call_hierarchy\n"
-    "  • Audit   → find_dead_code / get_coupling_metrics / get_hotspots / get_file_risk\n"
-    "  • Plan    → plan_turn (plan the whole change before editing)\n"
-    "jcodemunch reads its own finds too — don't re-read a source file through "
-    "ctx_read once jcodemunch already returned it. lean-ctx is for NON-code "
-    "(md/configs/env/lockfiles), shell, and dir trees only. State a reason if you "
-    "must fall back."
-)
-
-# ---------------------------------------------------------------------------
-# Prompt-submit state helpers (once-per-conversation guard)
-# ---------------------------------------------------------------------------
-
-
-def _prompt_state_path(conversation_id: str) -> Path:
-    safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in conversation_id)
-    return STATE_DIR / f"{safe}.jcodemunch-prompt-sent.json"
-
-
-def _prompt_already_sent(conversation_id: str) -> bool:
-    if not conversation_id:
-        return False
-    try:
-        p = _prompt_state_path(conversation_id)
-        if p.exists():
-            data = json.loads(p.read_text(encoding="utf-8"))
-            return bool(data.get("sent"))
-    except Exception:
-        pass
-    return False
-
-
-def _mark_prompt_sent(conversation_id: str) -> None:
-    if not conversation_id:
-        return
-    try:
-        STATE_DIR.mkdir(parents=True, exist_ok=True)
-        _prompt_state_path(conversation_id).write_text(
-            json.dumps({"sent": True}), encoding="utf-8"
-        )
-    except Exception:
-        pass
-
-
-def prompt_submit() -> int:
-    payload = _read_payload()
-    conversation_id = payload.get("conversation_id") or payload.get("session_id") or ""
-    if _prompt_already_sent(conversation_id):
-        return 0
-    _emit_additional_context("UserPromptSubmit", REMINDER)
-    _mark_prompt_sent(conversation_id)
-    return 0
 
 
 # ---------------------------------------------------------------------------
@@ -540,6 +490,11 @@ def pre_tool_use() -> int:
     else:
         return 0
 
+    # A session we cannot track (no id, e.g. some subagent payloads) is never
+    # blocked: its counters could not advance, so a block would never lift.
+    if not conversation_id:
+        return 0
+
     # --- Gate 1: Non-code / exempt → allow silently. ---
     if _is_exempt(target, cfg):
         return 0
@@ -565,17 +520,11 @@ def pre_tool_use() -> int:
             if note:
                 _emit_additional_context("PreToolUse", note)
             return 0
-        # Untrackable context (e.g. a subagent whose payload carries no session
-        # id, and which may not even hold a jcodemunch tool to satisfy the block)
-        # → fail OPEN immediately. A read must never be permanently deadlocked.
-        if not conversation_id:
-            return 0
         # Budgeted nudge: block a couple of times, then fail OPEN. This matches
         # the module contract ("you are never stuck"); previously Gate 2 had no
         # budget and could brick a subagent with no jcodemunch tool forever.
-        st = _load_state(conversation_id)
         idx_budget = int(cfg.get("index_missing_block_budget", 2))
-        idx_blocks = int(st.get("index_block_count", 0))
+        idx_blocks = int(_bump(conversation_id, "index_block_count").get("index_block_count", 1)) - 1
         if idx_blocks >= idx_budget:
             _emit_additional_context(
                 "PreToolUse",
@@ -583,8 +532,6 @@ def pre_tool_use() -> int:
                 "cheaper reads, but this read is allowed.",
             )
             return 0
-        st["index_block_count"] = idx_blocks + 1
-        _save_state(conversation_id, st)
         root = _find_git_root(Path(target))
         root_str = str(root) if root else "unknown"
         remaining = idx_budget - idx_blocks - 1
@@ -601,11 +548,6 @@ def pre_tool_use() -> int:
         return 0
 
     # --- Gate 3: Progressive count-based enforcement (coding phase only). ---
-    state = _load_state(conversation_id)
-
-    if state.get("jcodemunch_calls", 0) > 0:
-        return 0
-
     if _is_plan_or_ask(payload):
         return 0
 
@@ -617,16 +559,17 @@ def pre_tool_use() -> int:
     if initial_block_count <= 0 and enforce_after_write and _coding_started(conversation_id):
         initial_block_count = 2
 
-    blocks_so_far = state.get("read_blocked_count", 0)
+    # Relaxed while the index self-heals in the background (Spec B §3.3).
+    if (_load_state(conversation_id).get("read_blocked_count", 0) < initial_block_count
+            and _index_building(payload)):
+        return 0
+
+    # Claim a block slot under the lock; the counter stays exact under concurrency.
+    blocks_so_far = int(_bump(conversation_id, "read_blocked_count").get("read_blocked_count", 1)) - 1
 
     if blocks_so_far < initial_block_count:
-        # Relaxed while the index self-heals in the background (Spec B §3.3).
-        if _index_building(payload):
-            return 0
         # Still within the blocking budget — BLOCK this call.
         remaining_after = initial_block_count - blocks_so_far - 1
-        state["read_blocked_count"] = blocks_so_far + 1
-        _save_state(conversation_id, state)
 
         # Short, punchy block message.
         hint = Path(target).name if target else "this file"
@@ -645,9 +588,8 @@ def pre_tool_use() -> int:
         _emit_block(block_msg)
         return 0
 
-    # Budget exhausted — ALLOW with a single-line advisory.
-    state["read_allowed_count"] = state.get("read_allowed_count", 0) + 1
-    _save_state(conversation_id, state)
+    # Budget exhausted — give the claimed slot back and count an allow, in ONE update.
+    _update(conversation_id, {"read_blocked_count": -1, "read_allowed_count": 1})
 
     _emit_additional_context(
         "PreToolUse",
@@ -672,30 +614,19 @@ def mcp_used() -> int:
     conversation_id = payload.get("conversation_id") or payload.get("session_id") or ""
     if not conversation_id:
         return 0
-    state = _load_state(conversation_id)
-    state["jcodemunch_calls"] = state.get("jcodemunch_calls", 0) + 1
-    _save_state(conversation_id, state)
+    _bump(conversation_id, "jcodemunch_calls")
 
     # Satisfy the completion gate's dead-code check (Gate 5) when a dead-code /
     # blast-radius tool runs — the canonical "I audited my changes" signal.
     tool = str(payload.get("tool_name") or payload.get("tool") or "")
-    if any(t in tool for t in _DEADCODE_TOOLS):
-        try:
-            safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in conversation_id)
-            STATE_DIR.mkdir(parents=True, exist_ok=True)
-            (STATE_DIR / f"{safe}.deadcode.json").write_text(
-                json.dumps({"fired": True}), encoding="utf-8"
-            )
-        except Exception:
-            pass
+    if any(t in tool for t in _DEADCODE_TOOLS) and _gs is not None:
+        _gs.save_json(STATE_DIR / f"{_gs.safe_cid(conversation_id)}.deadcode.json", {"fired": True})
     return 0
 
 
 def main() -> int:
-    mode = sys.argv[1] if len(sys.argv) > 1 else "prompt-submit"
+    mode = sys.argv[1] if len(sys.argv) > 1 else "pre-tool-use"
     try:
-        if mode == "prompt-submit":
-            return prompt_submit()
         if mode == "pre-tool-use":
             return pre_tool_use()
         if mode == "mcp-used":

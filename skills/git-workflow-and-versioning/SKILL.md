@@ -57,13 +57,13 @@ This is the recommended default. Teams using gitflow or long-lived branches can 
 - **Release branches are acceptable.** When you need to stabilize a release while main moves forward.
 - **Feature flags > long branches.** Prefer deploying incomplete work behind flags rather than keeping it on a branch for weeks.
 
-### 1. Commit Early, Commit Often
+### 1. Small increments (commit only when asked)
 
-Each successful increment gets its own commit. Don't accumulate large uncommitted changes.
+Each successful increment is a candidate commit. In this workbench the agent never commits on its own: it keeps increments small and reviewable and the user commits (CLAUDE.md §3); when the user asks for commits, one per increment.
 
 ```
 Work pattern:
-  Implement slice → Test → Verify → Commit → Next slice
+  Implement slice → Test → Verify → (user) Commit → Next slice
 
 Not this:
   Implement everything → Hope it works → Giant commit
@@ -212,7 +212,7 @@ Agent starts work
     └── Feature complete → All commits form a clean history
 ```
 
-This pattern means you never lose more than one increment of work. If an agent goes off the rails, `git reset --hard HEAD` takes you back to the last successful state.
+This pattern means you never lose more than one increment of work. If an agent goes off the rails, the USER may run `git reset --hard HEAD` to return to the last save point; an agent never runs it (destructive) — it reverts its own edits file by file.
 
 ## Change Summaries
 
@@ -297,7 +297,7 @@ git log --grep="validation" --oneline
 
 | Rationalization | Reality |
 |---|---|
-| "I'll commit when the feature is done" | One giant commit is impossible to review, debug, or revert. Commit each slice. |
+| "I'll commit when the feature is done" | One giant commit is impossible to review, debug, or revert. Keep slices separate so the user can commit each one. |
 | "The message doesn't matter" | Messages are documentation. Future you (and future agents) will need to understand what changed and why. |
 | "I'll squash it all later" | Squashing destroys the development narrative. Prefer clean incremental commits from the start. |
 | "Branches add overhead" | Short-lived branches are free and prevent conflicting work from colliding. Long-lived branches are the problem — merge within 1-3 days. |
@@ -324,3 +324,5 @@ For every commit:
 - [ ] No secrets in the diff
 - [ ] No formatting-only changes mixed with behavior changes
 - [ ] `.gitignore` covers standard exclusions
+
+ECC graft: `references/ecc-git.md` — conventional commits, PR template discovery, attribution trailers, when the user asks.

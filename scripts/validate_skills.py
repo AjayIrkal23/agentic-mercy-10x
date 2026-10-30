@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-validate_skills.py — skill validator, rules R1..R12.
+validate_skills.py — skill validator, rules R1..R14.
 
   R1  name == dir (user-authored; vendored skills may keep upstream names)     [HARD]
   R2  single-sentence description + 6-gram garble detection (user-authored)   [WARN]
@@ -14,6 +14,7 @@ validate_skills.py — skill validator, rules R1..R12.
   R11 custom keys live under ``metadata:`` (HARD user-authored, WARN locked)
   R12 ``paths:`` entries are plain glob strings without ``~``                 [HARD]
   R13 intents not named as a router category are inert (exact match)         [WARN]
+  R14 block-scalar ``description: |`` / ``>`` (user-authored)                 [WARN]
 
 Routing metadata is read through build_skills_index.skill_meta (metadata: first,
 legacy top-level keys as fallback). --fix applies only to R1/R4. Exit nonzero on
@@ -122,6 +123,13 @@ def validate(fix: bool = False) -> int:
             print(f"  R2  WARN {name}: garbled/run-on description")
             warns += 1
 
+        # R14 block-scalar description (user-authored only) — WARN
+        # (graft of ecc:scripts/ci/validate-skills.js@25278e7d rule 4)
+        raw_fm = (d / "SKILL.md").read_text(encoding="utf-8").split("\n---", 1)[0]
+        if is_user and re.search(r"^description:\s*[|>]", raw_fm, re.M):
+            print(f"  R14 WARN {name}: block-scalar description (use an inline scalar; flat renderers key off one line)")
+            warns += 1
+
         # R3 keywords once metadata is present — WARN
         if is_user and (meta.get("schema") or fm.get("metadata")) and len(kws) < 3:
             print(f"  R3  WARN {name}: <3 trigger keywords ({len(kws)})")
@@ -180,7 +188,8 @@ def validate(fix: bool = False) -> int:
             hint = " (legacy routing keys)" if any(k in LEGACY_META_KEYS for k in stray) else ""
             if is_user:
                 print(f"  R11 HARD {name}: custom keys outside metadata:{hint} {stray} "
-                      f"— run scripts/migrate_frontmatter.py --only {name}")
+                      "— move them under metadata: by hand (front-matter helpers: scripts/skills_lib.py; "
+                      "NATIVE_KEYS at the top of this file)")
                 hard_fail += 1
             else:
                 print(f"  R11 WARN {name}: custom keys outside metadata: {stray}")

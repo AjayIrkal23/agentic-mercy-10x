@@ -38,6 +38,19 @@ def pytest_sessionfinish(session, exitstatus):
 
 
 @pytest.fixture(autouse=True)
+def _no_leaked_plan_tier():
+    """The session-start chain's `plan-tier-detect` link writes plan-tier.json into the shared test
+    state dir; a later test (statusline suffix, model routing) must not inherit that tier."""
+    d = os.environ.get("CLAUDE_HOOK_STATE_DIR")
+    if d:
+        try:
+            os.unlink(os.path.join(d, "plan-tier.json"))
+        except OSError:
+            pass
+    yield
+
+
+@pytest.fixture(autouse=True)
 def _restore_environ():
     """Installer code writes os.environ directly (bootstrap.main: CLAUDE_CONFIG_DIR and the
     relocation guard; selfheal.pin_config_dir). monkeypatch cannot undo a write it never

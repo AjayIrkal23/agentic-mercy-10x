@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# agentic-mercy oomguard tmux launcher: runs the tmux server in its own scope that survives one OOM
+# victim. Panes still get their own tmux-spawn-*.scope (tmux 3.6), so each pane's `claude` is protected
+# by bin/claude; this script protects the server itself. No user bus, no systemd-run, or already inside
+# a guarded scope: plain `exec tmux`. Design: docs/OOM-GUARD.md (layer L1).
+set -u
+
+if [ "${CLAUDE_WORKBENCH_SCOPE:-}" = 1 ] || [ ! -e "${XDG_RUNTIME_DIR:-/nonexistent}/bus" ]; then
+  exec tmux "$@"
+fi
+if ! command -v systemd-run >/dev/null 2>&1; then
+  exec tmux "$@"
+fi
+exec systemd-run --user --scope --quiet --collect --unit "tmux-claude-$$" \
+  -p OOMPolicy=continue -p ManagedOOMPreference=omit -- tmux "$@"

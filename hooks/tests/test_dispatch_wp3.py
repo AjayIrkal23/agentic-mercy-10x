@@ -258,3 +258,87 @@ def test_bare_only_runs_nothing():
         proc = subprocess.run([sys.executable, str(DISPATCH), "pre-tool-use", *argv], input=json.dumps(payload),
                               capture_output=True, text=True, timeout=60)
         assert json.loads(proc.stdout) == {}, argv
+
+
+# ---- mem-tier profile (MERGE-PLAN 1.3 / 6.5): crit drops p>0 advisories --- #
+def _mem(level: str, age_s: float = 0.0) -> None:
+    p = Path(os.environ["CLAUDE_HOOK_STATE_DIR"]) / "mem-pressure.json"
+    p.write_text(json.dumps({"schema": 1, "ts": time.time() - age_s, "level": level}), encoding="utf-8")
+
+
+def _adv(tmp_path, name, prio, **extra):
+    return {"id": name, "type": "advisory", "tools": "Bash", "priority": prio, **extra,
+            "cmd": _script(tmp_path, name,
+                           f"json.load(sys.stdin); print(json.dumps({{'additionalContext': {name.upper()!r}}}))\n")}
+
+
+def test_crit_profile_drops_low_priority_advisories_only(tmp_path):
+    mod = _load()
+    _mem("crit")
+    cfg = {"chains": {"pre-tool-use": [
+        _gate(tmp_path, "g", {"additionalContext": "GATE"}),
+        _adv(tmp_path, "p0", 0), _adv(tmp_path, "p1", 1), _adv(tmp_path, "p2x", 2, crit_exempt=True)]}}
+    try:
+        out = _ctx(mod.dispatch("pre-tool-use", {"session_id": "crit-s", "tool_name": "Bash"}, cfg))
+    finally:
+        (Path(os.environ["CLAUDE_HOOK_STATE_DIR"]) / "mem-pressure.json").unlink(missing_ok=True)
+    assert "GATE" in out and "P0" in out and "P2X" in out and "P1" not in out
+    rows = [r for r in _rows("p1") if r.get("decision") == "skip-profile"]
+    assert rows and rows[0].get("profile") == "crit"
+    assert [r for r in _rows("_dispatch") if r.get("session") == "crit-s" and r.get("note") == "profile:crit"]
+
+
+def test_crit_profile_runs_before_the_deferred_spawn(tmp_path, monkeypatch):
+    """REVIEW2 Fix 3: a defer:true p>0 advisory must not fork a worker at crit."""
+    mod = _load()
+    _mem("crit")
+    mod._MEM_TIER_CACHE = None
+    spawned, ran = [], []
+    monkeypatch.setattr(mod._sup, "spawn_deferred",
+                        lambda cmd, t, p, sid, ev, lid: spawned.append(lid) or True)
+    monkeypatch.setattr(mod, "_run_link", lambda ln, *a: ran.append(ln["id"]) or (None, ""))
+    cfg = {"chains": {"pre-tool-use": [
+        _adv(tmp_path, "deferred-p2", 2, defer=True), _adv(tmp_path, "plain-p2", 2),
+        _adv(tmp_path, "dp0", 0, defer=True)]}}
+    try:
+        mod.dispatch("pre-tool-use", {"session_id": "crit-defer", "tool_name": "Bash"}, cfg)
+    finally:
+        (Path(os.environ["CLAUDE_HOOK_STATE_DIR"]) / "mem-pressure.json").unlink(missing_ok=True)
+    assert spawned == ["dp0"] and ran == []
+    for lid in ("deferred-p2", "plain-p2"):
+        assert [r for r in _rows(lid) if r.get("decision") == "skip-profile" and r.get("session") == "crit-defer"]
+
+
+def test_warn_ok_stale_and_missing_tier_run_everything(tmp_path):
+    mod = _load()
+    state = Path(os.environ["CLAUDE_HOOK_STATE_DIR"]) / "mem-pressure.json"
+    cfg = {"chains": {"pre-tool-use": [_adv(tmp_path, "p1", 1)]}}
+    for setup in (lambda: _mem("warn"), lambda: _mem("ok"), lambda: _mem("crit", age_s=90),
+                  lambda: state.unlink(missing_ok=True),
+                  lambda: state.write_text("{garbage", encoding="utf-8")):
+        setup()
+        mod._MEM_TIER_CACHE = None
+        assert "P1" in _ctx(mod.dispatch("pre-tool-use", {"tool_name": "Bash"}, cfg))
+    state.unlink(missing_ok=True)
+
+
+def test_only_runs_ignore_the_crit_profile(tmp_path):
+    mod = _load()
+    _mem("crit")
+    mod._MEM_TIER_CACHE = None
+    cfg = {"chains": {"pre-tool-use": [_adv(tmp_path, "p1", 1)]}}
+    try:
+        out = _ctx(mod.dispatch("pre-tool-use", {"session_id": "s", "tool_name": "Bash"}, cfg, frozenset({"p1"})))
+    finally:
+        (Path(os.environ["CLAUDE_HOOK_STATE_DIR"]) / "mem-pressure.json").unlink(missing_ok=True)
+    assert "P1" in out
+
+
+def test_crit_exempt_link_is_never_budget_dropped(tmp_path):
+    mod = _load()
+    slow_gate = {"id": "sg", "type": "gate", "tools": "Bash",
+                 "cmd": _script(tmp_path, "sg", "json.load(sys.stdin); time.sleep(0.3); print('{}')\n")}
+    cfg = {"budgets": {"pre-tool-use": {"ms": 1, "chars": 4000}}, "chains": {"pre-tool-use": [
+        slow_gate, _adv(tmp_path, "q1", 1), _adv(tmp_path, "q2x", 2, crit_exempt=True)]}}
+    out = _ctx(mod.dispatch("pre-tool-use", {"tool_name": "Bash"}, cfg))
+    assert "Q2X" in out and "Q1" not in out

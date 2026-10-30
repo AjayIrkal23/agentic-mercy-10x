@@ -1,0 +1,17 @@
+{
+  "_about": "claude-memwatch sentinel thresholds (hooks/tools/memwatch.py). Tiers enter on these lines, exit with hysteresis.margin_mb and after hysteresis.holdoff_s. kill_policy stages: 1 stop own claude-index-* scopes; 2 kill the biggest browser renderer / stray build outside every claude tree; 3 stop the most idle ledger session (auto-restored). User overrides: ~/.claude/oomguard.local.json (kill_policy.enabled, protected_extra, victims_extra, shed_mode, restore_enabled, memory_high).",
+  "interval_s": 5,
+  "tiers": {"warn": {"mem_available_mb": 8192, "psi": 10, "swap_free_pct": 5, "swap_mem_available_mb": 12288},
+            "crit": {"mem_available_mb": 3072, "psi": 25}},
+  "hysteresis": {"margin_mb": 1024, "holdoff_s": 60},
+  "top_n": 8,
+  "state_stale_s": 30,
+  "notify": {"quiet_hours": "", "mod_flag_fresh_s": 60},
+  "kill_policy": {"enabled": true, "stage_holdoff_s": 20, "emergency_mb": 1500, "idle_min": 10, "victim_interval_s": 10, "stage3_after_s": 40,
+                  "victims": ["Isolated Web Co", "Web Content", "WebExtensions", "WebKitWebProcess", "WebKitNetworkProcess"],
+                  "victim_cmd_re": "(^|/)(tsserver|tsc|vitest|jest|esbuild|vite|webpack|cargo|rustc|gradle|gopls)(\\.m?js|\\.cjs)?(\\s|$)",
+                  "browser_parents": ["firefox", "firefox-bin", "chrome", "chromium", "chromium-browser", "brave", "electron", "code", "msedge"],
+                  "protected": ["claude", "tmux", "tmux: server", "gnome-shell", "mutter", "Xwayland", "pipewire", "wireplumber", "ptyxis", "ptyxis-agent", "gnome-terminal-", "kitty", "alacritty", "sshd", "systemd", "(sd-pam)", "dbus-daemon", "dbus-broker", "ollama"]},
+  "stuck": {"scan_s": 60, "pending_bash_s": 1800},
+  "restore": {"ok_hold_s": 60, "lock_stale_s": 600, "args": ["--only-if-ok", "--max-age", "7200", "--max", "6", "--per-window", "2"]}
+}

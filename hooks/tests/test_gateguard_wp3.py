@@ -35,6 +35,8 @@ def gate(tmp_path, monkeypatch):
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)  # plat.claude_dir() reads it before HOME
+    monkeypatch.delenv("CLAUDE_WORKBENCH_UNATTENDED", raising=False)
     # `~` is read from HOME on POSIX and USERPROFILE on Windows: the gate writes
     # ~/.claude/.gateguard-last-impact.md, so the sandbox must hold on both (A7-06)
     assert Path.home() == home, "sandbox home does not hold: the gate would write the live ~/.claude"

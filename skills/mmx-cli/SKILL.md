@@ -123,7 +123,7 @@ mmx image generate --prompt "Logo" --n 3 --out-dir ./gen/ --quiet
 
 Generate video. Default model: `MiniMax-Hailuo-2.3` (or `MiniMax-Hailuo-2.3-Fast` for fast mode with `--image`). This is an async task — by default it polls until completion.
 
-For `MiniMax-H3` — text-to-video, first/last-frame, multimodal reference image/video/audio generation, prompt construction, and failure handling — use the dedicated [mmx-h3-video skill](h3-video/SKILL.md) instead.
+For `MiniMax-H3` — text-to-video, first/last-frame, multimodal reference image/video/audio generation, prompt construction, and failure handling — read `~/.claude/skills/mmx-cli/h3-video/SKILL.md` directly (it is not a registered skill; the Skill tool cannot load it).
 
 ```bash
 mmx video generate --prompt <text> [flags]

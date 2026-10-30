@@ -43,13 +43,28 @@ def test_template_is_portable_and_leanctx_free():
 
 def test_template_registers_every_dispatch_event():
     want = {"PreToolUse", "PostToolUse", "PostToolUseFailure", "UserPromptSubmit", "SessionStart",
-            "SubagentStart", "SubagentStop", "TeammateIdle", "Stop", "PreCompact", "PostCompact",
+            "SubagentStart", "TeammateIdle", "Stop", "StopFailure", "InstructionsLoaded", "PreCompact",
             "ConfigChange", "SessionEnd"}
     assert want <= set(TMPL["hooks"])
+    # u:hook/SubagentStop, u:hook/PostCompact: chains stay in dispatch.config.json disabled, no registration
+    assert not {"SubagentStop", "PostCompact"} & set(TMPL["hooks"])
     for groups in TMPL["hooks"].values():
         for g in groups:
             for h in g["hooks"]:
                 assert h["command"].startswith("{{PYTHON}} {{CLAUDE_DIR}}/hooks/")
+    timeout = {ev: TMPL["hooks"][ev][0]["hooks"][0]["timeout"] for ev in TMPL["hooks"]}
+    assert (timeout["Stop"], timeout["StopFailure"], timeout["InstructionsLoaded"], timeout["UserPromptSubmit"]) \
+        == (40, 5, 3, 15)
+
+
+def test_output_style_overrides_and_effort_cap():
+    assert TMPL["outputStyle"] == "caveman" and TMPL["maxEffortLevel"] == "xhigh"
+    assert "fallbackModel" not in TMPL          # tier-derived (hooks/lib/plan_tier.render_overrides)
+    ov = json.loads((_ROOT / "docs" / "merge" / "skill-overrides.json").read_text(encoding="utf-8"))["skillOverrides"]
+    # the lean-ctx skill entry is dropped: a "lean-ctx" string in settings re-arms lean-ctx's injector
+    assert TMPL["skillOverrides"] == {k: v for k, v in ov.items() if k != "lean-ctx"}
+    assert set(ov.values()) <= {"on", "name-only", "user-invocable-only"}
+    assert all(name.startswith("invoke-") for name, v in ov.items() if v == "user-invocable-only")
 
 
 def test_shell_matchers_name_the_powershell_tool_and_the_statusline_its_own_interpreter_token():
@@ -64,6 +79,10 @@ def test_env_and_marketplaces():
     assert env["CLAUDE_CODE_SUBAGENT_MODEL"] == "sonnet"
     assert env["CLAUDE_CODE_PLUGIN_DIRS"] == "{{MOD_DIRS}}"  # machine paths are rendered, never templated
     assert env["RETICLE_TELEMETRY"] == "0"
+    for k, v in {"CLAUDE_CODE_TOOL_MEMORY_LIMIT": "6G", "CLAUDE_CODE_TOOL_MEMORY_CGROUP_EXCLUDE": "all-new",
+                 "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "5", "CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS": "4",
+                 "CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH": "600"}.items():
+        assert env[k] == v, k
     assert re.fullmatch(env["PONYTAIL_SUBAGENT_MATCHER"], "implementation-engineer")
     assert not re.search(env["PONYTAIL_SUBAGENT_MATCHER"], "Explore")
     mk = TMPL["extraKnownMarketplaces"]

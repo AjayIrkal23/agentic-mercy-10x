@@ -5,6 +5,10 @@ ONE process per hook event. Registered once per event in ``settings.json``:
 
     python3 ~/.claude/hooks/dispatch.py <event>
 
+Events include ``user-prompt-submit`` (the prompt router is its ``router`` link),
+``stop-failure`` and ``instructions-loaded`` (side-effect only: exec links, no
+``hookSpecificOutput``).
+
 Every legacy hook becomes a *link* in an ordered, config-driven chain declared
 in ``hooks/dispatch.config.json``. dispatch.py is a faithful **multiplexer**: it
 runs each link exactly as ``settings.json`` ran it before (each link is still its
@@ -16,7 +20,7 @@ What the orchestration layer adds on top of the old N-registrations-per-event:
   * per-link ``try/except`` isolation — one link's crash logs to telemetry and
     the chain continues (never takes down its siblings);
   * per-link ``enabled: true|false`` flag in the config;
-  * per-link ``tools:`` regex (replaces the 19 separate PreToolUse matchers);
+  * per-link ``tools:`` regex (one regex per link);
   * every link fire telemetry-logged from day 1 via ``lib/hook_telemetry.py``;
   * SOFT per-event ms budgets — overruns are logged; **gates, mutators and execs
     are NEVER budget-dropped**, only the lowest-priority *advisory* links are
@@ -44,6 +48,15 @@ Link types (declared per link):
   exec      side effect (journals, trackers); output ignored (still telemetered).
             Waited on (bounded by ``timeout_ms``) unless the link sets
             ``"async": true`` — then it is spawned detached and never waited on.
+
+``"crit_exempt": true`` (advisory): the link survives both drops below. Memory-tier
+profile: when ``state/mem-pressure.json`` (oom-sentinel) says ``crit`` and is at most
+30 s old, advisories with ``priority > 0`` are skipped (``skip-profile`` rows) unless
+crit_exempt; gates, mutators and execs always run, and ``--only`` runs ignore the tier.
+The budget skip never drops a crit_exempt link either.
+
+SessionStart with ``source`` compact|clear writes ``state/<sid>.router-reset``; the
+prompt router's manifest consumes it so dedup starts over after a compaction.
 
 Top-level ``{"decision":"block"}`` from a gate short-circuits Stop, ConfigChange and
 TeammateIdle (TeammateIdle exits 2 with the reason on stderr to keep the teammate
@@ -114,6 +127,8 @@ _EVENT_NAME = {
     "config-change": "ConfigChange",
     "teammate-idle": "TeammateIdle",
     "post-tool-use-failure": "PostToolUseFailure",
+    "stop-failure": "StopFailure",
+    "instructions-loaded": "InstructionsLoaded",
 }
 
 # events whose gates answer with a top-level {"decision":"block","reason":...}
@@ -122,7 +137,7 @@ _TOP_LEVEL_BLOCK_EVENTS = ("stop", "config-change", "teammate-idle")
 # reaches the user as a display message — post-compaction state is re-injected
 # from SessionStart(source=="compact") instead (session-lifecycle.py).
 _NO_HSO_EVENTS = ("SessionEnd", "PreCompact", "PostCompact", "Stop", "SubagentStop",
-                  "ConfigChange", "TeammateIdle")
+                  "ConfigChange", "TeammateIdle", "StopFailure", "InstructionsLoaded")
 
 # Defaults if the config omits a budget for an event (SOFT — advisory-only).
 _DEFAULT_BUDGET = {"ms": 2500, "chars": 4000}
@@ -316,6 +331,50 @@ def _cap(text: str, limit: int) -> str:
     return text[:limit] if limit else text
 
 
+_MEM_TIER_CACHE: str | None = None   # one read per process (one hook run)
+_MEM_STALE_S = 30.0
+
+
+def _state_base() -> Path:
+    if _plat is not None:
+        return _plat.state_dir()
+    return Path(os.environ.get("CLAUDE_HOOK_STATE_DIR") or _HOOKS.parent / "state")
+
+
+def _mem_tier() -> str:
+    """'ok' | 'warn' | 'crit' from state/mem-pressure.json (oom-sentinel); anything odd -> 'ok'."""
+    global _MEM_TIER_CACHE
+    if _MEM_TIER_CACHE is not None:
+        return _MEM_TIER_CACHE
+    tier = "ok"
+    try:
+        d = json.loads((_state_base() / "mem-pressure.json").read_text(encoding="utf-8"))
+        lvl = str(d.get("level") or "ok")
+        if lvl in ("warn", "crit") and time.time() - float(d.get("ts") or 0) <= _MEM_STALE_S:
+            tier = lvl
+    except Exception:  # noqa: BLE001  missing, unreadable, malformed -> ok
+        tier = "ok"
+    _MEM_TIER_CACHE = tier
+    return tier
+
+
+def _safe_sid(sid: str) -> str:
+    """Same sanitiser as prompt_router/manifest.py (copied: no router import here)."""
+    return "".join(c if (c.isalnum() or c in "-_.") else "-" for c in (sid or "nosession"))
+
+
+def _write_router_reset(event: str, sid: str, source: str) -> None:
+    """SessionStart(compact|clear): tell the prompt router to start dedup over."""
+    try:
+        path = _state_base() / f"{_safe_sid(sid)}.router-reset"
+        body = json.dumps({"ts": time.time(), "source": source})
+        if _plat is None or not _plat.atomic_write(path, body):
+            path.write_text(body, encoding="utf-8")
+        _telemeter(event, "_dispatch", decision="router-reset", session=sid, ms=0)
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _has_hidden_control_chars(obj) -> bool:
     """True if any string in a (possibly nested) tool_input contains a C0 control
     character (newline/carriage-return/etc., excluding tab) that the harness
@@ -375,8 +434,12 @@ def _dispatch_one(event: str, payload: dict, cfg: dict, only: frozenset | None =
     sid = str(payload.get("session_id") or payload.get("session") or "")
     tool = _tool_name(payload)
     _CUR_TOOL = tool
+    if event == "session-start" and sid:
+        source = str(payload.get("source") or "")
+        if source in ("compact", "clear"):
+            _write_router_reset(event, sid, source)
 
-    chain = (cfg.get("chains", {}) or {}).get(event, []) or []
+    chain =(cfg.get("chains", {}) or {}).get(event, []) or []
     budget = (cfg.get("budgets", {}) or {}).get(event, _DEFAULT_BUDGET)
     ms_budget = float(budget.get("ms", _DEFAULT_BUDGET["ms"]))
     char_cap = int(budget.get("chars", _DEFAULT_BUDGET["chars"]))
@@ -486,6 +549,21 @@ def _dispatch_one(event: str, payload: dict, cfg: dict, only: frozenset | None =
             hso["updatedInput"] = updated_input
         return {"hookSpecificOutput": hso}
 
+    # ---- memory-tier profile: at crit only p0 / crit_exempt advisories run - #
+    # before the deferred spawn: a defer:true p>0 link must not fork a worker at crit
+    tier = _mem_tier() if only is None else "ok"
+    if tier == "crit" and advisory_links:
+        keep = []
+        for ln in advisory_links:
+            if int(ln.get("priority", 5)) > 0 and not ln.get("crit_exempt"):
+                _telemeter(event, ln.get("id", "?"), decision="skip-profile", profile="crit",
+                           session=sid, ms=0)
+            else:
+                keep.append(ln)
+        if len(keep) < len(advisory_links):
+            _telemeter(event, "_dispatch", decision="profile", note="profile:crit", session=sid, ms=_ms())
+        advisory_links = keep
+
     # ---- deferred advisories: detached, delivered on a later call (B1-02) - #
     if only is None and sid and _sup:
         keep = []
@@ -512,12 +590,14 @@ def _dispatch_one(event: str, payload: dict, cfg: dict, only: frozenset | None =
         run_now = advisory_links
         if over_budget:
             # gates/mutators already blew the wall budget: only run the
-            # highest-priority advisory (mandatory-trigger) links, drop the rest.
+            # highest-priority advisory (mandatory-trigger) and crit_exempt links.
+            def _must_run(ln: dict) -> bool:
+                return int(ln.get("priority", 5)) == 0 or bool(ln.get("crit_exempt"))
             for ln in advisory_links:
-                if int(ln.get("priority", 5)) > 0:
+                if not _must_run(ln):
                     _telemeter(event, ln.get("id", "?"), decision="skip-budget",
                                budget_hit=True, session=sid, ms=0)
-            run_now = [ln for ln in advisory_links if int(ln.get("priority", 5)) == 0]
+            run_now = [ln for ln in advisory_links if _must_run(ln)]
         if run_now:
             try:
                 # imported here: concurrent.futures costs ~10 ms of the 35 ms dispatcher

@@ -1,25 +1,52 @@
 #!/usr/bin/env python3
 """state-cleanup.py — session-start exec link (async): bounded retention purge.
 
-Best-effort, never raises, never blocks a session. Purges:
-  telemetry/hook-fires-*.jsonl, telemetry/*.router-shadow.jsonl      > 14 d
-  state/*.classification.json, state/*.router-manifest.json           > 24 h
-  state/*.stack.json, state/persist-dedup/*.json                       > 14 d
-  state/.tmp-*.swap  (orphaned atomic-write temps)                     > 1 d
-  hooks/.state/*  (every extension, incl. .flag)                       > 7 d
-  hooks/.state/taste-dials/*  (no writer left)                         > 7 d
-  hooks/.state/index/*.flush-*.txt  (orphaned flush listings)          > 1 d
-  hooks/.state/index/<key>.json whose repo_root is gone                > 1 d
-  hooks/.telemetry/<session>.*.jsonl, <session>.suite-gate.json        > 14 d
-  hooks/.telemetry/skill-effectiveness.jsonl   rotated when > 2 MB (keeps last 5,000 lines)
-  plugins/cache/temp_git_*  dirs                                       > 1 d
-  session-env/*  EMPTY dirs                                            > 1 d
-  any *e2e-* file under state/, telemetry/, hooks/.state, hooks/.telemetry  (test residue)
-  test-named sessions (audit-*, ma-{heavy,light}-{live,shadow}-*, t<N>-*, t-iso-*,
-  dryrun-*, isg-*, t-<32 hex>) in those four dirs                       > 1 d
-  state/{go,vite,wt}-<8 hex>.stack.json  (fixture-repo stack caches)    > 1 d
-  *.json.lock / *.jsonl.lock whose data file is gone, in state/,
-  state/advisory-queue/, telemetry/, hooks/.telemetry                  > 1 d
+Best-effort, never raises, never blocks a session. ONE retention table drives the
+purge (``RETENTION``); this block is what ``state-cleanup.py --table`` prints, and a
+test compares the two so they cannot drift. Paths are relative to ~/.claude;
+``<dotstate>`` is hooks/.state (or CLAUDE_HOOK_DOTSTATE_DIR).
+
+  family             where                   patterns                                                age  kind
+  hook-fires         telemetry               hook-fires-*.jsonl, *.router-shadow.jsonl              14 d  files
+  classification     state                   *.classification.json, *.router-manifest.json           1 d  files
+  stack              state                   *.stack.json                                           14 d  files
+  persist-dedup      state/persist-dedup     *.json                                                 14 d  files
+  tmp-swap           state                   .tmp-*.swap                                             1 d  files
+  dotstate           <dotstate>              *                                                       7 d  files
+  taste-dials        <dotstate>/taste-dials  *                                                       7 d  files
+  index-flush        <dotstate>/index        *.flush-*.txt                                           1 d  files
+  telemetry-session  hooks/.telemetry        *.*.jsonl, *.suite-gate.json, *.suite-gate.json.lock   14 d  files
+  session-bridge     state/session-bridge    *.json                                                  1 d  files
+  resume-lock        state/resume-lock       *                                                       1 d  files
+  mod-flag           state/mercy-mod.active.d *.json                                                  1 d  files
+  mod-flag-legacy    state                   mercy-mod.active                                        1 d  files
+  launch-caps        state/launch-caps       *.json                                                  1 d  files
+  launch-settings    state                   launch-settings-*.json                                  1 d  files
+  advisory-queue     state/advisory-queue    *.jsonl                                                 7 d  files
+  ponytail-legacy    ponytail-modes          *                                                       7 d  ponytail
+  live-sessions      state/live-sessions     *.json                                                  7 d  ledger
+  teams              teams                   session-*                                              14 d  teams
+  plugin-temp        plugins/cache           temp_git_*                                              1 d  dirs
+  session-env        session-env             *                                                       1 d  empty-dirs
+  learning           state/learning          */observations.jsonl                                   30 d  jsonl-rows
+
+Kinds: files = files matching a pattern older than the age; dirs = whole dirs;
+empty-dirs = empty dirs only; ponytail = files whose name is not a 64-hex sha256
+(the plugin's legacy UUID keys); ledger = dead (pid gone or ``ended``) AND older
+than the age, unreadable left alone; teams = dirs older than the age unless
+``config.json``'s ``leadSessionId`` has a live ledger; jsonl-rows = rows whose
+numeric ``ts`` (seconds) is older than the age are dropped (rows without one stay).
+
+Special purges (predicates, not rows):
+  test-session  test-named sessions (audit-*, ma-*, t<N>-*, t-iso-*, dryrun-*, isg-*,
+                t-<32 hex>, fixture stack caches go/vite/wt-<8 hex>) in state/,
+                telemetry/, <dotstate>, hooks/.telemetry                 > 1 d
+  index-dead    <dotstate>/index/<key>.json whose repo_root is gone      > 1 d
+  orphan-lock   *.json.lock / *.jsonl.lock whose data file is gone       > 1 d
+  e2e-residue   any *e2e-* test residue file in the four dirs             now
+  rotate        hooks/.telemetry/skill-effectiveness.jsonl, state/oomguard.events:
+                > 2 MB → last 5,000 lines
+
 state/model-modes is never touched. Honors CLAUDE_HOOK_DOCTOR (no-op). Reads and
 ignores stdin; prints {}. Each run that removed anything appends one JSON line
 {ts, total, purged: {family: n}} to state/state-cleanup.log.
@@ -48,12 +75,53 @@ _DAY = 86400.0
 _ROTATE_BYTES = 2 * 1024 * 1024
 _ROTATE_KEEP_LINES = 5000
 
+# family, relative dir, glob patterns, max age days, kind
+RETENTION = (
+    ("hook-fires", "telemetry", ("hook-fires-*.jsonl", "*.router-shadow.jsonl"), 14, "files"),
+    ("classification", "state", ("*.classification.json", "*.router-manifest.json"), 1, "files"),
+    ("stack", "state", ("*.stack.json",), 14, "files"),
+    ("persist-dedup", "state/persist-dedup", ("*.json",), 14, "files"),
+    ("tmp-swap", "state", (".tmp-*.swap",), 1, "files"),
+    ("dotstate", "<dotstate>", ("*",), 7, "files"),
+    ("taste-dials", "<dotstate>/taste-dials", ("*",), 7, "files"),
+    ("index-flush", "<dotstate>/index", ("*.flush-*.txt",), 1, "files"),
+    ("telemetry-session", "hooks/.telemetry", ("*.*.jsonl", "*.suite-gate.json", "*.suite-gate.json.lock"), 14, "files"),
+    ("session-bridge", "state/session-bridge", ("*.json",), 1, "files"),
+    ("resume-lock", "state/resume-lock", ("*",), 1, "files"),
+    ("mod-flag", "state/mercy-mod.active.d", ("*.json",), 1, "files"),
+    ("mod-flag-legacy", "state", ("mercy-mod.active",), 1, "files"),
+    ("launch-caps", "state/launch-caps", ("*.json",), 1, "files"),
+    ("launch-settings", "state", ("launch-settings-*.json",), 1, "files"),
+    ("advisory-queue", "state/advisory-queue", ("*.jsonl",), 7, "files"),
+    ("ponytail-legacy", "ponytail-modes", ("*",), 7, "ponytail"),
+    ("live-sessions", "state/live-sessions", ("*.json",), 7, "ledger"),
+    ("teams", "teams", ("session-*",), 14, "teams"),
+    ("plugin-temp", "plugins/cache", ("temp_git_*",), 1, "dirs"),
+    ("session-env", "session-env", ("*",), 1, "empty-dirs"),
+    ("learning", "state/learning", ("*/observations.jsonl",), 30, "jsonl-rows"),
+)
+ROTATE = ("hooks/.telemetry/skill-effectiveness.jsonl", "state/oomguard.events")
+_SHA256_NAME = re.compile(r"^[0-9a-f]{64}$")
+_SAFE_ID = re.compile(r"^[\w.-]+$")
+
+
+def table_text() -> str:
+    """The retention table as a fixed-width block (embedded verbatim in the docstring)."""
+    rows = [f"  {'family':<18} {'where':<23} {'patterns':<54} {'age':>4}  kind"]
+    for fam, rel, pats, days, kind in RETENTION:
+        rows.append(f"  {fam:<18} {rel:<23} {', '.join(pats):<54} {str(days) + ' d':>4}  {kind}")
+    return "\n".join(rows)
+
 
 def _claude_dir() -> Path:
     if _plat is not None:
         return _plat.claude_dir()
     env = os.environ.get("CLAUDE_CONFIG_DIR")
     return Path(env).expanduser() if env else Path("~/.claude").expanduser()
+
+
+def _old(p: Path, max_age_s: float, now: float) -> bool:
+    return now - p.stat().st_mtime > max_age_s
 
 
 def _purge_files(directory: Path, patterns, max_age_s: float, now: float) -> int:
@@ -63,7 +131,7 @@ def _purge_files(directory: Path, patterns, max_age_s: float, now: float) -> int
     for pat in patterns:
         for f in directory.glob(pat):
             try:
-                if f.is_file() and now - f.stat().st_mtime > max_age_s:
+                if f.is_file() and _old(f, max_age_s, now):
                     f.unlink()
                     removed += 1
             except OSError:
@@ -80,7 +148,7 @@ def _purge_orphan_locks(directory: Path, max_age_s: float, now: float) -> int:
         return 0
     for f in [*directory.glob("*.json.lock"), *directory.glob("*.jsonl.lock")]:
         try:
-            if not f.with_suffix("").exists() and now - f.stat().st_mtime > max_age_s:
+            if not f.with_suffix("").exists() and _old(f, max_age_s, now):
                 f.unlink()
                 removed += 1
         except OSError:
@@ -95,7 +163,7 @@ def _purge_dirs(directory: Path, pattern: str, max_age_s: float, now: float,
         return 0
     for d in directory.glob(pattern):
         try:
-            if not d.is_dir() or now - d.stat().st_mtime <= max_age_s:
+            if not d.is_dir() or not _old(d, max_age_s, now):
                 continue
             if empty_only:
                 if any(d.iterdir()):
@@ -107,6 +175,112 @@ def _purge_dirs(directory: Path, pattern: str, max_age_s: float, now: float,
         except OSError:
             pass
     return removed
+
+
+def _purge_ponytail(directory: Path, patterns, max_age_s: float, now: float) -> int:
+    """Legacy UUID-named mode files the ponytail plugin no longer reads (current keys are sha256)."""
+    removed = 0
+    if not directory.is_dir():
+        return 0
+    for pat in patterns:
+        for f in directory.glob(pat):
+            try:
+                if f.is_file() and not _SHA256_NAME.match(f.name) and _old(f, max_age_s, now):
+                    f.unlink()
+                    removed += 1
+            except OSError:
+                pass
+    return removed
+
+
+def _ledger_dead(f: Path) -> bool | None:
+    """True dead, False alive, None unreadable/unknown. Needs lib.platform.pid_alive."""
+    try:
+        d = json.loads(f.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(d, dict) or _plat is None:
+        return None
+    if d.get("ended"):
+        return True
+    pid = d.get("pid")
+    if isinstance(pid, int) and not isinstance(pid, bool):
+        return not _plat.pid_alive(pid)
+    return None
+
+
+def _purge_dead_ledgers(directory: Path, patterns, max_age_s: float, now: float) -> int:
+    removed = 0
+    if _plat is None or not directory.is_dir():
+        return 0
+    for pat in patterns:
+        for f in directory.glob(pat):
+            try:
+                if f.is_file() and _old(f, max_age_s, now) and _ledger_dead(f) is True:
+                    f.unlink()
+                    removed += 1
+            except OSError:
+                pass
+    return removed
+
+
+def _purge_teams(directory: Path, patterns, max_age_s: float, now: float, base: Path) -> int:
+    """Agent-team dirs older than the age, unless the lead session's ledger is live."""
+    removed = 0
+    if not directory.is_dir():
+        return 0
+    ledgers = base / "state" / "live-sessions"
+    for pat in patterns:
+        for d in directory.glob(pat):
+            try:
+                if not d.is_dir() or not _old(d, max_age_s, now):
+                    continue
+                try:
+                    lead = json.loads((d / "config.json").read_text(encoding="utf-8")).get("leadSessionId")
+                except (OSError, ValueError, AttributeError):
+                    lead = None
+                if isinstance(lead, str) and _SAFE_ID.match(lead):
+                    led = ledgers / f"{lead}.json"
+                    if led.is_file() and _ledger_dead(led) is False:
+                        continue
+                shutil.rmtree(d, ignore_errors=True)
+                removed += 1
+            except OSError:
+                pass
+    return removed
+
+
+def _trim_rows(path: Path, max_age_s: float, now: float) -> int:
+    """Drop JSONL rows whose numeric ``ts`` is older than the age; rewrite (tmp + replace)
+    only when something was dropped. Rows without a numeric ts stay. Returns rows dropped."""
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines(keepends=True)
+    except OSError:
+        return 0
+    keep, dropped, cutoff = [], 0, now - max_age_s
+    for line in lines:
+        try:
+            ts = json.loads(line).get("ts")
+        except (ValueError, AttributeError):
+            ts = None
+        if isinstance(ts, (int, float)) and not isinstance(ts, bool) and ts < cutoff:
+            dropped += 1
+            continue
+        keep.append(line)
+    if dropped:
+        try:
+            tmp = path.with_name(path.name + ".trim.tmp")
+            tmp.write_text("".join(keep), encoding="utf-8", newline="")
+            os.replace(tmp, path)
+        except OSError:
+            return 0
+    return dropped
+
+
+def _purge_rows(directory: Path, patterns, max_age_s: float, now: float) -> int:
+    if not directory.is_dir():
+        return 0
+    return sum(_trim_rows(f, max_age_s, now) for pat in patterns for f in directory.glob(pat) if f.is_file())
 
 
 # Test residue names start a name segment with `e2e-` (t-e2e-…, x-e2e-1.json, e2e-repo).
@@ -137,7 +311,7 @@ def _purge_dead_index_states(index_dir: Path, max_age_s: float, now: float) -> i
         return 0
     for f in index_dir.glob("*.json"):
         try:
-            if now - f.stat().st_mtime <= max_age_s:
+            if not _old(f, max_age_s, now):
                 continue
             root = json.loads(f.read_text(encoding="utf-8")).get("repo_root")
             if isinstance(root, str) and root and not os.path.isdir(root):
@@ -217,6 +391,30 @@ def _log_counts(base: Path, counts: dict, now: float) -> None:
         pass
 
 
+def _resolve(base: Path, dot: Path, rel: str) -> Path:
+    if rel.startswith("<dotstate>"):
+        return dot / rel[len("<dotstate>"):].lstrip("/")
+    return base / rel
+
+
+def _run_row(row, base: Path, dot: Path, now: float) -> int:
+    fam, rel, pats, days, kind = row
+    d, age = _resolve(base, dot, rel), days * _DAY
+    if kind == "files":
+        return _purge_files(d, pats, age, now)
+    if kind in ("dirs", "empty-dirs"):
+        return sum(_purge_dirs(d, p, age, now, empty_only=kind == "empty-dirs") for p in pats)
+    if kind == "ponytail":
+        return _purge_ponytail(d, pats, age, now)
+    if kind == "ledger":
+        return _purge_dead_ledgers(d, pats, age, now)
+    if kind == "teams":
+        return _purge_teams(d, pats, age, now, base)
+    if kind == "jsonl-rows":
+        return _purge_rows(d, pats, age, now)
+    return 0
+
+
 def run(base: Path, now: float | None = None, dotstate: Path | None = None) -> dict:
     """Purge aged state; returns {family: files removed} and logs it to state/state-cleanup.log."""
     now = time.time() if now is None else now
@@ -230,21 +428,17 @@ def run(base: Path, now: float | None = None, dotstate: Path | None = None) -> d
 
     for d in (base / "state", base / "telemetry", dot, hooks / ".telemetry"):
         _purge_test_sessions(d, now, counts)
-    add("hook-fires", _purge_files(base / "telemetry", ["hook-fires-*.jsonl", "*.router-shadow.jsonl"], 14 * _DAY, now))
-    add("classification", _purge_files(base / "state", ["*.classification.json", "*.router-manifest.json"], _DAY, now))
-    add("stack", _purge_files(base / "state", ["*.stack.json"], 14 * _DAY, now))
-    add("persist-dedup", _purge_files(base / "state" / "persist-dedup", ["*.json"], 14 * _DAY, now))
-    add("tmp-swap", _purge_files(base / "state", [".tmp-*.swap"], _DAY, now))
-    add("dotstate", _purge_files(dot, ["*"], 7 * _DAY, now))
-    add("taste-dials", _purge_files(dot / "taste-dials", ["*"], 7 * _DAY, now))
-    add("index-flush", _purge_files(dot / "index", ["*.flush-*.txt"], _DAY, now))
+    for row in RETENTION:
+        try:
+            add(row[0], _run_row(row, base, dot, now))
+        except Exception:  # noqa: BLE001 - one family never stops the others
+            pass
     add("index-dead", _purge_dead_index_states(dot / "index", _DAY, now))
-    add("telemetry-session", _purge_files(hooks / ".telemetry", ["*.*.jsonl", "*.suite-gate.json"], 14 * _DAY, now))
-    _rotate(hooks / ".telemetry" / "skill-effectiveness.jsonl")
-    for d in (base / "state", base / "state" / "advisory-queue", base / "telemetry", hooks / ".telemetry"):
+    for rel in ROTATE:
+        _rotate(base / rel)
+    for d in (base / "state", base / "state" / "advisory-queue", base / "state" / "live-sessions",
+              base / "state" / "session-bridge", base / "telemetry", hooks / ".telemetry"):
         add("orphan-lock", _purge_orphan_locks(d, _DAY, now))
-    add("plugin-temp", _purge_dirs(base / "plugins" / "cache", "temp_git_*", _DAY, now))
-    add("session-env", _purge_dirs(base / "session-env", "*", _DAY, now, empty_only=True))
     for d in (base / "state", base / "telemetry", dot, hooks / ".telemetry"):
         add("e2e-residue", _purge_residue(d))
     _log_counts(base, counts, now)
@@ -252,6 +446,9 @@ def run(base: Path, now: float | None = None, dotstate: Path | None = None) -> d
 
 
 def main() -> int:
+    if "--table" in sys.argv[1:]:
+        print(table_text())
+        return 0
     try:
         try:
             sys.stdin.read()  # drain + ignore the hook payload

@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
-"""Tests for hooks/opus-guard.py: policy-driven model routing for the Agent tool.
+"""Tests for hooks/opus-guard.py: plan-tier-aware model routing for the Agent tool (R3.3).
 
-Covers the resolution order sourced from model-policy.json:
-  session_flags -> per-project mode -> explicit model / [label] (guarded agents and
-  fable need the user's phrase: test_opus_guard_explicit.py) -> agent_pins ->
-  escalation (execution agents: retry / large unplanned work) -> default
-Opus judges (pinned), Sonnet executes (default), escalation lifts execution agents.
-Plus policy-load fail-open (corrupt/missing policy -> hardcoded literals), full-input
-echo (only model/description overridden) and the per-session routing log.
+Order: session flags -> per-project mode -> explicit model / [label] (guarded roles and fable need
+the user's phrase: test_opus_guard_explicit.py) -> role x tier -> escalation -> usage step-down ->
+tier ceiling. Every scenario pins its tier through tests/fixtures/plan-tier/tier_fixture.py
+(default max20, no usage reading). Plus policy-load fail-open, full-input echo and the routing log.
 
-Session-flag tests use HOME=<tmp> so ~/.claude/state/*-only-mode files are read from a
-throwaway dir; the real state is never touched. The policy file itself loads via
-__file__ from the real hooks dir (unaffected by HOME).
+Session-flag tests use HOME=<tmp> so ~/.claude/state/*-only-mode files come from a throwaway dir.
 """
 from __future__ import annotations
 
@@ -21,11 +16,23 @@ import os
 import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import pytest
 
 HOOK = Path(__file__).resolve().parent.parent / "opus-guard.py"
+ROOT = HOOK.parent.parent
+sys.path.insert(0, str(ROOT / "tests" / "fixtures" / "plan-tier"))
+import tier_fixture as TF  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _max20_default():
+    TF.set_tier("max20")
+    TF.set_usage(None)
+    yield
+    TF.clear()
 
 
 def _load_module():
@@ -45,20 +52,14 @@ def run_agent(tool_input: dict, home: Path | None = None) -> dict:
     payload = {"tool_name": "Agent", "tool_input": tool_input}
     h = str(home or _clean_home())
     env = dict(os.environ)
-    # Path.home() reads USERPROFILE on Windows and HOME on POSIX — set both (and
-    # clear HOMEDRIVE/HOMEPATH) so the throwaway ~/.claude/state session flags are
-    # found on every OS, not just Linux.
+    # Path.home() reads USERPROFILE on Windows and HOME on POSIX — set both.
     env["HOME"] = h
     env["USERPROFILE"] = h
     env.pop("HOMEDRIVE", None)
     env.pop("HOMEPATH", None)
-    proc = subprocess.run(
-        [sys.executable, str(HOOK)],
-        input=json.dumps(payload),
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    env.pop("CLAUDE_CONFIG_DIR", None)
+    proc = subprocess.run([sys.executable, str(HOOK)], input=json.dumps(payload),
+                          capture_output=True, text=True, env=env)
     assert proc.returncode == 0, f"hook exited {proc.returncode}: {proc.stderr}"
     out = proc.stdout.strip()
     return json.loads(out) if out else {}
@@ -71,18 +72,16 @@ def resolved(out: dict) -> dict:
     return out["hookSpecificOutput"]["updatedInput"]
 
 
-# --- resolution order (in precedence) --------------------------------------
+# --- resolution order (max20) -----------------------------------------------
 
 def test_default_is_sonnet():
-    out = run_agent({"description": "do a thing", "subagent_type": "general-purpose"})
-    ui = resolved(out)
+    # no subagent_type (and any unknown agent) -> role `default` -> sonnet on max20
+    ui = resolved(run_agent({"description": "do a thing"}))
     assert ui["model"] == "sonnet"
     assert ui["description"] == "[sonnet] do a thing"
 
 
 def test_agent_pin_opus_beats_sonnet_label():
-    # frontend-uiux-designer is pinned opus (2026-07-19: Fable-first directive removed)
-    # even when the call carries a [sonnet] label.
     out = run_agent({"description": "[sonnet] polish UI", "subagent_type": "frontend-uiux-designer"})
     ui = resolved(out)
     assert ui["model"] == "opus"
@@ -90,14 +89,13 @@ def test_agent_pin_opus_beats_sonnet_label():
 
 
 def test_judges_pinned_opus():
-    # Opus judges (2026-09-29 Sonnet 5.5 remap): review, design, plan, spec, debug.
-    for at in ("santa-reviewer", "planning-director", "spec-architect", "debug-detective"):
+    for at in ("santa-reviewer", "planning-director", "spec-architect", "debug-detective",
+               "audit-specialist", "plan"):
         out = run_agent({"description": "[sonnet] work", "subagent_type": at})
         assert resolved(out)["model"] == "opus", at
 
 
 def test_implementors_default_to_sonnet():
-    # Sonnet 5.5 executes: implementors are no longer Opus-pinned.
     for at in ("implementation-engineer", "backend-implementor-specialist",
                "frontend-implementor-specialist", "integrator-specialist"):
         out = run_agent({"description": "build feature", "subagent_type": at,
@@ -105,7 +103,7 @@ def test_implementors_default_to_sonnet():
         assert resolved(out)["model"] == "sonnet", at
 
 
-# --- escalation: execution agents lift to opus on retry / large unplanned work ---
+# --- escalation --------------------------------------------------------------
 
 HEAVY = ("Rebuild the whole notification system end-to-end: real-time websocket "
          "event-driven pipeline across the codebase, frontend and backend.")
@@ -133,62 +131,64 @@ def test_plan_reference_keeps_large_task_on_sonnet():
 
 
 def test_explicit_model_without_user_phrase_does_not_block_escalation():
-    # E-04: an unprompted model param no longer outranks escalation for an executor
     out = run_agent({"description": "fix", "model": "sonnet", "subagent_type": "implementation-engineer",
                      "prompt": "Previous attempt failed: still broken."})
     assert resolved(out)["model"] == "opus"
 
 
 def test_non_execution_agents_never_escalate():
-    for at in ("explore", "general-purpose", "deadcode-reaper"):
+    # explore / docs roles are haiku; general-purpose is role `default` (sonnet on max20). None escalates.
+    for at, want in (("explore", "haiku"), ("general-purpose", "sonnet"), ("deadcode-reaper", "haiku")):
         out = run_agent({"description": "x", "subagent_type": at,
                          "prompt": "Previous attempt failed. " + HEAVY})
-        assert resolved(out)["model"] == "sonnet", at
+        assert resolved(out)["model"] == want, at
+        assert "escalated" not in out["hookSpecificOutput"]["additionalContext"]
 
 
 def test_escalation_fail_open(monkeypatch):
-    # a malformed marker regex must degrade to "no escalation", never raise.
     mod = _load_module()
     mod._POLICY_CACHE = None
     policy = mod._load_policy()
     mod._POLICY_CACHE = {**policy, "escalation": {**policy["escalation"], "retry_markers": ["("]}}
     monkeypatch.setattr(mod, "_flag_paths", lambda: {})
-    assert mod._resolve_required("implementation-engineer", "", "x", None, HEAVY) == \
-        ("sonnet", "default (no opus/fable signal)")
+    assert mod._resolve_required("implementation-engineer", "", "x", None, HEAVY)[:2] == \
+        ("sonnet", "role impl -> sonnet (tier max20)")
 
 
 def test_routing_log_records_every_decision(monkeypatch, tmp_path):
     mod = _load_module()
     monkeypatch.setattr(mod, "_TELEMETRY_DIR", tmp_path)
     monkeypatch.delenv("CLAUDE_HOOK_DOCTOR", raising=False)
-    mod._log_route("sid/1", "implementation-engineer", "opus", "previous attempt failed")
+    mod._log_route("sid/1", "implementation-engineer", "opus", "previous attempt failed",
+                   tier="max20", usage=False, fallback=["sonnet", "haiku"])
     rec = json.loads((tmp_path / "sid_1.model-routing.jsonl").read_text(encoding="utf-8").strip())
     assert (rec["agent"], rec["model"], rec["reason"]) == \
         ("implementation-engineer", "opus", "previous attempt failed")
+    assert rec["tier"] == "max20" and rec["usage_guard"] is False and rec["fallback"] == ["sonnet", "haiku"]
     monkeypatch.setenv("CLAUDE_HOOK_DOCTOR", "1")
     mod._log_route("sid2", "x", "sonnet", "default")
     assert not (tmp_path / "sid2.model-routing.jsonl").exists()
 
 
 def test_no_agent_is_auto_pinned_to_fable():
-    """2026-07-19 regression guard: Fable must never be reachable by a pin.
-    It is opt-in only (explicit label / model param / fable-only-mode flag)."""
     mod = _load_module()
     mod._POLICY_CACHE = None
-    _sonnet, _opus, fable_set = mod._agent_sets()
-    assert fable_set == set(), f"agent_pins.fable must stay empty, got {fable_set}"
+    pol = mod._load_policy()
+    for t, blk in pol["tiers"].items():
+        assert "fable" not in json.dumps(blk["roles"]) and "fable" not in json.dumps(blk["escalate"]), t
+    assert not pol["agent_pins"]["fable"]
 
 
-def test_agent_pin_sonnet_beats_opus_label():
+def test_unguarded_explore_label_honoured_within_cap():
+    ui = resolved(run_agent({"description": "[opus] map the code", "subagent_type": "explore"}))
+    assert ui["model"] == "opus" and ui["description"] == "[opus] map the code"
+    TF.set_tier("pro")
     out = run_agent({"description": "[opus] map the code", "subagent_type": "explore"})
-    ui = resolved(out)
-    assert ui["model"] == "sonnet"
-    assert ui["description"] == "[sonnet] map the code"
+    assert resolved(out)["model"] == "sonnet" and "tier-cap" in out["hookSpecificOutput"]["additionalContext"]
 
 
 def test_explicit_model_param_honored():
-    out = run_agent({"description": "special task", "model": "opus", "subagent_type": "general-purpose"})
-    ui = resolved(out)
+    ui = resolved(run_agent({"description": "special task", "model": "opus", "subagent_type": "general-purpose"}))
     assert ui["model"] == "opus"
     assert ui["description"] == "[opus] special task"
 
@@ -199,79 +199,87 @@ def test_label_prefix_used_when_no_pin_or_model():
 
 
 def test_noop_when_already_correct():
-    # opus-pinned agent + [opus] label + model opus -> nothing to change -> allow unchanged.
-    out = run_agent({
-        "description": "[opus] polish",
-        "model": "opus",
-        "subagent_type": "frontend-uiux-designer",
-    })
+    out = run_agent({"description": "[opus] polish", "model": "opus", "subagent_type": "frontend-uiux-designer"})
     assert out == {}
 
 
-# --- session flags win over everything, in precedence sonnet>opus>fable -----
+# --- session flags: haiku > sonnet > opus > fable, capped to the tier -------
+
+def _flag_home(*flags: str) -> Path:
+    home = _clean_home()
+    for f in flags:
+        (home / ".claude" / "state" / f).write_text("")
+    return home
+
 
 def test_sonnet_flag_overrides_opus_agent():
-    home = _clean_home()
-    (home / ".claude" / "state" / "sonnet-only-mode").write_text("")
-    out = run_agent(
-        {"description": "[opus] polish", "model": "opus", "subagent_type": "frontend-uiux-designer"},
-        home=home,
-    )
+    out = run_agent({"description": "[opus] polish", "model": "opus", "subagent_type": "frontend-uiux-designer"},
+                    home=_flag_home("sonnet-only-mode"))
     assert resolved(out)["model"] == "sonnet"
 
 
 def test_opus_flag_overrides_sonnet_agent():
-    home = _clean_home()
-    (home / ".claude" / "state" / "opus-only-mode").write_text("")
-    out = run_agent({"description": "map", "subagent_type": "explore"}, home=home)
+    out = run_agent({"description": "map", "subagent_type": "explore"}, home=_flag_home("opus-only-mode"))
     assert resolved(out)["model"] == "opus"
 
 
 def test_fable_flag_forces_fable():
-    home = _clean_home()
-    (home / ".claude" / "state" / "fable-only-mode").write_text("")
-    out = run_agent({"description": "task", "subagent_type": "general-purpose"}, home=home)
+    out = run_agent({"description": "task", "subagent_type": "general-purpose"}, home=_flag_home("fable-only-mode"))
     assert resolved(out)["model"] == "fable"
 
 
+def test_fable_flag_capped_on_pro():
+    TF.set_tier("pro")
+    out = run_agent({"description": "task", "subagent_type": "general-purpose"}, home=_flag_home("fable-only-mode"))
+    assert resolved(out)["model"] == "sonnet" and "tier-cap" in out["hookSpecificOutput"]["additionalContext"]
+
+
 def test_sonnet_flag_wins_precedence_over_opus_flag():
-    # both flags present -> sonnet wins (kill-switch precedence).
-    home = _clean_home()
-    (home / ".claude" / "state" / "sonnet-only-mode").write_text("")
-    (home / ".claude" / "state" / "opus-only-mode").write_text("")
-    out = run_agent({"description": "task", "subagent_type": "general-purpose"}, home=home)
+    out = run_agent({"description": "task", "subagent_type": "general-purpose"},
+                    home=_flag_home("sonnet-only-mode", "opus-only-mode"))
     assert resolved(out)["model"] == "sonnet"
+
+
+def test_haiku_flag_forces_haiku():
+    out = run_agent({"description": "review", "subagent_type": "santa-reviewer"}, home=_flag_home("haiku-only-mode"))
+    assert resolved(out)["model"] == "haiku"
+
+
+def test_haiku_flag_beats_sonnet_flag():
+    out = run_agent({"description": "task", "subagent_type": "general-purpose"},
+                    home=_flag_home("sonnet-only-mode", "haiku-only-mode"))
+    assert resolved(out)["model"] == "haiku"
 
 
 # --- full-input echo --------------------------------------------------------
 
 def test_full_input_echoed():
-    out = run_agent({
-        "description": "do a thing",
-        "subagent_type": "general-purpose",
-        "prompt": "a long prompt that must survive",
-        "extra_key": {"nested": [1, 2]},
-    })
-    ui = resolved(out)
-    # every original key preserved; only model/description change. The prompt
-    # and name are never touched (write protocol moved to SubagentStart, D3).
+    ui = resolved(run_agent({"description": "do a thing", "subagent_type": "general-purpose",
+                             "prompt": "a long prompt that must survive", "extra_key": {"nested": [1, 2]}}))
     assert ui["prompt"] == "a long prompt that must survive"
     assert ui["extra_key"] == {"nested": [1, 2]}
     assert ui["subagent_type"] == "general-purpose"
-    assert ui["model"] == "sonnet"
+    assert ui["model"] == "sonnet"  # general-purpose is role default (sonnet on max20)
+
+
+def test_general_purpose_is_the_plain_agent_default():
+    """Claude Code's Agent default type is general-purpose and opus-guard already labels a call without
+    `subagent_type` that way. Both spellings must land on the same model on every tier (FIX-1)."""
+    for tier, want in (("pro", "haiku"), ("max5", "sonnet"), ("max20", "sonnet"), ("api", "sonnet")):
+        TF.set_tier(tier)
+        plain = resolved(run_agent({"description": "do a thing", "prompt": "x"}))["model"]
+        named = run_agent({"description": "do a thing", "prompt": "x", "subagent_type": "general-purpose"})
+        assert plain == resolved(named)["model"] == want, (tier, plain, resolved(named)["model"])
+        assert "role default" in named["hookSpecificOutput"]["additionalContext"], tier
 
 
 def test_name_never_rewritten():
-    ui = resolved(run_agent({"description": "x", "subagent_type": "general-purpose",
-                             "name": "impl-crud-opus"}))
+    ui = resolved(run_agent({"description": "x", "subagent_type": "general-purpose", "name": "impl-crud-opus"}))
     assert ui["name"] == "impl-crud-opus"
 
 
 def test_explicit_model_param_without_user_phrase_does_not_beat_pin():
-    # E-04: only the user's own phrase this turn moves a pinned judge
-    # (the phrase case: test_opus_guard_explicit.py)
-    ui = resolved(run_agent({"description": "build it", "model": "sonnet",
-                             "subagent_type": "santa-reviewer"}))
+    ui = resolved(run_agent({"description": "build it", "model": "sonnet", "subagent_type": "santa-reviewer"}))
     assert ui["model"] == "opus"
     assert ui["description"] == "[opus] build it"
 
@@ -284,26 +292,107 @@ def test_per_project_mode_beats_explicit(monkeypatch, tmp_path):
     repo = tmp_path / "repo"
     repo.mkdir()
     assert mod._mm.set_mode(str(repo), "opus")
-    assert mod._resolve_required("general-purpose", "sonnet", "[sonnet] x", str(repo)) == \
+    assert mod._resolve_required("general-purpose", "sonnet", "[sonnet] x", str(repo))[:2] == \
         ("opus", "per-project model mode")
+    TF.set_tier("pro")  # the stored opus pin outranks the tier only up to its ceiling
+    assert mod._resolve_required("general-purpose", "sonnet", "x", str(repo))[:2] == \
+        ("sonnet", "per-project model mode; tier-cap: opus -> sonnet (pro)")
     assert mod._mm.set_mode(str(repo), None)
     assert mod._resolve_required("general-purpose", "sonnet", "x", str(repo))[0] == "sonnet"
 
 
+# --- tiers, usage guard, telemetry ------------------------------------------
+
+@pytest.mark.parametrize("tier,agent,want", [
+    ("pro", "santa-reviewer", "sonnet"), ("pro", "frontend-uiux-designer", "sonnet"),
+    ("pro", "implementation-engineer", "haiku"), ("pro", "test-author", "haiku"), ("pro", "qa-verifier", "haiku"),
+    ("pro", "security-sentinel", "haiku"), ("pro", "general-purpose", "haiku"),
+    ("max5", "santa-reviewer", "sonnet"), ("max5", "implementation-engineer", "sonnet"), ("max5", "explore", "haiku"),
+    ("max5", "test-author", "sonnet"),
+    ("max20", "santa-reviewer", "opus"), ("max20", "implementation-engineer", "sonnet"),
+    ("max20", "docs-sync-agent", "haiku"), ("max20", "audit-specialist", "opus"),
+    ("api", "santa-reviewer", "sonnet"), ("api", "deadcode-reaper", "haiku")])
+def test_tier_matrix_per_role(tier, agent, want):
+    TF.set_tier(tier)
+    assert resolved(run_agent({"description": "work", "subagent_type": agent,
+                               "prompt": "do the small thing"}))["model"] == want
+
+
+def test_escalation_stays_within_the_ceiling():
+    ti = {"description": "fix", "subagent_type": "implementation-engineer", "prompt": "Previous attempt failed."}
+    for tier, want in (("pro", "sonnet"), ("max5", "sonnet"), ("max20", "opus")):
+        TF.set_tier(tier)
+        assert resolved(run_agent(ti))["model"] == want, tier
+
+
+def test_usage_guard_steps_down_and_names_itself():
+    TF.set_usage(85.0, time.time() + 3600)
+    out = run_agent({"description": "fix", "subagent_type": "implementation-engineer",
+                     "prompt": "Previous attempt failed."})
+    assert resolved(out)["model"] == "sonnet" and "usage-guard" in out["hookSpecificOutput"]["additionalContext"]
+    assert resolved(run_agent({"description": "review", "subagent_type": "santa-reviewer"}))["model"] == "sonnet"
+    TF.set_tier("pro")
+    assert resolved(run_agent({"description": "review", "subagent_type": "santa-reviewer"}))["model"] == "haiku"
+    TF.set_usage(10.0, time.time() + 3600)
+    TF.set_tier("max20")
+    assert resolved(run_agent({"description": "review", "subagent_type": "santa-reviewer"}))["model"] == "opus"
+
+
+def test_usage_guard_state_file_written_on_flip():
+    TF.set_usage(90.0, time.time() + 3600)
+    run_agent({"description": "x", "subagent_type": "explore"})
+    assert json.loads((TF.state_dir() / "usage-guard.json").read_text(encoding="utf-8"))["active"] is True
+
+
+def test_tier_cap_reason_in_telemetry(monkeypatch, tmp_path, capsys):
+    mod = _load_module()
+    monkeypatch.setattr(mod, "_TELEMETRY_DIR", tmp_path)
+    monkeypatch.delenv("CLAUDE_HOOK_DOCTOR", raising=False)
+    TF.set_tier("pro")
+    assert mod.main_with_payload({"tool_name": "Agent", "session_id": "s9", "tool_input": {
+        "description": "[opus] review", "model": "opus", "subagent_type": "general-purpose"}}) == 0
+    rec = json.loads((tmp_path / "s9.model-routing.jsonl").read_text(encoding="utf-8").splitlines()[-1])
+    assert rec["model"] == "sonnet" and "tier-cap" in rec["reason"] and rec["tier"] == "pro"
+    assert rec["fallback"] == ["haiku"]
+    assert json.loads(capsys.readouterr().out)["hookSpecificOutput"]["updatedInput"]["model"] == "sonnet"
+
+
+def test_missing_tier_state_defaults_to_max20():
+    TF.clear()
+    assert resolved(run_agent({"description": "review", "subagent_type": "santa-reviewer"}))["model"] == "opus"
+
+
+def test_note_is_short():
+    out = run_agent({"description": "x", "subagent_type": "general-purpose"})
+    assert len(out["hookSpecificOutput"]["additionalContext"]) <= 220
+
+
+def test_doctor_fixture_exits_zero_with_json():
+    payload = (ROOT / "tests" / "fixtures" / "hook-events" / "pre-tool-use-agent.json").read_text(encoding="utf-8")
+    cp = subprocess.run([sys.executable, str(HOOK)], input=payload, capture_output=True, text=True)
+    assert cp.returncode == 0 and isinstance(json.loads(cp.stdout), dict)
+
+
 # --- policy-load fail-open (in-process; corrupt/missing policy -> literals) --
+
+def _isolated_home(monkeypatch, tmp_path):
+    home = tmp_path / "home"
+    (home / ".claude" / "state").mkdir(parents=True)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+
 
 def test_policy_load_fail_open_missing(monkeypatch, tmp_path):
     mod = _load_module()
     mod._POLICY_CACHE = None
     monkeypatch.setattr(mod, "POLICY_PATH", tmp_path / "does-not-exist.json")
-    home = tmp_path / "home"
-    (home / ".claude" / "state").mkdir(parents=True)
-    monkeypatch.setenv("HOME", str(home))
-    monkeypatch.setenv("USERPROFILE", str(home))  # Path.home() on Windows
-    # Missing policy -> literal fallback still pins the UI agent to opus and defaults sonnet.
+    _isolated_home(monkeypatch, tmp_path)
     assert mod._resolve_required("frontend-uiux-designer", "", "x")[0] == "opus"
     assert mod._resolve_required("general-purpose", "", "x")[0] == "sonnet"
     assert mod._default_model() == "sonnet"
+    TF.set_tier("pro")
+    assert mod._resolve_required("santa-reviewer", "", "x")[0] == "sonnet"  # literal ceiling
 
 
 def test_policy_load_fail_open_corrupt(monkeypatch, tmp_path):
@@ -312,25 +401,22 @@ def test_policy_load_fail_open_corrupt(monkeypatch, tmp_path):
     bad = tmp_path / "bad.json"
     bad.write_text("{ this is not valid json ][")
     monkeypatch.setattr(mod, "POLICY_PATH", bad)
-    home = tmp_path / "home"
-    (home / ".claude" / "state").mkdir(parents=True)
-    monkeypatch.setenv("HOME", str(home))
-    monkeypatch.setenv("USERPROFILE", str(home))  # Path.home() on Windows
+    _isolated_home(monkeypatch, tmp_path)
     assert mod._resolve_required("explore", "", "x")[0] == "sonnet"
     assert mod._resolve_required("santa-reviewer", "", "x")[0] == "opus"
     assert mod._resolve_required("implementation-engineer", "", "x")[0] == "sonnet"
 
 
 def test_policy_actually_loaded_from_disk():
-    # sanity: the real policy file parses and pins match the shipped literals.
     mod = _load_module()
     mod._POLICY_CACHE = None
-    sonnet_set, opus_set, fable_set = mod._agent_sets()
-    assert {"frontend-uiux-designer", "santa-reviewer", "planning-director"} <= opus_set
-    assert "implementation-engineer" not in opus_set
-    assert "backend-implementor-specialist" not in opus_set
-    assert fable_set == set(), "Fable is opt-in only; no agent may be pinned to it"
-    assert "explore" in sonnet_set
+    agents = mod._load_policy()["roles"]["agents"]
+    for j in ("santa-reviewer", "frontend-uiux-designer", "planning-director", "spec-architect",
+              "debug-detective", "audit-specialist"):
+        assert agents[j] == "judge", j
+    for i in ("implementation-engineer", "backend-implementor-specialist", "frontend-implementor-specialist"):
+        assert agents[i] == "impl", i
+    assert agents["explore"] == "explore"
     assert mod._default_model() == "sonnet"
 
 

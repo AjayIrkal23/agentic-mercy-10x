@@ -88,6 +88,22 @@ CASES = {
     # SANTA2A-01: the payload-head option walks restarted at every repeated head word
     "pwsh-option-flood": ("pwsh " + _rep("-x=pwsh ") + "; rm -rf /", "deny"),
     "cmd-option-flood": ("cmd " + _rep("/x=cmd ") + "; rm -rf /", "deny"),
+    # PKG gates: heredoc exec bodies, git hook bypass, dev-server ask, force-push tail
+    "heredoc-exec-flood": (_rep("bash <<E\nx\nE\n"), None),
+    "heredoc-exec-padded": (_rep("bash <<E\nx\nE\n") + "bash <<E\nrm -rf /\nE\n", "deny"),
+    "heredoc-cat-flood": (_rep("cat <<E\nrm -rf /\nE\n"), None),            # bodies not re-added: allow, fast
+    "herestring-flood": (_rep("bash <<< "), None),
+    "noverify-padded": ("git commit " + "-a " * 10000 + "--no-verify", "deny"),
+    "noverify-cluster-flood": ("git commit " + "-an " * 8000, "deny"),
+    "git-c-kv-hookspath-padded": ("git " + "-c k=v " * 6000 + "-c core.hooksPath=x commit", "deny"),
+    "gitconfig-env-flood": (_rep("GIT_CONFIG_COUNT=1 "), None),
+    "dev-flood": (_rep("npm run dev "), None),
+    "dev-padded": (_rep("echo x ") + "\nnpm run dev", None),                 # ask, time only
+    "push-cluster-flood": (_rep("git push -fu "), None),
+    "push-refspec-flood": (_rep("git push origin +m "), None),
+    # one long flag word: `-[a-z]*f[a-z]*(?![\w-])` backtracked both stars (20 KB = 2.7 s)
+    "clean-long-flag": ("git clean -" + "f" * N + "x-", None),
+    "push-long-flag": ("git push -" + "f" * N + "x-", None),
 }
 
 

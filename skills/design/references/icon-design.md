@@ -2,57 +2,12 @@
 
 AI-powered SVG icon generation using the active model. 15 styles, 12 categories, multi-size export.
 
-## Scripts
+## How icons are made
 
-| Script | Purpose |
-|--------|---------|
-| `scripts/icon/generate.py` | Generate SVG icons with the active model (text output, no image API) Preview |
-
-## Commands
-
-### Generate Single Icon
-
-```bash
-python3 ~/.claude/skills/design/scripts/icon/generate.py --prompt "settings gear" --style outlined
-python3 ~/.claude/skills/design/scripts/icon/generate.py --prompt "shopping cart" --style filled --color "#6366F1"
-python3 ~/.claude/skills/design/scripts/icon/generate.py --name "dashboard" --category navigation --style duotone
-```
-
-### Generate Batch Variations
-
-```bash
-python3 ~/.claude/skills/design/scripts/icon/generate.py --prompt "cloud upload" --batch 4 --output-dir ./icons
-python3 ~/.claude/skills/design/scripts/icon/generate.py --prompt "notification bell" --batch 6 --style outlined --output-dir ./icons
-```
-
-### Generate Multiple Sizes
-
-```bash
-python3 ~/.claude/skills/design/scripts/icon/generate.py --prompt "user profile" --sizes "16,24,32,48" --output-dir ./icons
-```
-
-### List Styles/Categories
-
-```bash
-python3 ~/.claude/skills/design/scripts/icon/generate.py --list-styles
-python3 ~/.claude/skills/design/scripts/icon/generate.py --list-categories
-```
-
-## CLI Options
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--prompt, -p` | Icon description | required |
-| `--name, -n` | Icon name (for filename) | - |
-| `--style, -s` | Icon style (15 options) | - |
-| `--category, -c` | Icon category for context | - |
-| `--color` | Primary hex color | currentColor |
-| `--size` | Display size in px | 24 |
-| `--viewbox` | SVG viewBox size | 24 |
-| `--output, -o` | Output file path | auto |
-| `--output-dir` | Output directory (batch) | ./icons |
-| `--batch` | Number of variations | - |
-| `--sizes` | Comma-separated sizes | - |
+Write each SVG directly with the Write tool (there is no generator script). Decide per icon:
+description, file name, style (table below), category, color (default `currentColor`),
+display size (24) and viewBox (24). For variations write N files side by side; for several
+sizes keep one viewBox and set `width`/`height` per export.
 
 ## Available Styles
 
@@ -108,15 +63,12 @@ python3 ~/.claude/skills/design/scripts/icon/generate.py --list-categories
 
 ## Workflow
 
-1. Describe icon → `--prompt "settings gear"`
-2. Choose style → `--style outlined`
-3. Generate → script outputs .svg file
-4. Optionally batch → `--batch 4` for variations
-5. Multi-size export → `--sizes "16,24,32,48"`
+1. Describe the icon ("settings gear")
+2. Choose a style (outlined)
+3. Write the .svg file
+4. Optionally write variations
+5. Multi-size export by `width`/`height` (16, 24, 32, 48)
 
 ## Setup
 
-```bash
-# No API key and no install needed — SVG icons are written directly as text;
-# scripts/icon/generate.py is legacy and must not be run.
-```
+No API key and no install needed — SVG icons are written directly as text.
