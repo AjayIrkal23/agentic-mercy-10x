@@ -9,7 +9,8 @@
                      user, SYSTEM and Administrators. The doctor never chmods or changes ACLs.
   lean-ctx floor     ZERO_INJECTION: the keys that keep lean-ctx from injecting into
                      ~/.claude are asserted even if the manifest ever drops one (G-13).
-  lean-ctx-runtime   a running `lean-ctx serve` daemon or a lean-ctx other than the pin -> WARN (F2).
+  lean-ctx-runtime   a running `lean-ctx serve` daemon or a lean-ctx other than the pin -> WARN (F2);
+                     drift of the installer-owned lean-ctx-bin binary -> FAIL (the deps step replaces it).
 Pure stdlib; all external calls injectable.
 """
 from __future__ import annotations
@@ -99,11 +100,25 @@ def _leanctx_version() -> str:
     return m.group(0) if m else ""
 
 
+def _leanctx_owned() -> bool:
+    """The installer's own lean-ctx: the release binary inside the global lean-ctx-bin npm package."""
+    try:
+        import deps  # type: ignore
+        root = deps.npm_root_g()
+    except Exception:  # noqa: BLE001
+        return False
+    exe = "lean-ctx" + (".exe" if plat.IS_WINDOWS else "")
+    return bool(root and (root / "lean-ctx-bin" / "bin" / exe).is_file())
+
+
 def check_leanctx_runtime(manifest: dict, ci: bool, *, proc_root="/proc",
-                          version: Callable[[], str] = _leanctx_version) -> tuple[str, str]:
+                          version: Callable[[], str] = _leanctx_version,
+                          owned: Callable[[], bool] = _leanctx_owned) -> tuple[str, str]:
     """Row ``lean-ctx-runtime`` (F2): WARN on a running `lean-ctx serve` daemon (only the npm postinstall's
     `onboard` starts one; the workbench runs lean-ctx as a stdio MCP) and on a lean-ctx other than the
-    manifest pin. Telemetry / cloud keys stay the lean-ctx-config row's FAIL, which the self-heal repairs."""
+    manifest pin. Version drift of the installer-owned binary (lean-ctx-bin's bin/) is a FAIL: the self-heal
+    repairs it through the deps step (release_bin replaces it); a hand-installed lean-ctx stays a WARN.
+    Telemetry / cloud keys stay the lean-ctx-config row's FAIL, which the self-heal repairs."""
     if ci:
         return SKIP, "ci"
     pinned = str(((manifest.get("user_space") or {}).get("lean_ctx") or {}).get("version") or "")
@@ -112,8 +127,11 @@ def check_leanctx_runtime(manifest: dict, ci: bool, *, proc_root="/proc",
     if pids:
         notes.append(f"`lean-ctx serve` daemon running (pid {', '.join(map(str, pids))}): `lean-ctx stop`")
     have = version()
-    if pinned and have and have != pinned:
+    drift = bool(pinned and have and have != pinned)
+    if drift:
         notes.append(f"lean-ctx {have} is not the pinned {pinned}")
+    if drift and owned():
+        return FAIL, "; ".join(notes) + " (installer-owned: the deps step replaces it)"
     if notes:
         return WARN, "; ".join(notes)
     return PASS, f"no lean-ctx daemon; lean-ctx {have or 'not on PATH'}"

@@ -842,7 +842,9 @@ def test_graphify_build_is_deferred_not_failed_when_memory_is_low(tmp_path, monk
     monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path / "no-tier"))
     cfg = il._load_config()
     ran = _recorder(monkeypatch)
-    monkeypatch.setattr(il, "_mem_available_mb", lambda: cfg["memory"]["fallback_min_avail_mb"] - 1)
+    # below any scaled floor (fallback_floor_mb is the minimum): the floor scales with this box's RAM, so
+    # `fallback_min_avail_mb - 1` passed on a 15 GiB box (Rohit's PC, round 2 I-3)
+    monkeypatch.setattr(il, "_mem_available_mb", lambda: 100)
     assert il._build_graphify(repo, False, [], cfg) == "DEFERRED"
     assert ran == [] and il._LAST_DEFER[0] == "memory"
 
@@ -1215,6 +1217,18 @@ def test_jdocmunch_build_embeds_an_index_that_has_vectors(tmp_path, monkeypatch,
     assert "--embeddings" not in cmd and ("--paths-from" in cmd) == incremental
     assert timeout == il._DEFAULT_CONFIG["build_timeouts_s"]["jdocmunch_embed"]
     assert all(e[k] == v for k, v in _DOC_ENV.items()) and "PATH" in e
+
+
+@pytest.mark.parametrize("incremental", [False, True])
+def test_jdocmunch_build_skips_graphify_out(tmp_path, monkeypatch, incremental):
+    """Rohit's PC, round 2 (ollama #2): graphify-out/ (generated wiki + report) was indexed as docs:
+    200k of CONCORD-WEBSITE's sections on this PC. jdocmunch stores the pattern with the index."""
+    repo, calls = _doc_repo(tmp_path, monkeypatch, vectors=False)
+    paths = [str(repo / "README.md")] if incremental else None
+    assert il._build_jdocmunch(repo, incremental, paths, il._DEFAULT_CONFIG) is True
+    cmd = calls[-1][0]
+    i = cmd.index("--extra-ignore-pattern")
+    assert cmd[i + 1] == "graphify-out/**" and ("--paths-from" in cmd) == incremental
 
 
 def test_jdocmunch_build_keeps_an_index_without_vectors_lexical(tmp_path, monkeypatch):

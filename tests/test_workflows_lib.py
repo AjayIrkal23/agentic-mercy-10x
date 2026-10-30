@@ -112,12 +112,28 @@ def tier_now() -> tuple[str, bool]:
 
 # ---------- static: every rendered script ----------
 
+def _harness_body(text: str) -> str:
+    """The Workflow harness runs a script as the body of an async function, `export` dropped: top-level
+    await and return are legal there. A bare `node --check` reads `export` as ESM and, on node >= 24.22,
+    rejects the top-level return (Rohit's PC, round 2 I-4)."""
+    return "(async () => {\n" + re.sub(r"^export (?=const meta\b)", "", text, flags=re.M) + "\n})\n"
+
+
+def _node_check(path: Path) -> subprocess.CompletedProcess:
+    return subprocess.run([NODE, "--check", str(path)], capture_output=True, text=True, **plat.no_window_kwargs())
+
+
 @needs_node
-def test_every_script_parses():
+def test_every_script_parses(tmp_path):
     assert {f.stem for f in scripts()} >= NAMES
     for f in scripts():
-        cp = subprocess.run([NODE, "--check", str(f)], capture_output=True, text=True, **plat.no_window_kwargs())
+        p = tmp_path / f"{f.stem}.cjs"
+        p.write_text(_harness_body(f.read_text(encoding="utf-8")), encoding="utf-8")
+        cp = _node_check(p)
         assert cp.returncode == 0, f"{f.name}: {cp.stderr}"
+    bad = tmp_path / "broken.cjs"  # the wrap must not hide a real syntax error
+    bad.write_text(_harness_body("export const meta = {}\nconst x = ;\nreturn 1\n"), encoding="utf-8")
+    assert _node_check(bad).returncode != 0
 
 
 def test_no_clock_random_or_import():

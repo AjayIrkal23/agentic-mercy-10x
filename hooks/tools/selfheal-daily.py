@@ -186,12 +186,28 @@ def _public(md: str) -> str:
                    for ln in lines)
 
 
+def _inventory_writer() -> bool:
+    """AGENTIC_MERCY_INVENTORY_WRITER=1 in the env, else in settings.user.json `env` (a run from a terminal
+    has no settings env; the same fallback as plat.ollama_url)."""
+    raw = os.environ.get("AGENTIC_MERCY_INVENTORY_WRITER")
+    if raw is None:
+        try:
+            user = json.loads((plat.claude_dir() / "settings.user.json").read_text(encoding="utf-8"))
+            raw = (user.get("env") or {}).get("AGENTIC_MERCY_INVENTORY_WRITER")
+        except (OSError, ValueError, AttributeError):
+            raw = None
+    return str(raw or "").strip() == "1"
+
+
 def _mcp_inventory(ctx: Ctx):
     """Regenerates the inventory reference from the live ~/.claude.json (the only writer of that file);
-    the hand-written preamble (everything before the first table header) is kept. Skipped on Windows:
-    the tracked file is written on the committing machine only, or the replica's pull would abort."""
+    the hand-written preamble (everything before the first table header) is kept. The file is tracked:
+    only the committing machine opts in (AGENTIC_MERCY_INVENTORY_WRITER=1, see _inventory_writer), or a
+    second machine's checkout goes dirty and its next `git pull --ff-only` aborts. Windows always skips."""
     if plat.IS_WINDOWS:
         return [("mcp-inventory", "mcp-inventory.md", "SKIP(replica)")]
+    if not _inventory_writer():
+        return []
     if not INVENTORY.is_file() or ctx.dry:
         return []
     r = plat.run([plat.python_exe(), str(INVENTORY), "--md"], timeout=30)

@@ -164,10 +164,13 @@ def _title(first: str) -> str:
 def split_text(text: str, budget: int = DEFAULT_BUDGET, keys=None, journal_name: str = JOURNAL_NAME,
                first_id: int = 1) -> tuple[str, list[tuple[int, str, list[str]]]]:
     """Pure. Returns (imported_text, tails). tails = [(id, unit_title, tail_lines)].
-    Adds header/pointer/prod-safety only when their markers are absent. Never reads disk
+    Adds header/pointer/prod-safety only when their markers are absent (prod-safety: also when its
+    first line is already there). A file within CHECK_LIMIT and never split comes back as is. Never reads disk
     except to load the keys when `keys` is None. `first_id` = 1 + the journal's highest id."""
-    keys = tuple(keys) if keys is not None else load_keys()
     lines = text.split("\n")
+    if len(text) <= CHECK_LIMIT and not any(HEADER_RE.match(ln) for ln in lines):
+        return text, []  # short enough to import whole: nothing to move, nothing to append (R2-2)
+    keys = tuple(keys) if keys is not None else load_keys()
     trailing = len(lines) > 1 and lines[-1] == ""
     if trailing:
         lines = lines[:-1]
@@ -202,7 +205,7 @@ def split_text(text: str, budget: int = DEFAULT_BUDGET, keys=None, journal_name:
     out.extend(footer)
     if POINTER_MARK not in out:
         out += ["", POINTER_MARK, POINTER_TEXT]
-    if PROD_MARK not in out:
+    if PROD_MARK not in out and norm(PROD_LINES[0]) not in norm("\n".join(out)):
         out += ["", PROD_MARK, *PROD_LINES]
     if trailing:
         out.append("")

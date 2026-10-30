@@ -880,7 +880,9 @@ def _build_jdocmunch(root: Path, incremental: bool, paths, cfg: dict):
         return "DEFERRED"
     env = _mcp_env("jdocmunch")  # its provider, and the manifest's telemetry-off flag
     to = cfg["build_timeouts_s"]["jdocmunch_embed" if embed else "jdocmunch"]
-    flags = [] if embed else ["--embeddings", "off"]
+    # graphify-out/ is generated (wiki + report: 200k of CONCORD-WEBSITE's sections). jdocmunch stores the
+    # pattern with the index, so MCP `index_local` refreshes inherit it; passing it replaces a stored list.
+    flags = ["--extra-ignore-pattern", "graphify-out/**"] + ([] if embed else ["--embeddings", "off"])
     if incremental and paths:
         docs = [str(p) for p in paths
                 if Path(p).suffix.lower() in

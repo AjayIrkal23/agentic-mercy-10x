@@ -372,7 +372,26 @@ def test_plan_tier_step_reports_only_a_change(sd, monkeypatch, tmp_path):
     assert sd._plan_tier(sd.Ctx(True, tmp_path, 60)) == [("plan-tier", "detect", "WOULD-DETECT")]
 
 
+def test_mcp_inventory_skips_without_the_writer_flag(sd, monkeypatch, tmp_path):
+    """Rohit's PC, round 2 (I-2): the daily self-heal rewrote the tracked mcp-inventory.md on a second machine,
+    which dirties its checkout and blocks the next `git pull --ff-only`. Only the committing machine opts in."""
+    target = tmp_path / "inv.md"
+    target.write_bytes(b"keep\n")
+    monkeypatch.setattr(sd, "INVENTORY_MD", target)
+    monkeypatch.setattr(sd, "INVENTORY", tmp_path / "inv.py")
+    (tmp_path / "inv.py").write_text("", encoding="utf-8")
+    monkeypatch.delenv("AGENTIC_MERCY_INVENTORY_WRITER", raising=False)
+    monkeypatch.setattr(sd.plat, "claude_dir", lambda: tmp_path)
+    monkeypatch.setattr(sd.plat, "IS_WINDOWS", False)
+    monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(0, "| Server |\n| new |\n"))
+    assert sd._mcp_inventory(sd.Ctx(False, tmp_path, 60)) == []
+    assert target.read_bytes() == b"keep\n"
+    (tmp_path / "settings.user.json").write_text('{"env": {"AGENTIC_MERCY_INVENTORY_WRITER": "1"}}', encoding="utf-8")
+    assert sd._mcp_inventory(sd.Ctx(False, tmp_path, 60)) == [("mcp-inventory", "mcp-inventory.md", "UPDATED")]
+
+
 def test_mcp_inventory_rewrites_only_on_change(sd, monkeypatch, tmp_path):
+    monkeypatch.setenv("AGENTIC_MERCY_INVENTORY_WRITER", "1")
     target = tmp_path / "skills" / "mcp-usage-standards" / "references" / "mcp-inventory.md"
     target.parent.mkdir(parents=True)
     target.write_text("old\n", encoding="utf-8")
@@ -387,6 +406,7 @@ def test_mcp_inventory_rewrites_only_on_change(sd, monkeypatch, tmp_path):
 
 
 def test_mcp_inventory_keeps_the_preamble(sd, monkeypatch, tmp_path):
+    monkeypatch.setenv("AGENTIC_MERCY_INVENTORY_WRITER", "1")
     target = tmp_path / "inv.md"
     target.write_text("# Inventory\nhand text\n\n| Server | x |\n|---|---|\n| a | 1 |\n", encoding="utf-8")
     monkeypatch.setattr(sd, "INVENTORY_MD", target)

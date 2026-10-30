@@ -5,7 +5,9 @@ must still sit in an always-on file); HOOK = code enforces it (the mechanism pat
 Keys are exact substrings after whitespace, backticks and asterisks are stripped; several
 keys in one cell are joined with ` || `. Always-on files: `CLAUDE.md`, the imported part of
 `CLAUDE.machines.local.md`, `rules/0*.md`, `output-styles/caveman.md`, the session-start
-aggregator sample. `docs/**` is never searched.
+aggregator sample. `docs/**` is never searched. Rows marked `(owner machines only)` are skipped
+when the live machines file carries `<!-- machines:tailored -->` (another person's machine, whose
+tailored file leaves them out); the owner's machines never carry the marker, so they stay strict.
 
 | # | directive | sentence_key | source | mechanism | strength |
 |---|---|---|---|---|---|

@@ -231,6 +231,24 @@ def _finish(dep: dict, status: str, env, dry_run: bool) -> str:
     return status + _link_bins(_bins_for(dep), env, dry_run)
 
 
+def _uv_tool_ok(spec: dict) -> bool | None:
+    """A uv tool's venv holds ``spec.version`` of ``spec.name`` and imports ``spec.import`` (jcodemunch-mcp
+    without its ``openai`` extra could not embed: Rohit's PC, round 2). None when uv or the venv is absent
+    (a pipx or hand install: left alone)."""
+    cp = plat.run(["uv", "tool", "dir"], timeout=30)
+    out = (cp.stdout or "").strip() if cp.returncode == 0 else ""
+    if not out:
+        return None
+    venv = Path(out.splitlines()[-1].strip()) / spec["name"]
+    py = venv / ("Scripts/python.exe" if plat.IS_WINDOWS else "bin/python")
+    if not py.is_file():
+        return None
+    mods = ", ".join(["importlib.metadata as m"] + ([spec["import"]] if spec.get("import") else []))
+    cp = plat.run([str(py), "-c", f"import {mods}; print(m.version({spec['name']!r}))"], timeout=60)
+    lines = (cp.stdout or "").strip().splitlines()
+    return cp.returncode == 0 and bool(lines) and lines[-1].strip() == spec["version"]
+
+
 def install_deps(env, *, ci: bool = False, dry_run: bool = False,
                  skip_optional: bool = False) -> list[tuple[str, str]]:
     """Install what is missing; ``skip_optional`` leaves the manifest's optional deps alone (the
@@ -245,13 +263,18 @@ def install_deps(env, *, ci: bool = False, dry_run: bool = False,
         imp = dep.get("import")
         exists = dep.get(f"exists_{env.os_name}") or dep.get("exists")
         bins = _bins_for(dep)
+        stale = False
         if ((which and (winutil.which(which) or (which in bins and npm_bin(which))))
                 or (imp and _importable(imp, env))
                 or (exists and Path(exists).expanduser().exists()) or npm_pkg_present(dep.get("npm_pkg"))):
-            results.append((did, _finish(dep, "PRESENT", env, dry_run)))
-            continue
+            stale = bool(not ci and dep.get("uv_tool") and _uv_tool_ok(dep["uv_tool"]) is False)
+            if not stale:
+                results.append((did, _finish(dep, "PRESENT", env, dry_run)))
+                continue
         install_cmd = dep.get(f"install_{env.os_name}") or dep.get("install")
         argv = _sub(install_cmd, _exec_tokens(env)) if install_cmd else []  # real paths, not {HOME} / {PYTHON}
+        if stale and argv[:3] == ["uv", "tool", "install"] and "--force" not in argv:
+            argv = argv[:3] + ["--force"] + argv[3:]  # same version, missing extra: --upgrade alone keeps the venv
         if ci and dep.get("ci_stub"):
             results.append((did, "SKIP(ci-stub)" if not dry_run or not install_cmd
                             else f"WOULD-INSTALL: {' '.join(argv)}"))
@@ -521,6 +544,25 @@ def reconcile_mcp_pins(*, dry_run: bool = False, run=None) -> list[tuple[str, st
     if not dry_run and (run or not os.environ.get("AGENTIC_MERCY_SKIP_BASE_TOOLS")):
         out += npx_cache.maintenance(changed, run)
     return out
+
+
+def warm_added_npx(rows: list[tuple[str, str]], *, dry_run: bool = False, run=None) -> list[tuple[str, str]]:
+    """Start each ``npx -y <spec>`` server that ``register_mcps`` just ADDED once, one at a time, so its
+    npm install (markdownify's preinstall builds a Python venv) happens here, not in the first session's
+    MCP initialize. Skipped like the pin warm-up: dry run, or offline (``AGENTIC_MERCY_SKIP_BASE_TOOLS``)
+    with no injected ``run``. [(server, "WARMED <spec>" | "NOT-WARMED(rc=N) <spec>")]."""
+    if dry_run or (run is None and os.environ.get("AGENTIC_MERCY_SKIP_BASE_TOOLS")):
+        return []
+    added = {name for name, status in rows if str(status).startswith("ADDED")}
+    todo: list[tuple[str, str]] = []
+    for srv in _load_manifest().get("mcp_servers", []):
+        argv = [str(a) for a in srv.get("add") or []]
+        if srv["name"] in added and "npx" in argv:
+            i = argv.index("npx")
+            if argv[i + 1:i + 2] == ["-y"] and len(argv) > i + 2:
+                todo.append((srv["name"], argv[i + 2]))
+    warmed = npx_cache.warm_npx([spec for _, spec in todo], run)
+    return [(name, f"{status} {spec}") for (name, _), (spec, status) in zip(todo, warmed)]
 
 
 def run_post_steps(env, *, ci: bool = False, dry_run: bool = False) -> list[tuple[str, str]]:

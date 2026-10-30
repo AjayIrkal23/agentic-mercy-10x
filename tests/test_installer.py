@@ -200,3 +200,127 @@ def test_always_load_reconcile_goes_through_replace_entry(tmp_path, monkeypatch)
     monkeypatch.setattr(deps.mcp_restore, "replace_entry", lambda name, new, old, ok: seen.update(new=new) or ok)
     assert deps.reconcile_mcp_always_load() == [("sequential-thinking", "ALWAYS-LOAD true")]
     assert seen["new"] == {"command": "npx", "args": ["x"], "alwaysLoad": True}
+
+
+def _install_pass(monkeypatch, tmp_path, ci=True, **fakes):
+    """Run selfheal._install_pass with every outward step faked; returns the emitted rows."""
+    import deps
+    import jcodemunch_config as jc
+    import selfheal
+    for fn in ("check_prereqs", "install_deps", "register_mcps", "reconcile_mcp_env", "reconcile_mcp_pins",
+               "reconcile_mcp_always_load", "warm_added_npx", "install_plugins", "run_post_steps"):
+        monkeypatch.setattr(deps, fn, fakes.get(fn) or (lambda *a, **k: []))
+    monkeypatch.setattr(deps, "configure_lean_ctx", lambda **k: ("lean-ctx-config", "x"))
+    monkeypatch.setattr(selfheal, "_ensure_settings", lambda *a, **k: None)
+    monkeypatch.setattr(selfheal, "_validate_fix", lambda *a, **k: None)
+    monkeypatch.setattr(jc, "configure", lambda **k: ("jcodemunch-config", "x"))
+    rows: list = []
+    selfheal._install_pass(tmp_path, object(), lambda *a: rows.append(a), ci)
+    return rows
+
+
+def test_the_install_pass_sets_always_load(monkeypatch, tmp_path):
+    """Rohit's PC, round 2 (tools F1): only the daily self-heal set sequential-thinking's alwaysLoad, so a
+    fresh box ran a day without it."""
+    calls: list = []
+    rows = _install_pass(monkeypatch, tmp_path, reconcile_mcp_always_load=lambda **k: calls.append(k) or
+                         [("sequential-thinking", "ALWAYS-LOAD true")])
+    assert calls == [{"dry_run": True}]
+    assert ("mcp-load", "sequential-thinking", "ALWAYS-LOAD true") in rows
+
+
+def test_the_install_pass_warms_what_it_just_registered(monkeypatch, tmp_path):
+    seen: list = []
+    _install_pass(monkeypatch, tmp_path, register_mcps=lambda *a, **k: [("markdownify", "ADDED")],
+                  warm_added_npx=lambda rows, **k: seen.append((rows, k)) or [])
+    assert seen == [([("markdownify", "ADDED")], {"dry_run": True})]
+
+
+def test_warm_added_npx_runs_only_newly_added_npx_servers(monkeypatch):
+    """Rohit's PC, round 2 (tools F6): markdownify's npm preinstall builds a Python venv (pip install
+    markitdown[all]); unwarmed, the first session's initialize took 35 s. Only re-pinned specs were warmed."""
+    import deps
+    ran: list = []
+
+    def run(argv, timeout):
+        ran.append(argv)
+        return 0, ""
+    rows = deps.warm_added_npx([("markdownify", "ADDED"), ("memory", "PRESENT"), ("semgrep", "ADDED"),
+                                ("openart", "ADDED")], dry_run=False, run=run)
+    assert ran == [["npx", "-y", "mcp-markdownify-server@1.1.0", "--version"]]  # semgrep / openart: no npx
+    assert rows == [("markdownify", "WARMED mcp-markdownify-server@1.1.0")]
+    ran.clear()
+    assert deps.warm_added_npx([("markdownify", "PRESENT")], dry_run=False, run=run) == [] and ran == []
+    assert deps.warm_added_npx([("markdownify", "ADDED")], dry_run=True, run=run) == [] and ran == []
+    monkeypatch.setenv("AGENTIC_MERCY_SKIP_BASE_TOOLS", "1")
+    monkeypatch.setattr(deps.npx_cache, "_run", lambda *a, **k: ran.append(a) or (0, ""))
+    assert deps.warm_added_npx([("markdownify", "ADDED")], dry_run=False) == [] and ran == []
+
+
+# --- R9: the jcodemunch uv tool is checked, not only its name on PATH (Rohit's PC, round 2) --- #
+JCM_UV_TOOL = {"name": "jcodemunch-mcp", "version": "1.108.319", "import": "openai"}  # == the manifest's
+
+
+def _jcm_box(monkeypatch, tmp_path, *, venv=True, version="1.108.319", import_ok=True):
+    """deps with only the jcodemunch dep, `which` finding it, and a fake `uv tool dir` venv.
+    Returns the list of install argvs run."""
+    import subprocess
+    import deps
+    m = json.loads((_ROOT / "installer" / "manifest.json").read_text(encoding="utf-8"))
+    dep = {**next(d for d in m["deps"] if d["id"] == "jcodemunch-mcp"), "uv_tool": JCM_UV_TOOL}
+    monkeypatch.setattr(deps, "_load_manifest", lambda: {"deps": [dep], "user_space": {}})
+    monkeypatch.setattr(deps.winutil, "which", lambda n: "/x/" + n)
+    monkeypatch.setattr(deps.plat, "IS_WINDOWS", False)
+    tools = tmp_path / "uv-tools"
+    if venv:
+        (tools / "jcodemunch-mcp" / "bin").mkdir(parents=True)
+        (tools / "jcodemunch-mcp" / "bin" / "python").write_text("", encoding="utf-8")
+
+    def run(argv, **k):
+        if argv[:3] == ["uv", "tool", "dir"]:
+            return subprocess.CompletedProcess(argv, 0, f"{tools}\n", "")
+        if argv[0].endswith("python"):
+            assert "openai" in argv[-1]
+            return subprocess.CompletedProcess(argv, 0 if import_ok else 1, f"{version}\n" if import_ok else "",
+                                               "" if import_ok else "ModuleNotFoundError: No module named 'openai'")
+        raise AssertionError(argv)
+    monkeypatch.setattr(deps.plat, "run", run)
+    installs: list = []
+    monkeypatch.setattr(deps, "_run_install", lambda argv: installs.append(argv) or subprocess.CompletedProcess(argv, 0, "", ""))
+    monkeypatch.setattr(deps, "_link_bins", lambda *a, **k: "")
+    return deps, installs
+
+
+ENV_POSIX = type("E", (), {"os_name": "posix", "python": "python3", "node": "node", "real_dir": None})()
+
+
+def test_jcodemunch_without_openai_is_reinstalled(monkeypatch, tmp_path):
+    deps, installs = _jcm_box(monkeypatch, tmp_path, import_ok=False)
+    rows = deps.install_deps(ENV_POSIX)
+    assert rows[0][0] == "jcodemunch-mcp" and rows[0][1].startswith("INSTALLED")
+    assert installs == [["uv", "tool", "install", "--force", "--upgrade", "jcodemunch-mcp[openai]==1.108.319"]]
+
+
+def test_jcodemunch_off_the_pin_is_reinstalled(monkeypatch, tmp_path):
+    deps, installs = _jcm_box(monkeypatch, tmp_path, version="1.108.399")
+    assert deps.install_deps(ENV_POSIX)[0][1].startswith("INSTALLED") and len(installs) == 1
+
+
+def test_jcodemunch_at_the_pin_with_openai_is_present(monkeypatch, tmp_path):
+    deps, installs = _jcm_box(monkeypatch, tmp_path)
+    assert deps.install_deps(ENV_POSIX) == [("jcodemunch-mcp", "PRESENT")] and installs == []
+
+
+def test_jcodemunch_without_a_uv_venv_is_left_alone(monkeypatch, tmp_path):
+    deps, installs = _jcm_box(monkeypatch, tmp_path, venv=False, import_ok=False)  # pipx or a hand install
+    assert deps.install_deps(ENV_POSIX) == [("jcodemunch-mcp", "PRESENT")] and installs == []
+
+
+def test_uv_tool_version_matches_the_install_pins():
+    m = json.loads((_ROOT / "installer" / "manifest.json").read_text(encoding="utf-8"))
+    for d in (d for d in m["deps"] if d.get("uv_tool")):
+        ut = d["uv_tool"]
+        for key in ("install_posix", "install_windows"):
+            pin = next(a for a in d[key] if a.startswith(ut["name"]) and "==" in a)
+            assert pin.split("==", 1)[1] == ut["version"], (d["id"], key)
+    assert next(d for d in m["deps"] if d["id"] == "jcodemunch-mcp").get("uv_tool") == JCM_UV_TOOL

@@ -12,7 +12,8 @@ Rows (PASS / WARN / FAIL / SKIP; non-zero exit on any FAIL):
   settings-safety     0 "lean-ctx" substrings in settings.json AND the template; deny == []
   lean-ctx-config      config.toml carries the manifest keys + the zero-injection floor
                        (doctor_host.ZERO_INJECTION) and lean-ctx >= min_version
-  lean-ctx-runtime     no `lean-ctx serve` daemon, lean-ctx == the manifest pin (WARN; doctor_host.py)
+  lean-ctx-runtime     no `lean-ctx serve` daemon, lean-ctx == the manifest pin (WARN; FAIL when the drifted
+                       binary is the installer's own lean-ctx-bin one, repaired by the deps step; doctor_host.py)
   jcodemunch-config    ~/.code-index/config.jsonc carries the manifest keys
   plugins-contract     template enabledPlugins == manifest plugins.install
   plugins-installed    every manifest plugin installed + enabled (`claude plugin list`)

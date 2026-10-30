@@ -290,6 +290,28 @@ def test_terms_live_shapes():
         assert noise not in got, noise
 
 
+def test_a_short_file_is_left_alone(tmp_path):
+    """Rohit's PC, round 2 (R2-2): a 2 KB tailored file was cut (one bullet over the 550-char budget) and got
+    the owner's journal pointer and production block appended. A file that fits the plan row stays as is."""
+    long_bullet = "- **This PC** (Ubuntu, bash) " + "detail " * 125
+    text = "# Machines (private)\n\n" + long_bullet.rstrip() + "\n- **Router** at home\n"
+    assert 900 < len(long_bullet) and len(text) < 2048
+    assert sm.split_text(text) == (text, [])
+    m = tmp_path / sm.MACHINES_NAME
+    m.write_text(text, encoding="utf-8")
+    rc, msgs = _apply(m)
+    assert rc == 0 and any("unchanged" in x for x in msgs)
+    assert m.read_text(encoding="utf-8") == text and not m.with_name(sm.JOURNAL_NAME).exists()
+
+
+def test_a_long_unsplit_file_with_the_prod_lines_gets_no_second_copy():
+    body = "\n".join(f"- **Host {i}** " + "x " * 120 for i in range(20))
+    text = "# Machines\n\n" + body + "\n\n" + "\n".join(sm.PROD_LINES) + "\n"
+    assert len(text) > sm.CHECK_LIMIT and sm.PROD_MARK not in text
+    out, _ = sm.split_text(text)
+    assert sm.norm(out).count(sm.norm(sm.PROD_LINES[0])) == 1
+
+
 def test_dry_run_writes_nothing(tmp_path):
     m = _copy(tmp_path)
     before = m.read_bytes()

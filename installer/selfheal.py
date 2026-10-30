@@ -151,7 +151,8 @@ def _repair(target: Path, failed: set, env, emit) -> None:
         import deps as _deps  # type: ignore
         for name, s in _deps.reconcile_mcp_pins():
             emit("repair", name, s)
-    if "cli-on-path" in {f.lower() for f in failed}:  # F1: the deps step links npm globals into ~/.local/bin
+    # F1: the deps step links npm globals into ~/.local/bin; it also replaces a drifted lean-ctx-bin binary
+    if {"cli-on-path", "lean-ctx-runtime"} & {f.lower() for f in failed}:
         import deps as _deps  # type: ignore
         for name, s in _deps.install_deps(env):
             if s != "PRESENT":
@@ -209,12 +210,17 @@ def _install_pass(target: Path, env, emit, ci: bool, todo: list | None = None) -
     if todo is not None:
         perm = settings_install.permission_line(target) if fresh else None
         todo.extend(ostools.checklist(manifest, sudo_cmd, extra=[perm] if perm else None))
-    for name, s in _deps.register_mcps(env, ci=ci, dry_run=ci):
+    registered = _deps.register_mcps(env, ci=ci, dry_run=ci)
+    for name, s in registered:
         emit("mcp", name, s)
     for name, s in _deps.reconcile_mcp_env(dry_run=ci):
         emit("mcp-env", name, s)
     for name, s in _deps.reconcile_mcp_pins(dry_run=ci):
         emit("mcp-pin", name, s)
+    for name, s in _deps.reconcile_mcp_always_load(dry_run=ci):  # not only the daily self-heal (tools F1)
+        emit("mcp-load", name, s)
+    for name, s in _deps.warm_added_npx(registered, dry_run=ci):  # a cold first initialize took 35 s (F6)
+        emit("mcp-warm", name, s)
     for name, s in _deps.install_plugins(env, ci=ci, dry_run=ci):
         emit("plugin", name, s)
     emit("config", *_jc.configure(dry_run=ci))

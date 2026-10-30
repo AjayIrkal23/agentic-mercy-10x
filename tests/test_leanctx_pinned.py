@@ -87,7 +87,61 @@ def test_the_binary_is_fetched_into_the_package_and_checked(home, monkeypatch):
     assert got["sha256"] == REL["assets"]["linux-x64"]["sha256"]
     assert (pkg / "bin" / "lean-ctx").read_bytes() == b"\x7fELF fake" and os.access(pkg / "bin" / "lean-ctx", os.X_OK)
     assert (pkg / "bin" / "lean-ctx.js").is_file()  # the npm shim stays
-    assert release_bin.ensure(REL, pkg, dry_run=False, download=lambda *a, **k: 1 / 0, key="linux-x64") == (True, "")
+    assert release_bin.ensure(REL, pkg, dry_run=False, download=lambda *a, **k: 1 / 0, key="linux-x64",
+                              version=lambda p: REL["version"]) == (True, "")
+
+
+def _drifted(home: Path) -> Path:
+    pkg = _pkg(home)
+    (pkg / "bin" / "lean-ctx").write_bytes(b"old")
+    return pkg
+
+
+@pytest.mark.skipif(os.name != "posix", reason="exec bit")
+def test_a_drifted_binary_is_replaced_by_the_pin(home, monkeypatch):
+    """Rohit's PC, round 2: lean-ctx-bin's postinstall had already placed 3.12.0 before the pin existed, and
+    `ensure` returned early on any existing binary, so 3.12.0 kept re-injecting hooks."""
+    monkeypatch.setattr(release_bin.plat, "IS_WINDOWS", False)
+    pkg = _drifted(home)
+    ok, note = release_bin.ensure(REL, pkg, dry_run=False, download=lambda u, d, **k: _tgz(Path(d)),
+                                  key="linux-x64", version=lambda p: "3.12.0")
+    assert ok and "3.12.0" in note and f"v{REL['version']}" in note
+    assert (pkg / "bin" / "lean-ctx").read_bytes() == b"\x7fELF fake"
+    assert not (pkg / "bin" / "lean-ctx.old").exists()
+
+
+def test_a_failed_replacement_puts_the_old_binary_back(home):
+    pkg = _drifted(home)
+
+    def dl(*_a, **_k):
+        raise OSError("offline")
+    ok, note = release_bin.ensure(REL, pkg, dry_run=False, download=dl, key="linux-x64", version=lambda p: "3.12.0")
+    assert ok is False and "offline" in note
+    assert (pkg / "bin" / "lean-ctx").read_bytes() == b"old"  # the npm shim never ends up without a binary
+
+
+def test_a_pinned_binary_is_left_alone(home):
+    pkg = _drifted(home)
+    assert release_bin.ensure(REL, pkg, dry_run=False, download=lambda *a, **k: 1 / 0, key="linux-x64",
+                              version=lambda p: REL["version"]) == (True, "")
+    assert (pkg / "bin" / "lean-ctx").read_bytes() == b"old"
+
+
+def test_a_dry_run_names_the_replacement(home):
+    pkg = _drifted(home)
+    ok, note = release_bin.ensure(REL, pkg, dry_run=True, version=lambda p: "3.12.0")
+    assert ok and "would replace" in note and (pkg / "bin" / "lean-ctx").read_bytes() == b"old"
+
+
+def test_a_drifted_lean_ctx_runtime_row_is_repaired_by_the_deps_step(tmp_path, monkeypatch):
+    seen: list = []
+    monkeypatch.setitem(sys.modules, "deps", deps)  # another test file may have re-loaded `deps`
+    monkeypatch.setattr(deps, "install_deps", lambda env, **k: seen.append(env) or [("lean-ctx", "PRESENT (replaced)"),
+                                                                                  ("uv", "PRESENT")])
+    rows: list = []
+    selfheal._repair(tmp_path, {"lean-ctx-runtime"}, ENV, lambda *a: rows.append(a))
+    assert seen == [ENV]
+    assert ("repair", "lean-ctx", "PRESENT (replaced)") in rows and ("repair", "uv", "PRESENT") not in rows
 
 
 def test_windows_gets_the_exe_from_the_zip(home, monkeypatch):
@@ -170,8 +224,23 @@ def test_runtime_row_warns_on_a_serve_daemon_and_on_version_drift(tmp_path):
         (proc / str(pid)).mkdir(parents=True)
         (proc / str(pid) / "cmdline").write_bytes(b"\0".join(argv) + b"\0")
     assert doctor_host.leanctx_daemons(proc) == [10]
-    st, det = doctor_host.check_leanctx_runtime(M, False, proc_root=proc, version=lambda: "3.12.0")
+    st, det = doctor_host.check_leanctx_runtime(M, False, proc_root=proc, version=lambda: "3.12.0",
+                                                owned=lambda: False)
     assert st == "WARN" and "pid 10" in det and "3.12.0" in det and "3.10.5" in det
     (proc / "10" / "cmdline").write_bytes(b"/x/lean-ctx\0")
     assert doctor_host.check_leanctx_runtime(M, False, proc_root=proc, version=lambda: "3.10.5")[0] == "PASS"
     assert doctor_host.check_leanctx_runtime(M, True)[0] == "SKIP"
+
+
+@pytest.mark.skipif(os.name != "posix", reason="/proc")
+def test_version_drift_fails_only_on_an_installer_owned_binary(tmp_path):
+    """The installer can replace its own lean-ctx-bin binary (FAIL, repaired by the deps step); a hand-installed
+    lean-ctx (this PC's ~/.local/bin/lean-ctx) stays a WARN: no repair can change it."""
+    proc = tmp_path / "proc"
+    proc.mkdir()
+    st, det = doctor_host.check_leanctx_runtime(M, False, proc_root=proc, version=lambda: "3.12.0", owned=lambda: True)
+    assert st == "FAIL" and "3.12.0" in det
+    assert doctor_host.check_leanctx_runtime(M, False, proc_root=proc, version=lambda: "3.12.0",
+                                             owned=lambda: False)[0] == "WARN"
+    assert doctor_host.check_leanctx_runtime(M, False, proc_root=proc, version=lambda: "3.10.5",
+                                             owned=lambda: True)[0] == "PASS"

@@ -342,6 +342,17 @@ def test_restore_lock_held_exits_locked(world, monkeypatch):
 
 
 @posix_only
+def test_a_failed_restore_is_not_planned_again(world):
+    """Rohit's PC, round 2 (R2O-1): a restore whose resume never reached SessionStart (`seen` older than
+    `restored_at`) was re-planned on every run. One that resumed and died again (`seen` newer) still launches."""
+    world.ledger("a", started=NOW - 90, seen=NOW - 90, restored=True, restored_at=NOW - 80)
+    world.ledger("b", started=NOW - 50, seen=NOW - 20, restored=True, restored_at=NOW - 40)
+    plan = {p["sid"]: p for p in world.run("--dry-run")["plan"]}
+    assert plan["a"]["action"] == "skip" and plan["a"]["reason"] == "restore failed"
+    assert plan["b"]["action"] == "launch"
+
+
+@posix_only
 def test_dry_run_writes_nothing(world):
     world.ledger("a", started=NOW - 90)
     world.ledger("b", started=NOW - 50)

@@ -30,6 +30,7 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 |------|------|
 | `test_lib_foundation.py` | `platform` (incl. every `OLLAMA_HOST` form `ollama_url` reads), `repo_context` ($HOME ceiling), `hook_telemetry`, `code_files.is_infra_root` (the four never-indexed roots) |
 | `test_dispatch_mutator.py` | dispatcher threads mutator `updatedInput` (the dropped-mutation regression); mod bridge: owned links skipped only for the owner session with a fresh `MERCY_MOD_BEAT`, `--only` ignores ownership |
+| `test_dispatch_lkg.py` | dispatcher keeps a last-known-good `dispatch.config.json` in the state dir, falls back to it, fails open (stderr + systemMessage + telemetry) only when neither parses |
 | `test_prompt_router.py`, `test_router_surface.py`, `test_surface_classification.py` | router classify/rank/output shape, stack/cwd surface, FE/BE detection, path-scoped push = Read; `fullstack-post` doc hit decided by path segments, never file content |
 | `test_router_migration.py` | "migrate/port/rewrite X from A to B" is IMPLEMENT; a size-L invoke chain that writes tests/docs gains `impl`; acts come in canonical order |
 | `test_router_budget.py` | per-prompt router injection stays small: a matched skill is named, never inlined; the WORKFLOW line carries no prompt echo; size caps per prompt class |

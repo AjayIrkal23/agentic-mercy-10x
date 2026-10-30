@@ -346,6 +346,10 @@ def _restore(args, out: dict, state: Path) -> dict:
         if not _SID_OK.match(sid):
             out["plan"].append(plan_entry(sid, "skip", "bad sid"))
             continue
+        if e.get("restored") and float(e.get("restored_at") or 0) > float(e.get("seen") or 0):
+            # the resume never reached SessionStart (it refreshes `seen`): a retry fails the same way
+            out["plan"].append(plan_entry(sid, "skip", "restore failed"))
+            continue
         if not _gate(args, out, state, planned):
             break
         if args.dry_run:

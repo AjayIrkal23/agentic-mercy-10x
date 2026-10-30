@@ -36,11 +36,17 @@ def test_template_exists_and_valid_json():
     json.loads(_load_render().substitute(tmpl.read_text(encoding="utf-8")))
 
 
-def test_render_semantically_equals_live(monkeypatch):
+def test_render_semantically_equals_live(monkeypatch, tmp_path):
     if not (_ROOT / "settings.json").exists():
         import pytest
         pytest.skip("settings.json not rendered (fresh checkout / CI)")
     live_interpreter.pin(monkeypatch)  # A7v2-03: the live file names the interpreter that rendered it
+    # the live file was rendered with the live plan tier (model, fallbackModel); conftest's empty state dir
+    # reads as max20, so a box on another tier (Rohit's PC, round 2 I-7: `api`) compared unlike things
+    tier = _ROOT / "state" / "plan-tier.json"
+    if tier.is_file():
+        (tmp_path / tier.name).write_bytes(tier.read_bytes())
+    monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path))
     r = _load_render()
     ok, msg = r.check_equivalence()
     assert ok, msg

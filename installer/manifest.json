@@ -103,6 +103,7 @@
   {
    "id": "jcodemunch-mcp",
    "which": "jcodemunch-mcp",
+   "uv_tool": {"name": "jcodemunch-mcp", "version": "1.108.319", "import": "openai"},
    "install_posix": ["uv", "tool", "install", "--upgrade", "jcodemunch-mcp[openai]==1.108.319"],
    "install_windows": ["uv", "tool", "install", "--upgrade", "jcodemunch-mcp[openai]==1.108.319"],
    "note": "Code-intelligence MCP (PyPI). [openai] extra = embeddings via a local ollama OpenAI-compatible endpoint (all-minilm).",

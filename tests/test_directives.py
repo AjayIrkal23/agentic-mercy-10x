@@ -100,6 +100,19 @@ def _claude_dir() -> Path:
     return Path(env).expanduser() if env else Path("~/.claude").expanduser()
 
 
+TAILORED = "<!-- machines:tailored -->"
+OWNER_ONLY = "(owner machines only)"
+
+
+def machines_tailored(root: Path) -> bool:
+    """The first existing live machines file carries TAILORED: a second person's machine, whose file
+    leaves out the owner-only rows on purpose. The owner's machines never carry it, so they stay strict."""
+    for cand in (root / "CLAUDE.machines.local.md", _claude_dir() / "CLAUDE.machines.local.md"):
+        if cand.is_file():
+            return TAILORED in cand.read_text(encoding="utf-8", errors="replace")
+    return False
+
+
 def machines_text(root: Path) -> str:
     """Imported part (after an in-memory split) of the first existing machines file."""
     for cand in (root / "CLAUDE.machines.local.md", _claude_dir() / "CLAUDE.machines.local.md",
@@ -143,8 +156,11 @@ def corpus(root: Path, drafts: Path | None) -> dict[str, str]:
 def check(root: Path, directives: Path, drafts: Path | None, strict_keys: bool = False) -> list[str]:
     rows = load_directives(directives)
     texts = corpus(root, drafts)
+    tailored = machines_tailored(root)
     fails = []
     for r in rows:
+        if tailored and OWNER_ONLY in r["directive"]:
+            continue
         if r["strength"] in ("TEXT", "SOFT") or (strict_keys and r["keys"]):
             for k in r["keys"]:
                 if not any(norm(k) in t for t in texts.values()):
@@ -191,6 +207,22 @@ def test_text_key_only_under_docs_fails(tmp_path):
     assert len(fails) == 1 and fails[0].startswith("row 1 ")
 
 
+def test_owner_rows_skip_only_on_a_tailored_machine(tmp_path, monkeypatch):
+    """Rohit's PC, round 2 (I-5): a second person's machines file is tailored and leaves out the owner's
+    rows (laptop never sleeps, production safety); it carries the marker, the owner's machines do not."""
+    monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "no-config"))
+    (tmp_path / "CLAUDE.md").write_text("nothing here\n", encoding="utf-8")
+    d = tmp_path / "DIRECTIVES.md"
+    d.write_text("| # | directive | sentence_key | source | mechanism | strength |\n|---|---|---|---|---|---|\n"
+                 "| 1 | Never sleep (owner machines only) | `NEVER let the laptop sleep` | machines | text | TEXT |\n",
+                 encoding="utf-8")
+    m = tmp_path / "CLAUDE.machines.local.md"
+    m.write_text(f"# Machines\n{TAILORED}\n\n- this box\n", encoding="utf-8")
+    assert machines_tailored(tmp_path) and check(tmp_path, d, None) == []
+    m.write_text("# Machines\n\n- this box\n", encoding="utf-8")
+    assert not machines_tailored(tmp_path) and len(check(tmp_path, d, None)) == 1
+
+
 def test_hook_rows_name_existing_files():
     fails = [f for f in check(_ROOT, DIRECTIVES, _drafts()) if "mechanism path" in f]
     assert fails == [], "\n".join(fails)
@@ -200,7 +232,8 @@ def test_hook_rows_name_existing_files():
 
 def test_machines_corpus_is_the_imported_part():
     text = machines_text(_ROOT)
-    assert "without my explicit word" in text
+    if not machines_tailored(_ROOT):  # a tailored file has no owner production block (R12: a short file stays as is)
+        assert "without my explicit word" in text
     assert "machines-split:tail" not in text
 
 

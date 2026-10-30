@@ -6,10 +6,12 @@ package on 2026-10-30) and runs `lean-ctx onboard` (telemetry on, the [cloud] op
 `lean-ctx` strings in settings.json, a `serve` daemon). The manifest installs it with
 `npm install -g --ignore-scripts`; this module puts the pinned, sha256-checked release binary where the
 package's own `bin/<exe>.js` shim looks for it (``manifest.user_space.<key>``: version, npm_pkg, exe,
-download, assets{key: name, sha256}). An existing binary is left alone. Never raises. Pure stdlib.
+download, assets{key: name, sha256}). An existing binary at the pin is left alone; one at another version
+(3.12.0 from a postinstall that ran before the pin existed) is replaced. Never raises. Pure stdlib.
 """
 from __future__ import annotations
 
+import re
 import sys
 import tarfile
 import zipfile
@@ -30,22 +32,49 @@ def arch_key() -> str:
     return f"{'windows' if plat.IS_WINDOWS else os_tag}-{arch}"
 
 
+def _binary_version(binary: Path) -> str:
+    """`<binary> --version` as x.y.z; "" when it cannot run or prints no version."""
+    try:
+        out = plat.run([str(binary), "--version"], timeout=15).stdout or ""
+    except Exception:  # noqa: BLE001
+        return ""
+    m = re.search(r"\d+\.\d+\.\d+", out)
+    return m.group(0) if m else ""
+
+
 def ensure(cfg: dict, pkg_dir: Path | None, *, dry_run: bool, download: Callable = _download,
-           key: str | None = None) -> tuple[bool, str]:
-    """(ok, note to append to the row). ok is False only when a needed binary could not be placed."""
+           key: str | None = None, version: Callable[[Path], str] = _binary_version) -> tuple[bool, str]:
+    """(ok, note to append to the row). ok is False only when a needed binary could not be placed.
+    A binary already in the package that is not the pin (a postinstall's releases/latest) is replaced;
+    a failed replacement puts the old one back, so the npm shim never ends up without a binary."""
     if not cfg or pkg_dir is None or not (Path(pkg_dir) / "package.json").is_file():
         return True, ""  # not npm-installed here (a hand-installed binary, CI, no npm): nothing to place
     exe = cfg["exe"] + (".exe" if plat.IS_WINDOWS else "")
     binary = Path(pkg_dir) / "bin" / exe
+    old: Path | None = None
+    have = ""
     if binary.is_file():
-        return True, ""
-    if dry_run:
+        have = version(binary)
+        if have == cfg["version"]:
+            return True, ""
+        if dry_run:
+            return True, f" (would replace {cfg['exe']} {have or '?'} with v{cfg['version']})"
+    elif dry_run:
         return True, f" (would fetch {cfg['exe']} v{cfg['version']})"
     key = key or arch_key()
     asset = (cfg.get("assets") or {}).get(key)
     if not asset:
         return False, f"no pinned asset for {key}"
+    if binary.is_file():
+        old = binary.with_name(binary.name + ".old")
+        try:  # rename, never overwrite: a running binary is ETXTBSY on Linux and locked on Windows
+            if old.exists():
+                old.unlink()
+            binary.replace(old)
+        except OSError as exc:
+            return False, f"cannot move {cfg['exe']} {have or '?'} aside: {type(exc).__name__}"
     url = cfg["download"].format(version=cfg["version"], asset=asset["name"])
+    err = ""
     try:
         with userspace.scratch() as tmp:
             arc = Path(tmp) / asset["name"]
@@ -57,9 +86,22 @@ def ensure(cfg: dict, pkg_dir: Path | None, *, dry_run: bool, download: Callable
                 with tarfile.open(arc, "r:gz") as tf:
                     extract_prefix(tf, binary.parent, strip=0, skip_top_files=False, only=lambda p: p == exe)
     except Exception as exc:  # noqa: BLE001 - a blocked or bad download is a row, not a crash
-        return False, f"{type(exc).__name__}: {str(exc)[:80]}"
-    if not binary.is_file():
-        return False, f"archive had no {exe}"
+        err = f"{type(exc).__name__}: {str(exc)[:80]}"
+    if not err and not binary.is_file():
+        err = f"archive had no {exe}"
+    if err:
+        if old is not None:
+            try:
+                old.replace(binary)
+            except OSError:
+                pass
+        return False, err
     if not plat.IS_WINDOWS:
         binary.chmod(0o755)
+    if old is not None:
+        try:
+            old.unlink()  # POSIX: fine while it runs; a Windows binary in use stays and goes next run
+        except OSError:
+            pass
+        return True, f" ({cfg['exe']} {have or '?'} replaced with v{cfg['version']} release binary, sha256 ok)"
     return True, f" ({cfg['exe']} v{cfg['version']} release binary, sha256 ok)"
