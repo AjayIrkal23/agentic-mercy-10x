@@ -203,6 +203,8 @@ def test_ensure_hanging_systemctl_times_out(ens, tmp_path):
     assert _log(tmp_path) == ["--user is-active claude-memwatch"]  # a timeout never falls through to install
 
 
+@pytest.mark.skipif(plat.IS_WINDOWS, reason="the systemd ensure path and its POSIX lock are Linux-only; "
+                                             "the Windows branch is asserted at the end of this test (flag stubbed)")
 def test_ensure_missing_unit_runs_setup_under_lock(tmp_path, monkeypatch):
     mod = _load(ENSURE, "memwatch_ensure")
     calls = []
