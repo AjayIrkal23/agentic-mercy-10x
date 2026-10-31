@@ -67,6 +67,23 @@ def test_a_server_that_could_not_be_restored_is_an_error_in_the_summary(sd, box,
     assert any("FAIL(unregistered)" in e for e in _summary(box)["errors"])
 
 
+def test_plugins_step_installs_missing_plugins_and_pins_toolprune_off(sd, box, monkeypatch, tmp_path):
+    """2026-10-31: egm@egm (added after a machine's install) arrives through the daily run, and
+    TokenEconomizer's `toolprune` is pinned off."""
+    _only(sd, monkeypatch, "plugins")
+    monkeypatch.setattr(sd.deps if hasattr(sd, "deps") else __import__("deps"), "install_plugins",
+                        lambda env, ci=False, dry_run=False: [("plugin:egm@egm", "INSTALLED"),
+                                                              ("plugin:ponytail@ponytail", "PRESENT")])
+    home = tmp_path / "te-home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    sd.main([])
+    changed = _summary(box)["changed"]
+    assert any("egm@egm" in c and "INSTALLED" in c for c in changed)
+    assert not any("ponytail" in c for c in changed)
+    assert json.loads((home / ".tokeneconomizer" / "config.json").read_text(encoding="utf-8"))["toolprune"] == "off"
+
+
 def _only(sd, monkeypatch, *names):
     monkeypatch.setattr(sd, "STEPS", [s for s in sd.STEPS if s[0] in names])
 
@@ -313,8 +330,8 @@ def _cp(rc=0, out="", err=""):
 
 def test_step_ids_and_order(sd):
     ids = [n for n, _ in sd.STEPS]
-    assert ids == ["mcp", "deps", "plan-tier", "settings", "oomguard", "machines-split", "vendor", "workflows",
-                   "library", "mcp-inventory", "ponytail-board", "learning-evolve"]
+    assert ids == ["mcp", "plugins", "deps", "plan-tier", "settings", "oomguard", "machines-split", "vendor",
+                   "workflows", "library", "mcp-inventory", "ponytail-board", "learning-evolve"]
     assert ids.index("plan-tier") < ids.index("settings")  # a new tier lands in the same run's render
 
 

@@ -44,7 +44,7 @@ only — no hook entry points, no import-time I/O. Every helper fails soft.
 | `skills_index.py` | the one skills-index reader: `load()` / `skills()` merge the tracked `../skills-index.json` (local skills only) with the gitignored per-machine plugin sidecar `<root>/state/skills-index.plugins.json` |
 | `hook_telemetry.py` | per-link telemetry records (appended through `plat.append_line`) |
 | `mcp_ids.py` | the exact MCP arguments for a repo: `ids(root)` = jcodemunch `repo` (db `meta.repo`, found by `index-lifecycle._index_db_for`), graphify `project_path` (root with `graphify-out/graph.json`), jdocmunch `local/<name>` (`_doc_name_for`); `project_root(path)` refuses `$HOME`/infra/non-repos; `call_lines(root)`. Read by jcodemunch-enforce, jdocmunch-enforce, subagent-context, session-start-aggregator |
-| `shell_reads.py` | `code_target(cmd, cwd)` -> (file or `<dir>/x.<ext>`, hint) for `grep/rg/ag/ack/cat/head/tail/sed -n/find/fd` segments (`cd` followed; git, package managers, `sed -i` skipped); the jcodemunch shell gate's target (B-02) |
+| `shell_reads.py` | `code_target(cmd, cwd)` -> (file or `<dir>/x[.<ext>]`, hint) for `grep/rg/ag/ack/cat/head/tail/sed -n/find/fd` and the PowerShell / cmd readers `Get-Content`/`gc`/`type`, `Select-String`/`sls`, `findstr` (case-insensitive, backslash paths kept; bash's `type cmd` is not a read); only a pipeline's first stage reads files, a plain `grep x` with no path reads stdin, `cd` followed; git, package managers, `sed -i` skipped; the jcodemunch shell gate's target (B-02) |
 | `agent_kinds.py` | `GOLDFISH` / `EGM_LEAN` agent-type sets, `is_goldfish`, `is_egm_lean` (EGM plan Step 6; bootstrap orchestrator excluded) |
 
 ## Gotchas / fragile spots

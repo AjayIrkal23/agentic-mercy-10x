@@ -101,9 +101,14 @@ re-check) happens automatically until the doctor reports 0 FAIL.
   update by hand, review the diff, bump `reviewed_commit`; never pin `#v0.1.0`, it predates the
   `egm-*` skill directory names); update them by hand, then run the doctor. `superpowers-marketplace` stays true.
 - **Eager MCPs (2026-10-31, owner: tool use over token cost):** `manifest.mcp_servers[*].alwaysLoad`
-  is set on sequential-thinking, jcodemunch, jdocmunch, graphify, memory, context7, semgrep and
-  playwright; `deps.reconcile_mcp_always_load` writes it into `~/.claude.json` (lightpanda, not in the
-  manifest, was set on its live entry). Template env `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH` = 4000.
+  is set on sequential-thinking, jcodemunch, jdocmunch, graphify, memory, context7, semgrep,
+  playwright and lightpanda; `deps.reconcile_mcp_always_load` writes it into `~/.claude.json`. Lightpanda
+  is a manifest server since 2026-10-31 (`which` + `posix_only`; the binary from `user_space.lightpanda`,
+  four release SHA-256s). Template env `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH` = 4000 and
+  `PLAYWRIGHT_MCP_OUTPUT_DIR` = `{{CLAUDE_TMP}}` (render token: `<tmp>/claude-<uid>`, `<tmp>/claude` on
+  Windows): playwright may touch only its output dir and the cwd, so session scratchpads under Claude
+  Code's temp dir work. The daily self-heal `plugins` step installs plugins the manifest gained after a
+  machine's install (egm) and keeps TokenEconomizer `toolprune` off.
   Last hand update: ponytail 4.12.0 → 5.3.2 (2026-10-21, v4.2.0).
 - **Pinned tool versions:** every npx MCP server, the lean-ctx npm install and the semgrep /
   jcodemunch-mcp / graphify installs carry an exact version in `manifest.json`. Drift between a

@@ -81,6 +81,27 @@ def _mcp(ctx: Ctx):
             + [("mcp-load", n, s) for n, s in deps.reconcile_mcp_always_load(dry_run=ctx.dry)])
 
 
+def _plugins(ctx: Ctx):
+    """2026-10-31: a marketplace or plugin added to the manifest after a machine's install (egm@egm)
+    lands on the next daily run, and TokenEconomizer's `toolprune` stays `off` (its own default `auto`
+    writes tool-hiding deny rules into every repo)."""
+    import deps  # type: ignore
+    rows = [("plugin", n, s) for n, s in deps.install_plugins(ctx.env(), ci=False, dry_run=ctx.dry)
+            if not s.startswith(("PRESENT", "SKIP"))]
+    try:
+        import importlib.util  # noqa: PLC0415
+        spec = importlib.util.spec_from_file_location(
+            "te_marketplace", _ROOT / "scripts" / "tokeneconomizer-marketplace.py")
+        te = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(te)  # type: ignore[union-attr]
+        status = "WOULD-SET toolprune off" if ctx.dry else te.ensure_toolprune_off()
+    except Exception as exc:  # noqa: BLE001
+        status = f"WARN({type(exc).__name__})"
+    if status != "PRESENT":
+        rows.append(("config", "tokeneconomizer-toolprune", status))
+    return rows
+
+
 def _deps(ctx: Ctx):
     import deps  # type: ignore
     rows: list = []
@@ -299,7 +320,7 @@ def _ponytail_board(ctx: Ctx):
 
 # plan-tier before settings: a tier change makes settings.json stale (selfheal._tier_drift), and the
 # same run's settings step then renders the new tier's model keys
-STEPS = [("mcp", _mcp), ("deps", _deps), ("plan-tier", _plan_tier), ("settings", _settings),
+STEPS = [("mcp", _mcp), ("plugins", _plugins), ("deps", _deps), ("plan-tier", _plan_tier), ("settings", _settings),
          ("oomguard", _oomguard), ("machines-split", _machines_split), ("vendor", _vendor),
          ("workflows", _workflows), ("library", _library), ("mcp-inventory", _mcp_inventory),
          ("ponytail-board", _ponytail_board), ("learning-evolve", _learning_evolve)]

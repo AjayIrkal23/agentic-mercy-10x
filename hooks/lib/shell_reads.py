@@ -16,6 +16,56 @@ import shlex
 _SPLIT = re.compile(r"\|\||&&|[;\n]")      # commands; a pipeline stays one command
 _PIPE = re.compile(r"(?<!\|)\|(?!\|)")      # its stages: only the first reads files, the rest read stdin
 _RECURSIVE_BY_DEFAULT = {"rg", "ag", "ack"}
+# PowerShell / cmd readers (Windows sessions; matched case-insensitively): Get-Content `gc` / cmd `type`
+# read a file, Select-String `sls` / `findstr` search one or a glob. Value options carry a separate value.
+_PS_READERS = {"get-content", "gc", "type"}
+_PS_SEARCHERS = {"select-string", "sls", "findstr"}
+_PS_VALUE_OPTS = {"-totalcount", "-tail", "-head", "-first", "-last", "-encoding", "-delimiter", "-readcount",
+                  "-context", "-include", "-exclude", "-filter"}
+_PS_PATH_OPTS = {"-path", "-literalpath"}
+
+
+def _ps_norm(p: str, cwd: str) -> str:
+    p = p.strip("'\"").replace("\\", "/")
+    if os.path.isabs(p) or re.match(r"[A-Za-z]:/", p):
+        return p
+    return os.path.join(cwd or ".", p)
+
+
+def _ps_segment(head: str, args: list, cwd: str) -> tuple:
+    """PowerShell / cmd readers: the file (or `<dir>/x.<ext>` for a glob) and the hint."""
+    pattern, paths, i = "", [], 0
+    while i < len(args):
+        a, low = args[i], args[i].lower()
+        if low in _PS_PATH_OPTS and i + 1 < len(args):
+            paths.append(args[i + 1])
+            i += 2
+            continue
+        if low == "-pattern" and i + 1 < len(args):
+            pattern = args[i + 1].strip("'\"")
+            i += 2
+            continue
+        if low in _PS_VALUE_OPTS:
+            i += 2
+            continue
+        if a.startswith("-") or (head == "findstr" and a.startswith("/")):
+            i += 1
+            continue
+        if head in _PS_SEARCHERS and not pattern:
+            pattern = a.strip("'\"")
+        else:
+            paths.append(a)
+        i += 1
+    for p in paths:
+        full = _ps_norm(p, cwd)
+        if head == "type" and "." not in os.path.basename(full):
+            continue  # bash's `type python3` names a command, cmd's `type a.ts` prints a file
+        if any(c in full for c in "*?"):
+            d, leaf = full.rsplit("/", 1) if "/" in full else (cwd or ".", full)
+            ext = leaf.rsplit(".", 1)[-1] if "." in leaf else ""
+            return f"{d}/x.{ext}" if ext.isalnum() else f"{d}/x", pattern[:80]
+        return full, (pattern or os.path.basename(full))[:80]
+    return "", ""
 _READERS = {"grep", "egrep", "fgrep", "rg", "ag", "ack", "cat", "bat", "head", "tail",
             "less", "more", "nl", "sed", "find", "fd"}
 _SEARCHERS = {"grep", "egrep", "fgrep", "rg", "ag", "ack"}
@@ -26,10 +76,12 @@ _VALUE_OPTS = {"-e", "-f", "-g", "--glob", "-t", "--type", "-A", "-B", "-C", "-m
 
 
 def _words(seg: str) -> list:
-    try:
-        return shlex.split(seg)
+    bare = seg.split()
+    first = os.path.basename(bare[0].replace("\\", "/")).lower().removesuffix(".exe") if bare else ""
+    try:  # PowerShell / cmd readers keep `src\auth.ts` intact (POSIX shlex would eat the backslash)
+        return shlex.split(seg, posix=first not in _PS_READERS and first not in _PS_SEARCHERS)
     except ValueError:
-        return seg.split()
+        return bare
 
 
 def _glob_ext(words: list) -> str:
@@ -78,7 +130,10 @@ def _segment(words: list, cwd: str) -> tuple:
         words = words[1:]
     if not words:
         return "", ""
-    head = os.path.basename(words[0])
+    head = os.path.basename(words[0].replace("\\", "/"))
+    low = head.lower().removesuffix(".exe")
+    if low in _PS_READERS or low in _PS_SEARCHERS:
+        return _ps_segment(low, words[1:], cwd)
     if head not in _READERS:
         return "", ""
     args = words[1:]

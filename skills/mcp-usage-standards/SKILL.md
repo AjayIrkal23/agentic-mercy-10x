@@ -42,8 +42,7 @@ by hand. Full generated table: [`references/mcp-inventory.md`](references/mcp-in
 ## Inventory (15 user-scope servers)
 
 Eager since 2026-10-31 (`alwaysLoad`, no ToolSearch step, subagents too): jcodemunch, jdocmunch,
-graphify, memory, sequential-thinking, context7, semgrep, playwright (manifest), lightpanda (live
-registration only). The rest defer.
+graphify, memory, sequential-thinking, context7, semgrep, playwright, lightpanda (POSIX). The rest defer.
 
 | Need | Server | Notes |
 |---|---|---|
@@ -54,7 +53,7 @@ registration only). The rest defer.
 | Library/SDK/CLI docs | `context7` | `resolve-library-id` → `query-docs`, one concept per query |
 | Security scan | `semgrep` | THE security path (satisfies stop Gate 3) |
 | Headless browser (default) | `lightpanda` (pinned 1.0.2, telemetry off, POSIX only) | goto, markdown, a11y tree, clicks, forms, evaluate; no pixels, no real layout |
-| Pixels + fallback browser | `playwright` (pinned 0.0.83, Chromium) | screenshots, layout, visual checks; any page lightpanda renders blank or broken; Windows; save files under the repo or `~/.playwright-mcp` (`/tmp` is outside its allowed roots) |
+| Pixels + fallback browser | `playwright` (pinned 0.0.83, Chromium) | screenshots, layout, visual checks; any page lightpanda renders blank or broken; Windows; files under the repo or Claude Code's temp dir (session scratchpads) are allowed (`PLAYWRIGHT_MCP_OUTPUT_DIR`), anything else is not |
 | DevTools of user's tab | `browser-tools-mcp` (pinned 2.0.2) | console/network/Lighthouse of an already-open tab |
 | In-app state truth | `reticle` (pinned 3.3.0, telemetry off) | attach to the user's running dev app |
 | Cross-session facts | `memory` | see memory protocol below |

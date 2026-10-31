@@ -1,6 +1,6 @@
 {
  "_about": "Declarative install contract for the ~/.claude workbench, read by installer/{deps,verify,doctor,selfheal}.py. Idempotent + fail-visible. Tokens: {PYTHON} {NODE} {CLAUDE_DIR} (from detect.py). `network:true` / `ci_stub:true` steps only PLAN (WOULD-*) under `install.py --ci` / `--dry-run`. `env_from` adds `-e NAME=$NAME` to an MCP registration only when NAME is set in the installer's environment (secrets never live in this file). MCP servers are registered user-scope into ~/.claude.json (the single live MCP store; settings.template.json has no mcpServers). Counts (skills, agents) are always computed from disk, never pinned here.",
- "version": "5.1.0",
+ "version": "5.1.1",
  "min_python": "3.10",
  "prereqs": [
   {
@@ -163,6 +163,7 @@
   {"name": "context7", "alwaysLoad": true, "env_from": ["CONTEXT7_API_KEY"], "add": ["claude", "mcp", "add", "--scope", "user", "context7", "--", "npx", "-y", "@upstash/context7-mcp@4.1.1"], "ci_stub": true, "note": "export CONTEXT7_API_KEY before installing for higher rate limits (works without)."},
   {"name": "github", "posix_only": true, "deprecated": "npm @modelcontextprotocol/server-github is unmaintained (last 2025.4.8): migrate to github/github-mcp-server", "add": ["claude", "mcp", "add", "--scope", "user", "github", "--", "sh", "-c", "GITHUB_PERSONAL_ACCESS_TOKEN=$(gh auth token) exec npx -y @modelcontextprotocol/server-github@2025.4.8"], "windows_add": ["claude", "mcp", "add", "--scope", "user", "github", "--", "{PYTHON}", "{CLAUDE_DIR}/scripts/github-mcp-launcher.py"], "ci_stub": true, "note": "token read at launch from `gh auth token` (never stored). Windows has no `sh`: windows_add runs scripts/github-mcp-launcher.py, which does the same."},
   {"name": "playwright", "alwaysLoad": true, "add": ["claude", "mcp", "add", "--scope", "user", "playwright", "--", "npx", "-y", "@playwright/mcp@0.0.83", "--browser", "chromium"], "ci_stub": true, "note": "--browser chromium: the default 'chrome' channel needs Google Chrome at a system path; bundled chromium comes from post-step playwright-chromium (same version)."},
+  {"name": "lightpanda", "alwaysLoad": true, "which": "lightpanda", "posix_only": true, "add": ["claude", "mcp", "add", "--scope", "user", "lightpanda", "-e", "LIGHTPANDA_DISABLE_TELEMETRY=true", "--", "lightpanda", "mcp"], "ci_stub": true, "note": "the default headless browser (text tools: tree, markdown, click, fill); playwright stays for pixels, layout and Windows. The binary comes from user_space.lightpanda (pinned, sha256-checked, ~/.local/bin); `which` registers the server only once it resolves, the daily self-heal retries the download."},
   {"name": "browser-tools-mcp", "add": ["claude", "mcp", "add", "--scope", "user", "browser-tools-mcp", "--", "npx", "-y", "@agentdeskai/browser-tools-mcp@2.0.2"], "ci_stub": true},
   {"name": "markdownify", "add": ["claude", "mcp", "add", "--scope", "user", "markdownify", "--", "npx", "-y", "mcp-markdownify-server@1.1.0"], "ci_stub": true},
   {"name": "semgrep", "alwaysLoad": true, "add": ["claude", "mcp", "add", "--scope", "user", "semgrep", "-e", "SEMGREP_MCP_DISABLE_TRACING=true", "-e", "SEMGREP_FINDINGS_DISABLED=true", "-e", "SEMGREP_SCAN_SUPPLY_CHAIN_DISABLED=true", "--", "semgrep", "mcp"], "ci_stub": true, "note": "tracing off; login-only tools hidden. Callers pass an explicit config (p/default …)."},
@@ -258,6 +259,13 @@
    "sha256": {"x64": "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb",
               "arm64": "e4a487ee7ccd7d3a7f7ec08657610aa3606637dab924210b3aee62570fb4b080"},
    "note": "layer 1 of scripts/golive.py's secrets scan; pinned release + SHA-256 (gitleaks_8.30.1_checksums.txt); bump both together. Linux only, no sudo."},
+  "lightpanda": {"version": "1.0.2",
+   "download": "https://github.com/lightpanda-io/browser/releases/download/{version}/{asset}",
+   "assets": {"linux-x64": {"name": "lightpanda-x86_64-linux", "sha256": "ae7d01d261efb9e480e18ce3424533332883863bcf70b12a4321b5733f37e19e"},
+              "linux-arm64": {"name": "lightpanda-aarch64-linux", "sha256": "ac546dfc43c533430da92b75ab36f2a29da7d6324d5d38baf606ef2e0d849345"},
+              "darwin-x64": {"name": "lightpanda-x86_64-macos", "sha256": "91a775ecc67937d8d79c1b1a315748e52157804f18f629c6e1c6332a46255fc6"},
+              "darwin-arm64": {"name": "lightpanda-aarch64-macos", "sha256": "9f3ee749a55d1abc5f8fdda0d9559c3b2abcec5bff5bfe902bc06c0a89538ec4"}},
+   "note": "basetools.ensure_lightpanda: the raw release binary into ~/.local/bin, sha256 from the GitHub release digests (linux-x64 equals the owner PC's verified binary, 2026-10-31); bump version and all four hashes together. POSIX only (no Windows build)."},
   "lean_ctx": {
    "version": "3.10.5",
    "npm_pkg": "lean-ctx-bin",
@@ -359,7 +367,7 @@
   "oomguard": true,
   "ollama": {"models": ["all-minilm", "qwen2.5-coder:3b"], "note": "probes <ollama>/api/tags (OLLAMA_HOST else 127.0.0.1:11434). all-minilm = jcodemunch/jdocmunch semantic-search embeddings; qwen2.5-coder:3b = jcodemunch AI summaries (WARN-only). Install: https://ollama.com then `ollama pull all-minilm qwen2.5-coder:3b`."},
   "interpreter_check": true,
-  "mcp_roster": ["jcodemunch", "jdocmunch", "graphify", "lean-ctx", "memory", "sequential-thinking", "context7", "github", "playwright", "browser-tools-mcp", "markdownify", "semgrep", "reticle", "drawio", "openart"],
+  "mcp_roster": ["jcodemunch", "jdocmunch", "graphify", "lean-ctx", "memory", "sequential-thinking", "context7", "github", "playwright", "lightpanda", "browser-tools-mcp", "markdownify", "semgrep", "reticle", "drawio", "openart"],
   "generated_checks": [
    ["{PYTHON}", "{CLAUDE_DIR}/hooks/gen-invoke-skills.py", "--check"],
    ["{PYTHON}", "{CLAUDE_DIR}/hooks/gen-agent-skill-blocks.py", "--check"]

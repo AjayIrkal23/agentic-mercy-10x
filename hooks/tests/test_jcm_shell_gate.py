@@ -45,6 +45,13 @@ def repo(tmp_path):
     ("cd src && head -50 auth.ts | tail -5", "auth.ts", "auth.ts"),
     ("grep -rn --include=*.ts useAuth .", "x.ts", "useAuth"),
     ("find . -name '*.ts'", "x.ts", ""),
+    # Windows PowerShell / cmd readers (2026-10-31)
+    ("Get-Content src/auth.ts", "auth.ts", "auth.ts"),
+    ("gc -Path src\\auth.ts -TotalCount 40", "auth.ts", "auth.ts"),
+    ("Select-String -Pattern useAuth -Path src\\*.ts", "x.ts", "useAuth"),
+    ("sls useAuth src/*.ts", "x.ts", "useAuth"),
+    ("findstr /s /i useAuth src\\*.ts", "x.ts", "useAuth"),
+    ("type src\\auth.ts", "auth.ts", "auth.ts"),
 ])
 def test_shell_targets(repo, cmd, leaf, hint):
     target, got_hint = shell_reads.code_target(cmd, str(repo))
@@ -55,6 +62,7 @@ def test_shell_targets(repo, cmd, leaf, hint):
 @pytest.mark.parametrize("cmd", [
     "git grep useAuth", "npm test", "grep foo README.md", "sed -i s/a/b/ src/auth.ts",
     "pytest -q", "ls src", "cat README.md", "echo grep foo", "git log | head",
+    "Get-Process | Select-String node", "Get-Content README.md", "type python3",
 ])
 def test_non_reads_pass(repo, cmd):
     target, _ = shell_reads.code_target(cmd, str(repo))

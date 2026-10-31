@@ -33,7 +33,7 @@ state `state/mem-pressure.json`; runbook `docs/OOM-GUARD.md`.
 | Gate | Fires on | Message prefix | Behavior |
 |---|---|---|---|
 | `dangerous-bash-gate` | Bash / PowerShell | `DANGEROUS COMMAND BLOCKED:` | deny; `rm` targets held in the command's own `R=/tmp/...` variable count as temp |
-| `jcodemunch-enforce` (jcm-gate-read, jcm-gate-shell) | Read/Grep/Glob/`ctx_read`, and Bash/PowerShell `grep/rg/cat/sed -n/head/tail/find`, on source | `BLOCKED (once per agent per turn): call mcp__jcodemunch__…(repo="<id>", …)` | one deny per agent per user turn, then allows with an advisory |
+| `jcodemunch-enforce` (jcm-gate-read, jcm-gate-shell) | Read/Grep/Glob/`ctx_read`, and Bash/PowerShell `grep/rg/cat/sed -n/head/tail/find`, `Get-Content/Select-String/findstr`, on source | `BLOCKED (once per agent per turn): call mcp__jcodemunch__…(repo="<id>", …)` | one deny per agent per user turn, then allows with an advisory |
 | `jdocmunch-enforce` (jdoc-doc-steer) | whole Read of an indexed doc ≥ 2,000 bytes | `BLOCKED (once per agent per turn): call mcp__jdocmunch__search_sections(repo="local/<name>", …)` | one deny per agent per user turn, then advisory |
 | `first-write-skill-gate` | first Write/Edit of code | `SKILL GATE: First code write to …` | advisory once per session: load the named skills |
 | `dox-write-gate` | Write/Edit in a repo with no root `CLAUDE.md` | `DOX GATE: no root CLAUDE.md …` | deny once per repo |

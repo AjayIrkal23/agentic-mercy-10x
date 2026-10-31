@@ -1,5 +1,18 @@
 # Changelog
 
+## v5.1.1 2026-11-01 Every machine converges: lightpanda in the installer, Playwright scratchpads, PowerShell reads
+
+- **Lightpanda in the installer**: an eager, POSIX-only manifest MCP server (`which` registers it once the
+  binary resolves) plus `user_space.lightpanda` 1.0.2 with all four release SHA-256s (linux-x64 equals the
+  owner PC's verified binary). Fresh Ubuntu/macOS installs get it; Windows keeps playwright.
+- **Playwright scratchpads**: `env.PLAYWRIGHT_MCP_OUTPUT_DIR` = `{{CLAUDE_TMP}}` (new render token: Claude
+  Code's temp dir per machine). The MCP may touch only its output dir and the cwd, so session scratchpad
+  files under `/tmp/claude-<uid>` now work without `--allow-unrestricted-file-access`.
+- **PowerShell reads steered**: `Get-Content`/`gc`/`type`, `Select-String`/`sls`, `findstr` on source go to
+  jcodemunch like `grep`/`cat` (`lib/shell_reads.py`, the `jcm-gate-shell` link).
+- **Existing machines converge daily**: a new self-heal step `plugins` installs marketplaces and plugins
+  the manifest gained after a machine's install (`egm@egm`) and pins TokenEconomizer `toolprune` off.
+
 ## v5.1.0 2026-10-31 Tools fire on their own: no auto-deny, eager MCPs, smarter routing, EGM
 
 Owner's brief: every skill, hook, MCP and plugin must trigger automatically for the main agent
