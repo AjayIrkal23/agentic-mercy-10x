@@ -35,7 +35,7 @@ from lib import platform as plat  # noqa: E402
 
 LOOP_N = 5
 SCOPE_N = 20
-NUDGE_PCT = 0.60
+NUDGE_PCT = 0.85  # auto-compact runs at 900k of 1M; nudging at 600k stopped work early (report 04 row 15)
 NUDGE_STEP = 60_000
 STANDARD_WINDOW = 200_000
 LARGE_WINDOW = 1_000_000
@@ -165,8 +165,8 @@ def _nudge(payload: dict, sid: str, path: Path, st: dict) -> str:
         return ""
     plat.locked_update(path, lambda d: {**d, "nudge_bucket": b}, default={})
     size = "1M" if window >= LARGE_WINDOW else f"{window // 1000}k"
-    return (f"[context] {used // 1000}k/{size} used: finish the current step and let auto-compact run; "
-            "do not start new large work in this context.")
+    return (f"[context] {used // 1000}k/{size} used: auto-compact runs near the window's end; "
+            "keep going, and keep your plan and findings in files so they survive it.")
 
 
 def main() -> int:

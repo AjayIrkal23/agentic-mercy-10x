@@ -79,7 +79,8 @@ def test_granted_allow_rules_are_claude_managed(tmp_path):
     ok, msg = r.check_equivalence(live_path=p, user_path=None)
     assert ok, msg
     data = json.loads(r.carry_managed(r.render(user_path=None), p))
-    assert data["permissions"]["allow"] == ["mcp__reticle"]
+    tmpl_allow = json.loads((_ROOT / "settings.template.json").read_text(encoding="utf-8"))["permissions"].get("allow", [])
+    assert data["permissions"]["allow"] == tmpl_allow + ["mcp__reticle"]  # template rules (EGM reads) + the grant
     live["permissions"]["deny"] = ["Bash(rm:*)"]
     p.write_text(json.dumps(live))
     ok, msg = r.check_equivalence(live_path=p, user_path=None)

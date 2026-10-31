@@ -41,6 +41,10 @@ by hand. Full generated table: [`references/mcp-inventory.md`](references/mcp-in
 
 ## Inventory (15 user-scope servers)
 
+Eager since 2026-10-31 (`alwaysLoad`, no ToolSearch step, subagents too): jcodemunch, jdocmunch,
+graphify, memory, sequential-thinking, context7, semgrep, playwright (manifest), lightpanda (live
+registration only). The rest defer.
+
 | Need | Server | Notes |
 |---|---|---|
 | Find/read/impact code | `jcodemunch` | MUST first for any code question; reads its own finds |
@@ -50,7 +54,7 @@ by hand. Full generated table: [`references/mcp-inventory.md`](references/mcp-in
 | Library/SDK/CLI docs | `context7` | `resolve-library-id` → `query-docs`, one concept per query |
 | Security scan | `semgrep` | THE security path (satisfies stop Gate 3) |
 | Headless browser (default) | `lightpanda` (pinned 1.0.2, telemetry off, POSIX only) | goto, markdown, a11y tree, clicks, forms, evaluate; no pixels, no real layout |
-| Pixels + fallback browser | `playwright` (pinned 0.0.83, Chromium) | screenshots, layout, visual checks; any page lightpanda renders blank or broken; Windows |
+| Pixels + fallback browser | `playwright` (pinned 0.0.83, Chromium) | screenshots, layout, visual checks; any page lightpanda renders blank or broken; Windows; save files under the repo or `~/.playwright-mcp` (`/tmp` is outside its allowed roots) |
 | DevTools of user's tab | `browser-tools-mcp` (pinned 2.0.2) | console/network/Lighthouse of an already-open tab |
 | In-app state truth | `reticle` (pinned 3.3.0, telemetry off) | attach to the user's running dev app |
 | Cross-session facts | `memory` | see memory protocol below |
@@ -85,7 +89,9 @@ Project-scope: `supabase` (CONCORD-WEBSITE: hosted HTTP, local scope, not yet re
 
 Hooks fire these automatically — prompt router ("call X now" lines per intent),
 `mcp-post-hints` after writes, session-start memory search, subagent-start protocol.
-Follow the line; don't wait to be asked.
+Follow the line; don't wait to be asked. A source read (Read/Grep/Glob, or shell
+`grep/rg/cat/sed -n/head/tail/find`) before any jcodemunch call is denied once per agent per
+turn with the exact call and repo id; make that call.
 
 1. Repo question → jcodemunch (then `Read`). Architecture → graphify. Doc sets → jdocmunch.
    Never grep-discover code when the index exists.

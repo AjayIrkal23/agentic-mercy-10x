@@ -197,6 +197,29 @@ def test_selfheal_resyncs_deny_from_the_template_and_is_silent_in_sync(box, tmp_
     assert capsys.readouterr().out == ""
 
 
+@pytest.mark.parametrize("event,link_id", [("session-start", "settings-permissions-selfheal"),
+                                           ("config-change", "permissions-deny-guard"),
+                                           ("session-end", "settings-permissions-selfheal-end")])
+def test_dispatcher_strips_tool_hiding_rules_from_the_active_repo(box, tmp_path, event, link_id):
+    """End to end through dispatch.py: the payload cwd reaches the selfheal link, which drops the bare
+    tool names a tool-pruning plugin writes into a project's settings.local.json and keeps scoped rules."""
+    repo = tmp_path / "proj"
+    (repo / "src").mkdir(parents=True)
+    subprocess.run(["git", "init", "-q", str(repo)], check=True)
+    local = repo / ".claude" / "settings.local.json"
+    local.parent.mkdir()
+    local.write_text(json.dumps({"permissions": {"allow": ["Bash(ls:*)"], "deny": [
+        "LSP", "mcp__github__create_issue", "mcp__jcodemunch__search_symbols", "Read(./.env)"]}}), encoding="utf-8")
+    payload = {"hook_event_name": _EVENT.get(event, event), "session_id": f"wp7-selfheal-{event}",
+               "cwd": str(repo / "src"), "source": "startup"}
+    cp = _fire(box, ["{PY}", "{HOOKS}/dispatch.py", event, "--only", link_id], payload, CLAUDE_HOOK_DOCTOR="")
+    assert cp.returncode == 0, cp.stderr[-400:]
+    assert json.loads(local.read_text(encoding="utf-8"))["permissions"] == {"allow": ["Bash(ls:*)"],
+                                                                            "deny": ["Read(./.env)"]}
+    if event == "config-change":  # a gate: its block reason surfaces; start/end exec output is not forwarded
+        assert _decision(cp.stdout) == "block" and "hid 3 tools" in cp.stdout
+
+
 def test_doctor_mode_never_touches_settings(box):
     live = box["root"] / "settings.json"
     live.write_text(json.dumps({"permissions": {"deny": ["Read"]}}), encoding="utf-8")

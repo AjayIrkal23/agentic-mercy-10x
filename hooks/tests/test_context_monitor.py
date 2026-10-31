@@ -102,15 +102,17 @@ def test_scope_warns_once_at_twenty_unique_files(mod, monkeypatch):
     assert "[scope]" in _ctx(_call(mod, monkeypatch, _payload("MultiEdit", {"edits": edits}, sid="s3")))
 
 
-def test_nudge_fires_at_60_percent_then_every_60k_and_never_names_a_slash_command(mod, monkeypatch, tmp_path):
+def test_nudge_fires_at_85_percent_then_every_60k_and_never_names_a_slash_command(mod, monkeypatch, tmp_path):
+    """Report 04 row 15: at 600k of 1M (compaction at 900k) the agent must keep working."""
     def at(tokens, i):
         tr = _transcript(tmp_path, tokens, name=f"t{i}.jsonl")
         return _ctx(_call(mod, monkeypatch, _payload("Read", {"file_path": f"/r/{i}"}, transcript=tr)))
-    assert at(500_000, 0) == ""
-    ctx = at(600_000, 1)
-    assert "[context]" in ctx and "600k/1M" in ctx and "let auto-compact run" in ctx
-    assert at(620_000, 2) == ""
-    assert "[context]" in at(660_000, 3)
+    assert at(600_000, 0) == ""
+    ctx = at(850_000, 1)
+    assert "[context]" in ctx and "850k/1M" in ctx and "auto-compact" in ctx and "keep going" in ctx
+    assert "do not start new large work" not in ctx
+    assert at(870_000, 2) == ""
+    assert "[context]" in at(910_000, 3)
 
 
 def test_nudge_rearms_after_a_compaction(mod, monkeypatch, tmp_path):
@@ -119,11 +121,11 @@ def test_nudge_rearms_after_a_compaction(mod, monkeypatch, tmp_path):
         tr = _transcript(tmp_path, tokens, model="claude-opus-5-5", name=f"r{i}.jsonl")
         return _ctx(_call(mod, monkeypatch, _payload("Read", {"file_path": f"/q/{i}"}, transcript=tr)))
     state = lambda: json.loads(mod._state_path("s1", None).read_text(encoding="utf-8"))
-    assert "[context]" in at(600_000, 0)
+    assert "[context]" in at(850_000, 0)
     old = state()["nudge_bucket"]
     assert at(100_000, 1) == ""
     assert state()["nudge_bucket"] < old
-    assert "[context]" in at(610_000, 2)
+    assert "[context]" in at(860_000, 2)
 
 
 def test_nudge_is_silent_when_the_mod_owns_compaction(mod, monkeypatch, tmp_path):
@@ -156,11 +158,11 @@ def test_bridge_fallback_when_the_transcript_has_no_usage(mod, monkeypatch, tmp_
     tr.write_text(json.dumps({"type": "user", "message": {"content": "hi"}}) + "\n", encoding="utf-8")
     (tmp_path / "home" / ".claude" / "settings.json").write_text(
         json.dumps({"autoCompactWindow": 900000}), encoding="utf-8")
-    _bridge(tmp_path, 65, age=500)
+    _bridge(tmp_path, 88, age=500)
     assert _ctx(_call(mod, monkeypatch, _payload("Read", {"file_path": "/a"}, transcript=tr))) == ""
-    _bridge(tmp_path, 65)
+    _bridge(tmp_path, 88)
     ctx = _ctx(_call(mod, monkeypatch, _payload("Read", {"file_path": "/b"}, transcript=tr)))
-    assert "[context]" in ctx and "650k/1M" in ctx
+    assert "[context]" in ctx and "880k/1M" in ctx
 
 
 def test_subagent_calls_track_their_own_ring_and_skip_the_nudge(mod, monkeypatch, tmp_path):
@@ -190,7 +192,7 @@ def test_output_is_at_most_two_lines(mod, monkeypatch, tmp_path):
     path = mod._state_path("s1", None)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(seed), encoding="utf-8")
-    tr = _transcript(tmp_path, 700_000)
+    tr = _transcript(tmp_path, 880_000)
     ctx = _ctx(_call(mod, monkeypatch, _payload("Edit", inp, transcript=tr)))
     assert ctx.count("\n") <= 1
     assert ctx.startswith("[context]")

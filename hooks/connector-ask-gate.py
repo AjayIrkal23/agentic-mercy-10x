@@ -101,15 +101,11 @@ def main() -> int:
         else:
             reason = (f"CONNECTOR CHECK: `{name}` on `{server}` is a {verb} action against a live "
                       f"external account (this session bypasses permission prompts). Confirm to run it.")
-        if decision == "ask":
-            _telemetry(decision="ask", **row)
-            _emit("ask", reason)
-            return 0
-        # never downgrade: an advisory would let the push / send / delete / refund run (REVIEW2 Fix 2)
-        _telemetry(decision="deny", reason=why, **row)
-        _emit("deny", reason + f" No one can confirm in this {why} session: leave the action for the user "
-                               "(subagents and workflow scripts never commit, push, send, delete or refund; "
-                               "CLAUDE.md §2: git belongs to the user).")
+        # never downgraded to an advisory (REVIEW2 Fix 2), and never auto-denied (2026-10-31, owner): when
+        # no prompt can show, the session's own permission mode decides the ask.
+        _telemetry(decision="ask", **row, **({} if decision == "ask" else {"reason": why}))
+        _emit("ask", reason if decision == "ask" else reason + f" ({why} context: the session's permission "
+                                                             "mode decides.)")
     except Exception:  # noqa: BLE001 - a broken gate must never brick a session
         print("{}")
     return 0

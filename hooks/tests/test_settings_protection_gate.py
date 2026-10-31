@@ -73,23 +73,25 @@ def test_new_repo_settings_local_asks(sp, monkeypatch):
     assert sp.calls[-1]["decision"] == "ask"
 
 
-def test_subagent_is_denied_never_downgraded(sp, monkeypatch):
+def test_subagent_asks_never_auto_denied(sp, monkeypatch):
+    """2026-10-31 (owner): never auto-deny; a subagent works for an attended parent."""
     out = _run(sp, monkeypatch, _write("/x/repo/.claude/settings.local.json", agent_id="a1"))
-    assert _decision(out) == "deny" and "subagent" in out["hookSpecificOutput"]["permissionDecisionReason"]
-    assert sp.calls[-1]["decision"] == "deny"
+    assert _decision(out) == "ask" and "subagent" in out["hookSpecificOutput"]["permissionDecisionReason"]
+    assert sp.calls[-1]["decision"] == "ask"
 
 
-def test_unattended_env_is_denied(sp, monkeypatch):
+def test_unattended_env_asks(sp, monkeypatch):
     monkeypatch.setenv("CLAUDE_WORKBENCH_UNATTENDED", "1")
-    assert _decision(_run(sp, monkeypatch, _write("/x/repo/.claude/settings.json"))) == "deny"
+    assert _decision(_run(sp, monkeypatch, _write("/x/repo/.claude/settings.json"))) == "ask"
 
 
-def test_headless_print_session_is_denied(sp, monkeypatch):
-    """Live r3: under `claude -p --permission-mode bypassPermissions` an `ask` let the Write through
-    (no prompt, no permission_denials); the harness marks such a session CLAUDE_CODE_SESSION_ATTENDED=0."""
+def test_headless_print_session_asks(sp, monkeypatch):
+    """A remote/app session also runs with CLAUDE_CODE_SESSION_ATTENDED=0 while the owner is present
+    (2026-10-31), so the gate asks and the session's permission mode decides. Live r3: under
+    `claude -p --permission-mode bypassPermissions` that ask lets the Write through (owner's choice)."""
     monkeypatch.setenv("CLAUDE_CODE_SESSION_ATTENDED", "0")
     out = _run(sp, monkeypatch, _write("/x/repo/.claude/settings.local.json", permission_mode="bypassPermissions"))
-    assert _decision(out) == "deny" and "unattended" in out["hookSpecificOutput"]["permissionDecisionReason"]
+    assert _decision(out) == "ask" and "unattended" in out["hookSpecificOutput"]["permissionDecisionReason"]
 
 
 def test_headless_prompt_naming_the_file_still_escapes(sp, monkeypatch, tmp_path):
@@ -127,7 +129,7 @@ def test_incidental_settings_or_permission_word_does_not_escape(sp, monkeypatch,
     t = _transcript(tmp_path, prompt)
     assert _decision(_run(sp, monkeypatch, _write("/x/repo/.claude/settings.local.json", transcript=t))) == "ask"
     monkeypatch.setenv("CLAUDE_CODE_SESSION_ATTENDED", "0")
-    assert _decision(_run(sp, monkeypatch, _write("/x/repo/.claude/settings.local.json", transcript=t))) == "deny"
+    assert _decision(_run(sp, monkeypatch, _write("/x/repo/.claude/settings.local.json", transcript=t))) == "ask"
 
 
 @pytest.mark.parametrize("prompt", ["format .vscode/settings.json with 2 spaces",
@@ -138,7 +140,7 @@ def test_vscode_settings_basename_does_not_escape(sp, monkeypatch, tmp_path, pro
     t = _transcript(tmp_path, prompt)
     assert _decision(_run(sp, monkeypatch, _write(path, transcript=t))) == "ask"
     monkeypatch.setenv("CLAUDE_CODE_SESSION_ATTENDED", "0")
-    assert _decision(_run(sp, monkeypatch, _write(path, transcript=t))) == "deny"
+    assert _decision(_run(sp, monkeypatch, _write(path, transcript=t))) == "ask"
 
 
 def test_bare_basename_without_claude_dir_asks(sp, monkeypatch, tmp_path):
@@ -217,7 +219,7 @@ def _bash(cmd, tool="Bash", **extra) -> dict:
 ])
 def test_shell_write_of_a_protected_file_is_denied_for_a_subagent(sp, monkeypatch, cmd, tool):
     out = _run(sp, monkeypatch, _bash(cmd, tool=tool, agent_id="a1"))
-    assert _decision(out) == "deny", (cmd, out)
+    assert _decision(out) == "ask", (cmd, out)
 
 
 @pytest.mark.parametrize("cmd", ["cat .claude/settings.json", "jq . .claude/settings.json > /tmp/out.json",
@@ -235,7 +237,7 @@ def test_dispatcher_denies_a_subagent_heredoc_every_time(tmp_path):
     for _ in range(2):
         cp = subprocess.run([sys.executable, str(HOOKS / "dispatch.py"), "pre-tool-use"], input=p,
                             capture_output=True, text=True, timeout=60, env=env)
-        assert '"permissionDecision": "deny"' in cp.stdout.replace('":"', '": "'), (cp.stdout, cp.stderr[-400:])
+        assert '"permissionDecision": "ask"' in cp.stdout.replace('":"', '": "'), (cp.stdout, cp.stderr[-400:])
 
 
 # --- SANTA-FINAL B/F3: NTFS is case-insensitive -------------------------------------------------------
@@ -269,7 +271,7 @@ def test_gate_wiring_asks_and_denies_unattended(sp, monkeypatch, make):
     cd = _cd(sp)
     assert _decision(_run(sp, monkeypatch, make(cd))) == "ask"
     monkeypatch.setenv("CLAUDE_CODE_SESSION_ATTENDED", "0")
-    assert _decision(_run(sp, monkeypatch, make(cd))) == "deny"
+    assert _decision(_run(sp, monkeypatch, make(cd))) == "ask"
 
 
 @pytest.mark.parametrize("rel,prompt", [
@@ -293,9 +295,9 @@ def test_read_only_open_is_not_a_write(sp, monkeypatch):
     read = f"python3 -c \"import json;print(len(json.load(open('{home}/.claude.json'))))\""
     assert _run(sp, monkeypatch, _bash(read, agent_id="a1")) == {}
     write = f"python3 -c \"open('{home}/.claude.json','w').write('{{}}')\""
-    assert _decision(_run(sp, monkeypatch, _bash(write, agent_id="a1"))) == "deny"
+    assert _decision(_run(sp, monkeypatch, _bash(write, agent_id="a1"))) == "ask"
     pw = f"python3 -c \"import pathlib; pathlib.Path('{_cd(sp)}/settings.json').write_text('x')\""
-    assert _decision(_run(sp, monkeypatch, _bash(pw, agent_id="a1"))) == "deny"
+    assert _decision(_run(sp, monkeypatch, _bash(pw, agent_id="a1"))) == "ask"
 
 
 # --- FIX2 item 1 (REVERIFY R3): moving, deleting, emptying or restoring the wiring is a write too ------------
@@ -331,9 +333,9 @@ _R3_MORE = [
 @pytest.mark.parametrize("cmd", _R3_PROBES + _R3_MORE)
 def test_move_delete_or_restore_of_the_wiring_asks_and_denies_unattended(sp, monkeypatch, home_cd, cmd):
     assert _decision(_run(sp, monkeypatch, _bash(cmd))) == "ask", cmd
-    assert _decision(_run(sp, monkeypatch, _bash(cmd, agent_id="a1"))) == "deny", cmd
+    assert _decision(_run(sp, monkeypatch, _bash(cmd, agent_id="a1"))) == "ask", cmd
     monkeypatch.setenv("CLAUDE_WORKBENCH_UNATTENDED", "1")
-    assert _decision(_run(sp, monkeypatch, _bash(cmd))) == "deny", cmd
+    assert _decision(_run(sp, monkeypatch, _bash(cmd))) == "ask", cmd
 
 
 def test_powershell_remove_item_of_the_wiring_asks(sp, monkeypatch, home_cd):

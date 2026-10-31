@@ -9,20 +9,18 @@ import { isConsent } from '../lib/consent'
 import { prune } from '../lib/dedupe'
 import { focusListing } from '../lib/focus'
 import { governAll } from '../lib/governor'
+import { isNotHuman } from '../lib/nothuman'
 import { dropResume, noteError, resumeKey, rt, takePending } from '../lib/runtime'
 import { snapshot } from '../lib/snap'
 import { stateLine } from '../lib/views'
 
 let brainText: string | undefined
 let lastStateLine = ''
-// harness "prompts" that no human typed (same list as hooks/lib/turns.py, NEW-10)
-const NOT_HUMAN = ['<task-notification>', '[Request interrupted', '<cross-session-message']
-
 export function registerPrompts(on: On): void {
   on('classic.UserPromptSubmit', async ($, e, next) => {
     // a new human turn: the Stop-block budget (one per human turn) and consent start over
     const prompt = (e.prompt ?? '').trimStart()
-    if (!NOT_HUMAN.some(p => prompt.startsWith(p))) {
+    if (!isNotHuman(prompt)) {
       rt.humanTurn += 1
       rt.consent = isConsent(prompt)
     }

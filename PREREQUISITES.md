@@ -88,7 +88,8 @@ pyright (symlinked into `~/.local/bin`), mmx-cli, all pinned). The
 `~/.config/lean-ctx/config.toml` merge (no hooks, rules or skill injection, no updates or
 telemetry, `shadow_mode=false`) runs first, before lean-ctx is installed or registered; then
 15 user-scope MCP servers from `installer/manifest.json` (every `npx` package pinned, telemetry
-off), 5 marketplaces (autoUpdate on) and 11 plugins, the rendered `settings.json` (never
+off), 7 marketplaces (autoUpdate as declared in the template's `extraKnownMarketplaces`; egm is
+updated by hand) and 13 plugins (TokenEconomizer from a local clone), the rendered `settings.json` (never
 contains the string `lean-ctx`; a re-render keeps the newest 3 dated `settings.json.bak-*`),
 re-vendored skills, generated `/invoke` skills and agent skill blocks, indexes, skill and mod
 validators, and a doctor run with 0 FAIL.

@@ -57,7 +57,7 @@ Canonical orchestrator stays **`workflow-orchestrator`**; the source bundle's ow
 ## Hooks and rules
 
 - **Canonical E2E doc:** `~/.claude/skills/skill-linkage-story/references/hooks-rules-e2e.md` (pipeline order, configs, overlap notes).
-- **Prompt-time routing:** `~/.claude/hooks/prompt_router/router.py` (≤3 skills per prompt, `max_skill_pushes` in `router.config.json`)
+- **Prompt-time routing:** `~/.claude/hooks/prompt_router/router.py` (≤5 skills per prompt, `max_skill_pushes` in `router.config.json`)
 - **Write hint:** `~/.claude/hooks/fullstack-skills-reminder.py` (canonical `FRONTEND_SKILLS` / `BACKEND_SKILLS` baselines; native `paths:` frontmatter surfaces the rest)
 - **Plan vs execution layering:** [`plan-exec-unified-stack.md`](plan-exec-unified-stack.md) (this folder)
 - **Session soft gate (ECC `plan-mode-gate` port):** plan-shaped prompts → the prompt router (`hooks/prompt_router/`) surfaces `plan-mode-gate`

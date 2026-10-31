@@ -212,6 +212,19 @@ def test_subcommands_run_the_real_binary_untouched(box, argv):
     assert not (state / "launch-caps").exists() and not list(state.glob("launch-settings-*"))
 
 
+@pytest.mark.parametrize("verb", ["remote-control", "rc"])
+def test_remote_control_keeps_the_scope_without_flags_before_the_verb(box, verb):
+    """2026-10-30: 2.1.314 refuses `--settings` (and `--model`) before `remote-control` ("is not carried
+    over to the sessions Remote Control starts"), so the Telegram bot's New session died at once. The verb is
+    hidden from `claude --help`. It hosts sessions, so it keeps the scope and the env caps."""
+    tmp, env = box
+    _tier(tmp)
+    out = _run(env, verb, "--spawn", "same-dir", "--name", "x").stdout
+    assert _real(out) == f"REAL {verb} --spawn same-dir --name x", out
+    assert "SYSTEMD-RUN" in out and "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS=" in out
+    assert not list((tmp / ".claude" / "state").glob("launch-settings-*"))
+
+
 def _real_claude() -> str | None:
     """The real CLI on PATH, never this launcher (the fixture and ~/.claude/bin put bin/ first)."""
     import os  # noqa: PLC0415

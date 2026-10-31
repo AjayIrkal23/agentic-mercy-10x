@@ -76,7 +76,7 @@ def test_overrides_policy(tmp_path):
     ov = sh.overrides(data["inventory"], data["stats"], data["window_sessions"])
     assert ov["invoke-review"] == "name-only"
     assert "user-invocable-only" not in ov.values()
-    assert ov["higgsfield-generate"] == "name-only"
+    assert "higgsfield-generate" not in ov  # descriptions on since 2026-10-31
     assert ov["img2threejs"] == "name-only"
     assert "update-docs" not in ov and "ponytail:ponytail" not in ov and "unknown-skill" not in ov
 

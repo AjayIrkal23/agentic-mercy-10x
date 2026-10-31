@@ -5,7 +5,7 @@
     "skill_count": 132,
     "plugin_count": 0,
     "alias_count": 83,
-    "checksum": "e6e5807df41bb253a12cdd37e0fd4dd38aef98619433339af6c9403e8e765124",
+    "checksum": "bf4d00b7938ac69999d36f0cb514915269af87bd6ea91f51293d32e7f07b81e6",
     "plugin_sidecar": "state/skills-index.plugins.json (gitignored, per machine)"
   },
   "aliases": {
@@ -109,9 +109,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [
         "**/.claude/agents/**",
@@ -178,8 +176,8 @@
         "frontend"
       ],
       "intents": [
-        "design",
-        "implement"
+        "DESIGN",
+        "IMPLEMENT"
       ],
       "path_rules": [],
       "paths": [
@@ -214,9 +212,7 @@
         "frontend",
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [
         {
           "path_contains_any": [
@@ -268,7 +264,7 @@
         "planning"
       ],
       "intents": [
-        "planning"
+        "PLAN"
       ],
       "path_rules": [],
       "paths": [],
@@ -302,9 +298,7 @@
       "surfaces": [
         "backend"
       ],
-      "intents": [
-        "backend"
-      ],
+      "intents": [],
       "path_rules": [
         {
           "filename_contains_any": [
@@ -370,9 +364,7 @@
       "surfaces": [
         "backend"
       ],
-      "intents": [
-        "backend"
-      ],
+      "intents": [],
       "path_rules": [
         {
           "filename_contains_any": [
@@ -434,9 +426,7 @@
       "surfaces": [
         "backend"
       ],
-      "intents": [
-        "backend"
-      ],
+      "intents": [],
       "path_rules": [
         {
           "filename_contains_any": [
@@ -483,9 +473,7 @@
       "surfaces": [
         "backend"
       ],
-      "intents": [
-        "backend"
-      ],
+      "intents": [],
       "path_rules": [
         {
           "filename_contains_any": [
@@ -646,7 +634,7 @@
         "frontend"
       ],
       "intents": [
-        "design"
+        "DESIGN"
       ],
       "path_rules": [],
       "paths": [],
@@ -670,9 +658,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [],
       "weight": 1.0,
@@ -707,9 +693,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [
         {
           "path_contains_any": [
@@ -721,12 +705,7 @@
           ]
         }
       ],
-      "paths": [
-        ".github/workflows/**",
-        "**/Dockerfile*",
-        "**/.gitlab-ci.yml",
-        "**/Makefile"
-      ],
+      "paths": [],
       "weight": 1.0,
       "source": "metadata",
       "category": "general",
@@ -752,9 +731,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [],
       "weight": 1.0,
@@ -788,7 +765,7 @@
         "frontend"
       ],
       "intents": [
-        "review"
+        "REVIEW"
       ],
       "path_rules": [],
       "paths": [],
@@ -823,9 +800,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [],
       "weight": 1.0,
@@ -898,7 +873,9 @@
         "codebase"
       ],
       "intents": [
-        "intel"
+        "AUDIT",
+        "PLAN",
+        "REFACTOR"
       ],
       "path_rules": [],
       "paths": [],
@@ -925,9 +902,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [
         "**/.claude/commands/**",
@@ -960,9 +935,9 @@
         "frontend"
       ],
       "intents": [
-        "implement",
-        "refactor",
-        "review"
+        "IMPLEMENT",
+        "REFACTOR",
+        "REVIEW"
       ],
       "path_rules": [],
       "paths": [
@@ -991,9 +966,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [],
       "weight": 1.0,
@@ -1081,7 +1054,7 @@
         "frontend"
       ],
       "intents": [
-        "review"
+        "REVIEW"
       ],
       "path_rules": [
         {
@@ -1155,8 +1128,7 @@
         "frontend"
       ],
       "intents": [
-        "DEBUG",
-        "debug"
+        "DEBUG"
       ],
       "path_rules": [
         {
@@ -1206,9 +1178,7 @@
         "backend",
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [
         {
           "filename_contains_any": [
@@ -1256,7 +1226,7 @@
         "frontend"
       ],
       "intents": [
-        "design"
+        "DESIGN"
       ],
       "path_rules": [],
       "paths": [],
@@ -1388,10 +1358,7 @@
       "surfaces": [],
       "intents": [],
       "path_rules": [],
-      "paths": [
-        "**/CONTEXT.md",
-        "**/docs/adr/**"
-      ],
+      "paths": [],
       "weight": 1.0,
       "source": "description",
       "when_to_use": "Use when pinning down domain terminology, recording an architectural decision, or editing CONTEXT.md / docs/adr."
@@ -1417,8 +1384,7 @@
         "DEBUG",
         "IMPLEMENT",
         "PLAN",
-        "SPEC",
-        "general"
+        "SPEC"
       ],
       "path_rules": [
         {
@@ -1457,7 +1423,7 @@
         "docs"
       ],
       "intents": [
-        "docs"
+        "DOCS"
       ],
       "path_rules": [],
       "paths": [
@@ -1495,8 +1461,8 @@
         "claude-infra"
       ],
       "intents": [
-        "impl",
-        "plan"
+        "IMPLEMENT",
+        "PLAN"
       ],
       "path_rules": [],
       "paths": [],
@@ -1564,8 +1530,7 @@
       "intents": [
         "QA",
         "REVIEW",
-        "TEST",
-        "general"
+        "TEST"
       ],
       "path_rules": [],
       "paths": [],
@@ -1731,9 +1696,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [
         "**/.golangci.y*ml",
@@ -1872,8 +1835,7 @@
         "frontend"
       ],
       "intents": [
-        "frontend",
-        "implement"
+        "IMPLEMENT"
       ],
       "path_rules": [
         {
@@ -1930,8 +1892,7 @@
         "frontend"
       ],
       "intents": [
-        "frontend",
-        "implement"
+        "IMPLEMENT"
       ],
       "path_rules": [
         {
@@ -1996,9 +1957,8 @@
         "frontend"
       ],
       "intents": [
-        "frontend",
-        "implement",
-        "refactor"
+        "IMPLEMENT",
+        "REFACTOR"
       ],
       "path_rules": [
         {
@@ -2124,8 +2084,8 @@
         "frontend"
       ],
       "intents": [
-        "implement",
-        "refactor"
+        "IMPLEMENT",
+        "REFACTOR"
       ],
       "path_rules": [
         {
@@ -2206,9 +2166,8 @@
         "frontend"
       ],
       "intents": [
-        "design",
-        "frontend",
-        "implement"
+        "DESIGN",
+        "IMPLEMENT"
       ],
       "path_rules": [
         {
@@ -2252,9 +2211,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [],
       "weight": 1.0,
@@ -2290,9 +2247,7 @@
         "backend",
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [
         {
           "extensions": [
@@ -2335,7 +2290,7 @@
         "frontend"
       ],
       "intents": [
-        "testing"
+        "TEST"
       ],
       "path_rules": [
         {
@@ -2409,7 +2364,7 @@
         "docs"
       ],
       "intents": [
-        "docs"
+        "DOCS"
       ],
       "path_rules": [],
       "paths": [],
@@ -2439,7 +2394,7 @@
         "frontend"
       ],
       "intents": [
-        "design"
+        "DESIGN"
       ],
       "path_rules": [],
       "paths": [],
@@ -2471,7 +2426,7 @@
         "frontend"
       ],
       "intents": [
-        "design"
+        "DESIGN"
       ],
       "path_rules": [],
       "paths": [],
@@ -2498,7 +2453,7 @@
         "frontend"
       ],
       "intents": [
-        "design"
+        "DESIGN"
       ],
       "path_rules": [],
       "paths": [],
@@ -2528,7 +2483,7 @@
         "frontend"
       ],
       "intents": [
-        "design"
+        "DESIGN"
       ],
       "path_rules": [],
       "paths": [],
@@ -2554,7 +2509,7 @@
         "frontend"
       ],
       "intents": [
-        "design"
+        "DESIGN"
       ],
       "path_rules": [],
       "paths": [],
@@ -2579,7 +2534,7 @@
         "frontend"
       ],
       "intents": [
-        "design"
+        "DESIGN"
       ],
       "path_rules": [],
       "paths": [],
@@ -2606,7 +2561,7 @@
         "frontend"
       ],
       "intents": [
-        "design"
+        "DESIGN"
       ],
       "path_rules": [],
       "paths": [],
@@ -2632,7 +2587,7 @@
         "frontend"
       ],
       "intents": [
-        "design"
+        "DESIGN"
       ],
       "path_rules": [],
       "paths": [],
@@ -2691,9 +2646,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [],
       "weight": 1.0,
@@ -3274,8 +3227,8 @@
         "frontend"
       ],
       "intents": [
-        "design",
-        "implement"
+        "DESIGN",
+        "IMPLEMENT"
       ],
       "path_rules": [],
       "paths": [],
@@ -3347,9 +3300,7 @@
       "surfaces": [],
       "intents": [],
       "path_rules": [],
-      "paths": [
-        "**/*mcp*/**"
-      ],
+      "paths": [],
       "weight": 1.0,
       "source": "description",
       "when_to_use": "Use when building or changing an MCP server (FastMCP or the TypeScript SDK) or its tool definitions."
@@ -3377,9 +3328,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [],
       "weight": 1.0,
@@ -3526,9 +3475,9 @@
         "frontend"
       ],
       "intents": [
-        "design",
-        "implement",
-        "review"
+        "DESIGN",
+        "IMPLEMENT",
+        "REVIEW"
       ],
       "path_rules": [],
       "paths": [
@@ -3557,9 +3506,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [],
       "weight": 1.0,
@@ -3597,7 +3544,7 @@
         "frontend"
       ],
       "intents": [
-        "security"
+        "SECURITY"
       ],
       "path_rules": [
         {
@@ -3633,12 +3580,7 @@
           ]
         }
       ],
-      "paths": [
-        "**/auth/**",
-        "**/middleware/**",
-        "**/*auth*.{go,ts,py}",
-        "**/*session*.{go,ts,py}"
-      ],
+      "paths": [],
       "weight": 1.0,
       "source": "metadata",
       "category": "security",
@@ -3674,9 +3616,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [],
       "weight": 1.0,
@@ -3705,7 +3645,7 @@
         "planning"
       ],
       "intents": [
-        "planning"
+        "PLAN"
       ],
       "path_rules": [],
       "paths": [],
@@ -3740,7 +3680,7 @@
         "planning"
       ],
       "intents": [
-        "planning"
+        "PLAN"
       ],
       "path_rules": [],
       "paths": [],
@@ -3775,9 +3715,7 @@
         "backend",
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [
         {
           "filename_contains_any": [
@@ -3821,9 +3759,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [],
       "weight": 1.0,
@@ -3842,12 +3778,12 @@
       "keywords": [
         "custom hook",
         "derived state",
-        "hook",
-        "hooks",
         "memoization",
         "react compiler",
+        "react hook",
+        "react hooks",
+        "react use hook",
         "stale closure",
-        "use()",
         "useactionstate",
         "usecallback",
         "useeffect",
@@ -3862,9 +3798,8 @@
         "frontend"
       ],
       "intents": [
-        "frontend",
-        "implement",
-        "review"
+        "IMPLEMENT",
+        "REVIEW"
       ],
       "path_rules": [
         {
@@ -3960,8 +3895,8 @@
         "frontend"
       ],
       "intents": [
-        "review",
-        "verify"
+        "REVIEW",
+        "VERIFY"
       ],
       "path_rules": [],
       "paths": [],
@@ -3992,9 +3927,7 @@
         "backend",
         "frontend"
       ],
-      "intents": [
-        "backend"
-      ],
+      "intents": [],
       "path_rules": [
         {
           "path_contains_any": [
@@ -4066,9 +3999,7 @@
         "backend",
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [
         {
           "filename_contains_any": [
@@ -4141,8 +4072,8 @@
         "frontend"
       ],
       "intents": [
-        "design",
-        "implement"
+        "DESIGN",
+        "IMPLEMENT"
       ],
       "path_rules": [
         {
@@ -4189,9 +4120,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [
         {
           "path_contains_any": [
@@ -4235,17 +4164,9 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
-      "paths": [
-        "**/.claude/hooks/**",
-        "**/.claude/agents/**",
-        "**/.claude/skills/**",
-        "hooks/**/*.py",
-        "skills/*/SKILL.md"
-      ],
+      "paths": [],
       "weight": 1.0,
       "source": "metadata",
       "category": "general",
@@ -4276,7 +4197,7 @@
         "frontend"
       ],
       "intents": [
-        "design"
+        "DESIGN"
       ],
       "path_rules": [],
       "paths": [],
@@ -4308,8 +4229,7 @@
       "intents": [
         "IMPLEMENT",
         "PLAN",
-        "SPEC",
-        "general"
+        "SPEC"
       ],
       "path_rules": [],
       "paths": [],
@@ -4342,7 +4262,7 @@
         "planning"
       ],
       "intents": [
-        "planning"
+        "PLAN"
       ],
       "path_rules": [],
       "paths": [],
@@ -4377,9 +4297,8 @@
         "frontend"
       ],
       "intents": [
-        "design",
-        "frontend",
-        "implement"
+        "DESIGN",
+        "IMPLEMENT"
       ],
       "path_rules": [
         {
@@ -4432,7 +4351,7 @@
         "frontend"
       ],
       "intents": [
-        "testing"
+        "TEST"
       ],
       "path_rules": [],
       "paths": [
@@ -4467,7 +4386,9 @@
         "frontend"
       ],
       "intents": [
-        "review"
+        "AUDIT",
+        "REFACTOR",
+        "REVIEW"
       ],
       "path_rules": [],
       "paths": [],
@@ -4529,13 +4450,7 @@
           ]
         }
       ],
-      "paths": [
-        "**/*_test.go",
-        "**/*.{test,spec}.{ts,tsx,js,jsx,mjs}",
-        "**/__tests__/**",
-        "**/test_*.py",
-        "**/*_test.py"
-      ],
+      "paths": [],
       "weight": 1.0,
       "source": "metadata",
       "category": "testing",
@@ -4624,9 +4539,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [],
       "weight": 1.0,
@@ -4652,9 +4565,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [],
       "weight": 1.0,
@@ -4684,7 +4595,7 @@
         "docs"
       ],
       "intents": [
-        "docs"
+        "DOCS"
       ],
       "path_rules": [
         {
@@ -4720,9 +4631,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [],
       "weight": 1.0,
@@ -4761,8 +4670,8 @@
         "frontend"
       ],
       "intents": [
-        "design",
-        "implement"
+        "DESIGN",
+        "IMPLEMENT"
       ],
       "path_rules": [],
       "paths": [
@@ -4799,15 +4708,10 @@
       "intents": [
         "QA",
         "REVIEW",
-        "TEST",
-        "backend"
+        "TEST"
       ],
       "path_rules": [],
-      "paths": [
-        "**/docs/**",
-        "**/*_docs/**",
-        "**/README.md"
-      ],
+      "paths": [],
       "weight": 1.0,
       "source": "metadata",
       "category": "backend",
@@ -4831,9 +4735,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [],
       "weight": 1.0,
@@ -5048,7 +4950,7 @@
         "frontend"
       ],
       "intents": [
-        "testing"
+        "TEST"
       ],
       "path_rules": [
         {
@@ -5061,11 +4963,7 @@
           ]
         }
       ],
-      "paths": [
-        "**/*.spec.{ts,tsx}",
-        "**/e2e/**",
-        "**/playwright.config.*"
-      ],
+      "paths": [],
       "weight": 1.0,
       "source": "metadata",
       "category": "testing",
@@ -5118,9 +5016,7 @@
       "surfaces": [
         "general"
       ],
-      "intents": [
-        "general"
-      ],
+      "intents": [],
       "path_rules": [],
       "paths": [],
       "weight": 1.0,

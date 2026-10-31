@@ -128,8 +128,9 @@ def main() -> int:
         print("{}")
         return 0
 
-    rel = fp.split("/")[-2:] if "/" in fp else [fp]
-    rel_str = "/".join(rel)
+    # the full normalised path: Gate 3 compares each file's mtime with its semgrep scan (B-08); the old
+    # last-two-parts form (`src/auth.ts`) resolved against the session cwd and matched no scan key
+    rel_str = os.path.normpath(fp if os.path.isabs(fp) else os.path.join(str(payload.get("cwd") or ""), fp))
 
     # Bookkeeping only (read by hard-completion-gate Gate 3). The model-facing
     # nudge is mcp-post-hints.py's "call mcp__semgrep__semgrep_scan" line — one

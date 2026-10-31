@@ -47,8 +47,10 @@ def test_shipped_config_inlines_no_skill_body():
 def test_security_prompt_names_the_skill_without_its_body(tmp_path):
     text = _route(SECURITY, tmp_path)
     # 4,714 ch with the 3,379-ch body before T7; final-fix 2 (one-line skills, 3 pushes, shorter
-    # substrate / MCP / dispatch lines) measured 1,207 here (no workflow index: dispatch lines instead)
-    assert "[inlined skill:" not in text and len(text) <= 1250, len(text)
+    # substrate / MCP / dispatch lines) measured 1,207 here (no workflow index: dispatch lines instead);
+    # audit A-08 (5 pushes, 8 routing lines) measured 1,254. The hook cap is 8,000 (Claude Code saves
+    # a larger additionalContext to a file and shows a 2 KB preview), so the bound is 2,000.
+    assert "[inlined skill:" not in text and len(text) <= 2000, len(text)
     must = [ln for ln in text.splitlines() if "MUST-READ" in ln]
     assert len(must) == 1 and "owasp-security" in must[0], must
 
@@ -60,7 +62,7 @@ def test_workflow_line_carries_no_prompt_echo(tmp_path):
     assert args["task"] == PLACEHOLDER and "Fastify" not in line and len(line) < 320, line
 
 
-def test_skill_push_is_one_line_each_and_at_most_three(monkeypatch):
+def test_skill_push_is_one_line_each_and_at_most_five(monkeypatch):
     from prompt_router import select as S
     from prompt_router.classify import TaskProfile
     names = ("owasp-security", "code-simplification", "backend-standards-always-follow", "update-docs", "santa-review")
@@ -68,7 +70,7 @@ def test_skill_push_is_one_line_each_and_at_most_three(monkeypatch):
     prof = TaskProfile(text="review the auth security", intents={"SECURITY": 4}, surfaces=set())
     cfg = json.loads((_HOOKS / "prompt_router" / "router.config.json").read_text(encoding="utf-8"))
     items = [it for it in R._skill_items(prof, {"config": cfg}) if it["id"].startswith("skill:")]
-    assert items and len(items) <= 3, items
+    assert items and len(items) <= 5, items
     assert all("\n" not in it["text"] and "ACTION: " in it["text"] for it in items), items
 
 

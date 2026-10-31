@@ -492,7 +492,7 @@ def reconcile_mcp_env(*, dry_run: bool = False) -> list[tuple[str, str]]:
 
 
 def reconcile_mcp_always_load(*, dry_run: bool = False) -> list[tuple[str, str]]:
-    """Manifest servers that declare ``alwaysLoad`` (sequential-thinking only, plan 4) get the key in the live
+    """Manifest servers that declare ``alwaysLoad`` (the mandated MCPs since 2026-10-31) get the key in the live
     ~/.claude.json entry: remove + add-json of the SAME entry (mcp_restore.replace_entry). Servers the
     manifest does not mention, or that are not registered, are left alone."""
     try:

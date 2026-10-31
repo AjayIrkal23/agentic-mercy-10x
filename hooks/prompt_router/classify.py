@@ -136,9 +136,14 @@ _URL = re.compile(r"\b(?:https?|ftp)://\S+", re.IGNORECASE)
 
 
 def keyword_ok(kw: str) -> bool:
-    """Keep a keyword only if it is > 3 chars or explicitly allow-listed."""
-    k = (kw or "").strip().lower()
-    return bool(k) and (len(k) > 3 or k in _SHORT_ALLOW)
+    """Keep a keyword only if its tokenized form is > 3 chars or explicitly allow-listed.
+
+    Judged on the tokens the matcher really compares: ``use()`` tokenizes to ``use``
+    (3 chars) and used to pass on its raw length, crediting every prompt with "use" (A-02).
+    """
+    toks = words(kw)
+    j = " ".join(toks)
+    return bool(toks) and (len(j) > 3 or j in _SHORT_ALLOW)
 
 
 def words(s: str) -> tuple[str, ...]:
@@ -380,14 +385,33 @@ _URL_RX = re.compile(r"https?://\S+")
 # Harness-generated "prompts" (background-agent results, local command output, a peer
 # session's message) are not user tasks: routing skills onto them is pure noise.
 _MACHINE_PREFIXES = ("<task-notification>", "<local-command-stdout>", "<local-command-stderr>",
-                     "<cross-session-message", "Another Claude session sent a message:",
+                     "<cross-session-message", "Another Claude session sent a message",
+                     "[Subagent hand-back]", "<agent-message from=",
                      # scripts/restore_sessions.py CONTINUE_PROMPT (the crash-restore unit)
                      "Session restored automatically after a crash")
 
 
+_SYS_REMINDER_OPEN = re.compile(r"\A(?:\s*<system-reminder\b[^>]*>)+")
+# A subagent hand-back / agent relay / peer message reaches UserPromptSubmit as a prompt. The
+# marker must open the text (after leading <system-reminder> tags) or open a line / follow a
+# closing tag within the first 400 chars; a human sentence that merely quotes it mid-line is a task.
+# Same markers in hooks/lib/turns.py _NOT_HUMAN and mods/mercy/hooks/features/prompts.ts NOT_HUMAN.
+_MACHINE_MARKER = re.compile(
+    r"(?:\A|\n|>)\s*(?:\[Subagent hand-back\]|<agent-message from=|Another Claude session sent a message)")
+_MACHINE_SCAN = 400
+
+
+def is_machine_text(prompt: str) -> bool:
+    """Harness-written prompt (never typed by the user): a known prefix, or a hand-back marker."""
+    p = (prompt or "").strip()
+    if p.startswith(_MACHINE_PREFIXES):
+        return True
+    body = _SYS_REMINDER_OPEN.sub("", p, count=1).lstrip()
+    return body.startswith(_MACHINE_PREFIXES) or bool(_MACHINE_MARKER.search(body[:_MACHINE_SCAN]))
+
+
 def is_trivial_ack(prompt: str) -> bool:
-    p = prompt.strip()
-    return p.lower().rstrip(".!") in ACK_ALLOWLIST or p.startswith(_MACHINE_PREFIXES)
+    return prompt.strip().lower().rstrip(".!") in ACK_ALLOWLIST or is_machine_text(prompt)
 
 
 def _machine_cwd(cwd) -> bool:
@@ -504,6 +528,10 @@ def _classify_impl(payload: dict) -> TaskProfile:
             named2 = named
         no_ui = "frontend" not in named2
     prof.is_ui = bool(prof.ui_hit) and ui_weight >= 1.0 and not backend_only and not no_ui
+    # claude-infra work ("skills and hooks do not trigger ... design tokens") is not a UI task
+    # unless the prompt itself names the frontend (A-01)
+    if prof.is_ui and "claude-infra" in prof.surfaces and not _surface._FE_VOCAB.search(text):
+        prof.is_ui = False
 
     # legacy path-segment / ui-suffix rules on any collected paths
     seg = idx["path_segment"]

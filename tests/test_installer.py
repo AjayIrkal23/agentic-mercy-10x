@@ -195,7 +195,9 @@ def test_always_load_reconcile_plans_then_skips_when_set(tmp_path, monkeypatch):
     cfg.write_text(json.dumps({"mcpServers": {"sequential-thinking": {"command": "npx", "args": ["x"]},
                                               "memory": {"command": "npx", "args": ["y"]}}}), encoding="utf-8")
     monkeypatch.setattr(deps, "user_config_file", lambda: cfg)
-    assert deps.reconcile_mcp_always_load(dry_run=True) == [("sequential-thinking", "WOULD-SET-ALWAYS-LOAD true")]
+    # both are eager in the manifest since 2026-10-31; manifest order
+    assert deps.reconcile_mcp_always_load(dry_run=True) == [("memory", "WOULD-SET-ALWAYS-LOAD true"),
+                                                            ("sequential-thinking", "WOULD-SET-ALWAYS-LOAD true")]
     cfg.write_text(json.dumps({"mcpServers": {"sequential-thinking": {"command": "npx", "args": ["x"], "alwaysLoad": True}}}),
                    encoding="utf-8")
     assert deps.reconcile_mcp_always_load(dry_run=True) == []

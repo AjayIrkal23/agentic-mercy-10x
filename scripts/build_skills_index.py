@@ -75,6 +75,53 @@ _STOP = {
 }
 
 
+# Frontmatter intents are free text; the router matches them to category names exactly (A-03), so
+# 72 of 132 skills never earned the +1.5 intent bonus. Normalise to the category vocabulary.
+_INTENT_ALIAS = {
+    "impl": "IMPLEMENT", "implement": "IMPLEMENT", "implementation": "IMPLEMENT", "build": "IMPLEMENT",
+    "review": "REVIEW", "audit": "AUDIT", "debug": "DEBUG", "plan": "PLAN", "planning": "PLAN",
+    "test": "TEST", "testing": "TEST", "verify": "VERIFY", "docs": "DOCS", "design": "DESIGN",
+    "refactor": "REFACTOR", "security": "SECURITY", "spec": "SPEC", "cleanup": "CLEANUP", "qa": "QA",
+}
+_SURFACE_INTENTS = {"frontend", "backend"}  # a surface, not an intent: moved to `surfaces`
+
+
+def categories() -> set[str]:
+    """Router intent categories: the autonomous config's plus router.config.json additions.intents."""
+    cats: set[str] = set()
+    cats.update((_load(_HOOKS / "autonomous-skill-router.config.json").get("categories") or {}))
+    cats.update(((_load(_HOOKS / "prompt_router" / "router.config.json").get("additions") or {})
+                 .get("intents") or {}))
+    return cats
+
+
+def normalize_intents(raw, cats: set[str] | None = None) -> list[str]:
+    cats = categories() if cats is None else cats
+    out = {_INTENT_ALIAS.get(str(i).strip().lower(), str(i).strip().upper()) for i in raw or []}
+    return sorted(out & cats)
+
+
+PLUGIN_OVERLAY = _HOOKS / "plugin-skill-triggers.json"
+
+
+def apply_plugin_overlay(entries: dict, overlay: dict, cats: set[str] | None = None) -> list[str]:
+    """Merge curated triggers (hooks/plugin-skill-triggers.json) into plugin entries: full-weight
+    keywords (source stays 'plugin'), router-category intents, surfaces (A-05). Returns the plugin
+    skills that have no entry, so a new plugin skill is visible instead of silently half-weight."""
+    specs = overlay.get("skills") if isinstance(overlay.get("skills"), dict) else {}
+    for key, spec in specs.items():
+        e = entries.get(key)
+        if not isinstance(e, dict) or not _is_plugin(e) or not isinstance(spec, dict):
+            continue
+        kws = sorted({str(k).lower() for k in spec.get("keywords") or [] if str(k).strip()})
+        if kws:
+            e["keywords"] = kws
+        e["intents"] = normalize_intents(spec.get("intents"), cats)
+        e["surfaces"] = sorted({str(s) for s in spec.get("surfaces") or []})
+        e["source"] = "plugin"
+    return sorted(k for k, e in entries.items() if _is_plugin(e) and k not in specs)
+
+
 def _is_plugin(entry: dict) -> bool:
     """``plugin`` (curated metadata) or ``plugin-description`` (keywords from the description)."""
     return str((entry or {}).get("source") or "").startswith("plugin")
@@ -172,8 +219,10 @@ def _entry(name: str, fm: dict, floor_map: dict, *, source_kind: str | None = No
     if source_kind:
         source = f"{source_kind}-description" if source == "description" else source_kind
 
-    surfaces = set(meta.get("surfaces") or []) | set(fl.get("surfaces", set()))
-    intents = set(trig.get("intents") or meta.get("intents") or []) | set(fl.get("intents", set()))
+    raw_intents = set(trig.get("intents") or meta.get("intents") or []) | set(fl.get("intents", set()))
+    surfaces = (set(meta.get("surfaces") or []) | set(fl.get("surfaces", set()))
+                | {str(i).lower() for i in raw_intents if str(i).lower() in _SURFACE_INTENTS})
+    intents = set(normalize_intents(raw_intents))
     paths = fm.get("paths") if isinstance(fm.get("paths"), list) else (
         [fm["paths"]] if isinstance(fm.get("paths"), str) else [])
     entry: dict = {
@@ -247,6 +296,7 @@ def build() -> dict:
         entries[key] = _entry(key, fm, floor_map, source_kind="plugin")
         entries[key]["plugin"] = short
 
+    apply_plugin_overlay(entries, _load(PLUGIN_OVERLAY))
     skills = dict(sorted(entries.items()))
     canon = json.dumps(skills, sort_keys=True, ensure_ascii=False)
     n_local = sum(1 for e in skills.values() if not _is_plugin(e))
@@ -311,7 +361,7 @@ def _is_stale() -> bool:
         idx_mtime = INDEX.stat().st_mtime
     except OSError:
         return True
-    candidates = [ALIASES, INSTALLED_PLUGINS]
+    candidates = [ALIASES, INSTALLED_PLUGINS, PLUGIN_OVERLAY]
     candidates += [d / "SKILL.md" for d in sl.skill_dirs()]
     candidates += [md for _s, md in _plugin_skill_files()]
     for p in candidates:
@@ -341,6 +391,12 @@ def main(argv: list[str] | None = None) -> int:
         n_disk = sum(1 for d in sl.skill_dirs() if d.name not in aliases)
         ok = n_idx == n_disk
         print(f"index local skills: {n_idx}  on-disk SKILL.md: {n_disk}  {'OK' if ok else 'MISMATCH'}")
+        # per-machine plugin inventories differ, so a plugin skill with no curated entry is a WARN
+        plug = (_load(SIDECAR).get("skills") or {})
+        bare = apply_plugin_overlay(dict(plug), _load(PLUGIN_OVERLAY))
+        if bare:
+            print(f"WARN: {len(bare)} plugin skills have no entry in {PLUGIN_OVERLAY.name} "
+                  f"(description keywords, half weight): {', '.join(bare[:8])}")
         return 0 if ok else 1
     if "--force" in argv or _is_stale() or not argv:
         payload = write_index()

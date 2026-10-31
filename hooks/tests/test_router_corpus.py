@@ -26,6 +26,7 @@ if str(_HOOKS) not in sys.path:
 
 from prompt_router import classify as C  # noqa: E402
 from prompt_router import router as R  # noqa: E402
+from prompt_router.modules import egm_routes as EG  # noqa: E402
 from prompt_router.modules import mcp_routes as M  # noqa: E402
 
 ROWS = [json.loads(line) for line in (_HOOKS / "tests" / "fixtures" / "router_corpus.jsonl")
@@ -70,6 +71,12 @@ def _repo(kind: str, tmp: pathlib.Path) -> pathlib.Path:
         (d / "server").mkdir()
         (d / "server" / "package.json").write_text(json.dumps(
             {"dependencies": {"express": "4.21.0"}}), encoding="utf-8")
+    elif kind == "fastmongo":
+        (d / "package.json").write_text(json.dumps(
+            {"dependencies": {"fastify": "4.28.0", "mongoose": "8.5.0"}}), encoding="utf-8")
+    elif kind == "reactmongo":
+        (d / "package.json").write_text(json.dumps(
+            {"dependencies": {"react": "19.0.0", "vite": "7.0.0", "mongoose": "8.5.0"}}), encoding="utf-8")
     elif kind == "supabase":
         (d / "supabase").mkdir()
         (d / "package.json").write_text(json.dumps(
@@ -80,7 +87,15 @@ def _repo(kind: str, tmp: pathlib.Path) -> pathlib.Path:
 @pytest.fixture
 def env(tmp_path, monkeypatch):
     monkeypatch.delenv("CLAUDE_HOOK_DOCTOR", raising=False)
+    for var in ("CLAUDE_CODE_SESSION_ATTENDED", "CLAUDE_WORKBENCH_UNATTENDED", "CLAUDE_CODE_ENTRYPOINT"):
+        monkeypatch.delenv(var, raising=False)   # EGM's attended-only routes read these
     monkeypatch.setattr(M, "server_available", lambda names, _roots=None: (list(names) or [None])[0])
+    # a FAKE egm plugin: the corpus never reads the real plugin cache (EGM route, Step 7)
+    root = tmp_path / "fake-egm-plugin"
+    for d in ("egm-review", "egm_brainstorm", "egm-draft", "egm-drift-report"):
+        (root / "skills" / d).mkdir(parents=True, exist_ok=True)
+        (root / "skills" / d / "SKILL.md").write_text("# skill\n", encoding="utf-8")
+    monkeypatch.setattr(EG, "plugin_root", lambda pid: root.as_posix())
     return tmp_path
 
 

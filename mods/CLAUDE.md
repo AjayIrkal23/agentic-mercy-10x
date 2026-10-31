@@ -78,8 +78,11 @@ One plugin; each feature has a `userConfig` toggle in `mercy/.claude-plugin/plug
   than 120 s, so a mod that unloads mid-session hands every link back.
 - The mod runs owned links through `dispatch.py <event> --only <ids>`, which ignores
   ownership. `sync` links run only when a predicate says they can fire (shell write,
-  `git commit`, doc path, jcodemunch not used yet, no root `CLAUDE.md`, semgrep, skill
-  load); their deny is returned as the gate's own, and an ask still lets the rest of the
+  `git commit`, doc path, shell read for `jcm-gate-shell`, no root `CLAUDE.md`, semgrep,
+  skill load); `jcm-gate-read` and `mcp-post-hints` always run in line (2026-10-31: Python
+  keys the read gate per agent and per user turn, which the session ledger cannot predict;
+  a subagent's call carries `agent_id` in the rebuilt payload from `rt.subagentCalls`, a
+  `tool_use_id -> agentId` map); their deny is returned as the gate's own, and an ask still lets the rest of the
   Python chain run (a deny there wins). `async` links queue in two lanes: `fast`
   (post-write advisories, drained before each classic tool event, PreCompact and Stop)
   and `slow` (tdd-guard, coalesced per file). Their output reaches the model on the

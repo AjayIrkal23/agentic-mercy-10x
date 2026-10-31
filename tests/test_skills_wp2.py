@@ -7,7 +7,6 @@ sitesync-mobile-native/) and from ~/.claude itself.
 """
 from __future__ import annotations
 
-import importlib.util
 import json
 import re
 import sys
@@ -152,27 +151,15 @@ def test_recall_holes_rank_in_top3(prompt, skill, tmp_path, monkeypatch):
 
 
 # --------------------------------------------------------------------------- D-06
-def _aggregator():
-    spec = importlib.util.spec_from_file_location("ssa_wp2", ROOT / "hooks/session-start-aggregator.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
-
-
-def test_core_full_bodies_fit_the_session_start_budget(monkeypatch):
-    monkeypatch.setenv("CLAUDE_HOOK_DOCTOR", "1")
-    m = _aggregator()
-    tail = [t for t in (m._superpowers_session_context(), m._configured_mcp_context()) if t.strip()]
-    sep = len("\n\n---\n\n")
-    room = m.MAX_AGGREGATED_CHARS - sum(len(t) + sep for t in tail) - sep
-    block = m._core_skill_digests(room)
+def test_claude_skills_md_imports_every_core_skill():
+    """The core bodies load through CLAUDE.skills.md (@imports); its list follows core-skill-set.json."""
     cfg = json.loads((ROOT / "hooks/core-skill-set.json").read_text(encoding="utf-8"))
-    full = [e["skill"] for e in cfg["always"] if e.get("mode") == "full"]
-    missing = [s for s in full if f"### skill: {s}" not in block]
-    assert not missing, f"configured full but only a pointer arrives: {missing}"
-    pointers = [e["skill"] for e in cfg["always"] if e.get("mode") != "full"]
-    liars = [s for s in pointers if "core-skill-set.json, full" in (SKILLS / s / "SKILL.md").read_text(encoding="utf-8")]
-    assert not liars, f"skill text claims full injection: {liars}"
+    text = (ROOT / "CLAUDE.skills.md").read_text(encoding="utf-8")
+    want = {f"@skills/{e['skill']}/SKILL.md" for e in cfg["always"]}
+    got = {ln.strip() for ln in text.splitlines() if ln.startswith("@")}
+    assert got == want
+    assert all((ROOT / g[1:]).is_file() for g in got)
+    assert "@CLAUDE.skills.md" in (ROOT / "CLAUDE.md").read_text(encoding="utf-8").splitlines()
 
 
 # --------------------------------------------------------------------------- D-07 / F-08
@@ -220,7 +207,8 @@ SKILL_PATHS = {  # skill: (must match, must not match)
     "backend-performance-standards": (["server/src/models/projects.model.ts", "db/q.sql"],
                                       ["sitesync-mobile-native/store/index.ts"]),
     "api-contract-standards": (["server/src/schemas/projects/get.schema.ts"], ["src/types/projects/index.ts"]),
-    "test-driven-development": (["src/hooks/__tests__/useX.test.ts", "server/src/a/__tests__/b.test.ts"], []),
+    # test-driven-development carries no `paths:` since the 2026-10-31 router audit (A-11): a
+    # cross-cutting skill must be visible to the Skill tool before any test file is read
     "agent-development": ([".claude/agents/x.md", "agents/x.md"], ["src/agents/x.ts"]),
     "command-development": ([".claude/commands/x.md", "commands/x.md"], ["hooks/dispatch.py"]),
 }

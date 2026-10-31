@@ -12,7 +12,6 @@ export type RunMode = 'async' | 'sync'
 export type PlanFacts = {
   tool: string
   input: Record<string, unknown>
-  jcodemunchUsed: boolean
   /** For writes: whether the file's git root already has a CLAUDE.md (undefined = unknown). */
   rootHasClaudeMd: boolean | undefined
 }
@@ -34,6 +33,8 @@ const INTERP_WRITE = new RegExp(CMD_POS + INTERP + String.raw`\b[^\n;|&]*?\s-(?:
 const bashWrite = (c: string): boolean => SHELL_WRITE.test(c) || PS_WRITE.test(c) || IN_PLACE.test(c) || INTERP_WRITE.test(c)
 const GIT_COMMIT = /\bgit\b[^|;&\n]*\bcommit\b/
 const SEMGREP = /\bsemgrep\b/
+// B-02: shell reads/searches the jcodemunch gate judges (`lib/shell_reads.py` decides the target; this only decides it runs).
+const SHELL_READ = new RegExp(CMD_POS + String.raw`(?:sudo\s+)?(?:grep|egrep|fgrep|rg|ag|ack|cat|bat|head|tail|less|more|nl|find|fd|sed\s+-n)\b`, 'm')
 const SKILL_MD = /[\\/]skills[\\/][^\\/]+[\\/]SKILL\.md$/
 
 function str(v: unknown): string {
@@ -50,13 +51,16 @@ const POLICIES: readonly Policy[] = [
   { id: 'bash-write-gate', event: 'pre-tool-use', mode: 'sync', when: f => bashWrite(str(f.input['command'])) },
   { id: 'blocking-doc-enforcer', event: 'pre-tool-use', mode: 'sync', when: f => GIT_COMMIT.test(str(f.input['command'])) },
   { id: 'jdoc-doc-steer', event: 'pre-tool-use', mode: 'sync', when: f => isDoc(str(f.input['file_path'] ?? f.input['path'])) },
-  { id: 'jcm-gate-read', event: 'pre-tool-use', mode: 'sync', when: f => !f.jcodemunchUsed },
+  // B-03/B-04: Python keys the gate per agent and per user turn, so the session ledger cannot predict it: always run
+  { id: 'jcm-gate-read', event: 'pre-tool-use', mode: 'sync', when: always },
+  { id: 'jcm-gate-shell', event: 'pre-tool-use', mode: 'sync', when: f => SHELL_READ.test(str(f.input['command'])) },
   { id: 'dox-write-gate-write', event: 'pre-tool-use', mode: 'sync', when: f => f.rootHasClaudeMd !== true },
   { id: 'fullstack-post', event: 'post-tool-use', mode: 'async', when: always },
   { id: 'codex-capture', event: 'post-tool-use', mode: 'async', when: always },
   { id: 'post-write-aggregator', event: 'post-tool-use', mode: 'async', when: always },
   { id: 'desloppify-cleanup', event: 'post-tool-use', mode: 'async', when: always },
-  { id: 'mcp-post-hints', event: 'post-tool-use', mode: 'async', when: always },
+  // B-10: in line, so a "call context7 / semgrep now" hint lands before the next call (3 s link, state I/O only)
+  { id: 'mcp-post-hints', event: 'post-tool-use', mode: 'sync', when: always },
   {
     id: 'security-semgrep-tracker', event: 'post-tool-use', mode: 'sync',
     when: f => f.tool.startsWith('mcp__semgrep__') || SEMGREP.test(str(f.input['command'])),
@@ -93,7 +97,7 @@ export function planFor(cfg: DispatchConfig, owned: readonly string[], event: Br
 }
 
 /** The PreToolUse stdin a settings hook receives, rebuilt from the classic envelope. */
-export function prePayload(env: Record<string, unknown>, base: { sessionId: string; transcriptPath: string; cwd: string }): string {
+export function prePayload(env: Record<string, unknown>, base: { sessionId: string; transcriptPath: string; cwd: string; agentId?: string }): string {
   const { tool, tool_use_id, ...input } = env
   return JSON.stringify({
     session_id: base.sessionId,
@@ -103,6 +107,8 @@ export function prePayload(env: Record<string, unknown>, base: { sessionId: stri
     tool_name: tool,
     tool_input: input,
     tool_use_id,
+    // a subagent's call: Python keys its gate state per agent (B-03)
+    ...(base.agentId ? { agent_id: base.agentId } : {}),
   })
 }
 

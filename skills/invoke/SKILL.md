@@ -55,7 +55,7 @@ Take the highest tier any signal reaches; anything touching a security glob or a
 | `docs` | docs-sync-agent | `DOCS-SYNC-REPORT.md` | sonnet | no | no |
 | `verify` | qa-verifier | `VERIFY-REPORT.md` | sonnet | no | no |
 
-`model` is what opus-guard resolves by default: opus judges, sonnet executes. Execution agents escalate to opus when the prompt reports a failed previous attempt, or when it names no plan/spec artifact and the task is large. Do not pass `model=`: opus-guard ignores it for pinned agents and executors unless the user's own turn names the model ("use opus").
+`model` is what opus-guard resolves by default on max20: opus judges and executors (since 2026-10-31); other plan tiers in `docs/MODEL-ROUTING.md`. On pro/max5/api execution agents escalate one model when the prompt reports a failed previous attempt, or when it names no plan/spec artifact and the task is large. Do not pass `model=`: opus-guard ignores it for pinned agents and executors unless the user's own turn names the model ("use opus").
 
 For each act, in order:
 

@@ -2,10 +2,6 @@
 name: update-docs
 description: 'Documentation lifecycle: read repo docs before substantive coding (Phase A) and sync Markdown/MDX, changelogs, READMEs, and PR docs after implementation (Phase B). Stack-neutral; Next.js monorepo mapping in references/.'
 when_to_use: Use when asked what docs a change affects, to sync docs with code, to scaffold docs for a feature, or when editing docs/, *_docs/, or README files.
-paths:
-- '**/docs/**'
-- '**/*_docs/**'
-- '**/README.md'
 metadata:
   schema: 1
   category: backend

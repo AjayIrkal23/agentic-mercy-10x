@@ -168,8 +168,8 @@ def check_model_routing(
     failed: str,
     warned: str,
 ) -> None:
-    """Validate the Sonnet 5.5 routing policy: Opus judges, Sonnet executes and
-    escalates to Opus, Fable never pinned."""
+    """Validate the routing policy: Opus judges, executors escalate to Opus (on max20 they run
+    Opus outright since 2026-10-31, owner: quality over token cost), Fable never pinned."""
     try:
         policy = json.loads((hooks / "model-policy.json").read_text(encoding="utf-8"))
         default = policy.get("default")
@@ -182,7 +182,7 @@ def check_model_routing(
         ok = (
             default == "sonnet"
             and judges <= opus_pins
-            and bool(executors) and not executors & opus_pins
+            and bool(executors)
             and esc.get("enabled") is True and esc.get("to") == "opus"
             and (policy.get("invoke_categories") or {}).get("IMPLEMENT") in (None, default)
             and not pins.get("fable")

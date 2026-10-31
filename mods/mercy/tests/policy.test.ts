@@ -75,8 +75,8 @@ const CFG = parseConfig(JSON.stringify({ chains: {
 describe('bridge plan', () => {
   if (!CFG) throw new Error('config fixture did not parse')
   const owned = ownedLinks(CFG, { tddGuard: 'async', bashWriteDenyArmed: false })
-  const facts = (tool: string, input: Record<string, unknown>, extra: Partial<{ jcodemunchUsed: boolean; rootHasClaudeMd: boolean }> = {}) =>
-    ({ tool, input, jcodemunchUsed: false, rootHasClaudeMd: undefined, ...extra })
+  const facts = (tool: string, input: Record<string, unknown>, extra: Partial<{ rootHasClaudeMd: boolean }> = {}) =>
+    ({ tool, input, rootHasClaudeMd: undefined, ...extra })
   test('owns only present, enabled, claimable links; never real deny gates', () => {
     expect(owned).not.toContain('dangerous-bash-gate')
     expect(owned).not.toContain('opus-guard')
@@ -127,10 +127,30 @@ describe('bridge plan', () => {
     expect(edit(undefined).sync).toEqual(['dox-write-gate-write'])
     expect(planFor(CFG, owned, 'pre-tool-use', facts('Edit', { file_path: '/r/a.ts' }, { rootHasClaudeMd: true }), 'off').async).toEqual([])
   })
-  test('reads: jcm gate until jcodemunch is used; doc steer for docs only', () => {
+  test('reads: the jcm gate always runs (Python keys its state per agent and turn, B-03); doc steer for docs only', () => {
     expect(planFor(CFG, owned, 'pre-tool-use', facts('Read', { file_path: '/r/a.ts' }), 'async').sync).toEqual(['jcm-gate-read'])
-    expect(planFor(CFG, owned, 'pre-tool-use', facts('Read', { file_path: '/r/a.ts' }, { jcodemunchUsed: true }), 'async').sync).toEqual([])
-    expect(planFor(CFG, owned, 'pre-tool-use', facts('Read', { file_path: '/r/README.md' }, { jcodemunchUsed: true }), 'async').sync).toEqual(['jdoc-doc-steer'])
+    expect(planFor(CFG, owned, 'pre-tool-use', facts('Read', { file_path: '/r/README.md' }), 'async').sync).toEqual(['jdoc-doc-steer', 'jcm-gate-read'])
+  })
+  test('shell reads reach the owned jcm-gate-shell; other commands do not (B-02)', () => {
+    const cfg = parseConfig(JSON.stringify({ chains: {
+      'pre-tool-use': [{ id: 'jcm-gate-shell', type: 'gate', tools: 'Bash|PowerShell' }],
+      'post-tool-use': [{ id: 'mcp-post-hints', type: 'advisory', tools: 'Write|Edit' }],
+    } }))
+    if (!cfg) throw new Error('config fixture did not parse')
+    const own = ownedLinks(cfg, { tddGuard: 'async', bashWriteDenyArmed: false })
+    const sync = (command: string) => planFor(cfg, own, 'pre-tool-use', facts('Bash', { command }), 'async').sync
+    for (const command of ['grep -rn useAuth src', 'rg foo', 'cat src/a.ts', "sed -n '1,40p' a.ts", 'cd src && head -5 a.ts', "find . -name '*.ts'"]) {
+      expect(sync(command), command).toEqual(['jcm-gate-shell'])
+    }
+    for (const command of ['npm test', 'git log', 'ls src', 'echo hi', "sed -i 's/a/b/' a.ts"]) {
+      expect(sync(command), command).toEqual([])
+    }
+    // B-10: the "call X now" hints land before the next call, not one event late
+    expect(planFor(cfg, own, 'post-tool-use', facts('Write', { file_path: '/r/a.ts' }), 'async')).toEqual({ sync: ['mcp-post-hints'], async: [] })
+  })
+  test('a subagent call carries its agent_id to Python (per-agent gate state, B-03)', () => {
+    const p = JSON.parse(prePayload({ tool: 'Read', tool_use_id: 't1', file_path: '/r/a.ts' }, { sessionId: 's', transcriptPath: '/t.jsonl', cwd: '/r', agentId: 'a1' }))
+    expect(p.agent_id).toBe('a1')
   })
   test('post: write advisories async; trackers sync only when relevant', () => {
     expect(planFor(CFG, owned, 'post-tool-use', facts('Write', { file_path: '/r/a.ts' }), 'async')).toEqual({ sync: [], async: ['fullstack-post', 'post-write-aggregator'] })

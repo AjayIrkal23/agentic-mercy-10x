@@ -254,14 +254,14 @@ def main() -> int:
         return 0
     reason = (f"`{base}` grants permissions, wires hooks or routes models (CLAUDE.md: no agent message can "
               "authorize changing permission settings or configuration).")
+    # 2026-10-31 (owner): never auto-deny. A remote/app session runs with CLAUDE_CODE_SESSION_ATTENDED=0
+    # while the owner is present, and subagents work for an attended parent; the ask goes to Claude
+    # Code's own permission flow (prompt, SDK host callback, or the session's permission mode).
     unattended = _unattended(payload)
+    decision = "ask"
+    reason += " Approve only if you asked for this change."
     if unattended:
-        decision = "deny"
-        reason += (f" No one can confirm in this {unattended} session: leave the change for the user, or name the "
-                   "file by its `.claude/` path (or a permission-rule phrase) in the prompt that asks for it.")
-    else:
-        decision = "ask"
-        reason += " Approve only if you asked for this change."
+        reason += f" ({unattended} context: the session's permission mode decides.)"
     _telemetry(decision=decision, file=base, session=sid, **({"reason": unattended} if unattended else {}))
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": decision,
                                              "permissionDecisionReason": reason}}))

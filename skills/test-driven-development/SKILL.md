@@ -2,12 +2,6 @@
 name: test-driven-development
 description: 'Red-green-refactor: write the failing test first, make it pass, then refactor, with language-specific test conventions.'
 when_to_use: Use when implementing logic, fixing a bug, or changing behavior that needs proof it works.
-paths:
-- '**/*_test.go'
-- '**/*.{test,spec}.{ts,tsx,js,jsx,mjs}'
-- '**/__tests__/**'
-- '**/test_*.py'
-- '**/*_test.py'
 metadata:
   schema: 1
   category: testing

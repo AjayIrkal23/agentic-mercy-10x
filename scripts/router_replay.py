@@ -16,7 +16,18 @@ Signals per routed prompt (a prompt the router injected anything for):
   app_line_no_repo      "Your app is running" on a cwd outside any git repo
   machine_routed        a harness prompt (teammate relay, restore, judge) got routed
   backend_git_oneliner  backend-standards pushed on a short commit/push/deploy line
+  egm_on_small          the EGM design-doc line on a DEBUG or size-S prompt
   union                 any of the above
+
+Recall signals (a skill the prompt should have got; rate = share of its own base, A-09):
+  zero_skill_dev        base dev_prompts: IMPLEMENT/DEBUG/REFACTOR/TEST/REVIEW/AUDIT intent, no skill pushed
+  audit_no_audit_skill  base audit_prompts: audit / tech debt / health check wording, no audit skill pushed
+  stack_skill_missed    base stack_prompts: repo deps hold mongoose / fastify / vitest, a backend (or TEST)
+                        prompt, mongoose-patterns / fastify-patterns / vitest-rtl not pushed
+  infra_got_fe_skill    base infra_prompts: a claude-infra prompt that was handed a frontend-only skill
+Judges read the prompt text and the repo's own package.json, never the router's UI verdict
+(the 17:57 misroute came from a classifier false positive the judge shared).
+`zero_skill_prompts` / `distinct_skills` are reported, not budgeted.
 
 Output: counts and rates only, to ``<state_dir>/router-replay/<date>.json``. Prompt text
 never leaves the process; the top flagged prompts print as ``<transcript>:<line>``.
@@ -44,18 +55,32 @@ if str(_HOOKS) not in sys.path:
     sys.path.insert(0, str(_HOOKS))
 
 SIGNALS = ("threejs_no_3d", "debug_no_bug", "fe_skill_no_ui", "app_line_no_repo",
-           "machine_routed", "backend_git_oneliner")
+           "machine_routed", "backend_git_oneliner", "egm_on_small")
+# recall signal -> the count that is its denominator
+RECALL = {"zero_skill_dev": "dev_prompts", "audit_no_audit_skill": "audit_prompts",
+          "stack_skill_missed": "stack_prompts", "infra_got_fe_skill": "infra_prompts"}
 _SKIP_PREFIX = ("Caveat:", "[Request interrupted", "This session is being continued",
                 "[Workflow harness", "Base directory for this skill", "<command-")
 _MACHINE = ("<task-notification>", "<teammate-message", "<cross-session-message",
-            "Another Claude session sent a message:", "Session restored automatically after a crash")
+            "Another Claude session sent a message", "Session restored automatically after a crash",
+            "[Subagent hand-back]", "<agent-message from=")
+_DEV_INTENTS = {"IMPLEMENT", "DEBUG", "REFACTOR", "TEST", "REVIEW", "AUDIT"}
+_AUDIT_RX = re.compile(r"\b(audit\w*|tech(?:nical)? debt|health[- ]?check|code health|bloat)\b", re.I)
+_AUDIT_SKILLS = {"tech-debt-audit", "ponytail:ponytail-audit", "code-review-and-quality", "santa-review",
+                 "ponytail:ponytail-review"}
+_STACK_SKILL = (({"mongoose", "mongodb"}, "mongoose-patterns", "be"), ({"fastify"}, "fastify-patterns", "be"),
+                ({"vitest"}, "vitest-rtl", "test"))
 _SKILL_RE = re.compile(r"^- \*\*([^*]+)\*\* \((?:MUST-READ|SHOULD-READ)\)|\[inlined skill: ([^\]]+)\]", re.M)
 _BUG_RX = re.compile(r"\b(bugs?|errors?|fail\w*|broken|crash\w*|fix\w*|issues?|not working|wrong|exception|"
                      r"traceback|doesn'?t|isn'?t|can'?t|cannot|why|stuck|hang\w*|slow|regress\w*|debug\w*|"
                      r"timed? ?out|not (?:show|load|open|work)\w*|missing)\b", re.I)
-_UI_RX = re.compile(r"\b(ui|ux|page|screen|button|modal|layout|css|style|design|frontend|component|"
-                    r"dashboard|form|tab|sidebar|navbar|mobile|responsive|theme|color|font|icon|view|"
-                    r"browser|click|display|render\w*|visual\w*|animation|scroll)\b", re.I)
+_UI_RX = re.compile(r"\b(ui|ux|pages?|screens?|buttons?|modals?|layouts?|css|styl\w+|design\w*|front[- ]?end|"
+                    r"components?|dashboards?|forms?|tabs?|sidebars?|navbar|mobile|responsive|themes?|colou?rs?|"
+                    r"fonts?|icons?|views?|browsers?|click\w*|display\w*|render\w*|visual\w*|animat\w+|scroll\w*|"
+                    r"padding|margin|spacing|align\w*|width|height|green|blue|red|dark|light|map|chart|table|"
+                    r"tooltip|screenshot|images?|logo|looks?|ugly|pretty|text|label|menu|toast|panel|card|"
+                    r"android|iphone|ios|emulator|expo|react[- ]native|metro)\b|"
+                    r"\[Image #|\.(?:png|jpe?g|svg|tsx|jsx|css)\b", re.I)
 _3D_RX = re.compile(r"\b(3d|three(?:\.?js)?|r3f|webgl|glb|gltf|shaders?|globe|scene|canvas|fiber|drei|mesh)\b", re.I)
 _GIT_RX = re.compile(r"\b(commit|comit|push|deploy|merge|pull request|pr)\b", re.I)
 _FE_EXTRA = {"debug-broken-ui", "improve-ui", "fixing-accessibility", "fixing-metadata",
@@ -140,12 +165,35 @@ def _fe_only_skills() -> set[str]:
     return out | _FE_EXTRA
 
 
-def flags_for(prompt: str, cwd: str, ctx: str, fe_only: set[str]) -> list[str]:
+def _repo_deps(cwd: str) -> set[str]:
+    """package.json dependency names of the git repo holding ``cwd`` (not ``$HOME``), read from the
+    files themselves so the judge does not share the router's stack detection."""
+    try:
+        p = Path(cwd or "/nonexistent-dir").resolve()
+        root = next((d for d in (p, *p.parents) if (d / ".git").exists()), None)
+        if root is None or root == Path.home().resolve():
+            return set()
+        from prompt_router.modules import surface as _s  # noqa: PLC0415
+        deps: set[str] = set()
+        for m in _s._scan(root)[0]:
+            if m.name == "package.json":
+                deps |= _s._deps(m)
+        return deps
+    except Exception:  # noqa: BLE001 - a judge never stops the replay
+        return set()
+
+
+def judge(prompt: str, cwd: str, ctx: str, fe_only: set[str]) -> tuple[list[str], set[str]]:
+    """(flags, bases): the signals this prompt trips and the recall denominators it belongs to."""
     from prompt_router import classify as _c  # noqa: PLC0415
     skills = [a or b for a, b in _SKILL_RE.findall(ctx)]
     prof = _c.classify({"prompt": prompt, "cwd": cwd or "/nonexistent-dir"})
-    fe = "frontend" in prof.surfaces or prof.is_ui or bool(_UI_RX.search(prompt))
-    out = []
+    # the UI judge reads the words, not the router's verdict: a classifier false positive
+    # (A-01: "tokens" made every prompt UI) must stay visible
+    fe = bool(_UI_RX.search(prompt))
+    out: list[str] = []
+    bases: set[str] = set()
+    machine = prompt.startswith(_MACHINE) or Path(cwd or "/").name == "double-shot-latte"
     if "threejs-r3f" in skills and not _3D_RX.search(prompt):
         out.append("threejs_no_3d")
     if "debug-investigation" in skills and not _BUG_RX.search(prompt):
@@ -154,12 +202,44 @@ def flags_for(prompt: str, cwd: str, ctx: str, fe_only: set[str]) -> list[str]:
         out.append("fe_skill_no_ui")
     if "Your app is running" in ctx and not _in_git(cwd):
         out.append("app_line_no_repo")
-    if prompt.startswith(_MACHINE) or Path(cwd or "/").name == "double-shot-latte":
+    if machine and ctx:
         out.append("machine_routed")
+    if "EGM artifact directory:" in ctx and ("DEBUG" in prof.intents or prof.size == "S"):
+        out.append("egm_on_small")
     if ("backend-standards-always-follow" in skills and _GIT_RX.search(prompt)
             and len(prompt.split()) <= 20):
         out.append("backend_git_oneliner")
-    return out
+    if machine:
+        return out, bases
+    if _DEV_INTENTS & set(prof.intents):
+        bases.add("dev_prompts")
+        if not skills:
+            out.append("zero_skill_dev")
+    if _AUDIT_RX.search(prompt):
+        bases.add("audit_prompts")
+        if not _AUDIT_SKILLS & set(skills):
+            out.append("audit_no_audit_skill")
+    if "claude-infra" in prof.surfaces:
+        bases.add("infra_prompts")
+        if any(s in fe_only for s in skills):
+            out.append("infra_got_fe_skill")
+    deps = _repo_deps(cwd)
+    strong = prof.surfaces - set(getattr(prof, "weak_surfaces", set()) or set())
+    # a backend inferred from the repo stack alone (a pasted shell line, a docs request) is no backend task
+    be = bool(strong & {"backend", "api"})
+    test = "TEST" in prof.intents
+    missed = False
+    for names, skill, kind in _STACK_SKILL:
+        if names & deps and (be if kind == "be" else test):
+            bases.add("stack_prompts")
+            missed = missed or skill not in skills
+    if missed:
+        out.append("stack_skill_missed")
+    return out, bases
+
+
+def flags_for(prompt: str, cwd: str, ctx: str, fe_only: set[str]) -> list[str]:
+    return judge(prompt, cwd, ctx, fe_only)[0]
 
 
 def replay(rows: list[dict]) -> tuple[dict, list[tuple[str, list[str]]]]:
@@ -167,8 +247,11 @@ def replay(rows: list[dict]) -> tuple[dict, list[tuple[str, list[str]]]]:
     fe_only = _fe_only_skills()
     keys = ("CLAUDE_HOOK_STATE_DIR", "CLAUDE_HOOK_TELEMETRY_DIR", "CLAUDE_HOOK_DOTSTATE_DIR", "CLAUDE_HOOK_DOCTOR")
     saved = {k: os.environ.get(k) for k in keys}
-    counts = {"prompts": len(rows), "skipped_mode": 0, "routed": 0, "union": 0, **{s: 0 for s in SIGNALS}}
+    counts = {"prompts": len(rows), "skipped_mode": 0, "routed": 0, "union": 0, **{s: 0 for s in SIGNALS},
+              "scored": 0, "zero_skill_prompts": 0, "distinct_skills": 0,
+              **{b: 0 for b in RECALL.values()}, **{s: 0 for s in RECALL}}
     flagged: list[tuple[str, list[str]]] = []
+    distinct: set[str] = set()
     try:
         for i, row in enumerate(rows):
             if _r.parse_mode_phrase(row["prompt"]):
@@ -183,15 +266,27 @@ def replay(rows: list[dict]) -> tuple[dict, list[tuple[str, list[str]]]]:
                 except Exception:  # noqa: BLE001 - one bad prompt never stops the replay
                     ctx = ""
                 # inside the box: classify() caches state/<repo>.stack.json, which re-created a removed box
-                f = flags_for(row["prompt"], row["cwd"], ctx, fe_only) if ctx else []
-            if not ctx:
-                continue
-            counts["routed"] += 1
+                f, bases = judge(row["prompt"], row["cwd"], ctx, fe_only)
+            pushed = [a or b for a, b in _SKILL_RE.findall(ctx)]
+            if not (row["prompt"].startswith(_MACHINE) or Path(row["cwd"] or "/").name == "double-shot-latte"):
+                counts["scored"] += 1
+                counts["zero_skill_prompts"] += 0 if pushed else 1
+            distinct.update(pushed)
+            for b in bases:
+                counts[b] += 1
             for s in f:
-                counts[s] += 1
+                if s in RECALL:
+                    counts[s] += 1
+            precision = [s for s in f if s not in RECALL]
+            if ctx:
+                counts["routed"] += 1
+                for s in precision:
+                    counts[s] += 1
+                if precision:
+                    counts["union"] += 1
             if f:
-                counts["union"] += 1
                 flagged.append((row["ref"], f))
+        counts["distinct_skills"] = len(distinct)
     finally:
         for k, v in saved.items():
             if v is None:
@@ -203,7 +298,12 @@ def replay(rows: list[dict]) -> tuple[dict, list[tuple[str, list[str]]]]:
 
 def rates(counts: dict) -> dict:
     n = counts.get("routed") or 0
-    return {s: (round(counts[s] / n, 4) if n else 0.0) for s in ("union", *SIGNALS)}
+    out = {s: (round(counts[s] / n, 4) if n else 0.0) for s in ("union", *SIGNALS)}
+    for s, base in RECALL.items():  # recall signals are shares of their own base
+        out[s] = round(counts.get(s, 0) / counts[base], 4) if counts.get(base) else 0.0
+    sc = counts.get("scored") or 0
+    out["zero_skill_prompts"] = round(counts.get("zero_skill_prompts", 0) / sc, 4) if sc else 0.0
+    return out
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -239,6 +339,10 @@ def main(argv: list[str] | None = None) -> int:
           f"union {r['union']:.3f} ({counts['union']}/{counts['routed']})")
     for s in SIGNALS:
         print(f"  {s:22} {counts[s]:4}  {r[s]:.3f}")
+    for s, base in RECALL.items():
+        print(f"  {s:22} {counts[s]:4}  {r[s]:.3f}  (of {counts[base]} {base})")
+    print(f"  zero-skill prompts {counts['zero_skill_prompts']}/{counts['scored']} "
+          f"({r['zero_skill_prompts']:.3f}), distinct skills pushed {counts['distinct_skills']}")
     for ref, f in flagged[:10]:
         print(f"  flagged {ref}  {','.join(f)}")
     if not a.check:

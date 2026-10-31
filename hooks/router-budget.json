@@ -8,6 +8,7 @@
     "fe_skill_no_ui": 0.01,
     "app_line_no_repo": 0.0,
     "machine_routed": 0.0,
-    "backend_git_oneliner": 0.01
+    "backend_git_oneliner": 0.01,
+    "egm_on_small": 0.01
   }
 }

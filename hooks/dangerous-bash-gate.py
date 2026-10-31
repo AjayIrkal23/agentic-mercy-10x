@@ -168,24 +168,68 @@ class _RmVar:
 
 
 _RMRF_RE = _RmRf()
+_RM_VAR = _RmVar()
 _SAFE_RM_PREFIXES = ("/tmp/", "/var/tmp/", "$TMPDIR", "${TMPDIR}", "$(mktemp")
 _SEGMENT_SPLIT = re.compile(r"&&|\|\||;|\n|\|")
 _REDIRECT_RE = re.compile(r"(?<!\d)\d*&?>>?\s*&?\S+|<\s*\S+")  # (?<!\d): one try per digit run, not per digit
 
 
-def _rm_is_safe(cmd: str) -> bool:
+# `R=/tmp/x` / `export R='/tmp/x'` / `R=$(mktemp -d)` as a whole segment (a `R=x cmd` prefix does not
+# count: bash expands `$R` in that command before the prefix applies).
+_ASSIGN_SEG = re.compile(r"(?:(?:export|declare|local|readonly)\s+)?([A-Za-z_]\w*)="
+                         r"(\"[^\"\n]*\"|'[^'\n]*'|\$\(mktemp[^)\n]*\)|[^\s'\"]*)")
+_VAR_REF = re.compile(r"\$\{(\w+)\}|\$(\w+)")
+_SEPS = re.compile(r"(&&|\|\||\||;|\n)")
+_FIRST_RM = re.compile(r"(?:^|[;&|\n(])\s*(?:sudo\s+)?(rm)\b")  # rm at a command position only
+
+
+def _literal_vars(cmd: str) -> dict:
+    """This command's own `NAME=value` statements that surely run before the first `rm`: assigned
+    once, before that `rm`, with no `&&` / `||` / `|` ahead of the assignment, and the bare name
+    nowhere else (`unset R`, `for R in`, `read R`, `R+=`, `R[0]=`, `local R` ...). The value must be a
+    plain path (no `$`, backtick, glob or `..`; `$(mktemp …)` allowed). Anything else stays unknown
+    and is never expanded (santa review 2026-10-31: order, control flow and reassignment)."""
+    rm = _FIRST_RM.search(cmd)
+    parts = _SEPS.split(cmd[: rm.start(1)] if rm else cmd)
+    seen: dict = {}
+    conditional = False
+    for i, part in enumerate(parts):
+        if i % 2:  # a separator
+            conditional = conditional or part in ("&&", "||", "|")
+            continue
+        m = _ASSIGN_SEG.fullmatch(part.strip())
+        if not m:
+            continue
+        name, val = m.group(1), m.group(2).strip("'\"")
+        bare = len(re.findall(rf"(?<![\w${{]){re.escape(name)}(?!\w)", cmd))
+        plain = val.startswith("$(mktemp") or not any(c in val for c in "$`*?[")
+        ok = plain and ".." not in val and not conditional and bare == 1 and name not in seen
+        seen[name] = val if ok else None
+    return {k: v for k, v in seen.items() if v}
+
+
+def _rm_is_safe(cmd: str, matcher=None) -> bool:
     """Suppress the rm -rf block only when EVERY rm -rf segment deletes nothing but
     temp paths (test scaffolding). Judged per segment and per argument, so
-    `rm -rf /tmp/x && rm -rf ~/src` or `rm -rf /tmp/../etc` is not safe."""
+    `rm -rf /tmp/x && rm -rf ~/src` or `rm -rf /tmp/../etc` is not safe. `$R` / `${R}` resolve
+    through the command's own literal `R=/tmp/...` statements (`_literal_vars`)."""
+    matcher = matcher or _RMRF_RE
+    env = _literal_vars(cmd)
     for seg in _SEGMENT_SPLIT.split(cmd):
-        if not _RMRF_RE.search(seg):
+        if not matcher.search(seg):
             continue
         seg = _REDIRECT_RE.sub(" ", seg)  # `2>/dev/null`, `>/dev/null 2>&1` are not targets
         m = re.search(r"\brm\b(.*)", seg)
         args = [a.strip("'\"") for a in (m.group(1).split() if m else []) if not a.startswith("-")]
+        args = [_VAR_REF.sub(lambda v: env.get(v.group(1) or v.group(2), v.group(0)), a) for a in args]
         if not args or not all(a.startswith(_SAFE_RM_PREFIXES) and ".." not in a for a in args):
             return False
     return True
+
+
+def _rm_var_is_safe(cmd: str) -> bool:
+    """`rm $R` passes only when it sits in a segment and every target resolves to a temp path."""
+    return any(_RM_VAR.search(s) for s in _SEGMENT_SPLIT.split(cmd)) and _rm_is_safe(cmd, _RM_VAR)
 
 
 _SAFE_PUSH_REFS = ("backup/", "archive/", "bak/", "wip/")
@@ -554,9 +598,9 @@ DANGEROUS_PATTERNS: list[tuple[re.Pattern, str, object]] = [
         None,  # no safe-suppression
     ),
     (
-        _RmVar(),
+        _RM_VAR,
         "rm with shell variable expansion (potential bypass)",
-        None,
+        _rm_var_is_safe,
     ),
     (
         _DbDrop(),

@@ -155,12 +155,11 @@ export function registerBridge(on: On): void {
         const facts: PlanFacts = {
           tool: e.tool,
           input,
-          jcodemunchUsed: (rt.ledger.mcp['jcodemunch'] ?? 0) > 0,
           rootHasClaudeMd: path ? await rootHasClaudeMd($, path) : undefined,
         }
         const plan = planFor(rt.dispatch, rt.bridge.owned, 'pre-tool-use', facts, rt.options.tddGuard)
         // classic.PreToolUse carries no cwd: read the live one (a shell `cd` moves it)
-        const base = { sessionId: rt.sessionId, transcriptPath: rt.transcriptPath, cwd: await $.session.cwd() }
+        const base = { sessionId: rt.sessionId, transcriptPath: rt.transcriptPath, cwd: await $.session.cwd(), agentId: rt.subagentCalls.get(e.tool_use_id) }
         const payload = prePayload(e as unknown as Record<string, unknown>, base)
         if (plan.sync.length) {
           const r = await attempt($, 'pre-tool-use', plan.sync, payload, e.tool_use_id)
@@ -204,7 +203,7 @@ export function registerBridge(on: On): void {
       await drain($, next.signal, false)
       if (rt.dispatch && rt.bridge.owned.length) {
         const input = (e.tool_input && typeof e.tool_input === 'object' ? e.tool_input : {}) as Record<string, unknown>
-        const facts: PlanFacts = { tool: e.tool_name, input, jcodemunchUsed: (rt.ledger.mcp['jcodemunch'] ?? 0) > 0, rootHasClaudeMd: undefined }
+        const facts: PlanFacts = { tool: e.tool_name, input, rootHasClaudeMd: undefined }
         const plan = planFor(rt.dispatch, rt.bridge.owned, 'post-tool-use', facts, rt.options.tddGuard)
         const payload = JSON.stringify(e)
         if (plan.sync.length) {

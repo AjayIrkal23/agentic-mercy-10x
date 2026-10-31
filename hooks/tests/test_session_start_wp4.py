@@ -59,21 +59,23 @@ def _longest_run(text: str, ch: str) -> int:
     return max((len(r) for r in runs), default=0)
 
 
-def _bodies(ctx: str) -> list:
-    return re.findall(r"^### skill: (\S+)", ctx, re.M)
-
-
-def test_core_bodies_do_not_depend_on_hook_output(agg, monkeypatch, tmp_path):
-    monkeypatch.setattr(agg, "INDEX_LIFECYCLE", tmp_path / "x.py")
-    (tmp_path / "x.py").write_text("")
-    monkeypatch.setattr(agg, "TDD_INIT_GUARD", tmp_path / "missing.py")
-    seen = []
-    for n in (0, 300, 700):
-        monkeypatch.setattr(agg, "_run_hook_subprocess", lambda *a, n=n: "i" * n)
-        ctx = _run(agg, {"cwd": str(tmp_path), "source": "startup"}, monkeypatch)
-        assert len(ctx) <= agg.MAX_AGGREGATED_CHARS
-        seen.append(_bodies(ctx))
-    assert seen[0] == seen[1] == seen[2], seen
+def test_index_block_names_the_exact_mcp_ids(agg, monkeypatch, tmp_path):
+    """B-07: the session-start index block tells the model which ids to pass, and no
+    longer says "no agent action required"."""
+    import subprocess
+    if str(_HOOKS) not in sys.path:
+        sys.path.insert(0, str(_HOOKS))
+    from lib import mcp_ids
+    root = tmp_path / "proj"
+    root.mkdir()
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    monkeypatch.setattr(mcp_ids, "ids", lambda r: {"jcodemunch": "Owner/proj", "graphify": str(root),
+                                                   "jdocmunch": ""})
+    _no_hooks(agg, monkeypatch, tmp_path,
+              "Index lifecycle (auto, background — no agent action required):\n- jcodemunch index: FRESH")
+    ctx = _run(agg, {"cwd": str(root), "source": "startup"}, monkeypatch)
+    assert 'repo="Owner/proj"' in ctx and f'project_path="{root}"' in ctx
+    assert "no agent action required" not in ctx and "jdocmunch repo" not in ctx
 
 
 def test_hook_output_is_clipped_to_the_index_cap(agg, monkeypatch, tmp_path):
@@ -82,7 +84,7 @@ def test_hook_output_is_clipped_to_the_index_cap(agg, monkeypatch, tmp_path):
     assert "i" * agg.CAPS["index"] + "…(index trimmed)" in ctx
     assert "i" * 4000 not in ctx
     assert len(ctx) <= agg.MAX_AGGREGATED_CHARS
-    assert "[Always-active core skills]" in ctx
+    assert "[Always-active core skills]" not in ctx  # bodies load through CLAUDE.skills.md
 
 
 @pytest.mark.parametrize("source", ["resume", "compact"])
@@ -149,8 +151,6 @@ def test_each_source_respects_its_cap(agg, monkeypatch, tmp_path):
     assert _longest_run(ctx, "i") <= agg.CAPS["index"]
     tail = ctx.split(agg.SEP)[-1]
     assert _longest_run(tail, "s") + _longest_run(tail, "m") <= agg.CAPS["mcp"]
-    core = ctx[ctx.index("[Always-active"):].split(agg.SEP)[0]
-    assert len(core) <= agg.CAPS["core"]
     assert len(ctx) <= 5500
     assert len(json.dumps({"additionalContext": ctx})) <= 5500
     assert len(raw[0].encode("utf-8")) <= 5500
@@ -229,7 +229,7 @@ def test_doctor_run_skips_subprocesses_worktree_and_stays_under_the_acceptance_b
     ctx = _run(agg, {"session_id": "t", "source": "startup", "cwd": "/tmp"}, monkeypatch, raw)
     assert calls == []
     assert len(raw[0].encode("utf-8")) <= 5500
-    assert "ALWAYS-ON STYLE" in ctx and "[Always-active core skills]" in ctx
+    assert "ALWAYS-ON STYLE" in ctx
 
 
 # --------------------------------------------------------------------------- RT-8

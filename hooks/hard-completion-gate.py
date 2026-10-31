@@ -323,10 +323,32 @@ def gate2_docs(cid: str, workspace_roots: "list | None" = None) -> tuple:
     return False, "Gate 2 (docs)", detail
 
 
+def _scans_cover(st: dict, files: list) -> bool:
+    """B-08: every security file needs a semgrep scan newer than its last edit (a file
+    under a scanned directory counts). State from before per-file stamps (no
+    `scanned_at`) keeps the old session-wide credit."""
+    seen = st.get("scanned_at")
+    if not isinstance(seen, dict):
+        return True
+    for f in files:
+        p = os.path.normpath(str(f))
+        if not os.path.isabs(p):
+            continue  # pre-2026-10-31 state stored `dir/file` only: keep the session-wide credit for it
+        try:
+            mtime = os.path.getmtime(p)
+        except OSError:
+            continue  # deleted or moved: nothing left to scan
+        if not any(isinstance(ts, (int, float)) and ts >= mtime
+                   and (p == k or p.startswith(k.rstrip(os.sep) + os.sep))
+                   for k, ts in seen.items()):
+            return False
+    return True
+
+
 def gate3_security(cid: str, roots: list, turn_ts: "datetime | None") -> tuple:
     """Gate 3: Security — semi-hard when security-sensitive files changed and no
-    scan evidence exists: semgrep (CLI or MCP) ran, security-sentinel was
-    dispatched, or a SECURITY-REPORT.md newer than the turn exists."""
+    scan evidence exists: semgrep (CLI or MCP) ran on each file after its last edit,
+    security-sentinel was dispatched, or a SECURITY-REPORT.md newer than the turn exists."""
     if _is_infra_only_session(cid):
         return True, "Gate 3 (security)", ""
     st = _load_json(STATE_DIR / f"{_safe_cid(cid)}.security-scan.json")
@@ -334,7 +356,7 @@ def gate3_security(cid: str, roots: list, turn_ts: "datetime | None") -> tuple:
     if not files:
         return True, "Gate 3 (security)", ""
 
-    if st.get("semgrep_ran", False):
+    if st.get("semgrep_ran", False) and _scans_cover(st, files):
         findings = st.get("semgrep_findings", 0)
         if findings:
             return True, "Gate 3 (security)", (
@@ -350,7 +372,8 @@ def gate3_security(cid: str, roots: list, turn_ts: "datetime | None") -> tuple:
         f"{len(files)} security-sensitive file(s) modified but no scan recorded. "
         "Fix: dispatch the security-sentinel agent now (Agent tool, subagent_type "
         "\"security-sentinel\") — or run semgrep "
-        "(`semgrep scan --config auto` or mcp__semgrep__semgrep_scan) on the changed "
+        "(mcp__semgrep__semgrep_scan with config p/default + p/owasp-top-ten + p/secrets, or "
+        "`semgrep scan --config p/default --config p/owasp-top-ten`; `auto` is refused with metrics off) on the changed "
         "auth/API files yourself, then retry."
     )
     return False, "Gate 3 (security)", detail

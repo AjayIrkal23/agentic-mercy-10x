@@ -30,6 +30,9 @@ tmux 3.6 puts each pane in its own `tmux-spawn-*.scope`, so wrapping the tmux se
 - `CLAUDECODE` is set or `CLAUDE_WORKBENCH_SCOPE=1` (nested launch: no scope inside a scope);
 - there is no `$XDG_RUNTIME_DIR/bus` or no `systemd-run`.
 
+`remote-control` / `rc` (hidden from `claude --help`) hosts sessions, so it keeps the scope and the env
+caps, but gets no `--settings` and no tier `--model`: 2.1.314 refuses either flag before the verb.
+
 Launch caps from `MemAvailable` (GiB, rounded down), exported only when the shell did not set them:
 
 - `CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS` = clamp(⌊GiB/3⌋, 1, 8)

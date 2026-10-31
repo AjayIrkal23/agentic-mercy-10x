@@ -58,8 +58,7 @@ BASELINE = {
 # Any of these having been loaded counts as evidence for every surface.
 BASELINE_ANY = frozenset(
     {s for skills in BASELINE.values() for s in skills}
-    | {"architect-system-design", "dead-code-and-change-audit",
-       "codebase-start-point-guide", "project-structure-map"}
+    | {"architect-system-design", "dead-code-and-change-audit"}
 )
 
 
@@ -67,13 +66,16 @@ def _infer_surface(file_path: str) -> str:
     fp = file_path.replace("\\", "/").lower()
     fe = ("client/", "frontend/", "apps/web", "/src/components/", "/src/pages/",
           "/src/hooks/", "/src/store/", "/src/app/", ".tsx", ".jsx")
-    be = ("server/", "backend/", "api/", "internal/", "cmd/", "pkg/", ".go")
+    be = ("server/", "backend/", "api/", "internal/", "cmd/", "pkg/", ".go", "/routes/", "/controllers/",
+          "/services/", "/models/", ".service.ts", ".controller.ts", ".route.ts")
     fe_score = sum(1 for s in fe if s in fp)
     be_score = sum(1 for s in be if s in fp)
     if fe_score > be_score:
         return "frontend"
     if be_score > fe_score:
         return "backend"
+    if fe_score and any(f"/{d}/" in f"/{fp}" for d in ("client", "frontend", "web")):  # client/src/api/x.ts
+        return "frontend"
     return "unknown"
 
 
@@ -109,8 +111,11 @@ def _mark_hinted(cid: str, state: dict, surface: str) -> None:
     state.update(locked_update(_fullstack_state_path(cid), add))
 
 
-def _baseline_skill_loaded(cid: str) -> bool:
-    """True when the skill-invocation telemetry shows any baseline skill loaded."""
+def _baseline_skill_loaded(cid: str, surface: "str | None" = None) -> bool:
+    """True when the skill-invocation telemetry shows a baseline skill loaded: any of BASELINE_ANY,
+    or with `surface` that surface's own standards skill (a frontend skill is no evidence for backend)."""
+    want = (set(BASELINE[surface]) - {"project-reference-linkage"}) if surface in ("frontend", "backend") \
+        else BASELINE_ANY
     p = TELEMETRY_DIR / f"{_safe_cid(cid)}.skill-invocations.jsonl"
     if not p.is_file():
         return False
@@ -121,14 +126,17 @@ def _baseline_skill_loaded(cid: str) -> bool:
             except Exception:
                 continue
             name = str(r.get("skill") or "").split(":", 1)[-1].strip().lower()
-            if name and _canonical(name) in BASELINE_ANY:
+            if name and _canonical(name) in want:
                 return True
     except OSError:
         pass
     return False
 
 
-def _evidence(cid: str, state: dict) -> bool:
+def _evidence(cid: str, state: dict, surface: str = "unknown") -> bool:
+    if surface in ("frontend", "backend"):  # 2026-10-31 A-10: one surface's evidence does not silence the other
+        return bool(state.get(f"{surface}_start_sent") or state.get("fullstack_start_sent")
+                    or _baseline_skill_loaded(cid, surface))
     return bool(
         state.get("frontend_start_sent")
         or state.get("backend_start_sent")
@@ -199,7 +207,7 @@ def main() -> int:
         state = _load_fullstack_state(cid)
         surface = _infer_surface(file_path)
         hinted = state.get("skills_hint_surfaces") or []
-        if surface in hinted or _evidence(cid, state):
+        if surface in hinted or _evidence(cid, state, surface):
             print("{}")
             return 0
 

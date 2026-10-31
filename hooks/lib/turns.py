@@ -73,7 +73,22 @@ def iter_tail(transcript_path, n: int = TAIL_LINES):
     yield from (tail_entries(transcript_path, n) or [])
 
 
-_NOT_HUMAN_PREFIXES = ("<task-notification>", "[Request interrupted", "<cross-session-message")
+_NOT_HUMAN_PREFIXES = ("<task-notification>", "[Request interrupted", "<cross-session-message",
+                       "[Subagent hand-back]", "<agent-message from=", "Another Claude session sent a message")
+_SYS_REMINDER_OPEN = re.compile(r"\A(?:\s*<system-reminder\b[^>]*>)+")
+# a hand-back marker that opens a line / follows a closing tag in the first 400 chars; a human
+# sentence quoting it mid-line stays human. Same rule as prompt_router/classify.is_machine_text
+# and mods/mercy/hooks/features/prompts.ts.
+_NOT_HUMAN_MARKER = re.compile(
+    r"(?:\A|\n|>)\s*(?:\[Subagent hand-back\]|<agent-message from=|Another Claude session sent a message)")
+
+
+def _not_human(text: str) -> bool:
+    t = text.lstrip()
+    if t.startswith(_NOT_HUMAN_PREFIXES):
+        return True
+    body = _SYS_REMINDER_OPEN.sub("", t, count=1).lstrip()
+    return body.startswith(_NOT_HUMAN_PREFIXES) or bool(_NOT_HUMAN_MARKER.search(body[:400]))
 
 
 def _prompt_text(entry: dict) -> Optional[str]:
@@ -96,7 +111,7 @@ def _prompt_text(entry: dict) -> Optional[str]:
         texts = [b.get("text", "") for b in content
                  if isinstance(b, dict) and b.get("type") == "text"]
         text = "\n".join(t for t in texts if t).strip() or None
-    if text and text.lstrip().startswith(_NOT_HUMAN_PREFIXES):
+    if text and _not_human(text):
         return None
     return text
 

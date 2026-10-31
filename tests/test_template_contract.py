@@ -80,7 +80,7 @@ def test_env_and_marketplaces():
     assert env["CLAUDE_CODE_PLUGIN_DIRS"] == "{{MOD_DIRS}}"  # machine paths are rendered, never templated
     assert env["RETICLE_TELEMETRY"] == "0"
     for k, v in {"CLAUDE_CODE_TOOL_MEMORY_LIMIT": "6G", "CLAUDE_CODE_TOOL_MEMORY_CGROUP_EXCLUDE": "all-new",
-                 "CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH": "600"}.items():
+                 "CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH": "4000"}.items():
         assert env[k] == v, k
     # a floor for launches bin/claude does not wrap (-p, --bare, nested, Windows); its --settings env
     # outranks user settings, so wrapped interactive launches still get the RAM-derived caps (SANTA-GATE 3)

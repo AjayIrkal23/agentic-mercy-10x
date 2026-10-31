@@ -1,0 +1,28 @@
+{
+  "_comment": "Curated router triggers for plugin skills (audit A-05). Plugin SKILL.md files carry no metadata, so their keywords came from the description at half weight (cap 2.0) and 30 of 32 could never reach the 3.0 floor. scripts/build_skills_index.py merges each entry into the per-machine sidecar state/skills-index.plugins.json with source 'plugin' (full weight). keywords are word-boundary phrases (> 3 chars after tokenizing); intents are router categories (DEBUG, PLAN, REVIEW ...); surfaces may be empty. A plugin skill with no entry here stays description-derived and half weight. Local skills that cover the same ground keep their own metadata; both can be pushed (max_skill_pushes).",
+  "skills": {
+    "superpowers:systematic-debugging": {"intents": ["DEBUG"], "keywords": ["debug", "fail intermittently", "intermittently", "intermittent failure", "flaky", "flaky test", "test fails", "root cause", "unexpected behavior", "stack trace", "regression", "keeps failing"]},
+    "superpowers:brainstorming": {"intents": ["SPEC", "PLAN", "DESIGN"], "keywords": ["brainstorm", "new feature", "design decisions", "what should we build", "ideas for", "options for", "trade offs"]},
+    "superpowers:writing-plans": {"intents": ["PLAN"], "keywords": ["write a plan", "implementation plan", "step by step plan", "multi step", "break this down", "task breakdown", "plan for"]},
+    "superpowers:test-driven-development": {"intents": ["TEST", "IMPLEMENT"], "keywords": ["tdd", "test first", "failing test", "write tests", "add tests", "regression test", "red green"]},
+    "superpowers:verification-before-completion": {"intents": ["VERIFY"], "keywords": ["verify", "make sure it works", "prove it works", "before we merge", "is it done", "confirm it works", "tests pass"]},
+    "superpowers:requesting-code-review": {"intents": ["REVIEW"], "keywords": ["review my changes", "review the diff", "code review", "before i merge", "ready to merge", "check my work"]},
+    "superpowers:receiving-code-review": {"intents": ["REVIEW"], "keywords": ["review feedback", "review comments", "reviewer said", "address the review", "pr feedback", "pr comments"]},
+    "superpowers:writing-skills": {"intents": ["IMPLEMENT"], "surfaces": ["claude-infra"], "keywords": ["write a skill", "new skill", "skill description", "skill not triggering", "skill does not trigger", "edit the skill", "skills trigger"]},
+    "superpowers:dispatching-parallel-agents": {"intents": ["PLAN", "AUDIT", "IMPLEMENT"], "keywords": ["parallel agents", "parallel sub agents", "parallel subagents", "in parallel", "fan out", "independent tasks"]},
+    "superpowers:subagent-driven-development": {"intents": ["IMPLEMENT"], "keywords": ["subagent driven", "execute the plan", "run the plan with agents", "implementation tasks"]},
+    "superpowers:using-git-worktrees": {"intents": ["IMPLEMENT"], "keywords": ["git worktree", "worktrees", "isolated workspace", "separate branch checkout"]},
+    "superpowers:finishing-a-development-branch": {"intents": ["SHIP"], "keywords": ["finish the branch", "merge the branch", "open a pr", "ready to ship", "wrap up the branch"]},
+    "ponytail:ponytail": {"intents": ["IMPLEMENT", "REFACTOR"], "keywords": ["ponytail", "simplest solution", "over engineered", "over engineering", "yagni", "smallest change", "bloat"]},
+    "ponytail:ponytail-audit": {"intents": ["AUDIT"], "keywords": ["audit this repo", "audit the repo", "audit the codebase", "find bloat", "what can i delete", "what can we delete", "bloat", "ponytail audit"]},
+    "ponytail:ponytail-review": {"intents": ["REVIEW"], "keywords": ["review this change", "review the last commit", "is this over engineered", "ponytail review", "review my pr"]},
+    "ponytail:ponytail-debt": {"keywords": ["ponytail debt", "shortcut comments", "list the shortcuts", "what did ponytail defer"]},
+    "andrej-karpathy-skills:karpathy-guidelines": {"intents": ["IMPLEMENT", "REFACTOR"], "keywords": ["surgical change", "avoid overcomplication", "karpathy", "keep it simple", "minimal diff"]},
+    "superpowers-lab:finding-duplicate-functions": {"intents": ["CLEANUP", "AUDIT"], "keywords": ["duplicate functions", "duplicate code", "duplication", "same function", "reuse existing", "copy pasted"]},
+    "elements-of-style:writing-clearly-and-concisely": {"intents": ["DOCS"], "keywords": ["write clearly", "concise", "rewrite this text", "improve the writing", "commit message", "error message wording"]},
+    "firecrawl:firecrawl": {"keywords": ["scrape", "crawl", "search the web", "read this url", "web search", "current information"]},
+    "firecrawl:firecrawl-developer-index": {"keywords": ["library docs", "known bug", "github issue", "error message docs", "api contract", "changelog for"]},
+    "firecrawl:firecrawl-research-index": {"keywords": ["research paper", "papers on", "literature review", "citations", "arxiv", "scientific paper"]},
+    "superpowers-lab:mcp-cli": {"intents": ["IMPLEMENT"], "surfaces": ["claude-infra"], "keywords": ["mcp cli", "mcp server tools", "discover mcp tools"]}
+  }
+}

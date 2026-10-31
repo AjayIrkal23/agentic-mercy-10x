@@ -7,6 +7,7 @@
   "enabledPlugins": {
     "andrej-karpathy-skills@karpathy-skills": true,
     "claude-session-driver@superpowers-marketplace": false,
+    "egm@egm": true,
     "elements-of-style@superpowers-marketplace": true,
     "firecrawl@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,
@@ -16,6 +17,7 @@
     "pyright-lsp@claude-plugins-official": true,
     "superpowers-lab@superpowers-marketplace": true,
     "superpowers@claude-plugins-official": true,
+    "tokeneconomizer@tokeneconomizer": true,
     "typescript-lsp@claude-plugins-official": true
   },
   "env": {
@@ -27,7 +29,7 @@
     "CLAUDE_CODE_WORKFLOW_MAX_CONCURRENT_AGENTS": "4",
     "CLAUDE_CODE_TOOL_MEMORY_LIMIT": "6G",
     "CLAUDE_CODE_TOOL_MEMORY_CGROUP_EXCLUDE": "all-new",
-    "CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH": "600",
+    "CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH": "4000",
     "MCP_TIMEOUT": "30000",
     "RETICLE_TELEMETRY": "0",
     "VALIDATION_CLIENT": "sdk",
@@ -36,6 +38,13 @@
     "PONYTAIL_SUBAGENT_MATCHER": "^(implementation-engineer|backend-implementor-specialist|frontend-implementor-specialist|frontend-uiux-designer|integrator-specialist|refactor-specialist|test-author|deadcode-reaper|docs-sync-agent)$"
   },
   "extraKnownMarketplaces": {
+    "egm": {
+      "autoUpdate": false,
+      "source": {
+        "repo": "google/elephant-goldfish-model",
+        "source": "github"
+      }
+    },
     "karpathy-skills": {
       "autoUpdate": false,
       "source": {
@@ -113,14 +122,6 @@
   },
   "outputStyle": "caveman",
   "skillOverrides": {
-    "higgsfield-brandkit": "name-only",
-    "higgsfield-generate": "name-only",
-    "higgsfield-marketplace-cards": "name-only",
-    "higgsfield-product-photoshoot": "name-only",
-    "higgsfield-soul-id": "name-only",
-    "higgsfield-video-explainer": "name-only",
-    "higgsfield-websites": "name-only",
-    "higgsfield-youtube-thumbnail": "name-only",
     "invoke-audit": "name-only",
     "invoke-clean": "name-only",
     "invoke-debug": "name-only",
@@ -137,11 +138,16 @@
     "invoke-test": "name-only",
     "invoke-update": "name-only",
     "invoke-verify": "name-only",
-    "kokonutui": "name-only",
     "mmx-cli": "name-only",
     "workflow-audit": "name-only"
   },
   "permissions": {
+    "allow": [
+      "Read(~/.claude/plugins/cache/egm/egm/*/agents/**)",
+      "Read(~/.claude/plugins/cache/egm/egm/*/docs/**)",
+      "Read(~/.claude/plugins/cache/egm/egm/*/resources/**)",
+      "Read(~/.claude/plugins/cache/egm/egm/*/skills/**)"
+    ],
     "defaultMode": "bypassPermissions",
     "deny": []
   },

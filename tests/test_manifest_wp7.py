@@ -42,8 +42,11 @@ def test_gitleaks_is_pinned_per_arch():
     assert set(g["sha256"]) == {"x64", "arm64"} and all(len(v) == 64 for v in g["sha256"].values())
 
 
-def test_sequential_thinking_is_the_only_always_load():
-    assert [s["name"] for s in M["mcp_servers"] if s.get("alwaysLoad") is True] == ["sequential-thinking"]
+def test_mandated_mcps_always_load():
+    """2026-10-31 (owner): every MCP the rules mandate loads eagerly, so no ToolSearch step stands
+    between the model (main or subagent) and jcodemunch / graphify / jdocmunch / memory / context7 / semgrep."""
+    eager = {s["name"] for s in M["mcp_servers"] if s.get("alwaysLoad") is True}
+    assert {"sequential-thinking", "jcodemunch", "jdocmunch", "graphify", "memory", "context7", "semgrep"} <= eager
 
 
 def test_windows_github_launcher_runs_the_manifest_pin():

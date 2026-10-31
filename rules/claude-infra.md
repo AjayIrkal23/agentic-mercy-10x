@@ -32,8 +32,9 @@ state `state/mem-pressure.json`; runbook `docs/OOM-GUARD.md`.
 
 | Gate | Fires on | Message prefix | Behavior |
 |---|---|---|---|
-| `dangerous-bash-gate` | Bash / PowerShell | `DANGEROUS COMMAND BLOCKED:` | deny |
-| `jcodemunch-enforce` (jcm-gate-read) | Read/Grep/Glob/`ctx_read` on source | `BLOCKED: Use mcp__jcodemunch__…` | budget 2, then fails open |
+| `dangerous-bash-gate` | Bash / PowerShell | `DANGEROUS COMMAND BLOCKED:` | deny; `rm` targets held in the command's own `R=/tmp/...` variable count as temp |
+| `jcodemunch-enforce` (jcm-gate-read, jcm-gate-shell) | Read/Grep/Glob/`ctx_read`, and Bash/PowerShell `grep/rg/cat/sed -n/head/tail/find`, on source | `BLOCKED (once per agent per turn): call mcp__jcodemunch__…(repo="<id>", …)` | one deny per agent per user turn, then allows with an advisory |
+| `jdocmunch-enforce` (jdoc-doc-steer) | whole Read of an indexed doc ≥ 2,000 bytes | `BLOCKED (once per agent per turn): call mcp__jdocmunch__search_sections(repo="local/<name>", …)` | one deny per agent per user turn, then advisory |
 | `first-write-skill-gate` | first Write/Edit of code | `SKILL GATE: First code write to …` | advisory once per session: load the named skills |
 | `dox-write-gate` | Write/Edit in a repo with no root `CLAUDE.md` | `DOX GATE: no root CLAUDE.md …` | deny once per repo |
 | `gateguard-write-gate` | Write/Edit with high blast radius | `GATEGUARD — high-blast-radius write to …` | `ask`, not deny |
@@ -41,9 +42,9 @@ state `state/mem-pressure.json`; runbook `docs/OOM-GUARD.md`.
 | `bash-write-gate` | Bash / PowerShell shell-write patterns (`sed -i`, `>`, `tee`, `Set-Content`, `Out-File`, …) | `BASH-WRITE-GATE (advisory)`, once per kind per session; deny when `BASH_WRITE_GATE_DENY_SHELL_WRITES=1` | rule carried by `01-no-shell-writes.md` |
 | `memwatch-brake` | Agent/Task/Workflow + heavy shell commands | `memory warn:` / `memory crit:` | warn: advisory once per tier per session; crit: `ask`, advisory when unattended |
 | `config-protection-gate` | Write/Edit on lint/format config | — | `ask` unless the prompt asked for it |
-| `settings-protection-gate` | Write/Edit, and Bash/PowerShell writes, on `.claude/settings*.json`, `hooks/model-policy.json`, `~/.claude.json` (new files too) | — | `ask`; deny when nobody can answer (subagent, unattended, headless `-p`); escape = the prompt names the file (`.claude/settings…` path for the settings files; basename for `.claude.json` / `model-policy.json`) or a permission-rule phrase (`permission rule`, `allow rule`, `permissions.allow`, ...) |
+| `settings-protection-gate` | Write/Edit, and Bash/PowerShell writes, on `.claude/settings*.json`, `hooks/model-policy.json`, `~/.claude.json` (new files too) | — | `ask`, never an auto-deny (2026-10-31: subagent / unattended / headless `-p` get the ask too and the session's permission mode decides); escape = the prompt names the file (`.claude/settings…` path for the settings files; basename for `.claude.json` / `model-policy.json`) or a permission-rule phrase (`permission rule`, `allow rule`, `permissions.allow`, ...) |
 | `hookify-gate` | repo `.claude/hookify.*.local.md` rules | — | gate on tools; advisory on prompt/stop |
-| `connector-ask-gate` | claude.ai connector, plugin and GitHub write tools | — | `ask`; deny for subagents |
+| `connector-ask-gate` | claude.ai connector, plugin and GitHub write tools | — | `ask` (subagents too; never an advisory, never an auto-deny) |
 | `hard-completion-gate` | Stop | `Gate 2 (docs)` … `Gate 5 (dead code)` | ≤1 block per turn |
 | `blocking-doc-enforcer` | `git commit` | `BLOCKED: Cannot commit without documentation updates.` | only when doc trees exist |
 | mercy mod guard | Bash / PowerShell dev server / watcher, subagent commit/push, live secret in a write | `mercy guard:` | deny; userConfig `guard` |
@@ -57,7 +58,7 @@ Mods (`mods/<name>`, loaded via rendered `env.CLAUDE_CODE_PLUGIN_DIRS`) run in-p
 beside the Python hooks; check them with `python3 scripts/validate_mods.py`.
 
 **Misdiagnosis order when an edit or read is refused** (stop at the first hit):
-1. No jcodemunch call yet this session → make one. 2. No `Read` of that file before
+1. No jcodemunch call yet by this agent this turn → make the call the refusal names. 2. No `Read` of that file before
 `Edit` → `Read` it and retry immediately (or use `ctx_patch`). 3. The message is a named
 gate above → follow it. 4. Only then look at `settings.json` `permissions.deny` (should
 be `[]`) or another running session. `Error editing file` is native, not a hook. Never

@@ -87,7 +87,7 @@ export function registerToolflow(on: On): void {
         startedAt: started,
       })
     }
-    if (e.agentId !== undefined) rt.subagentCalls.add(e.tool_use_id)
+    if (e.agentId !== undefined) rt.subagentCalls.set(e.tool_use_id, String(e.agentId))
     const r = await next(e).finally(() => rt.subagentCalls.delete(e.tool_use_id))
     const context: string[] = []
     try {

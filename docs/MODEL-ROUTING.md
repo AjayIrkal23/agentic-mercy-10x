@@ -47,16 +47,23 @@ Rows are roles (`roles.agents` maps each `subagent_type`); columns are tiers (`t
 
 | Role | Agents | pro | max5 / api | max20 |
 |---|---|---|---|---|
-| explore | explore, claude-code-guide | haiku | haiku | haiku |
-| docs | docs-sync-agent, deadcode-reaper, memory-codex | haiku | haiku | haiku |
-| verify | qa-verifier | haiku | haiku | haiku (sonnet at size L) |
-| test | test-author | haiku (sonnet on escalation) | sonnet | sonnet |
-| impl | implementation-engineer, BE/FE implementors, refactor-specialist | haiku (sonnet on escalation) | sonnet; haiku with a plan marker at size S/M | sonnet (opus on escalation) |
-| integrate, security | integrator-specialist, security-sentinel | haiku (sonnet on escalation) | sonnet | sonnet (opus on escalation) |
+| explore | explore, claude-code-guide | haiku | haiku | sonnet |
+| docs | docs-sync-agent, deadcode-reaper, memory-codex | haiku | haiku | sonnet |
+| verify | qa-verifier | haiku | haiku | opus |
+| test | test-author | haiku (sonnet on escalation) | sonnet | opus |
+| impl | implementation-engineer, BE/FE implementors, refactor-specialist | haiku (sonnet on escalation) | sonnet; haiku with a plan marker at size S/M | opus |
+| integrate, security | integrator-specialist, security-sentinel | haiku (sonnet on escalation) | sonnet | opus |
 | judge | santa-reviewer, frontend-uiux-designer, planning-director, spec-architect, debug-detective, audit-specialist, Plan | sonnet | sonnet; opus when your turn says "use opus" | opus |
-| default | general-purpose (the plain `Agent` type) and any other agent type | haiku | sonnet | sonnet |
+| judge (EGM plugin) | `egm:egm-zoom-out`, `egm:egm-comprehension`, `egm:egm-design`, `egm:egm-structural`, `egm:egm-style`, `egm:egm-implementation-readiness`, `egm:egm-codebase-details`, `egm:egm-synthesizer` | sonnet | sonnet; opus when your turn says "use opus" | opus |
+| default | general-purpose (the plain `Agent` type), `egm:egm-bootstrap-orchestrator` and any other agent type | haiku | sonnet | sonnet |
 
 A per-turn phrase ("use haiku/sonnet/opus/fable") overrides the row for that turn, up to the ceiling.
+
+**max20 since 2026-10-31** (owner: "smartest agents, tokens do not matter"): Sonnet is the floor (no
+Haiku role), and executors, tests and verify run Opus outright, so escalation changes nothing there
+(`tiers.max20.escalate` still names Opus; `size_bumps` is empty). `agent_pins.opus` lists every judge,
+executor, qa-verifier and the eight EGM judges. pro, max5 and api are unchanged. The usage guard still
+steps max20 down to Sonnet near the 5-hour limit (§5).
 
 | Tier setting | pro | max5 / api | max20 |
 |---|---|---|---|
@@ -76,7 +83,8 @@ Triggers: a retry marker in the prompt ("previous attempt failed"), or no plan m
 `prompt_router.classify` rates the work size L with risk 2 or more. Only executor roles (those with a
 `tiers.<tier>.escalate` entry: test, impl, integrate, security) escalate, and only to the model in
 that entry, inside the ceiling. A very complex task on pro therefore gets Sonnet, never Opus. On max5
-a planned small impl task drops to Haiku; on max20 qa-verifier moves to Sonnet for size-L work.
+a planned small impl task drops to Haiku. On max20 executors already run Opus, so escalation is a no-op.
+`escalation.plan_markers` also count `docs/designs/<name>.md` and `design_draft.md` (EGM design docs).
 
 ## 5. Usage guard
 
@@ -173,8 +181,7 @@ applied. `plan-tier-detect` logs `{tier, source, changed, ok}` to the hook telem
 
 ## 9. Cost notes
 
-Haiku is the default worker. Above 100K prompt tokens it costs 5x, so Haiku roles keep
-`autoCompactWindow` at 120000. The opus-guard note is one short sentence per Agent call; the
+Haiku is the default worker on pro, max5 and api; max20 has no Haiku role since 2026-10-31 (§3). The opus-guard note is one short sentence per Agent call; the
 workflow guard says nothing on saved scripts unless something drifted.
 
 ## 10. Tests

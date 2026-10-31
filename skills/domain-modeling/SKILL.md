@@ -2,9 +2,6 @@
 name: domain-modeling
 description: Build and sharpen a project's domain model. Use when the user wants to pin down domain terminology or a ubiquitous language, record an architectural decision, or when another skill needs to maintain the domain model.
 when_to_use: Use when pinning down domain terminology, recording an architectural decision, or editing CONTEXT.md / docs/adr.
-paths:
-- '**/CONTEXT.md'
-- '**/docs/adr/**'
 ---
 # Domain Modeling
 
