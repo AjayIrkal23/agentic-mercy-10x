@@ -39,6 +39,7 @@ S1 = "5f0c3a3e-1d2b-4c5d-9e8f-0a1b2c3d4e5f"  # Claude Code session ids are UUIDs
 @pytest.fixture(autouse=True)
 def _state(tmp_path, monkeypatch):
     monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.delenv("CLAUDE_HOOK_DOCTOR", raising=False)  # CI exports it; mode_start drops doctor replays
     monkeypatch.setattr(sl, "_claude_pid", lambda *a, **k: 4242)
     return tmp_path / "state"
 

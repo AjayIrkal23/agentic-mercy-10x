@@ -7,11 +7,20 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from lib import platform as plat  # noqa: E402
 
 APP = "/user.slice/user-1000.slice/user@1000.service/app.slice/"
+
+
+@pytest.fixture(autouse=True)
+def _linux_probes(monkeypatch):
+    """The probes read a fake /proc tree and env vars, which works on any OS; only their
+    Windows short-circuit is OS-bound (covered by test_windows_probes_are_none)."""
+    monkeypatch.setattr(plat, "IS_WINDOWS", False)
 
 
 def fake_proc(root: Path, *, mem_available_kb: int | None = 11479040, mem_total_kb: int = 31405920,

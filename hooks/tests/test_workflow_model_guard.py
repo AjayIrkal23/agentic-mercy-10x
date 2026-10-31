@@ -383,7 +383,8 @@ def test_t10_saved_script_gets_tier_hint_when_args_task_escalates():
     assert "updatedInput" not in out.get("hookSpecificOutput", {})  # no escalation -> args untouched
 
 
-def test_routing_telemetry_row(tmp_path):
+def test_routing_telemetry_row(tmp_path, monkeypatch):
+    monkeypatch.delenv("CLAUDE_HOOK_DOCTOR", raising=False)  # CI exports it; _log_route skips under doctor
     tele = tmp_path / "tele"
     run_hook({"script": "agent('p', {agentType: 'explore'});\n"}, env_extra={"CLAUDE_HOOK_TELEMETRY_DIR": str(tele)},
              payload_extra={"session_id": "w1"})

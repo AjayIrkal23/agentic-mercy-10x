@@ -21,8 +21,9 @@ _HOOKS = Path(__file__).resolve().parents[1]
 TOOL = _HOOKS / "tools" / "worktree_audit.py"
 if str(_HOOKS) not in sys.path:
     sys.path.insert(0, str(_HOOKS))
+from lib import platform as plat  # noqa: E402
 
-pytestmark = pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
+pytestmark =pytest.mark.skipif(shutil.which("git") is None, reason="git not installed")
 
 
 def _env(tmp_path, date: str | None = None) -> dict:
@@ -86,7 +87,8 @@ def _snapshot(tmp_path, repo) -> list:
         [_g(tmp_path, repo, "worktree", "list", "--porcelain")]
 
 
-def test_one_line_names_dirty_stale_and_conflict(wa, repo, tmp_path):
+def test_one_line_names_dirty_stale_and_conflict(wa, repo, tmp_path, monkeypatch):
+    monkeypatch.setattr(wa.plat, "IS_WINDOWS", False)  # one_line is "" on Windows by design; audit the logic
     before = _snapshot(tmp_path, repo)
     line = wa.one_line(str(repo), budget_ms=20000)
     assert "\n" not in line and len(line) <= 200
@@ -103,8 +105,9 @@ def test_silent_when_the_only_worktree_is_the_main_one_or_everything_is_clean(wa
     assert wa.one_line(str(r), budget_ms=20000) == ""
 
 
-def test_runs_from_a_subdirectory_and_from_a_linked_worktree(wa, repo, tmp_path):
-    main = wa.one_line(str(repo), budget_ms=20000)
+def test_runs_from_a_subdirectory_and_from_a_linked_worktree(wa, repo, tmp_path, monkeypatch):
+    monkeypatch.setattr(wa.plat, "IS_WINDOWS", False)
+    main =wa.one_line(str(repo), budget_ms=20000)
     assert main
     assert wa.one_line(str(repo / "sub"), budget_ms=20000) == main
     assert wa.one_line(str(tmp_path / "wt-clean"), budget_ms=20000) == main
@@ -140,6 +143,7 @@ def test_optional_tool_path_matches_session_notices_contract(wa, repo, monkeypat
     assert got == full[:session_notices._MAX_LINE] or got.endswith("(partial)")
 
 
+@pytest.mark.skipif(plat.IS_WINDOWS, reason="the audit is off on Windows by design; the CLI child cannot be stubbed")
 def test_cli_prints_the_line(wa, repo, tmp_path):
     expected = wa.one_line(str(repo), budget_ms=20000)
     cp = subprocess.run([sys.executable, str(TOOL), str(repo)], capture_output=True, text=True, timeout=60,

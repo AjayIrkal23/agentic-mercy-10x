@@ -5,9 +5,15 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 from pathlib import Path
 
 HOOKS = Path(__file__).resolve().parents[1]
+
+
+def _native(*paths: str) -> set:
+    """The tracker stores native paths (`\\r\\src\\a.ts` on Windows), as Gate 3's `_scans_cover` compares."""
+    return {os.path.normpath(p) for p in paths}
 
 
 def _load(tmp_path, monkeypatch):
@@ -28,7 +34,7 @@ def test_mcp_scan_records_each_file(tmp_path, monkeypatch):
                        "tool_input": {"code_files": [{"path": "/r/src/auth.ts"}, "src/login.ts"]}})
     st = _state(tmp_path)  # plain session id: the parent's Stop gate sees subagent scans
     assert st["semgrep_ran"] is True
-    assert set(st["scanned_at"]) == {"/r/src/auth.ts", "/r/src/login.ts"}
+    assert set(st["scanned_at"]) == _native("/r/src/auth.ts", "/r/src/login.ts")
     assert all(isinstance(v, float) for v in st["scanned_at"].values())
 
 
@@ -37,4 +43,4 @@ def test_cli_scan_records_targets_not_option_values(tmp_path, monkeypatch):
     mod.post_tool_use({"session_id": "s", "tool_name": "Bash", "cwd": "/r",
                        "tool_input": {"command": "semgrep scan --config p/owasp-top-ten --json src/auth.ts lib"},
                        "tool_result": {"exit_code": 0}})
-    assert set(_state(tmp_path)["scanned_at"]) == {"/r/src/auth.ts", "/r/lib"}
+    assert set(_state(tmp_path)["scanned_at"]) == _native("/r/src/auth.ts", "/r/lib")

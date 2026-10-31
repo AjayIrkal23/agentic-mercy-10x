@@ -402,6 +402,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--record", type=int, metavar="TOKENS", help="the /context token figure for the eager MCP schemas")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
+    try:  # the table holds non-ASCII; a cp1252 Windows console or pipe would raise UnicodeEncodeError
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError, OSError):
+        pass
     root = Path(a.root).expanduser().resolve()
     drafts = None
     if a.drafts:

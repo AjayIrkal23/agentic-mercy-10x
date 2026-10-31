@@ -4,6 +4,8 @@ from __future__ import annotations
 import importlib.util
 import json
 import os
+import shlex
+import sys
 import time
 from pathlib import Path
 
@@ -24,6 +26,8 @@ NOW = 1_800_000_000.0
 def env(tmp_path, monkeypatch):
     monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "cfg"))
+    # fixture /proc trees work on any OS; the Windows "unsupported" path is test_unsupported_tree_and_windows
+    monkeypatch.setattr(mw.plat, "IS_WINDOWS", False)
     return tmp_path
 
 
@@ -126,15 +130,23 @@ def test_ingest_drops_test_scopes(env):
     assert _events(env) == []
 
 
+def _py(code, *args):
+    """A --journal-cmd running this interpreter: no cat/false/sleep on Windows, and shlex.join keeps
+    backslash paths intact through memwatch's posix shlex.split."""
+    return shlex.join([sys.executable, "-c", code, *map(str, args)])
+
+
 def test_journal_cmd_end_to_end(env, monkeypatch, capsys):
-    _, _, ev = _run(env, FIX / "proc-ok", "--journal-cmd", f"cat {FIX / 'journal' / 'oomd.json'}")
+    cat = _py("import sys; sys.stdout.write(open(sys.argv[1], encoding='utf-8').read())", FIX / "journal" / "oomd.json")
+    _, _, ev = _run(env, FIX / "proc-ok", "--journal-cmd", cat)
     assert [e["source"] for e in ev] == ["oomd"]
     (env / "e.jsonl").unlink()
-    assert _run(env, FIX / "proc-ok", "--journal-cmd", "false")[2] == []
+    assert _run(env, FIX / "proc-ok", "--journal-cmd", _py("raise SystemExit(1)"))[2] == []
     assert "journal-cmd rc=1" in capsys.readouterr().err
     monkeypatch.setattr(mw, "JOURNAL_CMD_TIMEOUT", 1.0)
     t0 = time.monotonic()
-    assert _run(env, FIX / "proc-ok", "--journal-cmd", "sleep 30")[0] == 0 and time.monotonic() - t0 < 5
+    assert _run(env, FIX / "proc-ok", "--journal-cmd", _py("import time; time.sleep(30)"))[0] == 0
+    assert time.monotonic() - t0 < 5
 
 
 # ---- step 7: kill ladder -----------------------------------------------------------------------

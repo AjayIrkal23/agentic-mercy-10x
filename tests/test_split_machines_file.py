@@ -298,7 +298,7 @@ def test_a_short_file_is_left_alone(tmp_path):
     assert 900 < len(long_bullet) and len(text) < 2048
     assert sm.split_text(text) == (text, [])
     m = tmp_path / sm.MACHINES_NAME
-    m.write_text(text, encoding="utf-8")
+    m.write_text(text, encoding="utf-8", newline="\n")  # Windows write_text writes CRLF, which apply normalises
     rc, msgs = _apply(m)
     assert rc == 0 and any("unchanged" in x for x in msgs)
     assert m.read_text(encoding="utf-8") == text and not m.with_name(sm.JOURNAL_NAME).exists()

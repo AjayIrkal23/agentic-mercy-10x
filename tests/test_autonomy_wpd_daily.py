@@ -417,6 +417,7 @@ def test_mcp_inventory_rewrites_only_on_change(sd, monkeypatch, tmp_path):
     monkeypatch.setattr(sd, "INVENTORY_MD", target)
     monkeypatch.setattr(sd, "INVENTORY", tmp_path / "inv.py")
     (tmp_path / "inv.py").write_text("", encoding="utf-8")
+    monkeypatch.setattr(sd.plat, "IS_WINDOWS", False)  # the writer is POSIX-only (SKIP(replica) on Windows)
     monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(0, "new\n"))
     assert sd._mcp_inventory(sd.Ctx(False, tmp_path, 60)) == [("mcp-inventory", "mcp-inventory.md", "UPDATED")]
     assert target.read_text(encoding="utf-8") == "new\n"
@@ -431,6 +432,7 @@ def test_mcp_inventory_keeps_the_preamble(sd, monkeypatch, tmp_path):
     monkeypatch.setattr(sd, "INVENTORY_MD", target)
     monkeypatch.setattr(sd, "INVENTORY", tmp_path / "inv.py")
     (tmp_path / "inv.py").write_text("", encoding="utf-8")
+    monkeypatch.setattr(sd.plat, "IS_WINDOWS", False)
     monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(0, "generated header\n| Server | x |\n|---|---|\n| b | 2 |\n"))
     assert sd._mcp_inventory(sd.Ctx(False, tmp_path, 60)) == [("mcp-inventory", "mcp-inventory.md", "UPDATED")]
     assert target.read_text(encoding="utf-8") == "# Inventory\nhand text\n\n| Server | x |\n|---|---|\n| b | 2 |\n"

@@ -107,7 +107,9 @@ def test_ensure_gitleaks_downloads_verifies_and_extracts(home, monkeypatch):
     row = basetools.ensure_gitleaks(MANIFEST, ci=False, dry_run=False, download=fake_download, which=lambda n: None)
     assert row == ("gitleaks", "INSTALLED gitleaks v8.30.1")
     binary = home / ".local" / "bin" / "gitleaks"
-    assert binary.is_file() and binary.stat().st_mode & 0o111
+    assert binary.is_file()
+    if os.name == "posix":  # Windows has no exec bit (st_mode reads 0o666 for any non-.exe file)
+        assert binary.stat().st_mode & 0o111
     assert not (home / ".local" / "bin" / "LICENSE").exists() and not (home / ".local" / "bin" / "README.md").exists()
     assert seen["url"] == GL["download"].format(version="8.30.1", arch="x64") and seen["sha256"] == "a" * 64
 

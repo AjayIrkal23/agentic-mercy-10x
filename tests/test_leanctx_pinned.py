@@ -110,7 +110,8 @@ def test_a_drifted_binary_is_replaced_by_the_pin(home, monkeypatch):
     assert not (pkg / "bin" / "lean-ctx.old").exists()
 
 
-def test_a_failed_replacement_puts_the_old_binary_back(home):
+def test_a_failed_replacement_puts_the_old_binary_back(home, monkeypatch):
+    monkeypatch.setattr(release_bin.plat, "IS_WINDOWS", False)  # the fixture binary is the POSIX name, no .exe
     pkg = _drifted(home)
 
     def dl(*_a, **_k):
@@ -120,14 +121,16 @@ def test_a_failed_replacement_puts_the_old_binary_back(home):
     assert (pkg / "bin" / "lean-ctx").read_bytes() == b"old"  # the npm shim never ends up without a binary
 
 
-def test_a_pinned_binary_is_left_alone(home):
+def test_a_pinned_binary_is_left_alone(home, monkeypatch):
+    monkeypatch.setattr(release_bin.plat, "IS_WINDOWS", False)
     pkg = _drifted(home)
     assert release_bin.ensure(REL, pkg, dry_run=False, download=lambda *a, **k: 1 / 0, key="linux-x64",
                               version=lambda p: REL["version"]) == (True, "")
     assert (pkg / "bin" / "lean-ctx").read_bytes() == b"old"
 
 
-def test_a_dry_run_names_the_replacement(home):
+def test_a_dry_run_names_the_replacement(home, monkeypatch):
+    monkeypatch.setattr(release_bin.plat, "IS_WINDOWS", False)
     pkg = _drifted(home)
     ok, note = release_bin.ensure(REL, pkg, dry_run=True, version=lambda p: "3.12.0")
     assert ok and "would replace" in note and (pkg / "bin" / "lean-ctx").read_bytes() == b"old"

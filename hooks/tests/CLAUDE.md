@@ -106,7 +106,7 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 | `test_semgrep_tracker_files.py` | B-08 tracker half: MCP and CLI scans record `scanned_at` per absolute target (option values skipped) on the plain session id |
 | `test_agent_kinds.py` | EGM Step 6: goldfish/lean sets, lean SubagentStart block, bootstrap keeps the full block, goldfish passes both read gates |
 | `test_library_routes.py` | `library_routes.items`: <= 2 LIBRARY lines (stack pack, REVIEW lane, >= 2 trigger hits); never raises |
-| `test_memwatch.py`, `test_memwatch_state.py`, `test_platform_mem.py` | OOM guard: `tools/memwatch.py` tiers, journal, kill ladder, notify, restore, loop; `lib/memwatch_state.py` and the OOM parts of `session_notices`; `platform.py` memory and cgroup probes (`fake_proc`) |
+| `test_memwatch.py`, `test_memwatch_state.py`, `test_platform_mem.py` | OOM guard: `tools/memwatch.py` tiers, journal, kill ladder, notify, restore, loop; `lib/memwatch_state.py` and the OOM parts of `session_notices`; `platform.py` memory and cgroup probes (`fake_proc`); fixture-tree tests stub `plat.IS_WINDOWS` False (the probes return None on Windows) and `--journal-cmd` runs `sys.executable` via `shlex.join` (no `cat`/`sleep` there; posix `shlex.split` eats bare backslashes) |
 | `test_memwatch_brake.py` | `memwatch-brake.py` (PreToolUse) and `memwatch-ensure.py` (SessionStart) |
 | `test_observe_log.py` | `lib/scrub.py` (keys, bare tokens, URL creds, private keys, linear time) and `observe-log.py` (row shape, 2 KB cap, skip list, doctor no-op; dispatch regex mirrors `skip_tools`) |
 | `test_ollama_lib.py` | `lib/ollama.py`: host from `OLLAMA_HOST`, alive on any HTTP answer, chat shape and None on every failure, models |
@@ -125,7 +125,7 @@ only. Hook logic lives in `../`; installer/template tests live in `../../tests/`
 | `test_tool_failure_hint.py` | tool-failure-hint: legacy hints plus OOM victim, tool-cap inference and the MCP failure cache |
 | `test_usage_guard.py` | `lib/usage_guard.py`: newest bridge file wins, 80/70 hysteresis, reset clears, step-down table, fail-open |
 | `test_workflow_routes.py` | R3.2: big or multi-act prompts get a WORKFLOW line; small tasks stay inline; `run` is absolute UTC under the repo root (the cwd when no repo) |
-| `test_worktree_audit.py` | `tools/worktree_audit.py`: stale, dirty and conflicting linked worktrees in a temp repo; read-only |
+| `test_worktree_audit.py` | `tools/worktree_audit.py`: stale, dirty and conflicting linked worktrees in a temp repo; read-only; the audit is off on Windows, so the logic tests stub `plat.IS_WINDOWS` False and the CLI test is POSIX only |
 | `fixtures/` | `proc-ok/`, `proc-warn/`, `proc-crit/`, `proc-kill/` (fake /proc trees), `journal/` (user-manager rows), `learning/` (observations, model reply, instinct files, imports), `instructions-loaded.json` |
 
 ## Gotchas / fragile spots

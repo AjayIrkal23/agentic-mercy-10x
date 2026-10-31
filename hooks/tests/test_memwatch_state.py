@@ -150,6 +150,7 @@ def test_instinct_lines(tmp_path, monkeypatch):
 def _mw_ctx(tmp_path, monkeypatch, tree="proc-warn", **seams):
     from test_memwatch import FIX, _ctx
     monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(tmp_path / "cfg"))
+    monkeypatch.setattr(plat, "IS_WINDOWS", False)  # fixture /proc trees probe on any OS
     return _ctx(tmp_path, FIX / tree, **seams), FIX
 
 
