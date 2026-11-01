@@ -489,7 +489,9 @@ class _GitBypass:
                 rest = [t for t in toks[i + 1:] if t not in _CONFIG_SCOPE_FLAGS]
                 if len(rest) >= 2 and rest[0].lower() == "core.hookspath":
                     val = rest[1]  # a quoted value reads as "" after quote stripping: judged empty
-                    if val in ("", "/dev/null", "NUL", "nul") or (os.path.isabs(val) and not _has_files(val)):
+                    # py3.13+ ntpath.isabs("/tmp/x") is False (rooted, no drive): a rooted value is absolute too
+                    rooted = os.path.isabs(val) or val[:1] in ("/", os.sep)
+                    if val in ("", "/dev/null", "NUL", "nul") or (rooted and not _has_files(val)):
                         return _Hit("core.hooksPath set to an empty or missing hook dir", "config")
                 continue
             if sub not in _GIT_PROTECTED:
