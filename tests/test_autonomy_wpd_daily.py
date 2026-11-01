@@ -77,11 +77,27 @@ def test_plugins_step_installs_missing_plugins_and_pins_toolprune_off(sd, box, m
     home = tmp_path / "te-home"
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("USERPROFILE", str(home))
+    forced: list = []
+    monkeypatch.setattr(selfheal, "_ensure_settings", lambda t, env, emit, **k: forced.append(k.get("force"))
+                        or emit("settings", "settings.json", "OK(rendered)"))
     sd.main([])
     changed = _summary(box)["changed"]
     assert any("egm@egm" in c and "INSTALLED" in c for c in changed)
     assert not any("ponytail" in c for c in changed)
     assert json.loads((home / ".tokeneconomizer" / "config.json").read_text(encoding="utf-8"))["toolprune"] == "off"
+    # the marketplace add rewrote settings.json: one forced re-render brings back the template's keys
+    assert forced == [True] and "settings settings.json: OK(rendered)" in changed
+
+
+def test_plugins_step_re_renders_nothing_when_every_plugin_is_present(sd, box, monkeypatch, tmp_path):
+    _only(sd, monkeypatch, "plugins")
+    monkeypatch.setattr(deps, "install_plugins", lambda env, ci=False, dry_run=False: [("plugin:egm@egm", "PRESENT")])
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    forced: list = []
+    monkeypatch.setattr(selfheal, "_ensure_settings", lambda *a, **k: forced.append(1))
+    sd.main([])
+    assert forced == []
 
 
 def _only(sd, monkeypatch, *names):

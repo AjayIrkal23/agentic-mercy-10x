@@ -132,6 +132,12 @@ _POSIX_STEPS = (("pull", "git -C ~/.claude pull --ff-only && python3 ~/.claude/i
                 ("doctor", "python3 ~/.claude/installer/doctor.py | tail -1", 300))
 
 
+def _login(cmd: str) -> str:
+    """A bare `ssh host cmd` PATH lacks ~/.local/bin (node, claude, uv): the doctor's base-tools row
+    FAILed on a healthy box (Rohit's PC, 2026-11-01). A login shell reads ~/.profile like a terminal."""
+    return "bash -lc " + shlex.quote(cmd)
+
+
 def posix_main(host: str, dry: bool, *, run=plat.run) -> int:
     """A POSIX replica (another Linux box with a git ~/.claude): pull + render, then the doctor's
     summary line. Same PASS/WARN/SKIP semantics as the Windows path (FI-9)."""
@@ -140,14 +146,14 @@ def posix_main(host: str, dry: bool, *, run=plat.run) -> int:
         return 0
     if dry:
         for _, cmd, _t in _POSIX_STEPS:
-            print(f"plan ssh -o BatchMode=yes {host} {shlex.quote(cmd)}")
+            print(f"plan ssh -o BatchMode=yes {host} {shlex.quote(_login(cmd))}")
         return 0
     rows: list[tuple[str, str]] = []
     for name, cmd, timeout in _POSIX_STEPS:
         if name == "doctor" and rows and rows[0][1] != "OK":
             rows.append((name, "SKIP(pull failed)"))
             continue
-        cp = run(["ssh", *_SSH_OPTS, host, cmd], timeout=timeout, stdin_devnull=True)
+        cp = run(["ssh", *_SSH_OPTS, host, _login(cmd)], timeout=timeout, stdin_devnull=True)
         status = ("WARN(timeout)" if cp.returncode == 124 else
                   f"WARN(rc={cp.returncode})" if cp.returncode != 0 else
                   "WARN(doctor FAIL)" if name == "doctor" and re.search(r"[1-9]\d* FAIL", cp.stdout or "") else "OK")
