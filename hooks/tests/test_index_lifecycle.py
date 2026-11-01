@@ -905,6 +905,7 @@ def test_scoped_builder_command_shape(tmp_path, monkeypatch):
     (tmp_path / "bus").touch()
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     monkeypatch.setattr(il, "_which", lambda name: True)
+    monkeypatch.setattr(il.plat, "IS_WINDOWS", False)  # the systemd scope is the POSIX branch
     cfg = il._load_config()
     repo = tmp_path / "proj"
     cmd = il._scoped("graphify", repo, ["graphify", "update", str(repo)], cfg)
@@ -922,6 +923,7 @@ def test_scoped_unit_names_are_unique_per_call(tmp_path, monkeypatch):
     (tmp_path / "bus").touch()
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     monkeypatch.setattr(il, "_which", lambda name: True)
+    monkeypatch.setattr(il.plat, "IS_WINDOWS", False)
     cfg = il._load_config()
     a = il._scoped("jcodemunch", tmp_path, ["x"], cfg)
     b = il._scoped("jcodemunch", tmp_path, ["x"], cfg)
@@ -982,6 +984,7 @@ def test_scoped_omits_nice_and_ionice_when_absent(tmp_path, monkeypatch):
     (tmp_path / "bus").touch()
     monkeypatch.setenv("XDG_RUNTIME_DIR", str(tmp_path))
     monkeypatch.setattr(il, "_which", lambda n: n not in ("nice", "ionice"))
+    monkeypatch.setattr(il.plat, "IS_WINDOWS", False)
     cmd = il._scoped("dox", tmp_path, ["x", "y"], il._load_config())
     assert cmd[0] == "systemd-run" and cmd[cmd.index("IOWeight=20") + 1:] == ["x", "y"]
 

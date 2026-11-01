@@ -9,8 +9,6 @@ SessionStart aggregator — one advisory link that merges:
     learned instincts,
   * the ALWAYS-ON STYLE directive (ponytail + caveman + no-ai-slop; the caveman
     sentence is dropped when the caveman output style already carries it),
-  * the always-active core skill digests (hooks/core-skill-set.json) at a FIXED
-    budget, so the same bodies arrive every session (audit B2-07),
   * the superpowers bootstrap pointer and the configured MCP roster.
 
 Every source has its own cap (CAPS); a clipped source ends with "…(<source> trimmed)".
@@ -49,7 +47,7 @@ PLUGINS_ROOT = HOOK_DIR.parent / "plugins"
 # output, so this link keeps to 5,500 and leaves room for the memory directive and
 # the breadcrumb (see test_session_start_budget.py).
 MAX_AGGREGATED_CHARS = 5500
-CAPS = {"index": 600, "notices": 600, "style": 700, "core": 2000, "mcp": 700}
+CAPS = {"index": 600, "ids": 400, "notices": 600, "style": 700, "mcp": 700}
 SEP = "\n\n---\n\n"
 STYLE_CAVEMAN = ("caveman (ultra-compressed prose to the user, full technical accuracy; the "
                  "output style carries the rules)")
@@ -179,75 +177,6 @@ def _run_hook_subprocess(cmd: list[str], payload_txt: str, timeout: int) -> str:
     return ""
 
 
-def _canonical(name: str) -> str:
-    try:
-        from lib import skill_aliases
-        return skill_aliases.canonical(name)
-    except Exception:  # noqa: BLE001 - alias lib optional
-        return name
-
-
-def _core_skill_digests(budget: int = MAX_AGGREGATED_CHARS, bodies_ok: bool = True) -> str:
-    """Always-active core skill set (hooks/core-skill-set.json), within ``budget`` chars.
-    Every skill starts as a one-line pointer; `mode: full` entries are upgraded to
-    their body, in config order, only while the whole block still fits
-    (``bodies_ok=False``: pointers only)."""
-    try:
-        cfg = json.loads((HOOK_DIR / "core-skill-set.json").read_text(encoding="utf-8"))
-    except Exception:  # noqa: BLE001
-        return ""
-    idx = {}
-    try:
-        from lib import skills_index as _si  # noqa: PLC0415  (tracked index + plugin sidecar)
-        idx = _si.skills(HOOK_DIR)
-    except Exception:  # noqa: BLE001
-        pass
-    header = ("[Always-active core skills] — load a pointer with the Skill tool when it "
-              "applies, or Read the SKILL.md it names")
-    lines: list[str] = []
-    bodies: list[str | None] = []
-    seen: set[str] = set()
-    for ent in cfg.get("always", []):
-        name = _canonical(ent.get("skill") or "")
-        if not name or name in seen:
-            continue
-        seen.add(name)
-        desc = " ".join(((idx.get(name) or {}).get("description") or "").split())
-        sk = HOOK_DIR.parent / "skills" / name / "SKILL.md"
-        # `paths:`-scoped skills are "Unknown skill" to the Skill tool until a matching
-        # file is read; the path goes before the description so truncation keeps it.
-        hint = f" (Read {sk.as_posix()})" if (idx.get(name) or {}).get("paths") else ""
-        lines.append(f"- {name}{hint} — {desc[:150]}")
-        body = None
-        if bodies_ok and ent.get("mode") == "full" and sk.is_file():
-            try:
-                raw = sk.read_text(encoding="utf-8", errors="replace")
-                if raw.startswith("---"):
-                    end = raw.find("\n---", 3)
-                    if end != -1:
-                        raw = raw[end + 4:]
-                body = f"### skill: {name}\n{raw.strip()[: int(ent.get('max_chars', 5000))]}"
-            except OSError:
-                body = None
-        bodies.append(body)
-    if not lines:
-        return ""
-
-    def render(parts: list[str]) -> str:
-        return "\n\n".join([header, "\n".join(p for p in parts if p.startswith("- ")),
-                            *(p for p in parts if not p.startswith("- "))]).strip()
-
-    for i, body in enumerate(bodies):
-        if body:
-            trial = lines[:i] + [body] + lines[i + 1:]
-            if len(render(trial)) <= budget:
-                lines = trial
-    block = render(lines)
-    if len(block) > budget:  # too tight even for pointers: keep names + Read paths
-        block = render([p.split(" — ", 1)[0] if p.startswith("- ") else p for p in lines])
-    return block[:budget]
-
-
 def _output_style() -> str:
     """``outputStyle`` from the rendered settings.json, lower-cased; "" when unknown."""
     try:
@@ -313,6 +242,18 @@ def _session_notices(cwd: str = "") -> str:
     return _clip("\n".join(t.strip() for t in lines if t and t.strip()), CAPS["notices"], "notices")
 
 
+def _mcp_ids_block(cwd: str) -> str:
+    """B-07: the exact ids to pass for every indexed surface of the open repo (a guessed
+    `repo="<folder>"` misses: jcodemunch names its index after the git remote)."""
+    try:
+        from lib import mcp_ids
+        lines = mcp_ids.call_lines(mcp_ids.project_root(cwd))
+        return ("MCP ids for this repo (pass them as is):\n" + "\n".join(f"- {ln}" for ln in lines)
+                if lines else "")
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def _join(*chunks: str) -> str:
     out = ""
     for chunk in chunks:
@@ -336,17 +277,15 @@ def _full_context(payload: dict, payload_txt: str) -> str:
             for fut in futures:  # submission order -> deterministic merge
                 aggregated = _merge_additional_context(aggregated, fut.result())
 
-    # Every source has a fixed cap, so the core bodies never depend on what the hook
-    # output printed (B2-07) and the sum (4,600 + 4 separators + markers) stays under MAX.
-    index = _clip(aggregated, CAPS["index"], "index")
+    # Every source has a fixed cap, so the sum (2,600 + 3 separators + markers) stays under
+    # MAX. The core skill bodies load through CLAUDE.skills.md, not here.
+    aggregated = aggregated.replace(" — no agent action required", "")
+    index = _join(_clip(aggregated, CAPS["index"], "index"),
+                  _clip(_mcp_ids_block(str(payload.get("cwd") or "")), CAPS["ids"], "ids"))
     notices = _clip(_session_notices(str(payload.get("cwd") or "")), CAPS["notices"], "notices")
     style = _style_block()
-    core = _core_skill_digests(CAPS["core"])
     tail = _clip(_join(_superpowers_session_context(), _configured_mcp_context()), CAPS["mcp"], "mcp")
-    out = _join(index, notices, style, core, tail)
-    if len(out) > MAX_AGGREGATED_CHARS:  # arithmetic guard: unreachable with the caps above
-        out = _join(index, notices, style, _core_skill_digests(CAPS["core"], bodies_ok=False), tail)
-    return out[:MAX_AGGREGATED_CHARS]
+    return _join(index, notices, style, tail)[:MAX_AGGREGATED_CHARS]
 
 
 def main() -> int:

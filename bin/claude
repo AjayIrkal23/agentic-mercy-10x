@@ -39,6 +39,8 @@ done
 subcmd=0
 case "${1:-}" in  # subcommands take no session model (`claude --help` Commands list, 2.1.3xx)
   agents|attach|auth|auto-mode|config|doctor|gateway|import|install|kill|logs|mcp|migrate-installer|plugin|plugins|purge|respawn|rm|setup-token|stop|ultrareview|update|upgrade) has_model=1; subcmd=1 ;;
+  # hidden from --help; hosts sessions (keeps the scope), but 2.1.314 refuses --settings/--model before the verb
+  remote-control|rc) has_model=1; has_settings=1 ;;
 esac
 if [ "$unattended" = 1 ]; then
   export CLAUDE_WORKBENCH_UNATTENDED=1

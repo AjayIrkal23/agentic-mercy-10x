@@ -120,6 +120,15 @@ def test_roster_passes_when_live_matches_manifest():
     assert doctor_mcp.roster_status(m, live, set())[0] == "PASS"
 
 
+def test_roster_on_windows_does_not_expect_a_posix_only_server(monkeypatch):
+    m = _manifest(_srv("a", "@a/a@1.0.0"), {"name": "lp", "posix_only": True, "add": ["lightpanda", "mcp"]})
+    live = {"a": {"command": "npx", "args": ["-y", "@a/a@1.0.0"]}}
+    monkeypatch.setattr(doctor_mcp, "IS_WINDOWS", False)  # set at import: True on the Windows CI job
+    assert "missing: ['lp']" in doctor_mcp.roster_status(m, live, set())[1]
+    monkeypatch.setattr(doctor_mcp, "IS_WINDOWS", True)
+    assert doctor_mcp.roster_status(m, live, set())[0] == "PASS"
+
+
 def test_roster_warns_on_an_extra_live_server():
     m = _manifest(_srv("a", "@a/a@1.0.0"))
     live = {"a": {"command": "npx", "args": ["-y", "@a/a@1.0.0"]}, "drawio": {"command": "npx", "args": ["-y", "@drawio/mcp"]}}

@@ -26,7 +26,9 @@ metadata:
     - what should we refactor
     paths: []
     intents:
-    - review
+    - AUDIT
+    - REFACTOR
+    - REVIEW
 ---
 # Tech Debt Audit
 

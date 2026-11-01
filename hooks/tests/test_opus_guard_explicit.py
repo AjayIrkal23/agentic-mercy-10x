@@ -76,18 +76,23 @@ def test_user_phrase_lets_an_explicit_model_override_a_pin(tmp_path):
 
 
 def test_explicit_opus_cannot_upgrade_an_executor_without_a_phrase(tmp_path):
+    # max20 executors already run Opus (2026-10-31), so the guard is exercised on max5
     ti = {"description": "build", "subagent_type": "implementation-engineer", "model": "opus"}
+    assert model(run(ti, tmp_path)[0], ti) == "opus"  # max20 base model
+    TF.set_tier("max5")
     assert model(run(ti, tmp_path)[0], ti) == "sonnet"
     assert model(run(ti, tmp_path, "build it, use opus")[0], ti) == "opus"
 
 
-def test_explicit_sonnet_cannot_block_retry_escalation(tmp_path):
-    ti = {"description": "fix", "subagent_type": "implementation-engineer", "model": "sonnet",
+def test_explicit_model_cannot_block_retry_escalation(tmp_path):
+    TF.set_tier("pro")  # pro executors escalate haiku -> sonnet
+    ti = {"description": "fix", "subagent_type": "implementation-engineer", "model": "haiku",
           "prompt": "Previous attempt failed: still broken."}
-    assert model(run(ti, tmp_path)[0], ti) == "opus"
+    assert model(run(ti, tmp_path)[0], ti) == "sonnet"
 
 
 def test_opus_label_cannot_upgrade_an_executor_without_a_phrase(tmp_path):
+    TF.set_tier("max5")
     ti = {"description": "[opus] build", "subagent_type": "backend-implementor-specialist"}
     assert model(run(ti, tmp_path)[0], ti) == "sonnet"
 
@@ -114,7 +119,7 @@ def test_meta_rows_and_older_turns_are_not_the_users_phrase(tmp_path):
 def test_haiku_is_a_policy_model_now(tmp_path):
     ti = {"description": "tests", "subagent_type": "test-author", "model": "haiku"}
     out, rows = run(ti, tmp_path)
-    assert model(out, ti) == "sonnet"  # test-author is guarded: no phrase, the request is ignored
+    assert model(out, ti) == "opus"  # test-author is guarded (max20 test role): no phrase, the request is ignored
     assert "ignored" in rows[-1]["reason"] and "haiku" in rows[-1]["reason"]
     assert "haiku" in out["hookSpecificOutput"]["additionalContext"]
     assert model(run(ti, tmp_path, "write the tests, use haiku")[0], ti) == "haiku"
@@ -215,10 +220,14 @@ def test_pro_fable_label_is_not_lifted(tmp_path):
     assert model(out, ti) == "haiku" and "fable floor" not in rows[-1]["reason"]
 
 
-def test_max20_fable_floor_is_logged(tmp_path):
+def test_fable_floor_is_logged_on_max5(tmp_path):
     ti = {"description": "[fable] x", "subagent_type": "Explore"}
+    TF.set_tier("max5")  # explore is haiku here, so the floor lifts it
     out, rows = run(ti, tmp_path)
     assert model(out, ti) == "sonnet" and "fable floor -> sonnet" in rows[-1]["reason"]
+    TF.set_tier("max20")  # explore already runs sonnet on max20: no floor needed
+    out, rows = run(ti, tmp_path)
+    assert model(out, ti) == "sonnet" and "fable floor" not in rows[-1]["reason"]
 
 
 def test_no_transcript_means_no_phrase(tmp_path):

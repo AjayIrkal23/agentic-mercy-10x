@@ -1,0 +1,174 @@
+"""Which code file a shell read/search command stands for (audit 02 B-02).
+
+``grep -rn foo src``, ``rg foo``, ``cat a.ts``, ``sed -n 1,40p a.ts``, ``head``/``tail``,
+``find . -name '*.ts'``: the jcodemunch read gate judges these like the Read/Grep/Glob
+tools. ``code_target(cmd, cwd)`` returns ``(target, hint)``: the file the command reads,
+or ``<dir>/x.<ext>`` for a directory search (``x.py`` when no glob names the type), and
+the symbol or file name to name in the deny. ``("", "")`` for anything else: git, package
+managers, test runners, in-place edits, a search inside a non-code file. Never raises.
+"""
+from __future__ import annotations
+
+import os
+import re
+import shlex
+
+_SPLIT = re.compile(r"\|\||&&|[;\n]")      # commands; a pipeline stays one command
+_PIPE = re.compile(r"(?<!\|)\|(?!\|)")      # its stages: only the first reads files, the rest read stdin
+_RECURSIVE_BY_DEFAULT = {"rg", "ag", "ack"}
+# PowerShell / cmd readers (Windows sessions; matched case-insensitively): Get-Content `gc` / cmd `type`
+# read a file, Select-String `sls` / `findstr` search one or a glob. Value options carry a separate value.
+_PS_READERS = {"get-content", "gc", "type"}
+_PS_SEARCHERS = {"select-string", "sls", "findstr"}
+_PS_VALUE_OPTS = {"-totalcount", "-tail", "-head", "-first", "-last", "-encoding", "-delimiter", "-readcount",
+                  "-context", "-include", "-exclude", "-filter"}
+_PS_PATH_OPTS = {"-path", "-literalpath"}
+
+
+def _ps_norm(p: str, cwd: str) -> str:
+    p = p.strip("'\"").replace("\\", "/")
+    if os.path.isabs(p) or re.match(r"[A-Za-z]:/", p):
+        return p
+    return os.path.join(cwd or ".", p)
+
+
+def _ps_segment(head: str, args: list, cwd: str) -> tuple:
+    """PowerShell / cmd readers: the file (or `<dir>/x.<ext>` for a glob) and the hint."""
+    pattern, paths, i = "", [], 0
+    while i < len(args):
+        a, low = args[i], args[i].lower()
+        if low in _PS_PATH_OPTS and i + 1 < len(args):
+            paths.append(args[i + 1])
+            i += 2
+            continue
+        if low == "-pattern" and i + 1 < len(args):
+            pattern = args[i + 1].strip("'\"")
+            i += 2
+            continue
+        if low in _PS_VALUE_OPTS:
+            i += 2
+            continue
+        if a.startswith("-") or (head == "findstr" and a.startswith("/")):
+            i += 1
+            continue
+        if head in _PS_SEARCHERS and not pattern:
+            pattern = a.strip("'\"")
+        else:
+            paths.append(a)
+        i += 1
+    for p in paths:
+        full = _ps_norm(p, cwd)
+        if head == "type" and "." not in os.path.basename(full):
+            continue  # bash's `type python3` names a command, cmd's `type a.ts` prints a file
+        if any(c in full for c in "*?"):
+            d, leaf = full.rsplit("/", 1) if "/" in full else (cwd or ".", full)
+            ext = leaf.rsplit(".", 1)[-1] if "." in leaf else ""
+            return f"{d}/x.{ext}" if ext.isalnum() else f"{d}/x", pattern[:80]
+        return full, (pattern or os.path.basename(full))[:80]
+    return "", ""
+_READERS = {"grep", "egrep", "fgrep", "rg", "ag", "ack", "cat", "bat", "head", "tail",
+            "less", "more", "nl", "sed", "find", "fd"}
+_SEARCHERS = {"grep", "egrep", "fgrep", "rg", "ag", "ack"}
+_WRAPPERS = {"sudo", "command", "nice", "time", "xargs"}
+# grep/rg options that take a separate value (the value is not the pattern).
+_VALUE_OPTS = {"-e", "-f", "-g", "--glob", "-t", "--type", "-A", "-B", "-C", "-m", "--include",
+               "--exclude", "--exclude-dir", "--max-count", "--context"}
+
+
+def _words(seg: str) -> list:
+    bare = seg.split()
+    first = os.path.basename(bare[0].replace("\\", "/")).lower().removesuffix(".exe") if bare else ""
+    try:  # PowerShell / cmd readers keep `src\auth.ts` intact (POSIX shlex would eat the backslash)
+        return shlex.split(seg, posix=first not in _PS_READERS and first not in _PS_SEARCHERS)
+    except ValueError:
+        return bare
+
+
+def _glob_ext(words: list) -> str:
+    """The extension a ``--include=*.ts`` / ``-g '*.ts'`` / ``-name '*.ts'`` / ``-t ts`` names."""
+    for i, w in enumerate(words):
+        val = ""
+        if "=" in w and w.split("=", 1)[0] in ("--include", "--glob", "--type"):
+            val = w.split("=", 1)[1]
+        elif w in ("--include", "-g", "--glob", "-name", "-iname", "-t", "--type") and i + 1 < len(words):
+            val = words[i + 1]
+        if val:
+            ext = val.rsplit(".", 1)[-1].strip("*'\"{}") if "." in val else val
+            if ext and ext.isalnum():
+                return ext
+    return ""
+
+
+def _operands(head: str, args: list) -> tuple:
+    """(pattern, paths) of a reader's arguments."""
+    pattern, paths, skip, explicit = "", [], False, False
+    for i, a in enumerate(args):
+        if skip:
+            skip = False
+            if args[i - 1] == "-e":
+                pattern, explicit = a, True
+            continue
+        if a.startswith("-") and a != "-":
+            if a in _VALUE_OPTS and head != "find":
+                skip = True
+            if head == "find" and a in ("-name", "-iname", "-path", "-type", "-maxdepth", "-mindepth"):
+                skip = True
+            continue
+        if head in _SEARCHERS and not pattern and not explicit:
+            pattern = a
+            continue
+        if head == "sed" and not any(p for p in paths) and re.fullmatch(r"[\d,$]*p", a):
+            continue  # the sed script `1,40p`
+        if head in ("head", "tail") and a.isdigit():
+            continue
+        paths.append(a)
+    return pattern, paths
+
+
+def _segment(words: list, cwd: str) -> tuple:
+    while words and (re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*=.*", words[0]) or words[0] in _WRAPPERS):
+        words = words[1:]
+    if not words:
+        return "", ""
+    head = os.path.basename(words[0].replace("\\", "/"))
+    low = head.lower().removesuffix(".exe")
+    if low in _PS_READERS or low in _PS_SEARCHERS:
+        return _ps_segment(low, words[1:], cwd)
+    if head not in _READERS:
+        return "", ""
+    args = words[1:]
+    if head == "sed" and ("-n" not in args or any(a.startswith("-i") or a == "--in-place" for a in args)):
+        return "", ""
+    pattern, paths = _operands(head, args)
+    ext = _glob_ext(words)
+    if not paths:
+        # a plain `grep x` with no path reads stdin; rg/ag/ack and `grep -r` search the cwd tree
+        recursive = head in _RECURSIVE_BY_DEFAULT or any(
+            a == "--recursive" or (re.fullmatch(r"-[A-Za-z]+", a) and ("r" in a or "R" in a)) for a in args)
+        if (head in _SEARCHERS and recursive) or head in ("find", "fd"):
+            paths = ["."]
+        else:
+            return "", ""
+    for p in paths:
+        full = p if os.path.isabs(p) else os.path.join(cwd or ".", p)
+        if os.path.isdir(full) or head in ("find", "fd"):
+            # no glob: `<dir>/x` with no extension, so the code-path rule (src/, server/, ...) decides
+            return os.path.join(os.path.normpath(full), f"x.{ext}" if ext else "x"), pattern[:80]
+        return os.path.normpath(full), (pattern or os.path.basename(full))[:80]
+    return "", ""
+
+
+def code_target(cmd: str, cwd: str) -> tuple:
+    try:
+        here = cwd or ""
+        for seg in _SPLIT.split(str(cmd or "")):
+            words = _words(_PIPE.split(seg)[0].strip())
+            if len(words) >= 2 and words[0] in ("cd", "pushd"):
+                here = words[1] if os.path.isabs(words[1]) else os.path.join(here, words[1])
+                continue
+            target, hint = _segment(words, here)
+            if target:
+                return target, hint
+    except Exception:  # noqa: BLE001
+        pass
+    return "", ""

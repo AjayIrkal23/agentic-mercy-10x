@@ -1,5 +1,59 @@
 # Changelog
 
+## v5.1.1 2026-11-01 Every machine converges: lightpanda in the installer, Playwright scratchpads, PowerShell reads
+
+- **Lightpanda in the installer**: an eager, POSIX-only manifest MCP server (`which` registers it once the
+  binary resolves) plus `user_space.lightpanda` 1.0.2 with all four release SHA-256s (linux-x64 equals the
+  owner PC's verified binary). Fresh Ubuntu/macOS installs get it; Windows keeps playwright.
+- **Playwright scratchpads**: `env.PLAYWRIGHT_MCP_OUTPUT_DIR` = `{{CLAUDE_TMP}}` (new render token: Claude
+  Code's temp dir per machine). The MCP may touch only its output dir and the cwd, so session scratchpad
+  files under `/tmp/claude-<uid>` now work without `--allow-unrestricted-file-access`.
+- **PowerShell reads steered**: `Get-Content`/`gc`/`type`, `Select-String`/`sls`, `findstr` on source go to
+  jcodemunch like `grep`/`cat` (`lib/shell_reads.py`, the `jcm-gate-shell` link).
+- **Existing machines converge daily**: a new self-heal step `plugins` installs marketplaces and plugins
+  the manifest gained after a machine's install (`egm@egm`) and pins TokenEconomizer `toolprune` off.
+
+## v5.1.0 2026-10-31 Tools fire on their own: no auto-deny, eager MCPs, smarter routing, EGM
+
+Owner's brief: every skill, hook, MCP and plugin must trigger automatically for the main agent
+and every subagent; token cost does not matter; tool calls must stop being auto-denied. Five
+parallel audits (router, MCP enforcement, subagents, token biases, EGM design) in
+`.claude/runs/20261031T1757-workflow-audit-egm/`, then three implementers and the protected
+wiring by the main session.
+
+- **No auto-deny.** `settings-protection-gate` and `connector-ask-gate` ask everywhere; a
+  remote/app session (`CLAUDE_CODE_SESSION_ATTENDED=0` with the owner present), subagents and
+  headless runs get the ask and the session's permission mode decides. `dangerous-bash-gate`
+  resolves `$R` through the command's own literal `R=/tmp/...` / `R=$(mktemp …)` statements
+  (59 false denies in 14 days); real deletes, git hook bypasses and Mongo drops stay denied.
+- **No tool hiding.** TokenEconomizer `toolprune` is `off`; the permissions self-heal also strips
+  bare tool-name deny rules from the active repo's `.claude/settings.local.json` on session start,
+  end and ConfigChange (scoped rules such as `Read(./.env)` stay).
+- **Eager MCPs.** `alwaysLoad` on sequential-thinking, jcodemunch, jdocmunch, graphify, memory,
+  context7, semgrep, playwright (+ lightpanda live); full 4,000-char tool descriptions. Measured
+  before: graphify and jdocmunch 0 calls in 14 days, context7 10 %, subagents used jcodemunch in 34 %.
+- **MCP steering per agent.** Gate state keyed per subagent; shell `grep/rg/cat/sed -n/head/tail/find`
+  on source is steered to jcodemunch (`jcm-gate-shell`, `lib/shell_reads.py`); one deny per agent per
+  user turn naming the exact call with the real repo id, then allowed; STALE no longer relaxes the
+  gate. jdocmunch steers whole reads of indexed docs >= 2,000 bytes. Gate 3 needs a semgrep scan newer
+  than each security edit and recommends `p/default` + `p/owasp-top-ten` (not the refused `auto`).
+- **Subagents carry the tools.** SubagentStart block up to 3,000 chars: full MCP protocol, one
+  `ToolSearch select` line, exact jcodemunch / graphify / jdocmunch / memory ids, FE/BE SKILL.md paths
+  from the repo stack; qa-verifier and deadcode-reaper read CLAUDE.md again; session start prints the ids.
+- **Router.** "tokens" is no longer a UI word (it pushed react-hooks-patterns onto an infra prompt);
+  intents normalised for 72 skills, plugin skills reach the cut-off through
+  `hooks/plugin-skill-triggers.json`, repo stack pre-selects stack skills, claude-infra prompts get infra
+  skills, 8 `paths:`-scoped skills are visible again, harness hand-backs are not routed. Replay: misroute
+  union 0.072 -> 0.012, distinct skills pushed 25 -> 54. Higgsfield and kokonutui descriptions are back on.
+- **Models (max20).** Opus for executors, tests and verify, Sonnet floor, Opus judges; the 80 % usage
+  guard still steps down. pro / max5 / api unchanged.
+- **EGM.** Google's Elephant-Goldfish Model (`egm@egm`, reviewed `403d888`, `autoUpdate: false`):
+  a router route (`modules/egm_routes.py`) sends design-decision prompts to Read and follow the
+  installed brainstorm / draft / review / drift-report SKILL.md; Goldfish reviewers are Opus judges with
+  a lean SubagentStart block and pass the read gates; plugin-cache Read rules in the template.
+- First-write skill gate: a frontend skill no longer silences the backend hint; routes, services and
+  controllers infer backend.
+
 ## v5.0.0 2026-10-30 ECC merge, autonomous OOM guard, plan-tier routing, dynamic workflows
 
 The first release since v4.2.0. It bundles v4.3.0 (the merge), v4.3.1 (the audit2 fix pass) and

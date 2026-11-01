@@ -270,7 +270,13 @@ def _skill_items(profile, ctx: dict) -> list[dict]:
     threshold = int(cfg.get("auto_dispatch_threshold", _select.DEFAULT_AUTO_DISPATCH_THRESHOLD))
     top_n = int(cfg.get("max_skill_pushes", _select.DEFAULT_TOP_N))
     min_score = float(cfg.get("min_skill_score", _select.DEFAULT_MIN_SCORE))
-    ranked = _select.rank_skills(profile, top_n=top_n, min_score=min_score)
+    tail = cfg.get("min_skill_score_tail")
+    ranked = _select.rank_skills(profile, top_n=top_n, min_score=min_score,
+                                 tail_min=float(tail) if tail is not None else None,
+                                 tail_from=int(cfg.get("tail_from_rank", 3)))
+    egm = bool(ctx.get("_egm"))
+    if egm:  # EGM reviews a design doc: Santa stays for code diffs, so it is not pushed here
+        ranked = [r for r in ranked if _select.canonical(r[0]) != "santa-review"]
     ctx["_ranked"] = ranked
     meta = _select.index_meta()
     top_intent = max(profile.intents, key=profile.intents.get) if profile.intents else "GEN"
@@ -297,7 +303,7 @@ def _skill_items(profile, ctx: dict) -> list[dict]:
     for i, (name, score) in enumerate(ranked):
         if name == deep_name:
             continue
-        label = "MUST-READ" if (i == 0 and deep_name is None) else "SHOULD-READ"
+        label = "MUST-READ" if (i == 0 and deep_name is None and not egm) else "SHOULD-READ"
         # The Skill tool already lists every description (C-11). A `paths:`-scoped
         # skill is "Unknown skill" until a matching file is read, so its line names the
         # absolute SKILL.md to Read instead (a Read counts as loaded).
@@ -309,10 +315,10 @@ def _skill_items(profile, ctx: dict) -> list[dict]:
             "id": f"skill:{name}:{top_intent}:{surf_salt}", "tier": 2, "section": "SKILLS",
             "text": _policy.skill_line(name, label, read), "score": round(score, 2),
         })
-    ctx["_enforce"] = _policy.enforce_level(ranked, profile, meta, cfg.get("enforce_hard"))
+    ctx["_enforce"] = "soft" if egm else _policy.enforce_level(ranked, profile, meta, cfg.get("enforce_hard"))
     if deep_item:
         items.append(deep_item)
-    ctx["_must_read"] = [ranked[0][0]] if ranked and deep_name is None else []
+    ctx["_must_read"] = [ranked[0][0]] if ranked and deep_name is None and not egm else []
     return items
 
 
@@ -376,7 +382,8 @@ def _routing_items(profile, ctx: dict) -> list[dict]:
     cfg = ctx.get("config", {})
     items: list[dict] = _model_mode_items(profile, ctx)  # first: never cut by the routing cap
     items += _pointer_items(profile, ctx)
-    wf = _workflow_items(profile, ctx)
+    items += ctx.get("_egm_items") or []   # right after the pointers: cap_section keeps them
+    wf = [] if ctx.get("_egm") else _workflow_items(profile, ctx)   # an EGM design-doc task runs no Santa WORKFLOW
     items += wf
     covered: set[str] = set()   # acts a WORKFLOW line already runs: no per-act dispatch line
     for it in wf:
@@ -400,7 +407,7 @@ def _routing_items(profile, ctx: dict) -> list[dict]:
         pass
     threshold = int(cfg.get("auto_dispatch_threshold", _select.DEFAULT_AUTO_DISPATCH_THRESHOLD))
     max_lines = int(cfg.get("max_route_lines", 3))
-    tiers = [] if _policy.infra_routing(profile) else \
+    tiers = [] if (_policy.infra_routing(profile) or ctx.get("_egm")) else \
         [d for d in _select.dispatch_tiers(profile, threshold=threshold) if d["act"] not in covered]
     for d in tiers[:max_lines]:
         who = d.get("agent")
@@ -471,7 +478,18 @@ def _model_mode_items(profile, ctx: dict) -> list[dict]:
         return []
 
 
+def _egm_items(profile, ctx: dict) -> list[dict]:
+    """The EGM design-doc route (modules/egm_routes.py); sets ctx["_egm"]. Absent module -> []."""
+    try:
+        from prompt_router.modules import egm_routes as _egm  # noqa: PLC0415
+        return list(_egm.items(profile, ctx) or [])
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def _model_items(profile, ctx: dict) -> list[dict]:
+    if ctx.get("_egm"):
+        return []
     try:
         from prompt_router.modules import model_advice as _ma  # noqa: PLC0415
         advice = _ma.advise(profile)
@@ -485,6 +503,7 @@ def _model_items(profile, ctx: dict) -> list[dict]:
 
 
 def _builtin_items(profile, ctx: dict) -> list[dict]:
+    ctx["_egm_items"] = _egm_items(profile, ctx)   # first: the skill, routing and model steps read ctx["_egm"]
     items = _gate_items(profile, ctx)
     items += _substrate_items(profile, ctx)
     items += _intel_items(profile, ctx)

@@ -209,7 +209,10 @@ def test_t7_role_lookup_by_agent_type_then_label_then_default():
     script = ("agent('a', {agentType: 'santa-reviewer'});\nagent('b', {label: 'backend'});\n"
               "agent('c', {label: 'qa'});\nagent('d', {});\nagent('e', {agentType: 'explore'});\n")
     calls = run_in_node(rewritten_script(run_hook({"script": script})))
-    assert [c[1]["model"] for c in calls] == ["opus", "sonnet", "haiku", "sonnet", "haiku"]
+    assert [c[1]["model"] for c in calls] == ["opus", "opus", "opus", "sonnet", "sonnet"]  # max20 since 2026-10-31
+    TF.set_tier("max5")
+    calls = run_in_node(rewritten_script(run_hook({"script": script})))
+    assert [c[1]["model"] for c in calls] == ["sonnet", "sonnet", "haiku", "sonnet", "haiku"]
     TF.set_tier("pro")
     calls = run_in_node(rewritten_script(run_hook({"script": script})))
     assert [c[1]["model"] for c in calls] == ["sonnet", "haiku", "haiku", "haiku", "haiku"]
@@ -222,7 +225,7 @@ def test_t8_escalation_from_the_call_prompt_lifts_executors_only_within_ceiling(
               "agent('the previous attempt failed; review it', {agentType: 'santa-reviewer'});\n"
               "agent('the previous attempt failed; look', {agentType: 'explore'});\n")
     for tier, want in (("pro", ["sonnet", "sonnet", "haiku"]), ("max5", ["sonnet", "sonnet", "haiku"]),
-                       ("max20", ["opus", "opus", "haiku"])):
+                       ("max20", ["opus", "opus", "sonnet"])):
         TF.set_tier(tier)
         out = run_hook({"script": script})
         assert [c[1]["model"] for c in run_in_node(rewritten_script(out))] == want, tier
@@ -238,15 +241,15 @@ def test_retry_template_in_the_script_escalates_per_call_not_statically():
               "  agent(err ? 'The previous attempt failed: ' + err : 'implement it', "
               "{agentType: 'implementation-engineer'});\n"
               "  err = 'tests red';\n}\nagent('look around', {agentType: 'explore'});\n")
-    for tier, want in (("max20", ["sonnet", "opus", "opus", "haiku"]),
+    for tier, want in (("max20", ["opus", "opus", "opus", "sonnet"]),  # executors already Opus on max20
                        ("max5", ["sonnet", "sonnet", "sonnet", "haiku"]),
                        ("pro", ["haiku", "sonnet", "sonnet", "haiku"])):
         TF.set_tier(tier)
         assert [c[1]["model"] for c in run_in_node(rewritten_script(run_hook({"script": script})))] == want, tier
-    # a task-level retry still escalates every executor call
-    TF.set_tier("max20")
+    # a task-level retry still escalates every executor call (pro: haiku -> sonnet)
+    TF.set_tier("pro")
     out = run_hook({"script": script, "args": {"task": "the previous attempt failed, redo it"}})
-    assert [c[1]["model"] for c in run_in_node(rewritten_script(out))] == ["opus", "opus", "opus", "haiku"]
+    assert [c[1]["model"] for c in run_in_node(rewritten_script(out))] == ["sonnet", "sonnet", "sonnet", "haiku"]
 
 
 @node_required
@@ -256,10 +259,13 @@ def test_label_role_lookup_matches_tokens_not_substrings():
               "review:pkg", "spec:auth", "integrator", "santa-2"]
     script = "".join(f"agent('x', {{label: '{lb}'}});\n" for lb in labels)
     calls = run_in_node(rewritten_script(run_hook({"script": script})))
-    assert [c[1]["model"] for c in calls] == ["sonnet"] * 4 + ["opus", "opus", "sonnet", "opus"]
-    TF.set_tier("max20")
-    out = run_hook({"script": "agent('x', {label: 'integrator'});\n", "args": {"task": "previous attempt failed"}})
-    assert run_in_node(rewritten_script(out))[0][1]["model"] == "opus"  # integrat -> integrate, escalated
+    # max20: default sonnet, judge opus, integrate opus (2026-10-31)
+    assert [c[1]["model"] for c in calls] == ["sonnet"] * 4 + ["opus", "opus", "opus", "opus"]
+    TF.set_tier("pro")
+    script = "agent('x', {label: 'integrator'});\n"
+    assert run_in_node(rewritten_script(run_hook({"script": script})))[0][1]["model"] == "haiku"
+    out = run_hook({"script": script, "args": {"task": "previous attempt failed"}})
+    assert run_in_node(rewritten_script(out))[0][1]["model"] == "sonnet"  # integrat -> integrate, escalated
 
 
 def _pin(home: Path, cwd: Path, model: str) -> None:
@@ -294,9 +300,10 @@ def test_forced_per_project_pin_steps_down_under_the_usage_guard(tmp_path):
 
 @node_required
 def test_t8b_escalation_from_args_task():
+    TF.set_tier("pro")  # max20 executors already run Opus; pro shows the lift (haiku -> sonnet)
     out = run_hook({"script": "agent('p', {agentType: 'implementation-engineer'});\n",
                     "args": {"task": "Previous attempt failed: tests still red"}})
-    assert run_in_node(rewritten_script(out))[0][1]["model"] == "opus"  # max20
+    assert run_in_node(rewritten_script(out))[0][1]["model"] == "sonnet"
 
 
 @node_required
@@ -343,7 +350,7 @@ def test_usage_guard_applies_inside_the_wrapper():
               "agent('c', {model: 'fable'});\n")
     out = run_hook({"script": script})
     calls = run_in_node(rewritten_script(out))
-    assert [c[1]["model"] for c in calls] == ["haiku", "sonnet", "sonnet"]
+    assert [c[1]["model"] for c in calls] == ["sonnet", "sonnet", "sonnet"]  # max20 impl opus -> sonnet
     assert "usage-guard" in out["hookSpecificOutput"]["additionalContext"]
 
 
@@ -376,7 +383,8 @@ def test_t10_saved_script_gets_tier_hint_when_args_task_escalates():
     assert "updatedInput" not in out.get("hookSpecificOutput", {})  # no escalation -> args untouched
 
 
-def test_routing_telemetry_row(tmp_path):
+def test_routing_telemetry_row(tmp_path, monkeypatch):
+    monkeypatch.delenv("CLAUDE_HOOK_DOCTOR", raising=False)  # CI exports it; _log_route skips under doctor
     tele = tmp_path / "tele"
     run_hook({"script": "agent('p', {agentType: 'explore'});\n"}, env_extra={"CLAUDE_HOOK_TELEMETRY_DIR": str(tele)},
              payload_extra={"session_id": "w1"})

@@ -79,6 +79,13 @@ def test_counts_table():
     assert int(counts["Local skills"]) == len(list((_ROOT / "skills").glob("*/SKILL.md")))
 
 
+def test_a_cp1252_console_still_gets_the_table():
+    """windows-latest CI: a cp1252 stdout raised UnicodeEncodeError on the table's non-ASCII column."""
+    r = _run("--counts", env={"PYTHONUTF8": "0", "PYTHONIOENCODING": "cp1252"})
+    assert r.returncode == 0, r.stderr
+    assert "| Local skills |" in r.stdout
+
+
 def test_overrides_change_listing(tmp_path):
     for name in ("a", "b"):
         d = tmp_path / "skills" / name

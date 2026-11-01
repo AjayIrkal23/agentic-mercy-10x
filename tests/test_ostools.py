@@ -188,6 +188,7 @@ def test_zram_line_none_when_swap_is_enough_or_zram_active_or_no_apt(tmp_path):
 
 def test_checklist_prints_the_zram_line_under_the_sudo_block(monkeypatch):
     monkeypatch.setattr(ostools, "zram_line", lambda *a, **k: "sudo apt-get install -y systemd-zram-generator && x")
+    monkeypatch.setattr(ostools.plat, "IS_WINDOWS", False)  # zram is the Linux branch; Windows never asks
     text = "\n".join(ostools.checklist(M, "sudo apt-get install -y tmux"))
     assert "Swap is small for this RAM. One-time zram setup (sudo):" in text
     assert text.index("tmux") < text.index("zram")

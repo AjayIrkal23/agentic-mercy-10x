@@ -102,10 +102,23 @@ def test_model_routing_accepts_judges_on_opus(tmp_path):
     assert _routing_status(tmp_path, lambda p: None)[0] == "PASS"
 
 
-def test_model_routing_rejects_opus_pinned_implementor(tmp_path):
+def test_model_routing_accepts_opus_pinned_executors(tmp_path):
+    # 2026-10-31 (owner): max20 runs executors on Opus outright; the shipped policy pins them
+    assert "implementation-engineer" in json.loads(
+        (_ROOT / "hooks" / "model-policy.json").read_text(encoding="utf-8"))["agent_pins"]["opus"]
+    assert _routing_status(tmp_path, lambda p: None)[0] == "PASS"
+
+
+def test_model_routing_rejects_fable_pinned_implementor(tmp_path):
     def pin_impl(p):
-        p["agent_pins"]["opus"].append("implementation-engineer")
+        p["agent_pins"]["fable"].append("implementation-engineer")
     assert _routing_status(tmp_path, pin_impl)[0] == "FAIL"
+
+
+def test_model_routing_rejects_disabled_escalation(tmp_path):
+    def off(p):
+        p["escalation"]["enabled"] = False
+    assert _routing_status(tmp_path, off)[0] == "FAIL"
 
 
 def test_model_routing_rejects_unpinned_judge(tmp_path):

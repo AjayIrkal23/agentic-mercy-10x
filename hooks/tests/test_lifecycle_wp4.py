@@ -78,7 +78,7 @@ def test_subagent_context_carries_the_protocol_within_budget(monkeypatch):
     ctx = out["hookSpecificOutput"]["additionalContext"]
     assert out["hookSpecificOutput"]["hookEventName"] == "SubagentStart"
     assert "FILE ACCESS PROTOCOL" in ctx and "git commit" in ctx and "MCP PROTOCOL" in ctx
-    assert len(ctx) <= 1200
+    assert len(ctx) <= 3000
 
 
 def test_subagent_context_fails_open_on_garbage(monkeypatch):
@@ -97,8 +97,63 @@ def _selfheal(tmp_path, monkeypatch, live_deny, tmpl_deny):
     tmpl.write_text(json.dumps({"permissions": {"deny": tmpl_deny}}))
     monkeypatch.setattr(sh, "LIVE", live)
     monkeypatch.setattr(sh, "TEMPLATE", tmpl)
+    monkeypatch.setattr(sh, "LOCAL", tmp_path / "settings.local.json")  # absent unless a test writes it
     monkeypatch.delenv("CLAUDE_HOOK_DOCTOR", raising=False)
     return sh, live
+
+
+def test_selfheal_clears_a_local_deny_list_and_keeps_its_other_keys(tmp_path, monkeypatch):
+    """2026-10-31: a tool-pruning plugin wrote 467 deny rules into settings.local.json."""
+    sh, _ = _selfheal(tmp_path, monkeypatch, [], [])
+    local = tmp_path / "settings.local.json"
+    local.write_text(json.dumps({"env": {"K": "v"}, "permissions": {"allow": ["Bash"], "deny": ["mcp__x__y"]}}))
+    out = _stdout(sh.main, {}, monkeypatch, ["session-start"])
+    assert json.loads(local.read_text(encoding="utf-8")) == {"env": {"K": "v"},
+                                                             "permissions": {"allow": ["Bash"], "deny": []}}
+    assert "settings.local.json" in out["hookSpecificOutput"]["additionalContext"]
+    before = local.stat().st_mtime_ns
+    assert _stdout(sh.main, {}, monkeypatch, ["session-start"]) == {}   # clean: silent
+    assert local.stat().st_mtime_ns == before
+
+
+def test_selfheal_strips_tool_hiding_rules_from_the_active_repo(tmp_path, monkeypatch):
+    """2026-10-31: a tool-pruning plugin writes bare tool names into each repo's settings.local.json."""
+    sh, _ = _selfheal(tmp_path, monkeypatch, [], [])
+    repo = tmp_path / "proj"
+    (repo / ".git").mkdir(parents=True)
+    (repo / "src").mkdir()
+    local = repo / ".claude" / "settings.local.json"
+    local.parent.mkdir()
+    local.write_text(json.dumps({"permissions": {"deny": ["LSP", "mcp__github__create_issue", "Read(./.env)"],
+                                                 "allow": ["Bash(ls:*)"]}}))
+    out = _stdout(sh.main, {"cwd": str(repo / "src")}, monkeypatch, ["session-start"])
+    assert json.loads(local.read_text(encoding="utf-8"))["permissions"] == {"deny": ["Read(./.env)"],
+                                                                            "allow": ["Bash(ls:*)"]}
+    assert "hid 2 tools" in out["hookSpecificOutput"]["additionalContext"]
+    assert _stdout(sh.main, {"cwd": str(repo)}, monkeypatch, ["session-start"]) == {}  # clean: silent
+    local.write_text(json.dumps({"permissions": {"deny": ["WebFetch", "Read(./.env)"]}}))  # re-added mid-session
+    out = _stdout(sh.main, {"cwd": str(repo)}, monkeypatch, ["config-change"])
+    assert out["decision"] == "block" and "hid 1 tools" in out["reason"]
+    assert json.loads(local.read_text(encoding="utf-8"))["permissions"]["deny"] == ["Read(./.env)"]
+    assert not list(local.parent.glob("*.lock"))  # nothing left behind in the user's repo
+    real = tmp_path / "shared-settings.json"                     # santa LOW: a symlinked file stays a link
+    real.write_text(json.dumps({"permissions": {"deny": ["LSP"]}}))
+    local.unlink()
+    try:
+        local.symlink_to(real)
+    except OSError:
+        return  # no symlink rights (Windows without Developer Mode)
+    _stdout(sh.main, {"cwd": str(repo)}, monkeypatch, ["session-start"])
+    assert local.is_symlink() and json.loads(real.read_text(encoding="utf-8"))["permissions"]["deny"] == ["LSP"]
+
+
+def test_selfheal_config_change_clears_a_local_deny_list(tmp_path, monkeypatch):
+    sh, _ = _selfheal(tmp_path, monkeypatch, [], [])
+    local = tmp_path / "settings.local.json"
+    local.write_text(json.dumps({"permissions": {"deny": ["Grep"]}}))
+    out = _stdout(sh.main, {}, monkeypatch, ["config-change"])
+    assert out["decision"] == "block"
+    assert json.loads(local.read_text(encoding="utf-8"))["permissions"]["deny"] == []
 
 
 def test_selfheal_repairs_only_a_drifted_deny_list(tmp_path, monkeypatch):

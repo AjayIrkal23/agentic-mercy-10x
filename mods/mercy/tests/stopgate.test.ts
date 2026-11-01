@@ -2,6 +2,7 @@ import type { On } from 'claude-code'
 import { describe, expect, mock, test } from 'claude-code/testing'
 
 import { isConsent } from '../hooks/lib/consent'
+import { isNotHuman } from '../hooks/lib/nothuman'
 
 /** A quiet engine whose Python Stop chain answers from `python` (B2-06). */
 function engine(on: On, python: () => { block?: string } = () => ({})) {
@@ -36,6 +37,27 @@ describe('user consent (B2-06)', () => {
   })
 })
 
+describe('harness text is not a human prompt (same rule as hooks/lib/turns.py)', () => {
+  test('hand-backs and relays are machine text, a quoted marker is not', () => {
+    for (const t of [
+      '[Subagent hand-back]\nreport',
+      '  \n[Subagent hand-back] done',
+      '<system-reminder foo="1">[Subagent hand-back] done',
+      '<system-reminder>x</system-reminder><agent-message from="impl">done</agent-message>',
+      '<system-reminder>\nctx\n</system-reminder>\nAnother Claude session sent a message (uds:/x): hi',
+    ]) {
+      expect(isNotHuman(t), t).toBe(true)
+    }
+    for (const t of [
+      'why does the router treat "[Subagent hand-back]" as a task? fix the react component',
+      'the string Another Claude session sent a message is in classify.py, is that right?',
+      'fix the <agent-message from= parser in the docs',
+    ]) {
+      expect(isNotHuman(t), t).toBe(false)
+    }
+  })
+})
+
 describe('one block per human turn, shared with the Python gates (B2-06)', () => {
   test('after a Python block this human turn the verify gate stays quiet; a new prompt re-arms it', async ($, on) => {
     let pythonBlocks = true
@@ -64,7 +86,13 @@ describe('one block per human turn, shared with the Python gates (B2-06)', () =>
     expect((await $.classic.Stop({ stop_hook_active: false })).block).toContain('hard-completion-gate')
     pythonBlocks = false
     // the verify gate (unverified edit) must not re-arm: no human typed these
-    for (const prompt of ['<task-notification>\n<result>done</result>', '<cross-session-message from="x">ok</cross-session-message>']) {
+    for (const prompt of [
+      '<task-notification>\n<result>done</result>',
+      '<cross-session-message from="x">ok</cross-session-message>',
+      '[Subagent hand-back]\nIMPL-REPORT written',
+      '<system-reminder>\nctx\n</system-reminder>\n<agent-message from="impl">done</agent-message>',
+      'Another Claude session sent a message (uds:/x): hi',
+    ]) {
       await $.classic.UserPromptSubmit({ prompt })
       expect((await $.classic.Stop({ stop_hook_active: false })).block, prompt).toBeUndefined()
     }

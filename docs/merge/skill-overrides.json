@@ -9,14 +9,6 @@
   "never": "user-invocable-only (it hides the skill from the model's Skill tool)"
  },
  "skillOverrides": {
-  "higgsfield-brandkit": "name-only",
-  "higgsfield-generate": "name-only",
-  "higgsfield-marketplace-cards": "name-only",
-  "higgsfield-product-photoshoot": "name-only",
-  "higgsfield-soul-id": "name-only",
-  "higgsfield-video-explainer": "name-only",
-  "higgsfield-websites": "name-only",
-  "higgsfield-youtube-thumbnail": "name-only",
   "invoke-audit": "name-only",
   "invoke-clean": "name-only",
   "invoke-debug": "name-only",
@@ -33,7 +25,6 @@
   "invoke-test": "name-only",
   "invoke-update": "name-only",
   "invoke-verify": "name-only",
-  "kokonutui": "name-only",
   "lean-ctx": "name-only",
   "mmx-cli": "name-only",
   "workflow-audit": "name-only"

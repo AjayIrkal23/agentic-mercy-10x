@@ -104,7 +104,7 @@ _GO_NOUN_PHRASE = r"(?:a|an|the|this|my|our|small|simple|tiny|new) go (?:cli|pro
 
 _FE_VOCAB = _rx(
     r"react", r"next\.?js", r"vue", r"svelte", r"angular", r"tailwind(?:css)?", r"shadcn",
-    r"components?", r"tsx", r"jsx", r"css", r"scss", r"front-?end", r"ui", r"ux",
+    r"components?", r"tsx", r"jsx", r"css", r"scss", r"front[- ]?end", r"ui", r"ux",
     r"landing page", r"hero section", r"tooltip", r"modal", r"navbar", r"sidebar", r"dropdown",
     r"responsive", r"typography", r"three\.?js", r"r3f", r"react-three-fiber", r"@react-three",
     r"webgl", r"glb", r"gltf", r"shader", r"parallax", r"scrollytelling", r"vite", r"storybook",
@@ -116,7 +116,7 @@ _BE_VOCAB = _rx(
     r"redis", r"kafka", r"queue", r"workers?", r"cron", r"udp", r"tcp", r"websocket", r"golang",
     r"go\.mod", r"go (?:service|module|package|code|server|handler|worker|struct|routine|binary)s?",
     _GO_NOUN_PHRASE,
-    r"fastapi", r"express", r"fastify", r"django", r"flask", r"prisma", r"drizzle", r"back-?end",
+    r"fastapi", r"express", r"fastify", r"django", r"flask", r"prisma", r"drizzle", r"back[- ]?end",
     r"server", r"database", r"db", r"index on", r"webhook", r"ingest(?:ion)?", r"pipeline",
     r"batch(?:es|ing)?", r"retries", r"idempoten\w+", r"jwt", r"oauth", r"microservices?",
 )
@@ -466,7 +466,7 @@ def stack_fingerprint(repo) -> dict:
         markers, sql, migrations, ch = _scan(root)
         sig = {str(m.relative_to(root)): int(m.stat().st_mtime) for m in markers}
         sig["_flags"] = int(sql) | (int(migrations) << 1) | (int(ch) << 2)
-        sig["_v"] = 5  # bump when _compute derives new tags, so old caches recompute
+        sig["_v"] = 6  # bump when _compute derives new tags, so old caches recompute
     except OSError:
         return {}
     cache = _cache_dir() / f"{getattr(repo, 'key', 'repo')}.stack.json"

@@ -8,8 +8,6 @@ import json
 import re
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[2]
 POLICY = json.loads((ROOT / "hooks" / "model-policy.json").read_text(encoding="utf-8"))
 ENV = json.loads((ROOT / "settings.template.json").read_text(encoding="utf-8"))["env"]
@@ -74,12 +72,20 @@ def test_api_is_a_copy_of_max5():
     assert TIERS["api"] == TIERS["max5"]
 
 
-def test_haiku_is_the_default_worker_everywhere():
-    for t in ("pro", "max5", "max20"):
+def test_haiku_is_the_default_worker_on_pro_max5_api():
+    for t in ("pro", "max5", "api"):
         for role in ("explore", "docs", "verify"):
             assert tier_model(t, role) == "haiku", (t, role)
     assert TIERS["pro"]["roles"]["impl"] == "haiku" and TIERS["pro"]["subagent_env"] == "haiku"
-    assert TIERS["max20"]["roles"]["judge"] == "opus" and TIERS["max20"]["main"] == "opus"
+
+
+def test_max20_runs_sonnet_floor_and_opus_executors():
+    # 2026-10-31 (owner: smartest agents, tokens do not matter): no Haiku role on max20
+    roles = TIERS["max20"]["roles"]
+    assert "haiku" not in roles.values()
+    assert {r: roles[r] for r in ("explore", "docs", "default")} == dict.fromkeys(("explore", "docs", "default"), "sonnet")
+    assert all(roles[r] == "opus" for r in ("verify", "test", "impl", "integrate", "security", "judge"))
+    assert TIERS["max20"]["main"] == "opus" and TIERS["max20"]["size_bumps"] == {}
 
 
 def test_roles_cover_every_agent_and_only_known_roles():
@@ -90,19 +96,9 @@ def test_roles_cover_every_agent_and_only_known_roles():
     assert set(ROLES["labels"].values()) <= ROLE_NAMES
 
 
-# agents-skills flips frontmatter to the max20 column; until then xfail on EXACTLY these (self-tightening)
-PENDING_AGENTS_SKILLS = {
-    "deadcode-reaper": ("sonnet", "haiku"), "docs-sync-agent": ("sonnet", "haiku"),
-    "memory-codex": ("sonnet", "haiku"), "qa-verifier": ("sonnet", "haiku"),
-    "audit-specialist": ("sonnet", "opus")}
-
-
 def test_agent_frontmatter_model_is_the_max20_column():
     wrong = {n: (fm.get("model"), tier_model("max20", role_of(n))) for n, fm in AGENTS.items()
              if fm.get("model") != tier_model("max20", role_of(n))}
-    pending = {n: w for n, w in wrong.items() if PENDING_AGENTS_SKILLS.get(n) == w}
-    if wrong and wrong == pending:
-        pytest.xfail(f"agents-skills has not flipped these frontmatter models yet: {sorted(pending)}")
     assert not wrong, wrong
 
 
@@ -120,7 +116,8 @@ def test_escalation_legacy_keys_agree_with_tiers():  # doctor_checks.py reads to
     assert esc["enabled"] is True and esc["to"] == TIERS["max20"]["escalate"]["impl"] == "opus"
     executors = {a for a, r in ROLES["agents"].items() if any(r in TIERS[t]["escalate"] for t in TIERS)}
     assert set(esc["agents"]) == executors and executors <= set(AGENTS)
-    assert not executors & set(POLICY["agent_pins"]["opus"])
+    # 2026-10-31 (owner): on max20 executors run Opus outright; elsewhere they still escalate to it
+    assert all(tier_model("max20", ROLES["agents"][a]) == "opus" for a in executors)
     for p in esc["retry_markers"] + esc["plan_markers"]:
         re.compile(p)
 

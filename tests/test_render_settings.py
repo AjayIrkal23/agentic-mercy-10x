@@ -66,6 +66,21 @@ def test_semantic_check_ignores_claude_managed_keys(tmp_path):
     assert not ok and "env.EXTRA" in msg
 
 
+def test_claude_tmp_token_fills_the_playwright_output_dir_and_emits_back(tmp_path):
+    """2026-10-31: the playwright MCP may touch only its output dir and the cwd; pointing the output dir
+    at Claude Code's temp dir lets it read/write session scratchpads on every machine."""
+    r = _load_render()
+    tmpl = tmp_path / "settings.template.json"
+    tmpl.write_text(json.dumps({"env": {"PLAYWRIGHT_MCP_OUTPUT_DIR": "{{CLAUDE_TMP}}"}}), encoding="utf-8")
+    data = json.loads(r.render(template_path=tmpl, user_path=None))
+    assert data["env"]["PLAYWRIGHT_MCP_OUTPUT_DIR"] == r.claude_tmp()
+    assert "{{" not in r.claude_tmp() and "/claude" in r.claude_tmp() and "\\" not in r.claude_tmp()
+    live = tmp_path / "settings.json"
+    live.write_text(json.dumps(data), encoding="utf-8")
+    back = json.loads(r.emit_template(live_path=live, out_path=tmp_path / "emitted.json"))
+    assert back["env"]["PLAYWRIGHT_MCP_OUTPUT_DIR"] == "{{CLAUDE_TMP}}"  # machine paths never enter the template
+
+
 def test_granted_allow_rules_are_claude_managed(tmp_path):
     """An "always allow" granted in Claude Code's own dialog lands in permissions.allow: the
     equivalence check ignores it and a re-render (the daily self-heal) keeps it, so the user
@@ -79,7 +94,8 @@ def test_granted_allow_rules_are_claude_managed(tmp_path):
     ok, msg = r.check_equivalence(live_path=p, user_path=None)
     assert ok, msg
     data = json.loads(r.carry_managed(r.render(user_path=None), p))
-    assert data["permissions"]["allow"] == ["mcp__reticle"]
+    tmpl_allow = json.loads((_ROOT / "settings.template.json").read_text(encoding="utf-8"))["permissions"].get("allow", [])
+    assert data["permissions"]["allow"] == tmpl_allow + ["mcp__reticle"]  # template rules (EGM reads) + the grant
     live["permissions"]["deny"] = ["Bash(rm:*)"]
     p.write_text(json.dumps(live))
     ok, msg = r.check_equivalence(live_path=p, user_path=None)

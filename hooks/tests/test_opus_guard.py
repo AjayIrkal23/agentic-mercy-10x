@@ -108,54 +108,66 @@ def test_judges_pinned_opus():
         assert resolved(out)["model"] == "opus", at
 
 
-def test_implementors_default_to_sonnet():
-    for at in ("implementation-engineer", "backend-implementor-specialist",
-               "frontend-implementor-specialist", "integrator-specialist"):
-        out = run_agent({"description": "build feature", "subagent_type": at,
-                         "prompt": "Add a created_at column to the users table and update the handler."})
-        assert resolved(out)["model"] == "sonnet", at
+def test_implementors_route_per_tier():
+    # 2026-10-31: executors run Opus outright on max20; Sonnet on max5, Haiku on pro
+    for tier, want in (("max20", "opus"), ("max5", "sonnet"), ("pro", "haiku")):
+        TF.set_tier(tier)
+        for at in ("implementation-engineer", "backend-implementor-specialist",
+                   "frontend-implementor-specialist", "integrator-specialist"):
+            out = run_agent({"description": "build feature", "subagent_type": at,
+                             "prompt": "Add a created_at column to the users table and update the handler."})
+            assert resolved(out)["model"] == want, (tier, at)
 
 
 # --- escalation --------------------------------------------------------------
+# max20 executors already run Opus, so the mechanism is exercised on pro (haiku -> sonnet).
 
 HEAVY = ("Rebuild the whole notification system end-to-end: real-time websocket "
          "event-driven pipeline across the codebase, frontend and backend.")
 
 
 def test_retry_escalates_implementor():
+    TF.set_tier("pro")
     out = run_agent({"description": "fix tests", "subagent_type": "backend-implementor-specialist",
                      "prompt": "Previous attempt failed: the migration test is still red. Fix it."})
-    assert resolved(out)["model"] == "opus"
+    assert resolved(out)["model"] == "sonnet"
     assert "previous attempt failed" in out["hookSpecificOutput"]["additionalContext"]
 
 
-def test_large_unplanned_task_escalates_even_with_sonnet_label():
-    out = run_agent({"description": "[sonnet] notifications", "subagent_type": "implementation-engineer",
+def test_large_unplanned_task_escalates_even_with_haiku_label():
+    TF.set_tier("pro")
+    out = run_agent({"description": "[haiku] notifications", "subagent_type": "implementation-engineer",
                      "prompt": HEAVY})
     ui = resolved(out)
-    assert ui["model"] == "opus"
-    assert ui["description"] == "[opus] notifications"
+    assert ui["model"] == "sonnet"
+    assert ui["description"] == "[sonnet] notifications"
 
 
-def test_plan_reference_keeps_large_task_on_sonnet():
-    out = run_agent({"description": "notifications", "subagent_type": "implementation-engineer",
-                     "prompt": HEAVY + " Execute docs/superpowers/plans/plan-2026-09-29-notify.md task by task."})
-    assert resolved(out)["model"] == "sonnet"
+def test_plan_reference_blocks_size_escalation():
+    ti = {"description": "notifications", "subagent_type": "implementation-engineer",
+          "prompt": HEAVY + " Execute docs/superpowers/plans/plan-2026-09-29-notify.md task by task."}
+    TF.set_tier("pro")
+    assert resolved(run_agent(ti))["model"] == "haiku"
+    TF.set_tier("max20")
+    assert resolved(run_agent(ti))["model"] == "opus"  # max20 base model, not an escalation
 
 
 def test_explicit_model_without_user_phrase_does_not_block_escalation():
-    out = run_agent({"description": "fix", "model": "sonnet", "subagent_type": "implementation-engineer",
+    TF.set_tier("pro")
+    out = run_agent({"description": "fix", "model": "haiku", "subagent_type": "implementation-engineer",
                      "prompt": "Previous attempt failed: still broken."})
-    assert resolved(out)["model"] == "opus"
+    assert resolved(out)["model"] == "sonnet"
 
 
 def test_non_execution_agents_never_escalate():
-    # explore / docs roles are haiku; general-purpose is role `default` (sonnet on max20). None escalates.
-    for at, want in (("explore", "haiku"), ("general-purpose", "sonnet"), ("deadcode-reaper", "haiku")):
-        out = run_agent({"description": "x", "subagent_type": at,
-                         "prompt": "Previous attempt failed. " + HEAVY})
-        assert resolved(out)["model"] == want, at
-        assert "escalated" not in out["hookSpecificOutput"]["additionalContext"]
+    # explore / docs / default roles have no escalate entry: pro keeps them on haiku, max20 on sonnet.
+    for tier, want in (("pro", "haiku"), ("max20", "sonnet")):
+        TF.set_tier(tier)
+        for at in ("explore", "general-purpose", "deadcode-reaper"):
+            out = run_agent({"description": "x", "subagent_type": at,
+                             "prompt": "Previous attempt failed. " + HEAVY})
+            assert resolved(out)["model"] == want, (tier, at)
+            assert "escalated" not in out["hookSpecificOutput"]["additionalContext"]
 
 
 def test_escalation_fail_open(monkeypatch):
@@ -164,8 +176,9 @@ def test_escalation_fail_open(monkeypatch):
     policy = mod._load_policy()
     mod._POLICY_CACHE = {**policy, "escalation": {**policy["escalation"], "retry_markers": ["("]}}
     monkeypatch.setattr(mod, "_flag_paths", lambda: {})
+    TF.set_tier("pro")
     assert mod._resolve_required("implementation-engineer", "", "x", None, HEAVY)[:2] == \
-        ("sonnet", "role impl -> sonnet (tier max20)")
+        ("haiku", "role impl -> haiku (tier pro)")
 
 
 def test_routing_log_records_every_decision(monkeypatch, tmp_path):
@@ -323,8 +336,10 @@ def test_per_project_mode_beats_explicit(monkeypatch, tmp_path):
     ("pro", "security-sentinel", "haiku"), ("pro", "general-purpose", "haiku"),
     ("max5", "santa-reviewer", "sonnet"), ("max5", "implementation-engineer", "sonnet"), ("max5", "explore", "haiku"),
     ("max5", "test-author", "sonnet"),
-    ("max20", "santa-reviewer", "opus"), ("max20", "implementation-engineer", "sonnet"),
-    ("max20", "docs-sync-agent", "haiku"), ("max20", "audit-specialist", "opus"),
+    ("max20", "santa-reviewer", "opus"), ("max20", "implementation-engineer", "opus"),
+    ("max20", "docs-sync-agent", "sonnet"), ("max20", "audit-specialist", "opus"),
+    ("max20", "explore", "sonnet"), ("max20", "qa-verifier", "opus"), ("max20", "test-author", "opus"),
+    ("max20", "security-sentinel", "opus"), ("max20", "general-purpose", "sonnet"),
     ("api", "santa-reviewer", "sonnet"), ("api", "deadcode-reaper", "haiku")])
 def test_tier_matrix_per_role(tier, agent, want):
     TF.set_tier(tier)

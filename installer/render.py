@@ -21,6 +21,11 @@ Tokens:
                     loads ``env.CLAUDE_CODE_PLUGIN_DIRS`` only from absolute or ``~`` paths,
                     so the POSIX ``${HOME}`` form of {{CLAUDE_DIR}} cannot be reused.
                     Empty → the env key is dropped.
+    {{CLAUDE_TMP}}  Claude Code's temp dir on this machine (``<tmp>/claude-<uid>`` on POSIX,
+                    ``<tmp>/claude`` on Windows), the parent of every session scratchpad;
+                    ``env.PLAYWRIGHT_MCP_OUTPUT_DIR`` names it so the playwright MCP may
+                    read and write scratchpad files (its allowed roots are the output dir
+                    and the cwd; 2026-10-31).
 
 The equivalence gate is SEMANTIC (parsed JSON, Claude-managed keys ignored), and a
 write carries the existing Claude-managed keys (theme, tui, voice …) over.
@@ -66,7 +71,16 @@ _USER = _ROOT / "settings.user.json"
 
 PATHSEP = os.pathsep
 PLUGIN_DIRS_KEY = "CLAUDE_CODE_PLUGIN_DIRS"
+PLAYWRIGHT_OUT_KEY = "PLAYWRIGHT_MCP_OUTPUT_DIR"
 _MOD_ID = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+
+
+def claude_tmp() -> str:
+    """Claude Code's temp dir (forward slashes): the parent of every session scratchpad."""
+    import tempfile  # noqa: PLC0415
+    base = Path(tempfile.gettempdir())
+    leaf = "claude" if plat.IS_WINDOWS or not hasattr(os, "getuid") else f"claude-{os.getuid()}"
+    return (base / leaf).as_posix()
 
 # Default substitution values == the live POSIX literals (equivalence gate).
 _DEFAULT_SUBS = {
@@ -135,7 +149,7 @@ def render(
     # mods come from the manifest next to the TEMPLATE, so a sandbox --template never
     # pulls the live checkout's mods (audit A-11)
     mods = PATHSEP.join(mod_dirs(Path(template_path).resolve().parent))
-    rendered = substitute(tmpl_text, {"MOD_DIRS": mods, **(subs or {})})
+    rendered = substitute(tmpl_text, {"MOD_DIRS": mods, "CLAUDE_TMP": claude_tmp(), **(subs or {})})
     data = json.loads(rendered)  # fail loud on a broken template
     if plat.IS_WINDOWS and isinstance(data.get("env"), dict):  # semgrep-core has no posix backend there
         data["env"].pop("EIO_BACKEND", None)
@@ -254,7 +268,9 @@ def emit_template(live_path: Path = _LIVE, out_path: Path = _TEMPLATE) -> str:
         data.pop(k)
     if isinstance(env, dict) and PLUGIN_DIRS_KEY in env:
         env[PLUGIN_DIRS_KEY] = "{{MOD_DIRS}}"  # machine paths never enter the template
-    if tier_keys or (isinstance(env, dict) and PLUGIN_DIRS_KEY in env):
+    if isinstance(env, dict) and PLAYWRIGHT_OUT_KEY in env:
+        env[PLAYWRIGHT_OUT_KEY] = "{{CLAUDE_TMP}}"
+    if tier_keys or (isinstance(env, dict) and (PLUGIN_DIRS_KEY in env or PLAYWRIGHT_OUT_KEY in env)):
         text = json.dumps(data, indent=2, ensure_ascii=False) + "\n"
     Path(out_path).write_text(text, encoding="utf-8", newline="\n")
     return text

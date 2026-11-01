@@ -38,6 +38,7 @@ Pure modules unless noted (no `$`): what each exports, and who imports it (`feat
 | `ledger.ts` | the session ledger (`emptyLedger`, `recordTool`, `recordEdit`, `recordCommand`) | bridge, restyle, lifecycle, stop, toolflow, lib views |
 | `modelcaps.ts` | subagent model cap (`capModel`, `Policy`) mirroring `hooks/opus-guard.py` | model-caps |
 | `os.ts` | the one OS switch (`isWindowsEnv`, `defaultPython`, `system32`) | lifecycle, lib/winalerts, lib/probes |
+| `nothuman.ts` | `isNotHuman`: harness text (task notification, interrupt, peer message, subagent hand-back, `<agent-message from=`) is not a human prompt; same rule as `hooks/lib/turns.py` and `hooks/prompt_router/classify.py` | prompts |
 | `paths.ts` | path classification and `statePathFrom`, `join`, `shortPath` | most features, lib/guard, lib/ledger, lib views |
 | `probes.ts` | port/tasklist parsers and `parseMemPressure` | auto, memwatch, lib/deckviews |
 | `queue.ts` | background job lanes `fast` / `slow` (`enqueue`, `take`, `busy`) | bridge, lifecycle, stop, lib/snap |

@@ -38,8 +38,10 @@ def env(tmp_path, monkeypatch):
     return m, repo
 
 
-def run(m, monkeypatch, tool_input: dict) -> dict:
+def run(m, monkeypatch, tool_input: dict, agent: str = "") -> dict:
     payload = {"session_id": "t-jde", "tool_name": "Read", "tool_input": tool_input}
+    if agent:
+        payload["agent_id"] = agent
     monkeypatch.setattr(sys, "stdin", io.StringIO(json.dumps(payload)))
     out = io.StringIO()
     monkeypatch.setattr(sys, "stdout", out)
@@ -48,10 +50,27 @@ def run(m, monkeypatch, tool_input: dict) -> dict:
 
 
 def test_large_doc_whole_read_is_steered(env, monkeypatch):
+    """B-05: the first whole read is denied once with the exact call, then advisory."""
     m, repo = env
     big = repo / "docs" / "guide.md"
     big.write_text("# h\n" + "x" * 20000, encoding="utf-8")
+    first = run(m, monkeypatch, {"file_path": str(big)})
+    assert first.get("permissionDecision") == "deny"
+    assert 'mcp__jdocmunch__search_sections(repo="local/repo", query="guide")' in first["permissionDecisionReason"]
     assert "jDocMunch" in run(m, monkeypatch, {"file_path": str(big)}).get("additionalContext", "")
+
+
+def test_deny_is_once_per_agent_and_per_turn(env, monkeypatch):
+    m, repo = env
+    big = repo / "docs" / "guide.md"
+    big.write_text("x" * 3000, encoding="utf-8")  # over the 2,000-byte floor
+    turn = {"k": "t1"}
+    monkeypatch.setattr(m, "_turn", lambda payload: turn["k"])
+    assert run(m, monkeypatch, {"file_path": str(big)}).get("permissionDecision") == "deny"
+    assert run(m, monkeypatch, {"file_path": str(big)}).get("permissionDecision") is None
+    assert run(m, monkeypatch, {"file_path": str(big)}, agent="a1").get("permissionDecision") == "deny"
+    turn["k"] = "t2"
+    assert run(m, monkeypatch, {"file_path": str(big)}).get("permissionDecision") == "deny"
 
 
 def test_small_doc_is_not_steered(env, monkeypatch):

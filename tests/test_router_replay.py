@@ -52,7 +52,9 @@ def test_report_shape_and_skips(tmp_path):
     assert set(rep) >= {"date", "window_days", "counts", "rates", "max", "top_flagged"}
     c = rep["counts"]
     assert c["prompts"] == 3 and c["skipped_mode"] == 1          # dup, meta, tool_result dropped
-    assert set(rep["rates"]) >= {"union", "threejs_no_3d", "debug_no_bug", "machine_routed"}
+    assert set(rep["rates"]) >= {"union", "threejs_no_3d", "debug_no_bug", "machine_routed", "egm_on_small",
+                                 "zero_skill_dev", "audit_no_audit_skill", "stack_skill_missed",
+                                 "infra_got_fe_skill", "zero_skill_prompts"}
     assert "fix the login bug" not in json.dumps(rep)               # counts only, no prompt text
     assert "router-replay --check: OK" in cp.stdout
 

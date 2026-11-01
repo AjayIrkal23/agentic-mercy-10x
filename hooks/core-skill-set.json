@@ -1,5 +1,5 @@
 {
- "_comment": "Always-active core skill set injected at session start as one pointer line each (name + description; the model loads a body with the Skill tool). session-start-aggregator caps this block at CAPS['core'] = 2000 chars. No entry is `full`: the caveman rules ride in the `caveman` output style (output-styles/caveman.md), which the system prompt caches. tests/test_skills_wp2.py asserts every `full` entry arrives (none today) and that no pointer skill claims full injection.",
+ "_comment": "Always-active core skill set. The full bodies load through CLAUDE.skills.md (@imports from CLAUDE.md; a hook's additionalContext over 8,000 chars is cut to a 2 KB preview, so no hook carries them); tests/test_skills_wp2.py keeps that file's list equal to this one. scripts/skill_health.py keeps these skills described. No entry is `full` (tests/test_context_budget.py).",
  "always": [
   {
    "skill": "caveman",

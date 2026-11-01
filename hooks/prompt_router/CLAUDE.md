@@ -8,14 +8,15 @@
 
 The **UserPromptSubmit router** (`router.py`): a `dispatch.py user-prompt-submit`
 advisory link (p0, 12 s) once integrate lands the chain; callable directly for tests.
-One process per prompt: classify → detect FE/BE/API/docs surface → rank ≤3 skills →
+One process per prompt: classify → detect FE/BE/API/docs surface → rank ≤5 skills →
 pointer / WORKFLOW / MCP / LIBRARY routes → agent/act suggestion → emit
 `{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":
 "<!-- prompt-router v3 -->\n…"}}`. Measured 88 tokens mean / 310 p90 (1,257 live
 fires, 2026-10-15..29); after the merge 768 ch mean (post-T7, n=29), so final-fix 2
 (2026-10-30) shortened every line: fixed 4-prompt probe 1,145 → 964 ch mean; the
 real-session number needs ≥ 30 prompts after epoch 1793342134 (target ≤ 445 ch mean,
-≤ 1,474 p90; next lever `max_routing_lines` 5 → 4). Nothing in here starts servers or mutates the repo; side
+≤ 1,474 p90). Audit A-08 (2026-10-31) then raised the caps for recall over tokens
+(see Caps below). Nothing in here starts servers or mutates the repo; side
 effects are the session manifest, `hooks/.telemetry/<sid>.pushed-skills.jsonl` and
 telemetry records.
 
@@ -77,9 +78,34 @@ telemetry records.
   graph build. `_doc_index_exists` checks both manifest names index-lifecycle uses
   (`<name>`, `<name>-<sha1(realpath)[:8]>`). Never reintroduce `/invoke <act>`,
   `/model <id>` or `graphify update` in router text (`tests/test_autonomy_wpc_text.py`).
-- Caps: `max_skill_pushes` 3, `max_route_lines` 3 (dispatch), `max_mcp_routes` 4,
-  `max_routing_lines` 5 (total; order: model-mode echo, surface pointer, WORKFLOW, UI,
-  asset login, MCP, dispatch, LIBRARY).
+- Caps (audit A-08, 2026-10-31; the user's priority is recall, not tokens): `max_skill_pushes` 5
+  (ranks 1-3 need `min_skill_score` 3.0, ranks 4-5 only `min_skill_score_tail` 2.5 from
+  `tail_from_rank` 3), `max_route_lines` 3 (dispatch), `max_mcp_routes` 6, `max_routing_lines` 8
+  (total; order: model-mode echo, surface pointer, EGM, WORKFLOW, UI, asset login, MCP,
+  dispatch, LIBRARY), `code_intel.max_symbols` 8. The whole context stays under Claude Code's
+  8,000-char hook cap (`test_router_budget.py` bounds a heavy prompt at 2,000).
+- **Harness text is not a prompt** (`classify.is_machine_text`): a known prefix, or
+  `[Subagent hand-back]` / `<agent-message from=` / `Another Claude session sent a message` at the
+  start (after leading `<system-reminder>` tags), at a line start or right after a closing `>` in the
+  first 400 chars. A human sentence that quotes the words mid-line is still routed. Keep
+  `lib/turns.py _NOT_HUMAN_PREFIXES` and `mods/mercy/hooks/lib/nothuman.ts` in step.
+- **Skill triggering fixes (audit 2026-10-31).** `keyword_ok` judges the tokenized form (`use()` is
+  `use`, 3 chars: dropped; `build-trigger-floor.py` agrees). `tokens` is a vague UI word (0.4); a
+  claude-infra prompt keeps `is_ui` only when it names the frontend. `front end` / `back end` are
+  surfaces. Index `intents` are normalised to router categories by `build_skills_index.py`
+  (`normalize_intents`; `frontend`/`backend` move to `surfaces`). Plugin skills get full-weight
+  curated triggers from `hooks/plugin-skill-triggers.json`. `additions.surface_skills["claude-infra"]`
+  plus claude-infra `skill_rules` map infra prompts to infra skills; `additions.builtin_skills`
+  (update-config, plugin-authoring, keybindings-help) are harness skills with no directory that
+  `select.skill_exists` accepts. Stack tags `mongo`, `fastify`, `express`, `vitest`, `expo`
+  (`stack_indicators`, stack cache `_v` 6) pre-select their stack skills once their side is
+  established (`select._STACK_SKILL_TAGS`); a skill rule may carry `unless_surfaces`.
+- **EGM route** (`modules/egm_routes.py`, `additions.egm`, plugin `egm@egm`): design-doc review,
+  brainstorm, draft and drift report. The plugin's skills are `disable-model-invocation`, so the line
+  says `Read <SKILL.md>` and states the resolved plugin root; with it the skill labels are all
+  SHOULD-READ (enforce soft, no MUST-READ), `santa-review` is not pushed, and there is no WORKFLOW,
+  act-dispatch or model-advice line. A question about EGM is never routed (`question_rx` applies even
+  with an explicit cue). Tests use a fake plugin tree (`egm_routes.plugin_root` is the seam).
 - The `prompt_router.live` telemetry row carries `ms` (router wall time, A-10).
 - Run `python3 -m py_compile` on every edited module before the next prompt —
   the hook is live.
@@ -100,7 +126,7 @@ telemetry records.
 | `budget.py` | tier-ascending ordering only (the 24k budget never bound; nothing is dropped) |
 | `manifest.py` | per-session dedup of emitted ids (never suppresses a first fire); consumes the `<sid>.router-reset` marker |
 | `router.config.json` | knobs + `additions` (the only place to tune routing by hand): `intents` (incl. `MODEL_ROUTING`), `surface_skills`, `demote`, `ui_veto`, `surface_pointers`, `stack_indicators`, `skill_rules` |
-| `modules/` | `surface.py`, `mcp_routes.py`, `code_intel.py`, `model_advice.py`, `asset_auth.py`, `workflow_routes.py` (+ `library_routes.py` from package `library`) — see its CLAUDE.md |
+| `modules/` | `surface.py`, `mcp_routes.py`, `code_intel.py`, `model_advice.py`, `asset_auth.py`, `workflow_routes.py`, `egm_routes.py` (+ `library_routes.py` from package `library`) — see its CLAUDE.md |
 
 ## Gotchas / fragile spots
 

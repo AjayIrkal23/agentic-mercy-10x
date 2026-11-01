@@ -31,9 +31,10 @@ PER_EVENT_NOTES = ("prompt router line: ~92 tok mean pre-merge, ~192 post-merge 
                    "1,145 -> 964 ch, target <= 445 ch (hooks/prompt_router/CLAUDE.md)","memwatch-brake: 0 / 40 / 60 tokens (ok / warn / crit)",
                    "tdd-guard advisory: ~120 tokens per write in test-stack repos")
 ECC_ADVICE = (
-    "- Haiku for mechanical work (explore, docs, cleanup, verify); the plan tier picks it (`rules/04`).",
-    "- MCP tools stay deferred; only `sequential-thinking` may set `alwaysLoad`.",
-    "- `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH=600` caps each MCP tool description.",
+    "- The plan tier picks subagent models (`rules/04`); on max20 Sonnet is the floor and executors and verify run Opus (2026-10-31).",
+    "- The mandated MCPs load eagerly (`alwaysLoad`: sequential-thinking, jcodemunch, jdocmunch, graphify,",
+    "  memory, context7, semgrep, playwright; 2026-10-31, owner: tool use over token cost). The rest stay deferred.",
+    "- `CLAUDE_CODE_MAX_MCP_DESCRIPTION_LENGTH=4000`: full tool descriptions (was 600, which cut context7's).",
     "- Compact at natural breaks (after exploration, after a milestone), never mid-change.",
     "- `/clear` between unrelated tasks; stale context costs tokens on every message.",
     "- Subagents protect the main context: they read 20 files and return a summary.",
@@ -401,6 +402,10 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--record", type=int, metavar="TOKENS", help="the /context token figure for the eager MCP schemas")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
+    try:  # the table holds non-ASCII; a cp1252 Windows console or pipe would raise UnicodeEncodeError
+        sys.stdout.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError, OSError):
+        pass
     root = Path(a.root).expanduser().resolve()
     drafts = None
     if a.drafts:

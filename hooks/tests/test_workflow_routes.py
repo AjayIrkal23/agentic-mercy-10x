@@ -59,7 +59,9 @@ def test_two_acts_route_to_invoke_in_canonical_order(home):
     args = _args(it[0]["text"])
     # the invoke entry's canonical order (audit spec plan debug test impl ...), as invoke.js runs them
     assert args["acts"] in (["plan", "impl"], ["plan", "test", "impl"])
-    assert args["run"].startswith("/nonexistent-dir/.claude/runs/") and args["slug"] and "tier_hint" not in args
+    # native separators: the run dir is a pathlib path ("\\nonexistent-dir\\..." on Windows)
+    assert pathlib.Path(args["run"]).parent == pathlib.Path("/nonexistent-dir/.claude/runs")
+    assert args["slug"] and "tier_hint" not in args
     assert it[0]["id"].startswith("route:workflow:invoke:")
     assert it[0]["section"] == "ROUTING" and it[0]["tier"] == 2
 
@@ -68,10 +70,10 @@ def test_run_dir_is_absolute_utc_under_the_repo_root(home):
     class Repo:
         root = "/srv/repo"
     it = _items("plan the retry queue, then implement it and write the tests", cwd="/srv/repo/pkg/sub", repo=Repo())
-    run = _args(it[0]["text"])["run"]
-    assert run.startswith("/srv/repo/.claude/runs/") and re.fullmatch(r"\d{8}T\d{4}", run.rsplit("/", 1)[1].split("-", 1)[0])
+    run = pathlib.Path(_args(it[0]["text"])["run"])
+    assert run.parent == pathlib.Path("/srv/repo/.claude/runs") and re.fullmatch(r"\d{8}T\d{4}", run.name.split("-", 1)[0])
     now = datetime.now(timezone.utc)
-    assert run.rsplit("/", 1)[1][:8] in {now.strftime("%Y%m%d"), (now - timedelta(minutes=1)).strftime("%Y%m%d")}
+    assert run.name[:8] in{now.strftime("%Y%m%d"), (now - timedelta(minutes=1)).strftime("%Y%m%d")}
 
 
 def test_size_l_single_act_routes_to_invoke(home):

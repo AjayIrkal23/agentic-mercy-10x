@@ -330,6 +330,65 @@ def _bump(conversation_id: str, key: str, by: int = 1) -> dict:
     return _update(conversation_id, {key: by})
 
 
+def _sid(payload: dict) -> str:
+    return str(payload.get("conversation_id") or payload.get("session_id") or "")
+
+
+def _cid(payload: dict) -> str:
+    """Gate state key: one per AGENT (B-03). A subagent's payload carries the parent's
+    session id plus its own ``agent_id``; it starts with none of the parent's jcodemunch
+    results, so the parent's calls must not unlock it."""
+    sid, aid = _sid(payload), str(payload.get("agent_id") or "")
+    return f"{sid}.{aid}" if sid and aid else sid
+
+
+def _turn(payload: dict) -> str:
+    """The user turn this call belongs to ("?" when unknown: never resets)."""
+    try:
+        from lib.turns import turn_key
+        tp = payload.get("transcript_path")
+        return turn_key(tp) if tp else "?"
+    except Exception:  # noqa: BLE001
+        return "?"
+
+
+def _turn_reset(conversation_id: str, payload: dict) -> None:
+    """A new user turn starts the budget over (B-04): one fresh deny per agent per turn,
+    and an agent that used jcodemunch for the last task is asked again for this one."""
+    p, turn = _state_path(conversation_id), _turn(payload)
+    if p is None or turn == "?":
+        return
+
+    def _apply(d: dict) -> dict:
+        return d if d.get("turn") == turn else {**_DEFAULTS, "turn": turn}
+
+    _gs.update_json(p, _apply, default=_DEFAULTS)
+
+
+def _repo_id(root) -> str:
+    """jcodemunch's own id for the repo (``Owner/remote``), "" when not indexed."""
+    try:
+        from lib import mcp_ids
+        return mcp_ids.ids(str(root))["jcodemunch"] if root else ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
+def _exact_call(root, target: str, hint: str, search: bool) -> str:
+    """The one call to make instead, with the real repo id (B-04)."""
+    rid = _repo_id(root)
+    if not rid:
+        return (f'mcp__jcodemunch__resolve_repo(path="{root}"), then '
+                f'mcp__jcodemunch__search_symbols(repo=<its id>, query="{hint}")')
+    if search:
+        return f'mcp__jcodemunch__search_symbols(repo="{rid}", query="{hint}")'
+    try:
+        rel = Path(target).resolve().relative_to(Path(root).resolve()).as_posix()
+    except Exception:  # noqa: BLE001
+        rel = Path(target).name
+    return f'mcp__jcodemunch__get_file_outline(repo="{rid}", file_path="{rel}")'
+
+
 def _fullstack_state_path(conversation_id: str) -> Path:
     safe = "".join(c if c.isalnum() or c in "-_" else "_" for c in conversation_id)
     return STATE_DIR / f"{safe}.fullstack.json"
@@ -405,6 +464,22 @@ def _emit_block(message: str) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _egm_lean(agent_type) -> bool:
+    try:
+        from lib.agent_kinds import is_egm_lean
+        return is_egm_lean(agent_type)
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _is_shell(tool: str) -> bool:
+    try:
+        from tool_compat import is_shell_tool
+        return bool(is_shell_tool(tool))
+    except Exception:  # noqa: BLE001
+        return tool in ("Bash", "PowerShell")
+
+
 def _norm(p: str) -> str:
     return os.path.normcase(p).replace("\\", "/")
 
@@ -456,15 +531,23 @@ def pre_tool_use() -> int:
     payload = _read_payload()
     tool = payload.get("tool_name") or payload.get("tool") or ""
     inp = payload.get("tool_input") or payload.get("input") or {}
-    conversation_id = payload.get("conversation_id") or payload.get("session_id") or ""
+    conversation_id = _cid(payload)
+    if _egm_lean(payload.get("agent_type")):
+        return 0  # EGM goldfish reviewers read blind by design (plan Step 6)
 
     cfg = _load_enforce_config()
     gate_lean_ctx = bool(cfg.get("gate_lean_ctx", True))
 
-    # Extract target path. Covers native Read/Grep/Glob AND lean-ctx ctx_* reads
-    # so a blind source read can't silently route around jcodemunch.
-    target = ""
-    if tool == "Read":
+    # Extract target path. Covers native Read/Grep/Glob, lean-ctx ctx_* reads AND
+    # shell reads (grep/rg/cat/sed -n/head/tail/find, B-02) so a blind source read
+    # can't silently route around jcodemunch.
+    target, shell_hint = "", ""
+    if _is_shell(tool):
+        from lib.shell_reads import code_target
+        target, shell_hint = code_target(str(inp.get("command") or ""), str(payload.get("cwd") or ""))
+        if not target or _gate2_exempt_root(_find_git_root(Path(target).parent)):
+            return 0  # not a code read, or outside a project repo
+    elif tool == "Read":
         target = str(inp.get("file_path") or "")
     elif tool == "Grep":
         base = str(inp.get("path") or payload.get("cwd") or "")
@@ -498,6 +581,8 @@ def pre_tool_use() -> int:
     # --- Gate 1: Non-code / exempt → allow silently. ---
     if _is_exempt(target, cfg):
         return 0
+
+    _turn_reset(conversation_id, payload)
 
     # A session that already used jcodemunch has satisfied the whole gate — this
     # early return used to sit BELOW Gate 2, so "index missing" still blocked
@@ -552,17 +637,15 @@ def pre_tool_use() -> int:
         return 0
 
     enforce_after_write = bool(cfg.get("enforce_after_code_write", True))
-    if enforce_after_write and not _coding_started(conversation_id):
+    if enforce_after_write and not _coding_started(_sid(payload)):
         return 0
 
     initial_block_count = int(cfg.get("initial_block_count", 0))
-    if initial_block_count <= 0 and enforce_after_write and _coding_started(conversation_id):
-        initial_block_count = 2
+    if initial_block_count <= 0 and enforce_after_write and _coding_started(_sid(payload)):
+        initial_block_count = 1
 
-    # Relaxed while the index self-heals in the background (Spec B §3.3).
-    if (_load_state(conversation_id).get("read_blocked_count", 0) < initial_block_count
-            and _index_building(payload)):
-        return 0
+    # No relax while a STALE index rebuilds (B-04): the old index still answers symbol
+    # lookups. A MISSING index never reaches here (Gate 2 handles it).
 
     # Claim a block slot under the lock; the counter stays exact under concurrency.
     blocks_so_far = int(_bump(conversation_id, "read_blocked_count").get("read_blocked_count", 1)) - 1
@@ -571,19 +654,19 @@ def pre_tool_use() -> int:
         # Still within the blocking budget — BLOCK this call.
         remaining_after = initial_block_count - blocks_so_far - 1
 
-        # Short, punchy block message.
         hint = Path(target).name if target else "this file"
+        search = tool == "Grep" or (_is_shell(tool) and shell_hint != hint)  # grep/find, not cat
         if tool == "Grep" and inp.get("pattern"):
             hint = str(inp["pattern"])[:80]  # a directory search has no real file name
-        if remaining_after > 0:
-            suffix_note = f"({remaining_after} more block{'s' if remaining_after != 1 else ''} remaining)"
-        else:
-            suffix_note = "(last block — subsequent Reads allowed with advisory)"
+        elif shell_hint:
+            hint = shell_hint
+        call = _exact_call(_find_git_root(Path(target).parent), target, hint, search)
+        suffix_note = (f"({remaining_after} more this turn)" if remaining_after > 0
+                       else "Then retry: the next read passes.")
         block_msg = (
-            f"BLOCKED: Use mcp__jcodemunch__search_symbols or get_symbol_source for '{hint}' first. "
-            f"jcodemunch returns the same code with ~95% fewer tokens. "
-            f"Call the MCP tool, then retry this {tool or 'Read'} only if jcodemunch returns nothing. "
-            f"{suffix_note}"
+            f"BLOCKED (once per agent per turn): call {call} first. jcodemunch returns every "
+            f"definition and caller of '{hint}' from the index; a plain {tool or 'Read'} sees one "
+            f"file and misses the rest. {suffix_note}"
         )
         _emit_block(block_msg)
         return 0
@@ -593,7 +676,8 @@ def pre_tool_use() -> int:
 
     _emit_additional_context(
         "PreToolUse",
-        "Advisory: prefer jcodemunch for code retrieval (~95% fewer tokens).",
+        "Advisory: jcodemunch search_symbols / find_references find every caller and "
+        "definition; this read is allowed.",
     )
     return 0
 
@@ -611,16 +695,18 @@ _DEADCODE_TOOLS = ("find_dead_code", "get_dead_code_v2", "find_unused_paths")
 def mcp_used() -> int:
     """afterMCPExecution: increment jcodemunch_calls; record dead-code audit signal."""
     payload = _read_payload()
-    conversation_id = payload.get("conversation_id") or payload.get("session_id") or ""
+    conversation_id = _cid(payload)
     if not conversation_id:
         return 0
+    _turn_reset(conversation_id, payload)
     _bump(conversation_id, "jcodemunch_calls")
 
     # Satisfy the completion gate's dead-code check (Gate 5) when a dead-code /
-    # blast-radius tool runs — the canonical "I audited my changes" signal.
+    # blast-radius tool runs — the canonical "I audited my changes" signal. Keyed on
+    # the plain session id: the parent's Stop gate must see a subagent's audit.
     tool = str(payload.get("tool_name") or payload.get("tool") or "")
     if any(t in tool for t in _DEADCODE_TOOLS) and _gs is not None:
-        _gs.save_json(STATE_DIR / f"{_gs.safe_cid(conversation_id)}.deadcode.json", {"fired": True})
+        _gs.save_json(STATE_DIR / f"{_gs.safe_cid(_sid(payload))}.deadcode.json", {"fired": True})
     return 0
 
 

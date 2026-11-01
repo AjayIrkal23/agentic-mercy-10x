@@ -114,8 +114,10 @@ def test_escalation_reason_keeps_its_signature_and_membership():
     ("max5", "implementation-engineer", None, None, HEAVY, False, "sonnet", "escalated"),
     ("max20", "implementation-engineer", None, None, HEAVY, False, "opus", "escalated"),
     ("max20", "implementation-engineer", None, None, HEAVY, True, "sonnet", "usage-guard"),
-    ("max20", "qa-verifier", None, None, HEAVY, False, "sonnet", "size bump"),
-    ("max20", "qa-verifier", None, None, "check it", False, "haiku", "role verify"),
+    # 2026-10-31: max20 verify runs opus outright, no size bump left in any tier (see test_size_bump_*)
+    ("max20", "qa-verifier", None, None, HEAVY, False, "opus", "role verify"),
+    ("max20", "qa-verifier", None, None, "check it", False, "opus", "role verify"),
+    ("max5", "qa-verifier", None, None, "check it", False, "haiku", "role verify"),
     ("max20", "general-purpose", "opus", None, "research", False, "opus", "explicit model param"),
     ("pro", "general-purpose", "opus", None, "research", False, "haiku", "explicit 'opus' ignored"),  # D6 ask_only
     ("max20", "general-purpose", "fable", None, "x", False, "sonnet", "ignored"),
@@ -128,6 +130,17 @@ def test_resolve_matrix(tier, agent, asked, phrase, text, usage, want, why):
                                phrase_for=(lambda m: phrase if phrase and m in phrase else None),
                                text=text, cwd=None, tier=tier, usage_active=usage, flags=[], pin=None)
     assert model == want and why in reason, (model, reason)
+
+
+def test_size_bump_mechanism_lifts_a_role_at_its_size():
+    # no shipped tier carries size_bumps since 2026-10-31; keep the resolver path covered with a copy
+    pol = json.loads(json.dumps(POL))
+    pol["tiers"]["max5"]["size_bumps"] = {"verify": {"L": "sonnet"}}
+    kw = dict(asked=None, phrase_for=lambda m: None, cwd=None, tier="max5", usage_active=False, flags=[], pin=None)
+    model, reason = mm.resolve(pol, "qa-verifier", text=HEAVY, **kw)
+    assert model == "sonnet" and "size bump L -> sonnet" in reason, (model, reason)
+    assert mm.resolve(pol, "qa-verifier", text="check it", **kw)[0] == "haiku"
+    assert all(not blk["size_bumps"] for blk in POL["tiers"].values())
 
 
 def test_resolve_flags_and_pins_then_cap():
@@ -193,7 +206,8 @@ def test_santa_prompts_keep_the_role_route(tmp_path, tier, text):
         kw = dict(asked=None, text=text, cwd=None, tier=tier, usage_active=False, flags=[], pin=None)
         got = mm.resolve(POL, agent, phrase_for=said, **kw)[0]
         assert got == mm.resolve(POL, agent, phrase_for=lambda m: None, **kw)[0], (agent, got)
-        assert got != "fable" and (agent != "explore" or got == "haiku"), (agent, got)
+        # explore keeps its tier route (haiku on max5, sonnet on max20 since 2026-10-31)
+        assert got != "fable" and (agent != "explore" or got == POL["tiers"][tier]["roles"]["explore"]), (agent, got)
 
 
 def test_max5_use_fable_is_not_a_silent_opus():

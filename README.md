@@ -35,7 +35,7 @@ pinned Python, then installs PortableGit (Git Bash), Node 22, Claude Code, uv, g
 per user into `%LOCALAPPDATA%\Programs\agentic-mercy` (override: `AGENTIC_MERCY_TOOLS_DIR`),
 each download SHA-256 checked; tools already on PATH are reused.
 
-<img src="assets/install.webp" alt="Install flow: git clone and install.sh, then base tools, packages, local AI, 15 MCP servers and 11 plugins, and a self-heal loop until the doctor reports 0 FAIL" width="100%">
+<img src="assets/install.webp" alt="Install flow: git clone and install.sh, then base tools, packages, local AI, 15 MCP servers and 13 plugins, and a self-heal loop until the doctor reports 0 FAIL" width="100%">
 
 A fresh Ubuntu 24.04+ needs only `git`, `curl` and `python3`, and no sudo. The installer
 merges the clone into `~/.claude` (a file of yours that differs is kept as
@@ -64,7 +64,7 @@ without it directives 20, 21 and 30 do nothing.
 | Base tools (no sudo) | Node 22 + npm (official tarball, checksum verified), Claude Code (pinned to the mod's minimum version), uv, gh → `~/.local/bin` |
 | Packages | pinned semgrep, jcodemunch, jdocmunch, graphify (+ its serve venv), lean-ctx, tdd-guard, pyright, PyYAML |
 | Local AI | ollama (user space) + the `all-minilm` embedding and `qwen2.5-coder:3b` summary models; or another machine's ollama via `OLLAMA_HOST` in `settings.user.json` (nothing installed locally) |
-| Claude Code | 15 MCP servers at pinned versions, 5 marketplaces + 11 plugins, rendered `settings.json` (status line, mods env) |
+| Claude Code | 15 MCP servers at pinned versions, 7 marketplaces + 13 plugins (TokenEconomizer from a local clone), rendered `settings.json` (status line, mods env) |
 | Workbench | re-vendored skills, generated `/invoke` skills and agent blocks, skills index, validators, doctor |
 | OS tools (apt) | `tmux` (session restore after an OOM kill), `ss`, `curl`, and on a desktop `canberra-gtk-play`, `notify-send`, `pw-play` for the UI deck: installed with root or passwordless sudo, otherwise one `sudo apt-get install` line is printed (plus a one-time zram line when swap is under half of RAM). Everything but restore works without them |
 | Per machine | `settings.user.json` (mode 600) gets `OLLAMA_HOST` from the install environment, a machine-wide `CLAUDE_CODE_TOOL_MEMORY_LIMIT` of half the RAM on a Linux box over 12 GB (one cgroup that every session's tool commands share), and on a bare box `permissions.defaultMode: acceptEdits` (set `AGENTIC_MERCY_PERMISSION_MODE=bypassPermissions` before installing to keep the template's bypass) |
@@ -76,7 +76,7 @@ read-only DB MCP: `python3 ~/.claude/scripts/add-db-mcp.py --supabase|--mongodb`
 Installer internals: [`installer/CLAUDE.md`](installer/CLAUDE.md).
 
 **Rollback** restores the `*.pre-install` files only; there is no uninstaller yet. It leaves
-registered the 15 user-scope MCP servers (`~/.claude.json`), the 5 marketplaces and 11
+registered the 15 user-scope MCP servers (`~/.claude.json`), the 7 marketplaces and 13
 plugins, the uv tools and npm globals, and the two user units (`claude-memwatch`,
 `claude-restore`) plus `~/.config/systemd/user.conf.d/10-oom.conf`
 (`installer/oomguard_setup.py` has no `--remove`), the `# >>> claude-workbench >>>` PATH block
@@ -92,9 +92,11 @@ delete the PATH block, `loginctl disable-linger`); the OOM guard's own switches 
 ## Every prompt is routed
 
 `hooks/prompt_router/router.py` runs before Claude reads your prompt. It classifies the
-intent and the repo's stack, then injects up to 4 ranked skills, the MCP calls to make
-first and the specialist agent to dispatch, in about 800 tokens. The output below is real
-router output from a prompt about this README, trimmed.
+intent and the repo's stack, then injects up to 5 ranked skills, the MCP calls to make
+first and the specialist agent to dispatch, in about 800 tokens. A design-document prompt
+(fresh-eyes review, brainstorm, draft or drift report) also gets an EGM line that names the
+installed Elephant-Goldfish SKILL.md for the main agent to read and follow. The output below is real router
+output from a prompt about this README, trimmed.
 
 <img src="assets/router.webp" alt="Prompt router: a prompt goes through classify, rank, substrate, route and dedup, and the hook injects ranked skills and a dispatch line for frontend-uiux-designer" width="100%">
 
@@ -173,7 +175,7 @@ Counts change; recompute them rather than trusting this table.
 | Hook events wired | 13 | `settings.template.json` → `hooks` |
 | Dispatch links enabled | 61 | `hooks/dispatch.config.json` → `chains` |
 | MCP servers | 15 | `installer/manifest.json` → `mcp_servers` |
-| Plugins | 11 | `installer/manifest.json` → `plugins.install` |
+| Plugins | 13 | `installer/manifest.json` → `plugins.install` |
 | Vendored skill sources | 27 | `hooks/skills-sources.json` |
 | Test files | 196 | `ls tests/test_*.py hooks/tests/test_*.py \| wc -l` |
 | Always-on context | about 16.6k chars doctrine (includes your machines file) | `python3 scripts/measure_context_cost.py` |
@@ -209,8 +211,9 @@ Every hook is a link in `hooks/dispatch.config.json` (types `gate`, `mutator`, `
 <summary>Models and teams</summary>
 
 The plan tier (`pro` / `max5` / `max20` / `api`) is detected at session start from the login
-and picks the models; the agent's role picks the row. Haiku 5.5 is the default worker, Sonnet
-executes on max5/max20, Opus judges on max20 only. Your `/model`, a per-turn "use opus" and a
+and picks the models; the agent's role picks the row. Haiku 5.5 is the default worker on Pro and
+Max 5x, Sonnet executes on Max 5x; on Max 20x executors, tests and verify run Opus with a Sonnet
+floor, and Opus judges. Your `/model`, a per-turn "use opus" and a
 per-project pin always win. Rules: [`rules/04-model-routing.md`](rules/04-model-routing.md);
 full matrix and state files: [`docs/MODEL-ROUTING.md`](docs/MODEL-ROUTING.md).
 
@@ -218,9 +221,9 @@ full matrix and state files: [`docs/MODEL-ROUTING.md`](docs/MODEL-ROUTING.md).
 |---|---|---|---|
 | Pro | Haiku (Sonnet is the ceiling) | Sonnet | a `[sonnet]` / `[opus]` label alone keeps Haiku; say "use sonnet" this turn |
 | Max 5x | Sonnet (Haiku for explore, docs, verify) | Sonnet | Opus on "use opus" |
-| Max 20x | Sonnet (Haiku for explore, docs, verify) | Opus | Fable on "use fable" |
+| Max 20x | Opus (Sonnet for explore, docs) | Opus | Fable on "use fable" |
 
-At 80 % of the 5-hour usage window the guard steps workers down a model (Haiku at the floor).
+At 80 % of the 5-hour usage window the guard steps workers down a model (Sonnet on Max 20x, Haiku at the floor elsewhere).
 Team, enterprise and API logins count as `api`, which follows the Max 5x rules. The first
 launch after sign-in re-detects the plan and re-renders models and workflows.
 

@@ -20,6 +20,7 @@ Removed 2026-09-28 (do not re-add): `fetch`, `ast-grep`, `figma`, `gbrain`; plug
 | `jcodemunch` | user | stdio | `~/.local/bin/jcodemunch-mcp` | code symbols, callers, blast radius, reading source (FIRST for code) |
 | `jdocmunch` | user | stdio | `~/.local/bin/jdocmunch-mcp` | section-level search/read over indexed doc sets (FIRST for docs) |
 | `lean-ctx` | user | stdio | `~/.local/bin/lean-ctx` | optional compressed ctx_read/ctx_shell/ctx_patch |
+| `lightpanda` | user | stdio | `lightpanda mcp` | — |
 | `markdownify` | user | stdio | `npx -y mcp-markdownify-server@1.1.0` | convert pdf/docx/pptx/xlsx/web/youtube to markdown |
 | `memory` | user | stdio | `npx -y @modelcontextprotocol/server-memory@2026.8.31` | durable cross-session facts (pattern::/decision::/fragile::) |
 | `openart` | user | http | `https://mcp.openart.ai/mcp` | secondary asset engine (only where a project says so) |
@@ -29,4 +30,4 @@ Removed 2026-09-28 (do not re-add): `fetch`, `ast-grep`, `figma`, `gbrain`; plug
 | `sequential-thinking` | user | stdio | `npx -y @modelcontextprotocol/server-sequential-thinking@2026.8.31` | MUST for non-trivial reasoning: plan/spec/audit/design/debug/decide |
 | `firecrawl` | plugin:firecrawl@claude-plugins-official | http | `https://mcp.firecrawl.dev/v2/mcp-search` | — |
 
-15 user-scope, 1 project/plugin-scope servers.
+16 user-scope, 1 project/plugin-scope servers.

@@ -53,24 +53,25 @@ def test_github_read_tools_pass(monkeypatch, name):
 
 
 @pytest.mark.parametrize("name", ["push_files", "merge_pull_request"])
-def test_unattended_github_write_is_denied_and_logged(monkeypatch, tmp_path, name):
-    """REVIEW2 Fix 2: nobody can confirm, so the write never downgrades to an advisory."""
+def test_unattended_github_write_asks_and_is_logged(monkeypatch, tmp_path, name):
+    """REVIEW2 Fix 2: the write never downgrades to an advisory; 2026-10-31 (owner): nor is it auto-denied,
+    the session's permission mode decides the ask."""
     monkeypatch.setenv("CLAUDE_HOOK_TELEMETRY_DIR", str(tmp_path / "tel"))
     monkeypatch.setenv("CLAUDE_WORKBENCH_UNATTENDED", "1")
     hso = _run(monkeypatch, f"mcp__github__{name}")["hookSpecificOutput"]
-    assert hso["permissionDecision"] == "deny" and "unattended" in hso["permissionDecisionReason"]
+    assert hso["permissionDecision"] == "ask" and "unattended" in hso["permissionDecisionReason"]
     rows = [json.loads(line) for p in (tmp_path / "tel").glob("*.jsonl")
             for line in p.read_text(encoding="utf-8").splitlines()]
-    assert any(r.get("decision") == "deny" and r["link_id"] == "connector-ask-gate" for r in rows)
+    assert any(r.get("decision") == "ask" and r["link_id"] == "connector-ask-gate" for r in rows)
     assert not any(r.get("decision") == "ask_downgraded" for r in rows)
 
 
 @pytest.mark.parametrize("extra", [{"agent_id": "a1"}, {"workflow_id": "wf1"}])
 @pytest.mark.parametrize("name", ["push_files", "merge_pull_request"])
-def test_subagents_and_workflows_never_write_to_github(monkeypatch, extra, name):
+def test_subagent_and_workflow_github_writes_ask(monkeypatch, extra, name):
     hso = _run(monkeypatch, f"mcp__github__{name}", **extra)["hookSpecificOutput"]
-    assert hso["permissionDecision"] == "deny"
-    assert "subagents" in hso["permissionDecisionReason"].lower()
+    assert hso["permissionDecision"] == "ask"
+    assert "GITHUB WRITE" in hso["permissionDecisionReason"]
 
 
 @pytest.mark.parametrize("tool,extra,unattended", [
@@ -79,14 +80,14 @@ def test_subagents_and_workflows_never_write_to_github(monkeypatch, extra, name)
     ("mcp__claude_ai_Apollo__emailer_send_now", {}, True),
     ("mcp__claude_ai_Shopify__create_refund", {"workflow_id": "wf1"}, False),
 ])
-def test_destructive_connector_actions_are_denied_when_nobody_can_confirm(monkeypatch, tool, extra, unattended):
-    """REVIEW2 Fix 2: a send / delete / refund never runs on an advisory."""
+def test_destructive_connector_actions_ask_when_nobody_can_confirm(monkeypatch, tool, extra, unattended):
+    """REVIEW2 Fix 2: a send / delete / refund never runs on an advisory; it asks (2026-10-31, owner)."""
     if unattended:
         monkeypatch.setenv("CLAUDE_WORKBENCH_UNATTENDED", "1")
     hso = _run(monkeypatch, tool, **extra)["hookSpecificOutput"]
-    assert hso["permissionDecision"] == "deny"
+    assert hso["permissionDecision"] == "ask"
     assert "CONNECTOR CHECK" in hso["permissionDecisionReason"]
-    assert "no one can confirm" in hso["permissionDecisionReason"].lower()
+    assert "permission mode decides" in hso["permissionDecisionReason"]
 
 
 def test_interactive_destructive_connector_action_asks(monkeypatch):

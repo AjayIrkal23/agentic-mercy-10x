@@ -41,6 +41,7 @@ from __future__ import annotations
 import ast
 import hashlib
 import json
+import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -79,6 +80,8 @@ _VAGUE = {
     "find", "search", "where", "count", "scan", "flow", "trace", "graph",
     "module", "structure", "overview", "shape", "polish", "refine", "clean",
     "test", "rename", "typo", "small", "medium", "large",
+    # LLM vocabulary ("save tokens"): only "design tokens" is a UI phrase (audit A-01)
+    "tokens",
 }
 
 
@@ -97,8 +100,9 @@ def _weight_for(kw: str) -> float:
 
 
 def keyword_ok(kw) -> bool:
-    k = str(kw).strip().lower()
-    return bool(k) and (len(k) > 3 or k in SHORT_ALLOW)
+    # judged on the matcher's tokens, like prompt_router/classify.py::keyword_ok: "use()" is "use"
+    j = " ".join(re.findall(r"\w+", str(kw).lower()))
+    return bool(j) and (len(j) > 3 or j in SHORT_ALLOW)
 
 
 # --------------------------------------------------------------------------- #

@@ -2,10 +2,6 @@
 name: webapp-testing
 description: "End-to-end testing of a web app in a real browser — driving flows with Playwright, asserting UI, and capturing console/network/performance evidence and screenshots against real runtime data."
 when_to_use: Use when writing or running .spec files, an e2e/ suite, or a Playwright config, or when a UI flow must be verified in a real browser.
-paths:
-  - "**/*.spec.{ts,tsx}"
-  - "**/e2e/**"
-  - "**/playwright.config.*"
 metadata:
   schema: 1
   category: testing

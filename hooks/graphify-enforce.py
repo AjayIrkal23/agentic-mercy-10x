@@ -84,6 +84,9 @@ _STALE_CACHE_TTL_S = 600
 
 def _session_id(hook_input: dict) -> str:
     cid = str(hook_input.get("session_id") or hook_input.get("conversation_id") or "")
+    aid = str(hook_input.get("agent_id") or "")
+    if cid and aid:  # per agent (B-03): a subagent's reminders are its own
+        cid = f"{cid}.{aid}"
     return "".join(c if c.isalnum() or c in "-_" else "_" for c in cid)
 
 

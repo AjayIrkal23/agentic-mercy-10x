@@ -97,7 +97,7 @@ def test_aggregator_sample_under_5500():
 
 
 @pytest.mark.parametrize("agent_type", ["implementation-engineer", "qa-verifier"])
-def test_subagent_context_under_1200(agent_type):
+def test_subagent_context_under_3000(agent_type):
     script = _ROOT / "hooks" / "subagent-context.py"
     if not script.is_file():
         pytest.skip("hooks/subagent-context.py missing")
@@ -106,7 +106,7 @@ def test_subagent_context_under_1200(agent_type):
                        env={**os.environ, "CLAUDE_HOOK_DOCTOR": "1"})
     data = json.loads(r.stdout or "{}")
     ctx = data.get("additionalContext") or (data.get("hookSpecificOutput") or {}).get("additionalContext") or ""
-    assert len(ctx) <= 1200, f"{agent_type}: {len(ctx)} chars"
+    assert len(ctx) <= 3000, f"{agent_type}: {len(ctx)} chars"  # B-06: repo ids + one ToolSearch line
 
 
 def test_agent_descriptions_under_1200():
@@ -128,7 +128,9 @@ def test_agent_descriptions_total_under_10000():
 def test_manifest_always_load():
     servers = json.loads((_ROOT / "installer" / "manifest.json").read_text(encoding="utf-8"))["mcp_servers"]
     eager = [s.get("name") for s in servers if s.get("alwaysLoad") is True]
-    assert set(eager) <= {"sequential-thinking"}, eager
+    # 2026-10-31 (owner): tool use over token cost; the mandated MCPs load eagerly, nothing beyond them
+    assert set(eager) <= {"sequential-thinking", "jcodemunch", "jdocmunch", "graphify", "memory", "context7",
+                          "semgrep", "playwright", "lightpanda"}, eager
 
 
 def test_library_not_autoloaded():

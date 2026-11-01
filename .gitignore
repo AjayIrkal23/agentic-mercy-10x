@@ -181,6 +181,11 @@ plugins/synced/
 /SECURITY-REPORT.md
 /VERIFY-REPORT.md
 .claude/runs/
+# /invoke and audit run folders at this checkout's root (machine paths, session detail)
+/runs/
+# Claude Code's remote-settings sync artifacts (runtime, written and removed by the harness)
+/remote-settings.json
+/remote-settings.json.synced-at
 
 # --- Claude Code mods (mods/<id>/ is tracked source) ---
 # the per-session hot-reload folder the plugin-authoring skill writes into

@@ -125,6 +125,13 @@ def _attach(tmp_path, dry=False, **answers):
     return og.attach_live(dry, run=run, proc_root=_tree(tmp_path), bus=Path("/bus"), uid=1000), run
 
 
+@pytest.fixture
+def linux(monkeypatch):
+    """attach_live's fake /proc + fake systemctl/busctl run on any OS; only its Windows SKIP is OS-bound."""
+    monkeypatch.setattr(plat, "IS_WINDOWS", False)
+
+
+@pytest.mark.usefixtures("linux")
 def test_attach_moves_a_stop_scope_session(tmp_path):
     rows, run = _attach(tmp_path)
     assert rows == ["attach pid 100: MOVED (3 pids)", "attach pid 200: SKIP(already continue)"]
@@ -135,6 +142,7 @@ def test_attach_moves_a_stop_scope_session(tmp_path):
                        "ManagedOOMPreference", "s", "avoid", "0"]]
 
 
+@pytest.mark.usefixtures("linux")
 def test_attach_rechecks_after_reload_and_reports_failures(tmp_path):
     assert _attach(tmp_path, **{"show:ptyxis-spawn-aaaa.scope": "continue"})[0][0] == "attach pid 100: SKIP(already continue)"
     assert _attach(tmp_path, rc=1)[0][0] == "attach pid 100: WARN(rc=1)"

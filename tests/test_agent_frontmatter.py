@@ -17,8 +17,8 @@ POLICY = json.loads((ROOT / "hooks" / "model-policy.json").read_text(encoding="u
 TURNS = POLICY["turn_caps"]["agents"]  # the one cap table (hooks/model-policy.json turn_caps)
 REPORT_AGENTS = {"santa-reviewer", "spec-architect", "planning-director", "audit-specialist",
                  "debug-detective", "qa-verifier", "security-sentinel"}
-OMIT = {"deadcode-reaper", "qa-verifier", "memory-codex"}
-COMPACT = {"qa-verifier", "test-author"}
+OMIT = {"memory-codex"}  # C-06: qa-verifier decides "done" and deadcode-reaper deletes: both load CLAUDE.md
+COMPACT: set = set()  # C-06: no agent compacts at 120k of a 1M window any more
 MEMORY_LOCAL = {"audit-specialist", "debug-detective", "santa-reviewer", "security-sentinel"}
 IMPLEMENTOR_CLASS = {"implementation-engineer", "backend-implementor-specialist",
                      "frontend-implementor-specialist", "refactor-specialist", "integrator-specialist"}

@@ -1,6 +1,7 @@
 """subagent-context.py (SubagentStart advisory): the block a fresh subagent gets.
 
-<= 1,800 chars with the last line intact; the delivery contract (final message, turn
+<= 3,000 chars with the last line intact (B-06: repo ids, one ToolSearch select line,
+FE/BE SKILL.md paths); the delivery contract (final message, turn
 cap, 3 retrieval cycles), the untrusted-content line, a memory line at warn+, the dox
 read line only for agents whose frontmatter sets `omitClaudeMd: true`.
 """
@@ -56,14 +57,58 @@ def _build(m, agent_type, tmp_path) -> str:
 TYPES = ["deadcode-reaper", "docs-sync-agent", "qa-verifier", "general-purpose", None]
 
 
-def test_block_fits_1200_without_truncation(sc, monkeypatch, tmp_path):
+def test_block_fits_3000_without_truncation(sc, monkeypatch, tmp_path):
     monkeypatch.setattr(sc, "_memory_line", lambda: "m" * 90)
     monkeypatch.setattr(sc, "_forced_mode", lambda cwd: "opus")
     for t in TYPES:
         text = _build(sc, t, tmp_path)
-        assert len(text) <= 1200, (t, len(text))
+        assert len(text) <= 3000, (t, len(text))
         assert text.endswith(sc._SKILLS)
-    assert len(sc.build({})) <= 1200
+        assert sc._MCP in text  # the full MCP line is never cut (B-06)
+    assert len(sc.build({})) <= 3000
+
+
+@pytest.fixture
+def indexed_repo(tmp_path, monkeypatch):
+    import subprocess
+    from lib import mcp_ids
+    root = tmp_path / "proj"
+    root.mkdir()
+    subprocess.run(["git", "init", "-q", str(root)], check=True)
+    (root / "package.json").write_text('{"dependencies": {"react": "19", "fastify": "5"}}', encoding="utf-8")
+    monkeypatch.setattr(mcp_ids, "ids", lambda r: {"jcodemunch": "Owner/proj", "graphify": str(root),
+                                                   "jdocmunch": "local/proj"})
+    return root
+
+
+def test_repo_block_names_exact_ids_and_tools_first(sc, monkeypatch, indexed_repo):
+    """B-06 / C-02 / C-03: the subagent gets the real ids and ONE ToolSearch select line."""
+    monkeypatch.setattr(sc, "_memory_line", lambda: "m" * 120)
+    monkeypatch.setattr(sc, "_forced_mode", lambda cwd: "opus")
+    text = sc.build({"agent_id": "a", "agent_type": "deadcode-reaper", "cwd": str(indexed_repo)})
+    assert len(text) <= 3000, len(text)
+    assert 'repo="Owner/proj"' in text and f'project_path="{indexed_repo}"' in text
+    assert 'repo="local/proj"' in text and 'mcp__memory__search_nodes("proj")' in text
+    assert text.count('ToolSearch "select:') == 1
+    for tool in ("mcp__jcodemunch__resolve_repo", "mcp__jcodemunch__search_symbols", "mcp__graphify__query_graph",
+                 "mcp__jdocmunch__search_sections", "mcp__memory__search_nodes", "mcp__context7__resolve-library-id",
+                 "mcp__context7__query-docs", "mcp__semgrep__semgrep_scan",
+                 "mcp__sequential-thinking__sequentialthinking"):
+        assert tool in text, tool
+    assert text.endswith(sc._SKILLS)
+
+
+def test_stack_line_names_absolute_skill_paths(sc, indexed_repo):
+    """C-01: FE/BE standards are paths:-scoped skills, so the block names the SKILL.md to Read."""
+    text = sc.build({"agent_id": "a", "agent_type": "general-purpose", "cwd": str(indexed_repo)})
+    skills = _HOOKS.parent / "skills"
+    assert str(skills / "frontend-standards-always-follow" / "SKILL.md") in text
+    assert str(skills / "backend-standards-always-follow" / "SKILL.md") in text
+
+
+def test_no_repo_block_outside_a_repo(sc, tmp_path):
+    text = _build(sc, "general-purpose", tmp_path)
+    assert "REPO " not in text and 'ToolSearch "select:' in text
 
 
 def test_contract_lines_present(sc, tmp_path):
@@ -90,7 +135,7 @@ def test_turn_cap_line_survives_shedding(sc, monkeypatch, tmp_path):
     monkeypatch.setattr(sc, "_memory_line", lambda: "m" * 120)
     monkeypatch.setattr(sc, "_forced_mode", lambda cwd: "opus")
     text = _build(sc, "deadcode-reaper", tmp_path)  # dox + memory + mode + cap: the worst case
-    assert len(text) <= 1200 and text.endswith(sc._SKILLS) and "TURN CAP 30" in text
+    assert len(text) <= 3000 and text.endswith(sc._SKILLS) and "TURN CAP 30" in text
 
 
 def test_reserve_falls_back_when_policy_lacks_the_block(sc, monkeypatch, tmp_path):

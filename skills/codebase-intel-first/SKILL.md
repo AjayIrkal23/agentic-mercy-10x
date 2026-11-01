@@ -32,7 +32,9 @@ metadata:
     - unfamiliar codebase
     paths: []
     intents:
-    - intel
+    - AUDIT
+    - PLAN
+    - REFACTOR
 when_to_use: 'Use at the start of any codebase task: planning, auditing, review, implementing, refactoring,
   debugging, or ''help me understand X''.'
 ---

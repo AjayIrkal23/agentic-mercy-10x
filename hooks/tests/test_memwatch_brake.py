@@ -22,6 +22,7 @@ from lib import platform as plat  # noqa: E402
 @pytest.fixture
 def env(tmp_path, monkeypatch):
     monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.delenv("CLAUDE_HOOK_DOCTOR", raising=False)  # CI exports it; memwatch-ensure no-ops under doctor
     e = {k: v for k, v in os.environ.items() if k != "CLAUDE_WORKBENCH_UNATTENDED"}
     e.update(CLAUDE_HOOK_STATE_DIR=str(tmp_path / "state"), CLAUDE_HOOK_TELEMETRY_DIR=str(tmp_path / "tele"))
     return e
@@ -202,12 +203,15 @@ def test_ensure_hanging_systemctl_times_out(ens, tmp_path):
     assert _log(tmp_path) == ["--user is-active claude-memwatch"]  # a timeout never falls through to install
 
 
+@pytest.mark.skipif(plat.IS_WINDOWS, reason="the systemd ensure path and its POSIX lock are Linux-only; "
+                                             "the Windows branch is asserted at the end of this test (flag stubbed)")
 def test_ensure_missing_unit_runs_setup_under_lock(tmp_path, monkeypatch):
     mod = _load(ENSURE, "memwatch_ensure")
     calls = []
     mod.ensure_fn = lambda dry: calls.append(dry)
     monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path / "state"))
     monkeypatch.setenv("MEMWATCH_ENSURE_ALLOW_TEST", "1")
+    monkeypatch.delenv("CLAUDE_HOOK_DOCTOR", raising=False)  # CI exports it; main() no-ops under doctor
     monkeypatch.setenv("HOME", str(tmp_path))
     import types
     monkeypatch.setattr(mod.plat, "systemd_user_bus", lambda: tmp_path / "bus")

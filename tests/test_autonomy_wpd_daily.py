@@ -67,6 +67,23 @@ def test_a_server_that_could_not_be_restored_is_an_error_in_the_summary(sd, box,
     assert any("FAIL(unregistered)" in e for e in _summary(box)["errors"])
 
 
+def test_plugins_step_installs_missing_plugins_and_pins_toolprune_off(sd, box, monkeypatch, tmp_path):
+    """2026-10-31: egm@egm (added after a machine's install) arrives through the daily run, and
+    TokenEconomizer's `toolprune` is pinned off."""
+    _only(sd, monkeypatch, "plugins")
+    monkeypatch.setattr(sd.deps if hasattr(sd, "deps") else __import__("deps"), "install_plugins",
+                        lambda env, ci=False, dry_run=False: [("plugin:egm@egm", "INSTALLED"),
+                                                              ("plugin:ponytail@ponytail", "PRESENT")])
+    home = tmp_path / "te-home"
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setenv("USERPROFILE", str(home))
+    sd.main([])
+    changed = _summary(box)["changed"]
+    assert any("egm@egm" in c and "INSTALLED" in c for c in changed)
+    assert not any("ponytail" in c for c in changed)
+    assert json.loads((home / ".tokeneconomizer" / "config.json").read_text(encoding="utf-8"))["toolprune"] == "off"
+
+
 def _only(sd, monkeypatch, *names):
     monkeypatch.setattr(sd, "STEPS", [s for s in sd.STEPS if s[0] in names])
 
@@ -214,11 +231,13 @@ def test_deps_step_heals_base_tools_through_the_os_dispatcher(sd, box, monkeypat
     seen: list = []
     monkeypatch.setattr(basetools, "ensure_base_tools",
                         lambda env, manifest, *, ci=False, dry_run=False: seen.append((ci, dry_run)) or [("git", "INSTALLED x")])
+    monkeypatch.setattr(basetools, "ensure_lightpanda",
+                        lambda manifest, *, ci=False, dry_run=False: ("lightpanda", "INSTALLED lightpanda 1.0.2"))
     monkeypatch.setattr(deps, "install_deps", lambda env, **k: [])
     _only(sd, monkeypatch, "deps")
     sd.main([])
     assert seen == [(False, False)]
-    assert _summary(box)["changed"] == ["dep git: INSTALLED x"]
+    assert _summary(box)["changed"] == ["dep git: INSTALLED x", "dep lightpanda: INSTALLED lightpanda 1.0.2"]
 
 
 def _settings(sd, box, monkeypatch, *, exists: bool, stale: bool):
@@ -311,8 +330,8 @@ def _cp(rc=0, out="", err=""):
 
 def test_step_ids_and_order(sd):
     ids = [n for n, _ in sd.STEPS]
-    assert ids == ["mcp", "deps", "plan-tier", "settings", "oomguard", "machines-split", "vendor", "workflows",
-                   "library", "mcp-inventory", "ponytail-board", "learning-evolve"]
+    assert ids == ["mcp", "plugins", "deps", "plan-tier", "settings", "oomguard", "machines-split", "vendor",
+                   "workflows", "library", "mcp-inventory", "ponytail-board", "learning-evolve"]
     assert ids.index("plan-tier") < ids.index("settings")  # a new tier lands in the same run's render
 
 
@@ -398,6 +417,7 @@ def test_mcp_inventory_rewrites_only_on_change(sd, monkeypatch, tmp_path):
     monkeypatch.setattr(sd, "INVENTORY_MD", target)
     monkeypatch.setattr(sd, "INVENTORY", tmp_path / "inv.py")
     (tmp_path / "inv.py").write_text("", encoding="utf-8")
+    monkeypatch.setattr(sd.plat, "IS_WINDOWS", False)  # the writer is POSIX-only (SKIP(replica) on Windows)
     monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(0, "new\n"))
     assert sd._mcp_inventory(sd.Ctx(False, tmp_path, 60)) == [("mcp-inventory", "mcp-inventory.md", "UPDATED")]
     assert target.read_text(encoding="utf-8") == "new\n"
@@ -412,6 +432,7 @@ def test_mcp_inventory_keeps_the_preamble(sd, monkeypatch, tmp_path):
     monkeypatch.setattr(sd, "INVENTORY_MD", target)
     monkeypatch.setattr(sd, "INVENTORY", tmp_path / "inv.py")
     (tmp_path / "inv.py").write_text("", encoding="utf-8")
+    monkeypatch.setattr(sd.plat, "IS_WINDOWS", False)
     monkeypatch.setattr(sd.plat, "run", lambda *a, **k: _cp(0, "generated header\n| Server | x |\n|---|---|\n| b | 2 |\n"))
     assert sd._mcp_inventory(sd.Ctx(False, tmp_path, 60)) == [("mcp-inventory", "mcp-inventory.md", "UPDATED")]
     assert target.read_text(encoding="utf-8") == "# Inventory\nhand text\n\n| Server | x |\n|---|---|\n| b | 2 |\n"

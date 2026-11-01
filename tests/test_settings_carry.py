@@ -12,6 +12,8 @@ from pathlib import Path
 import pytest
 
 _ROOT = Path(__file__).resolve().parents[1]
+# template-owned allow rules (EGM plugin-cache reads, 2026-10-31) come first; carried user grants follow
+_TMPL_ALLOW = json.loads((_ROOT / "settings.template.json").read_text(encoding="utf-8"))["permissions"].get("allow", [])
 for _p in (str(_ROOT / "installer"), str(_ROOT / "hooks")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
@@ -51,7 +53,7 @@ def test_rerender_keeps_user_added_plugins_marketplaces_and_rules(r, live):
     assert "elsewhere" in out["extraKnownMarketplaces"]
     assert out["permissions"]["deny"] == ["Bash(rm:*)"]
     assert out["permissions"]["ask"] == ["Bash(git push:*)"]
-    assert out["permissions"]["allow"] == ["mcp__reticle"]
+    assert out["permissions"]["allow"] == _TMPL_ALLOW + ["mcp__reticle"]
 
 
 def test_rerender_keeps_the_templates_own_entries_and_template_wins_conflicts(r, live):
@@ -134,7 +136,7 @@ def test_carry_never_brings_lean_ctx_injections_back(r, live):
     p.write_text(json.dumps(data), encoding="utf-8")
     out = r.carry_managed(r.render(user_path=None), p)
     assert "lean-ctx" not in out
-    assert json.loads(out)["permissions"]["allow"] == ["mcp__reticle"]
+    assert json.loads(out)["permissions"]["allow"] == _TMPL_ALLOW + ["mcp__reticle"]
 
 
 def test_an_injected_settings_json_is_re_rendered_even_when_it_looks_fresh(tmp_path, monkeypatch):

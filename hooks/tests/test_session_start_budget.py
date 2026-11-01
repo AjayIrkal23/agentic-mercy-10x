@@ -44,28 +44,9 @@ def test_dispatched_session_start_fits_the_cap():
     assert len(ctx) < 7800, len(ctx)
 
 
-def test_core_skills_degrade_to_pointers_and_keep_every_name():
-    agg = _load_aggregator()
-    names = [e["skill"] for e in json.loads((HOOKS / "core-skill-set.json").read_text(encoding="utf-8"))["always"]]
-    block = agg._core_skill_digests(budget=1500)
-    assert len(block) <= 1500
-    assert all(agg._canonical(n) in block for n in names)
-
-
-def test_path_scoped_core_pointer_names_its_skill_file():
-    """dox-doc-tree is `paths:`-scoped (**/CLAUDE.md): the Skill tool may call it unknown."""
-    agg = _load_aggregator()
-    idx = json.loads((HOOKS / "skills-index.json").read_text(encoding="utf-8"))["skills"]
-    block = agg._core_skill_digests(budget=1500)
-    for line in block.splitlines():
-        name = line[2:].split(" ", 1)[0] if line.startswith("- ") else ""
-        if (idx.get(name) or {}).get("paths"):
-            assert f"skills/{name}/SKILL.md" in line, line
-
-
 def test_new_lines_fit(monkeypatch, tmp_path):
     """OOM-guard, worktree and instinct notices (oom-sentinel, session-stop, learning) are clipped by
-    CAPS['notices'] and never push the style block or the core-skill header out of the cap."""
+    CAPS['notices'] and never push the style block out of the cap."""
     agg = _load_aggregator()
     sn = agg._notices_module()
     monkeypatch.setattr(sn, "memwatch_line", lambda *a, **k: "M" * 300, raising=False)
@@ -76,12 +57,5 @@ def test_new_lines_fit(monkeypatch, tmp_path):
                "cwd": str(tmp_path)}
     ctx = agg._full_context(payload, json.dumps(payload))
     assert "M" * 50 in ctx                     # the stubs reached the notices block
-    assert "ALWAYS-ON STYLE" in ctx and "[Always-active core skills]" in ctx
+    assert "ALWAYS-ON STYLE" in ctx
     assert len(ctx) <= 5500          # room for the 1,500-char breadcrumb + memory line under 7,800 (dispatch merges them)
-
-
-def test_core_skills_use_full_bodies_when_they_fit():
-    agg = _load_aggregator()
-    roomy = agg._core_skill_digests(budget=200000)
-    tight = agg._core_skill_digests(budget=1500)
-    assert len(roomy) > len(tight)

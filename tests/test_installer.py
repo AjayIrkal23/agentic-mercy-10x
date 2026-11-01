@@ -171,6 +171,17 @@ def test_register_mcps_windows_uses_windows_add_for_posix_only(monkeypatch):
     assert posix["github"] == "WOULD-ADD: claude mcp add github -- sh -c x"
 
 
+def test_register_mcps_skips_a_server_whose_binary_is_missing(monkeypatch):
+    deps = _load("deps", "installer/deps.py")
+    monkeypatch.setattr(deps.shutil, "which", lambda c: None)
+    monkeypatch.setattr(deps, "registered_user_mcps", lambda: set())
+    monkeypatch.setattr(deps, "_load_manifest", lambda: {"mcp_servers": [
+        {"name": "lp", "which": "lightpanda", "add": ["claude", "mcp", "add", "lp", "--", "lightpanda", "mcp"]}]})
+    monkeypatch.setattr(deps.plat, "run", lambda *a, **k: (_ for _ in ()).throw(AssertionError("must not register")))
+    assert deps.register_mcps(_env("posix", "python3")) == [("lp", "SKIP(no lightpanda on PATH)")]
+    assert deps.register_mcps(_env("posix", "python3"), dry_run=True) == [("lp", "WOULD-ADD: claude mcp add lp -- lightpanda mcp")]
+
+
 def test_manifest_github_has_windows_launcher():
     m = json.loads((_ROOT / "installer" / "manifest.json").read_text(encoding="utf-8"))
     gh = next(s for s in m["mcp_servers"] if s["name"] == "github")
@@ -184,7 +195,9 @@ def test_always_load_reconcile_plans_then_skips_when_set(tmp_path, monkeypatch):
     cfg.write_text(json.dumps({"mcpServers": {"sequential-thinking": {"command": "npx", "args": ["x"]},
                                               "memory": {"command": "npx", "args": ["y"]}}}), encoding="utf-8")
     monkeypatch.setattr(deps, "user_config_file", lambda: cfg)
-    assert deps.reconcile_mcp_always_load(dry_run=True) == [("sequential-thinking", "WOULD-SET-ALWAYS-LOAD true")]
+    # both are eager in the manifest since 2026-10-31; manifest order
+    assert deps.reconcile_mcp_always_load(dry_run=True) == [("memory", "WOULD-SET-ALWAYS-LOAD true"),
+                                                            ("sequential-thinking", "WOULD-SET-ALWAYS-LOAD true")]
     cfg.write_text(json.dumps({"mcpServers": {"sequential-thinking": {"command": "npx", "args": ["x"], "alwaysLoad": True}}}),
                    encoding="utf-8")
     assert deps.reconcile_mcp_always_load(dry_run=True) == []

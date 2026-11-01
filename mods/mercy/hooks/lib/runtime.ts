@@ -127,7 +127,8 @@ export type Runtime = {
   /** Root → whether that git root has a CLAUDE.md (for the dox gate predicate). */
   claudeMdRoots: Map<string, boolean>
   /** tool_use_ids of in-flight calls made inside a subagent loop (tool.call knows the loop, classic.PreToolUse does not). */
-  subagentCalls: Set<string>
+  /** tool_use_id -> agent id of a subagent's in-flight call (the bridge forwards it to Python, B-03) */
+  subagentCalls: Map<string, string>
   contextPct: number
   costUsd: number
   /** Real user prompts so far (classic.UserPromptSubmit); a Stop block is allowed once per value. */
@@ -178,7 +179,7 @@ export function freshRuntime(options: Options): Runtime {
     pending: [],
     pendingFiles: new Map(),
     claudeMdRoots: new Map(),
-    subagentCalls: new Set(),
+    subagentCalls: new Map(),
     contextPct: 0,
     costUsd: 0,
     humanTurn: 0,

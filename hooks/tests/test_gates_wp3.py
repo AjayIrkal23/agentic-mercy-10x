@@ -71,6 +71,26 @@ def test_no_hint_when_a_baseline_skill_was_loaded(tmp_path, monkeypatch):
     assert _main(mod, _write("/repo/server/src/a.ts"), monkeypatch) == {}
 
 
+def test_frontend_skill_does_not_silence_the_backend_hint(tmp_path, monkeypatch):
+    """A-10 (2026-10-31): FE standards loaded is no evidence for a BE write, and the reverse."""
+    mod = _fw(tmp_path, monkeypatch)
+    (tmp_path / "tel").mkdir()
+    (tmp_path / "tel" / "fw-s1.skill-invocations.jsonl").write_text(
+        json.dumps({"skill": "frontend-standards-always-follow"}) + "\n", encoding="utf-8")
+    assert _main(mod, _write("/repo/src/components/X.tsx"), monkeypatch) == {}
+    be = _main(mod, _write("/repo/server/src/routes/user.route.ts"), monkeypatch)
+    assert "backend-standards-always-follow" in be["hookSpecificOutput"]["additionalContext"]
+
+
+def test_routes_and_client_api_paths_get_a_surface(tmp_path, monkeypatch):
+    mod = _fw(tmp_path, monkeypatch)
+    assert mod._infer_surface("src/routes/user.ts") == "backend"
+    assert mod._infer_surface("src/services/billing.service.ts") == "backend"
+    assert mod._infer_surface("client/src/api/user.tsx") == "frontend"
+    assert mod._infer_surface("/repo/client/src/api/user.ts") == "frontend"  # absolute path: tie -> client side
+    assert mod._infer_surface("/repo/server/src/api/user.ts") == "backend"
+
+
 def test_non_code_write_is_silent(tmp_path, monkeypatch):
     mod = _fw(tmp_path, monkeypatch)
     assert _main(mod, _write("/repo/README.md"), monkeypatch) == {}

@@ -12,7 +12,7 @@ metadata:
   platforms: [linux, darwin, windows]
   token-cost: 700
   triggers:
-    keywords: [hook, hooks, useState, useReducer, useEffect, useRef, useMemo, useCallback, custom hook, stale closure, derived state, useActionState, useOptimistic, useFormStatus, "use()", React Compiler, memoization]
+    keywords: [react hook, react hooks, useState, useReducer, useEffect, useRef, useMemo, useCallback, custom hook, stale closure, derived state, useActionState, useOptimistic, useFormStatus, react use hook, React Compiler, memoization]
     paths: [.hook., /hooks/use, /src/hooks/, use-, useHook, reducer., slice., selector.]
     intents: [frontend, implement, review]
 ---

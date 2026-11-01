@@ -8,7 +8,7 @@ local `CLAUDE.md`.
 | [`hooks/CLAUDE.md`](../hooks/CLAUDE.md) | dispatcher, links, configs |
 | [`hooks/lib/CLAUDE.md`](../hooks/lib/CLAUDE.md) | shared helpers |
 | [`hooks/prompt_router/CLAUDE.md`](../hooks/prompt_router/CLAUDE.md) | UserPromptSubmit router |
-| [`hooks/prompt_router/modules/CLAUDE.md`](../hooks/prompt_router/modules/CLAUDE.md) | surface, MCP routes, code intel |
+| [`hooks/prompt_router/modules/CLAUDE.md`](../hooks/prompt_router/modules/CLAUDE.md) | surface, MCP routes, code intel, EGM route |
 | [`hooks/tests/CLAUDE.md`](../hooks/tests/CLAUDE.md) | hook tests |
 | [`hooks/tools/CLAUDE.md`](../hooks/tools/CLAUDE.md) | link doctor, state cleanup |
 | [`installer/CLAUDE.md`](../installer/CLAUDE.md) | one-command installer |

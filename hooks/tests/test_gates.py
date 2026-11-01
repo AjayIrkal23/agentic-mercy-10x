@@ -253,6 +253,30 @@ def test_gate3_credits_security_sentinel_dispatch(gate, monkeypatch):
     assert ok
 
 
+def test_gate3_needs_a_scan_newer_than_each_security_edit(gate, tmp_path):
+    """B-08 (2026-10-31): one semgrep run early in the session no longer covers later auth edits."""
+    hcg, cid = gate["mod"], "sess-b08"
+    auth = tmp_path / "src" / "auth.ts"
+    auth.parent.mkdir()
+    auth.write_text("x\n", encoding="utf-8")
+    mtime = auth.stat().st_mtime
+
+    def state(**extra):
+        (gate["state"] / f"{cid}.security-scan.json").write_text(json.dumps(
+            {"security_files": [str(auth)], "semgrep_ran": True, "semgrep_findings": 0, **extra}))
+        return hcg.gate3_security(cid, [], None)[0]
+
+    assert state(scanned_at={str(auth): mtime - 10}) is False           # scanned before the last edit
+    assert state(scanned_at={str(auth): mtime + 1}) is True             # scanned after it
+    assert state(scanned_at={str(auth.parent): mtime + 1}) is True      # the directory scan covers it
+    assert state() is True                                              # legacy state: session-wide credit
+    # santa review: an old `dir/file` entry is never resolved against the cwd (false block / silent pass)
+    (gate["state"] / f"{cid}.security-scan.json").write_text(json.dumps(
+        {"security_files": ["src/auth.ts"], "semgrep_ran": True, "semgrep_findings": 0,
+         "scanned_at": {"/elsewhere": 1}}))
+    assert hcg.gate3_security(cid, [], None)[0] is True
+
+
 # --------------------------------------------------------------------------- #
 # invoke-suite-gate — naive timestamps are UTC, never a TypeError
 # --------------------------------------------------------------------------- #

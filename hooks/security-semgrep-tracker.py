@@ -40,6 +40,47 @@ def _update_state(cid: str, fn) -> None:
     locked_update(STATE_DIR / f"{_safe_cid(cid)}.security-scan.json", apply)
 
 
+_VALUE_OPTS = {"--config", "-c", "-f", "--output", "-o", "--include", "--exclude", "--severity",
+               "--lang", "-l", "--metrics", "--timeout", "--jobs", "-j", "--baseline-commit", "-e", "--pattern"}
+
+
+def _abs(path: str, cwd: str) -> str:
+    p = str(path or "").strip()
+    return os.path.normpath(p if os.path.isabs(p) or not cwd else os.path.join(cwd, p)) if p else ""
+
+
+def _mcp_targets(payload: dict) -> list:
+    ti = payload.get("tool_input") or {}
+    items = list(ti.get("code_files") or []) + list(ti.get("paths") or []) + [ti.get("path")]
+    paths = [(it.get("path") or it.get("filename")) if isinstance(it, dict) else it for it in items]
+    return [p for p in paths if isinstance(p, str) and p]
+
+
+def _cli_targets(command: str) -> list:
+    """Positional targets after `semgrep scan|ci` (option values skipped)."""
+    m = SEMGREP_RE.search(command)
+    words = re.split(r"[;&|\n]", command[m.end():])[0].split() if m else []
+    out, skip = [], False
+    for w in words:
+        if skip:
+            skip = False
+        elif w.startswith("-"):
+            skip = w in _VALUE_OPTS
+        else:
+            out.append(w.strip("'\""))
+    return out
+
+
+def _stamp(state: dict, targets: list, cwd: str) -> None:
+    """B-08: `scanned_at` per target; Gate 3 compares it with each file's last edit."""
+    import time
+    now, seen = time.time(), state.setdefault("scanned_at", {})
+    for t in targets:
+        path = _abs(t, cwd)
+        if path:
+            seen[path] = now
+
+
 def _command_from(payload: dict) -> str:
     ti = payload.get("tool_input") or {}
     return str(ti.get("command") or "")
@@ -108,6 +149,7 @@ def post_tool_use(payload: dict) -> int:
             state["semgrep_ran"] = True
             state["semgrep_command"] = name
             state["semgrep_findings"] = max(int(state.get("semgrep_findings") or 0), found)
+            _stamp(state, _mcp_targets(payload), str(payload.get("cwd") or ""))
         _update_state(cid, mark_mcp)
         return 0
     if not is_shell_tool(name):
@@ -124,6 +166,7 @@ def post_tool_use(payload: dict) -> int:
         state["semgrep_ran"] = True
         state["semgrep_command"] = command[:500]
         state.setdefault("semgrep_findings", 0)
+        _stamp(state, _cli_targets(command) or ["."], str(payload.get("cwd") or ""))
     _update_state(cid, mark_cli)
     return 0
 

@@ -2,11 +2,6 @@
 name: owasp-security
 description: 'Security review and hardening: OWASP Top 10:2025, ASVS 5.0, LLM Top 10 (2025), and Agentic AI security (2026) across auth, input handling, sessions, and secrets.'
 when_to_use: Use when reviewing for vulnerabilities, implementing authentication/authorization, handling user input, or touching auth, session, or middleware files.
-paths:
-- '**/auth/**'
-- '**/middleware/**'
-- '**/*auth*.{go,ts,py}'
-- '**/*session*.{go,ts,py}'
 metadata:
   schema: 1
   category: security

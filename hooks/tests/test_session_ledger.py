@@ -34,11 +34,15 @@ sl = _load()
 DEAD_PID = 4190000
 ZERO_BOOT = "00000000-0000-0000-0000-000000000000"
 S1 = "5f0c3a3e-1d2b-4c5d-9e8f-0a1b2c3d4e5f"  # Claude Code session ids are UUIDs; mode_start ignores anything else (O6)
+# the ledger is a Windows no-op by design (it walks the /proc chain); the pure classify/dead-entry
+# logic below still runs everywhere, and test_windows_start_and_end_are_noops pins the no-op itself
+posix_ledger = pytest.mark.skipif(plat.IS_WINDOWS, reason="session-ledger writes nothing on Windows (/proc chain)")
 
 
 @pytest.fixture(autouse=True)
 def _state(tmp_path, monkeypatch):
     monkeypatch.setenv("CLAUDE_HOOK_STATE_DIR", str(tmp_path / "state"))
+    monkeypatch.delenv("CLAUDE_HOOK_DOCTOR", raising=False)  # CI exports it; mode_start drops doctor replays
     monkeypatch.setattr(sl, "_claude_pid", lambda *a, **k: 4242)
     return tmp_path / "state"
 
@@ -72,6 +76,15 @@ def _git_repo(where: Path) -> Path:
     return where
 
 
+def test_windows_start_and_end_are_noops(tmp_path, _state, monkeypatch):
+    monkeypatch.setattr(sl.plat, "IS_WINDOWS", True)
+    rc, out = _start(tmp_path, cwd=str(_git_repo(tmp_path / "repo")))
+    assert rc == 0 and _entry(_state, S1) is None
+    rc, out = _main(["end"], {"session_id": S1, "reason": "other"})
+    assert rc == 0 and json.loads(out) == {}
+
+
+@posix_ledger
 def test_start_writes_the_ledger_entry(tmp_path, _state):
     repo = _git_repo(tmp_path / "repo")
     rc, _ = _start(tmp_path, cwd=str(repo))
@@ -87,6 +100,7 @@ def test_start_writes_the_ledger_entry(tmp_path, _state):
     assert e["cwd"] == str(repo)
 
 
+@posix_ledger
 def test_startup_prints_a_session_title_resume_and_compact_do_not(tmp_path):
     repo = _git_repo(tmp_path / "myrepo")
     rc, out = _start(tmp_path, cwd=str(repo))
@@ -99,6 +113,7 @@ def test_startup_prints_a_session_title_resume_and_compact_do_not(tmp_path):
         assert rc == 0 and json.loads(out) == {}
 
 
+@posix_ledger
 def test_title_uses_the_git_root_name(tmp_path):
     repo = _git_repo(tmp_path / "rootname")
     sub = repo / "sub" / "dir"
@@ -107,6 +122,7 @@ def test_title_uses_the_git_root_name(tmp_path):
     assert json.loads(out)["hookSpecificOutput"]["sessionTitle"].startswith("rootname ")
 
 
+@posix_ledger
 def test_resume_keeps_started_and_refreshes_seen_and_pid(tmp_path, _state, monkeypatch):
     monkeypatch.setattr(sl, "_now", lambda: 1000)
     _start(tmp_path)
@@ -128,6 +144,7 @@ def test_end_deletes_the_entry(tmp_path, _state):
     assert _entry(_state, S1) is None
 
 
+@posix_ledger
 def test_end_marks_ended_when_the_unlink_fails(tmp_path, _state, monkeypatch):
     _start(tmp_path)
 
@@ -155,6 +172,7 @@ def test_start_under_doctor_replay_writes_nothing(tmp_path, _state, monkeypatch)
     assert _entry(_state, S1) is None
 
 
+@posix_ledger
 def test_start_accepts_an_uppercase_uuid(tmp_path, _state):
     _start(tmp_path, sid=S1.upper())
     assert _entry(_state, S1.upper())["sid"] == S1.upper()
@@ -282,6 +300,7 @@ def test_garbage_stdin_prints_empty_json():
         assert rc == 0 and json.loads(out) == {}
 
 
+@posix_ledger
 def test_entry_write_is_atomic_json(tmp_path, _state):
     _start(tmp_path)
     d = _state / "live-sessions"

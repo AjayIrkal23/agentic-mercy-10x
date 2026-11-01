@@ -16,7 +16,11 @@
       "integrator-specialist": "integrate",
       "security-sentinel": "security",
       "santa-reviewer": "judge", "frontend-uiux-designer": "judge", "planning-director": "judge",
-      "spec-architect": "judge", "debug-detective": "judge", "audit-specialist": "judge", "plan": "judge"
+      "spec-architect": "judge", "debug-detective": "judge", "audit-specialist": "judge", "plan": "judge",
+      "egm:egm-zoom-out": "judge", "egm:egm-comprehension": "judge", "egm:egm-design": "judge",
+      "egm:egm-structural": "judge", "egm:egm-style": "judge", "egm:egm-implementation-readiness": "judge",
+      "egm:egm-codebase-details": "judge", "egm:egm-synthesizer": "judge",
+      "egm:egm-bootstrap-orchestrator": "default"
     },
     "labels": {"spec": "judge", "plan": "judge", "review": "judge", "santa": "judge", "design": "judge", "debug": "judge",
                "audit": "judge", "backend": "impl", "frontend": "impl", "impl": "impl", "refactor": "impl",
@@ -25,7 +29,7 @@
     "default": "default",
     "guarded": ["judge", "impl", "integrate", "security", "test"]
   },
-  "tiers_comment": "Kept outside `tiers`. ceiling = hardest model any path yields; main = settings `model`; subagent_env = CLAUDE_CODE_SUBAGENT_MODEL; fallback = fallbackModel; escalate = role's model on escalation; usage_guard = executor ceiling after one step down + fixed judge model while >= 80 %; judge_phrase_lift = judge model when the user's turn says that model's phrase; impl_planned_small = impl model with a plan marker and size <= M; size_bumps = role -> {size: model}; ask_only = models above the tier's routed set that need the user's own phrase this turn for ANY role (an explicit param or label alone is not the user's words). `api` copies `max5`.",
+  "tiers_comment": "Kept outside `tiers`. ceiling = hardest model any path yields; main = settings `model`; subagent_env = CLAUDE_CODE_SUBAGENT_MODEL; fallback = fallbackModel; escalate = role's model on escalation; usage_guard = executor ceiling after one step down + fixed judge model while >= 80 %; judge_phrase_lift = judge model when the user's turn says that model's phrase; impl_planned_small = impl model with a plan marker and size <= M; size_bumps = role -> {size: model}; ask_only = models above the tier's routed set that need the user's own phrase this turn for ANY role (an explicit param or label alone is not the user's words). `api` copies `max5`. max20 since 2026-10-31 (owner: smartest agents, tokens do not matter): executors, tests and verify run Opus, Sonnet is the floor (no Haiku role), the usage guard still steps down near the 5-hour limit.",
   "tiers": {
     "pro": {"ceiling": "sonnet", "main": "sonnet", "subagent_env": "haiku", "fallback": ["haiku"],
             "roles": {"explore": "haiku", "docs": "haiku", "verify": "haiku", "test": "haiku", "impl": "haiku",
@@ -40,11 +44,11 @@
              "usage_guard": {"ceiling": "sonnet", "judge": "sonnet"},
              "judge_phrase_lift": "opus", "impl_planned_small": "haiku", "size_bumps": {}, "ask_only": ["opus"]},
     "max20": {"ceiling": "fable", "main": "opus", "subagent_env": "sonnet", "fallback": ["sonnet", "haiku"],
-              "roles": {"explore": "haiku", "docs": "haiku", "verify": "haiku", "test": "sonnet", "impl": "sonnet",
-                        "integrate": "sonnet", "security": "sonnet", "judge": "opus", "default": "sonnet"},
-              "escalate": {"impl": "opus", "integrate": "opus", "security": "opus"},
+              "roles": {"explore": "sonnet", "docs": "sonnet", "verify": "opus", "test": "opus", "impl": "opus",
+                        "integrate": "opus", "security": "opus", "judge": "opus", "default": "sonnet"},
+              "escalate": {"test": "opus", "impl": "opus", "integrate": "opus", "security": "opus"},
               "usage_guard": {"ceiling": "sonnet", "judge": "sonnet"},
-              "judge_phrase_lift": null, "impl_planned_small": null, "size_bumps": {"verify": {"L": "sonnet"}},
+              "judge_phrase_lift": null, "impl_planned_small": null, "size_bumps": {},
               "ask_only": ["fable"]},
     "api": {"ceiling": "opus", "main": "sonnet", "subagent_env": "sonnet", "fallback": ["haiku"],
             "roles": {"explore": "haiku", "docs": "haiku", "verify": "haiku", "test": "sonnet", "impl": "sonnet",
@@ -55,8 +59,12 @@
   },
   "agent_pins": {
     "_comment": "Legacy view of tiers.max20 (doctor_checks, docs). The guards read roles+tiers; the consistency test pins this to max20.",
-    "opus": ["audit-specialist", "debug-detective", "frontend-uiux-designer", "plan", "planning-director", "santa-reviewer", "spec-architect"],
-    "haiku": ["claude-code-guide", "deadcode-reaper", "docs-sync-agent", "explore", "memory-codex", "qa-verifier"],
+    "opus": ["audit-specialist", "backend-implementor-specialist", "debug-detective", "egm:egm-codebase-details",
+             "egm:egm-comprehension", "egm:egm-design", "egm:egm-implementation-readiness", "egm:egm-structural",
+             "egm:egm-style", "egm:egm-synthesizer", "egm:egm-zoom-out", "frontend-implementor-specialist",
+             "frontend-uiux-designer", "implementation-engineer", "integrator-specialist", "plan", "planning-director",
+             "qa-verifier", "refactor-specialist", "santa-reviewer", "security-sentinel", "spec-architect", "test-author"],
+    "haiku": [],
     "sonnet": [],
     "fable": []
   },
@@ -95,7 +103,9 @@
       "\\bimpl-report-be\\.md\\b",
       "\\brootcause\\.md\\b",
       "\\btest-report\\.md\\b",
-      "docs/superpowers/(plans|specs)/"
+      "docs/superpowers/(plans|specs)/",
+      "docs/designs/[\\w.-]+\\.md",
+      "\\bdesign_draft\\.md\\b"
     ]
   },
   "usage_guard": {

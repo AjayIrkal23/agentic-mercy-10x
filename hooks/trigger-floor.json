@@ -10114,7 +10114,7 @@
       "value": "tokens",
       "source_file": "ui-keywords.json",
       "source_key": "ui_keywords",
-      "weight": 1.0
+      "weight": 0.4
     },
     {
       "kind": "ui_keyword",

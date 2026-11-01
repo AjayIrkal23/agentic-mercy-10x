@@ -130,8 +130,14 @@ def _skill_paths() -> dict[str, Path]:
     return out
 
 
+def _builtin_skills() -> frozenset[str]:
+    """Harness skills with no directory here (update-config, plugin-authoring, ...): callable
+    through the Skill tool, so a ranked candidate may name them (``additions.builtin_skills``)."""
+    return frozenset(str(s) for s in ((_router_cfg().get("additions") or {}).get("builtin_skills") or []))
+
+
 def skill_exists(name: str) -> bool:
-    if name in _skill_paths():
+    if name in _skill_paths() or name in _builtin_skills():
         return True
     return name in index_meta()
 
@@ -307,6 +313,11 @@ def _category_skills(profile) -> dict[str, float]:
     return scores
 
 
+# stack tag -> what must be established before its weak (repo-only) credit counts
+_STACK_SKILL_TAGS = {"mongo": "backend", "fastify": "backend", "express": "backend", "go": "backend",
+                     "vitest": "test"}
+
+
 def _surface_skills(profile) -> dict[str, float]:
     cfg = _router_cfg()
     table = (cfg.get("additions") or {}).get("surface_skills") or {}
@@ -319,8 +330,16 @@ def _surface_skills(profile) -> dict[str, float]:
         return scores
     for surf in profile.surfaces:
         if surf in weak:
-            # stack-only tags (three, motion, shadcn...) need the prompt to name them (RQ-4)
+            # stack-only tags (three, motion, shadcn...) need the prompt to name them (RQ-4);
+            # the stack-skill tags (mongo, fastify, ...) earn partial credit once their side is
+            # established by the prompt or cwd (A-07), so a Mongoose repo's backend prompt gets
+            # mongoose-patterns without saying "mongo" while a React prompt does not
             f = weak_factor if surf in ("frontend", "backend") else 0.0
+            side = _STACK_SKILL_TAGS.get(surf)
+            if side == "test":
+                f = weak_factor if "TEST" in profile.intents else 0.0
+            elif side and side in set(profile.surfaces) - weak:
+                f = weak_factor
         else:
             f = 1.0
         if not f:
@@ -338,6 +357,8 @@ def _rule_skills(profile) -> dict[str, float]:
             continue
         need = set(r.get("surfaces") or [])
         if need and not (need & profile.surfaces):
+            continue
+        if set(r.get("unless_surfaces") or []) & profile.surfaces:
             continue
         try:
             if re.search(str(r["regex"]), profile.text, re.IGNORECASE):
@@ -391,10 +412,18 @@ def rank_all(profile) -> list[tuple[str, float]]:
     return out
 
 
-def rank_skills(profile, *, top_n: int = DEFAULT_TOP_N,
-                min_score: float = DEFAULT_MIN_SCORE) -> list[tuple[str, float]]:
-    """Return [(skill_name, score)] descending — at most ``top_n``, all >= ``min_score``."""
-    return [(n, s) for n, s in rank_all(profile) if s >= min_score][:top_n]
+def rank_skills(profile, *, top_n: int = DEFAULT_TOP_N, min_score: float = DEFAULT_MIN_SCORE,
+                tail_min: float | None = None, tail_from: int = 3) -> list[tuple[str, float]]:
+    """Return [(skill_name, score)] descending — at most ``top_n``. Ranks 1..``tail_from`` need
+    ``min_score``; later ranks need only ``tail_min`` when given (A-08)."""
+    out: list[tuple[str, float]] = []
+    for n, s in rank_all(profile):
+        floor = min_score if (tail_min is None or len(out) < tail_from) else min(tail_min, min_score)
+        if s >= floor:
+            out.append((n, s))
+        if len(out) >= top_n:
+            break
+    return out
 
 
 # --------------------------------------------------------------------------- #

@@ -38,3 +38,27 @@
 {"id": "P8", "kind": "pos", "repo": "supabase", "listener": "none", "prompt": "add an index on the visits table and an RLS policy in supabase", "must": ["postgres-patterns"]}
 {"id": "P9", "kind": "pos", "repo": "none", "listener": "none", "prompt": "the deploy step timed out after 120 s with a timeout error", "intent_has": ["DEBUG"]}
 {"id": "P10", "kind": "pos", "repo": "fe3", "listener": "none", "prompt": "the map page throws a TypeError: cannot read properties of undefined", "must_any": ["debug-investigation", "debug-broken-ui"]}
+{"id": "Q1", "kind": "hard", "repo": "none", "listener": "none", "prompt": "we should save tokens less and be more thorough with every answer", "must_not": ["react-hooks-patterns", "design-taste-frontend", "frontend-standards-always-follow"], "intent_lacks": ["DESIGN"]}
+{"id": "Q2", "kind": "hard", "repo": "none", "listener": "none", "prompt": "we should save tokens less and be more thorough, skills and hooks do not trigger properly for front end, back end, apis and infra work", "must": ["skill-linkage-story"], "must_not": ["react-hooks-patterns", "design-taste-frontend", "frontend-standards-always-follow"]}
+{"id": "Q3", "kind": "hard", "repo": "py", "listener": "none", "prompt": "use the jcodemunch index to find dead code in the repo", "must_not": ["react-hooks-patterns"]}
+{"id": "Q4", "kind": "pos", "repo": "none", "listener": "none", "prompt": "fix the front end login page, the submit button does nothing", "must": ["frontend-standards-always-follow"]}
+{"id": "Q5", "kind": "pos", "repo": "none", "listener": "none", "prompt": "the back end returns a wrong total for the invoice endpoint", "must": ["backend-standards-always-follow"]}
+{"id": "Q6", "kind": "pos", "repo": "none", "listener": "none", "prompt": "audit this repo for tech debt and tell me what to clean up", "must": ["tech-debt-audit"]}
+{"id": "Q7", "kind": "pos", "repo": "none", "listener": "none", "prompt": "add a repo rule in the hooks that blocks force push in this repo", "must": ["hookify-rules"], "must_not": ["frontend-standards-always-follow"]}
+{"id": "Q8", "kind": "pos", "repo": "fastmongo", "listener": "none", "prompt": "add an endpoint that returns invoices sorted by date with an index on the date field", "must": ["mongoose-patterns", "fastify-patterns"], "must_not": ["postgres-patterns"]}
+{"id": "Q9", "kind": "hard", "repo": "reactmongo", "listener": "none", "prompt": "add a tooltip to the sidebar button in the react component", "must_not": ["mongoose-patterns", "fastify-patterns"]}
+{"id": "M6", "kind": "hard", "repo": "none", "listener": "none", "prompt": "[Subagent hand-back]\nIMPL-REPORT written. Frontend skills, hooks and a review workflow for the react component.", "empty": true}
+{"id": "M7", "kind": "hard", "repo": "none", "listener": "none", "prompt": "<system-reminder>\nnote\n</system-reminder>\n<agent-message from=\"impl\">done: the react dashboard is finished, please review</agent-message>", "empty": true}
+{"id": "M8", "kind": "hard", "repo": "none", "listener": "none", "prompt": "Another Claude session sent a message (uds:/x): please review the react page", "empty": true}
+{"id": "E1", "kind": "pos", "repo": "none", "listener": "none", "prompt": "Review docs/designs/webhook-delivery.md with fresh eyes before we build it", "must": ["egm-review/SKILL.md"], "must_not": ["WORKFLOW:", "santa-review", "(MUST-READ)"]}
+{"id": "E2", "kind": "pos", "repo": "none", "listener": "none", "prompt": "We need webhook delivery with retries and dedup across three services; brainstorm the design before any code", "must": ["egm_brainstorm/SKILL.md"], "must_not": ["WORKFLOW:"]}
+{"id": "E3", "kind": "pos", "repo": "none", "listener": "none", "prompt": "check whether the design docs in docs/designs still match the code", "must": ["egm-drift-report/SKILL.md"]}
+{"id": "E4", "kind": "pos", "repo": "none", "listener": "none", "prompt": "write the design doc from the concepts brief", "must": ["egm-draft/SKILL.md"]}
+{"id": "E5", "kind": "pos", "repo": "none", "listener": "none", "prompt": "how should we architect multi-tenant billing", "must": ["egm_brainstorm/SKILL.md"]}
+{"id": "E6", "kind": "hard", "repo": "none", "listener": "none", "prompt": "fix the typo in the login button label", "must_not": ["/skills/egm"]}
+{"id": "E7", "kind": "hard", "repo": "none", "listener": "none", "prompt": "the checkout endpoint returns 500 after the last deploy, find the root cause", "must_not": ["/skills/egm"]}
+{"id": "E8", "kind": "hard", "repo": "none", "listener": "none", "prompt": "review my changes before I merge", "must_not": ["/skills/egm"]}
+{"id": "E9", "kind": "hard", "repo": "none", "listener": "none", "prompt": "review the landing page design, it looks off", "must_not": ["/skills/egm"]}
+{"id": "E10", "kind": "hard", "repo": "none", "listener": "none", "prompt": "add a created_at field to the user model", "must_not": ["/skills/egm"]}
+{"id": "E11", "kind": "hard", "repo": "none", "listener": "none", "prompt": "what is the elephant goldfish model?", "must_not": ["/skills/egm"]}
+{"id": "E12", "kind": "soft", "repo": "none", "listener": "none", "prompt": "plan the rollout of the new billing service across services", "must_not": ["/skills/egm"]}
