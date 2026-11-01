@@ -99,6 +99,11 @@ def _plugins(ctx: Ctx):
         status = f"WARN({type(exc).__name__})"
     if status != "PRESENT":
         rows.append(("config", "tokeneconomizer-toolprune", status))
+    if not ctx.dry and any(s.startswith(("ADDED", "INSTALLED")) for _, _, s in rows):
+        # `claude plugin marketplace add` rewrites settings.json (egm lost the template's autoUpdate: false);
+        # the file is then newer than the template, so `_settings` would keep that drift: re-render now
+        import selfheal  # type: ignore
+        selfheal._ensure_settings(ctx.target, ctx.env(), lambda k, n, s: rows.append((k, n, s)), force=True)
     return rows
 
 

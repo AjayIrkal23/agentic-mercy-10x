@@ -12,6 +12,11 @@
   jcodemunch like `grep`/`cat` (`lib/shell_reads.py`, the `jcm-gate-shell` link).
 - **Existing machines converge daily**: a new self-heal step `plugins` installs marketplaces and plugins
   the manifest gained after a machine's install (`egm@egm`) and pins TokenEconomizer `toolprune` off.
+  When it adds or installs anything it forces one settings re-render: `claude plugin marketplace add`
+  rewrites `settings.json` without the template's `autoUpdate: false`, and the newer file kept the
+  drift (doctor `render-equivalence` FAIL on Rohit's PC).
+- **POSIX replica sync** runs each remote step in `bash -lc`: a bare ssh PATH lacks `~/.local/bin`, so
+  the doctor's `base-tools` row FAILed on a healthy box.
 
 ## v5.1.0 2026-10-31 Tools fire on their own: no auto-deny, eager MCPs, smarter routing, EGM
 

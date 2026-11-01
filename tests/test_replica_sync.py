@@ -165,17 +165,18 @@ def test_windows_host_side_refuses(monkeypatch, capsys):
 def test_posix_dry_run_prints_the_pull_and_render(_env, capsys):
     assert R.main(["--posix", "--host", "u@h", "--dry-run"]) == 0
     out = capsys.readouterr().out
-    assert ("ssh -o BatchMode=yes u@h 'git -C ~/.claude pull --ff-only && "
-            "python3 ~/.claude/installer/render.py'") in out
+    assert "ssh -o BatchMode=yes u@h 'bash -lc '\"'\"'git -C ~/.claude pull --ff-only && " in out
+    assert "python3 ~/.claude/installer/render.py" in out
     assert _calls(_env) == []
 
 
 @posix_only
 def test_posix_run_uses_plain_ssh_and_the_doctor(_env, capsys):
+    """A login shell: a bare ssh PATH lacks ~/.local/bin, so base-tools FAILed on a healthy box."""
     assert R.main(["--posix", "--host", "u@h"]) == 0
     calls = _calls(_env)
-    assert calls[0][-1] == "git -C ~/.claude pull --ff-only && python3 ~/.claude/installer/render.py"
-    assert calls[1][-1] == "python3 ~/.claude/installer/doctor.py | tail -1"
+    assert calls[0][-1] == "bash -lc 'git -C ~/.claude pull --ff-only && python3 ~/.claude/installer/render.py'"
+    assert calls[1][-1] == "bash -lc 'python3 ~/.claude/installer/doctor.py | tail -1'"
     assert all("USERPROFILE" not in c[-1] for c in calls)
     assert "replica_sync: PASS" in capsys.readouterr().out
 
