@@ -309,6 +309,29 @@ def test_vendored_skills_are_re_vendored_only_on_drift(sd, box, monkeypatch, tmp
     assert any(c.startswith("vendor") for c in _summary(box)["changed"])
 
 
+def test_impeccable_engine_is_fetched_only_when_missing(sd, box, monkeypatch, tmp_path):
+    _only(sd, monkeypatch, "impeccable-engine")
+    log = tmp_path / "imp.log"
+    script = tmp_path / "impeccable_engine.py"
+
+    def fake(check_rc: int) -> None:
+        script.write_text("import sys\nopen(%r, 'a').write(' '.join(sys.argv[1:]) + '\\n')\n"
+                          "print('impeccable-engine: INSTALLED(engine 0.1.18)' if '--check' not in sys.argv else '')\n"
+                          "sys.exit(%d if '--check' in sys.argv else 0)\n" % (str(log), check_rc), encoding="utf-8")
+
+    monkeypatch.setattr(sd, "IMPECCABLE", script)
+    fake(0)                                    # cached: only the check runs
+    sd.main([])
+    assert log.read_text(encoding="utf-8").split("\n")[:-1] == ["--check"]
+    assert _summary(box)["changed"] == []
+    _stamp(box, 30)
+    log.unlink()
+    fake(1)                                    # missing: fetched, reported as a change
+    sd.main([])
+    assert log.read_text(encoding="utf-8").split("\n")[:-1] == ["--check", ""]
+    assert any(c.startswith("impeccable-engine") for c in _summary(box)["changed"])
+
+
 def test_ponytail_board_import_runs_from_the_installed_plugin(sd, box, monkeypatch):
     if not _NODE:
         pytest.skip("no node on PATH")
@@ -347,7 +370,8 @@ def _cp(rc=0, out="", err=""):
 def test_step_ids_and_order(sd):
     ids = [n for n, _ in sd.STEPS]
     assert ids == ["mcp", "plugins", "deps", "plan-tier", "settings", "oomguard", "machines-split", "vendor",
-                   "workflows", "library", "mcp-inventory", "ponytail-board", "learning-evolve"]
+                   "impeccable-engine", "workflows", "library", "mcp-inventory", "ponytail-board",
+                   "learning-evolve"]
     assert ids.index("plan-tier") < ids.index("settings")  # a new tier lands in the same run's render
 
 

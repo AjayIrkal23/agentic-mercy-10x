@@ -3,10 +3,12 @@
 
 Every act agent carries a ``## <act> pipeline (automatic, every task)`` table and writes a
 ``## Pipeline`` section into its artifact (each call and its result, or ``P<n> skipped: <reason>``).
-When such an agent stops inside an /invoke run, this gate finds the NEWEST run.json that expects an
-artifact from it (``expected_artifacts[<agent_type>]``, the teammate-idle-gate lookup) and keeps the
-agent working ONCE when the artifact is missing or has no ``## Pipeline`` heading. Outside a run
-(no run.json naming the agent) it does nothing.
+When such an agent stops inside an /invoke run, this gate finds the fresh run.json it was dispatched
+for (``expected_artifacts[<agent_type>]``, and the agent's first prompt, read from
+``agent_transcript_path``, names that run folder and the artifact without "never write <artifact>")
+and keeps the agent working ONCE when the artifact is missing or has no ``## Pipeline`` heading.
+Outside a run, for another run's agent, a workflow helper that writes notes, or an unreadable
+transcript, it does nothing.
 
 Bounded: Claude Code's ``stop_hook_active`` ends a second round, and the state file allows one block
 per (run.json, agent_id). Counters: ``hooks/.state/pipeline-evidence.json`` (``CLAUDE_HOOK_DOTSTATE_DIR``;
@@ -62,10 +64,37 @@ def _runs_dir(cwd: Path) -> Path | None:
     return None
 
 
-def _expected(cwd: Path, agent: str) -> tuple[Path, Path] | None:
-    """(run.json, artifact path) of the newest fresh run that expects ``agent``."""
+def _first_prompt(transcript: str) -> str:
+    """The text of the first user message in the subagent's own transcript ("" when unreadable)."""
+    try:
+        with open(transcript, encoding="utf-8", errors="replace") as fh:
+            for n, line in enumerate(fh):
+                if n > 200:
+                    break
+                try:
+                    row = json.loads(line)
+                except ValueError:
+                    continue
+                msg = row.get("message") if isinstance(row, dict) else None
+                if not isinstance(msg, dict) or msg.get("role") != "user":
+                    continue
+                content = msg.get("content")
+                if isinstance(content, str):
+                    return content
+                if isinstance(content, list):
+                    return "\n".join(str(b.get("text") or "") for b in content if isinstance(b, dict))
+    except (OSError, TypeError):
+        pass
+    return ""
+
+
+def _expected(cwd: Path, agent: str, prompt: str) -> tuple[Path, Path] | None:
+    """(run.json, artifact path) of the fresh run THIS agent was dispatched for: its prompt names the run
+    folder and the artifact, and does not forbid writing it. A workflow's helper agents of the same type
+    (review.js: chunk reviewers and verifiers write notes, "never write SANTA-REVIEW.md yourself") and
+    agents of another run or of no run never match (santa review 2026-11-03)."""
     runs = _runs_dir(cwd)
-    if runs is None:
+    if runs is None or not prompt:
         return None
     now = time.time()
     try:
@@ -77,10 +106,15 @@ def _expected(cwd: Path, agent: str) -> tuple[Path, Path] | None:
         try:
             if now - rj.stat().st_mtime > MAX_AGE_S:
                 break
+            if rj.parent.name not in prompt:
+                continue
             art = (json.loads(rj.read_text(encoding="utf-8")).get("expected_artifacts") or {}).get(agent)
         except (OSError, ValueError, AttributeError):
             continue
         if isinstance(art, str) and art:
+            name = Path(art).name
+            if name not in prompt or re.search(rf"never write\W+{re.escape(name)}", prompt, re.I):
+                return None
             if os.path.isabs(art):
                 return rj, Path(art)
             # /invoke writes the artifact into the run folder; a repo-relative path also counts
@@ -117,7 +151,8 @@ def decide(payload: dict) -> dict:
     agent = str(payload.get("agent_type") or "").split(":")[-1]
     if agent not in ACT_AGENTS:
         return {}
-    hit = _expected(Path(payload.get("cwd") or os.getcwd()), agent)
+    hit = _expected(Path(payload.get("cwd") or os.getcwd()), agent,
+                    _first_prompt(str(payload.get("agent_transcript_path") or "")))
     if hit is None:
         return {}
     run_json, art = hit

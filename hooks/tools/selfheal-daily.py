@@ -41,6 +41,7 @@ from lib import platform as plat  # noqa: E402
 VENDOR = _ROOT / "scripts" / "vendor_skill.py"
 WORKFLOWS = _ROOT / "scripts" / "build_workflows.py"
 LIB_INDEX = _ROOT / "scripts" / "build_library_index.py"
+IMPECCABLE = _ROOT / "scripts" / "impeccable_engine.py"
 SPLIT = _ROOT / "scripts" / "split_machines_file.py"
 PLAN_TIER = _ROOT / "hooks" / "plan-tier-detect.py"
 INSTINCTS = Path(__file__).resolve().parent / "instincts.py"
@@ -294,6 +295,21 @@ def _vendor(ctx: Ctx):
     return [("vendor", "--all", f"WARN(rc={cp.returncode}" + (f": {warn[5:]}" if warn else "") + ")")]
 
 
+def _impeccable(ctx: Ctx):
+    """The design trio's Impeccable engine (ui-quality-autorun and the design act use it): fetch it once
+    when missing; offline it stays SKIP and the next day retries."""
+    if not IMPECCABLE.is_file():
+        return []
+    cmd = [plat.python_exe(), str(IMPECCABLE)]
+    if plat.run([*cmd, "--check"], timeout=30).returncode == 0:
+        return []
+    if ctx.dry:
+        return [("impeccable-engine", "fetch", "WOULD-FETCH")]
+    cp = plat.run(cmd, timeout=330)
+    last = ((cp.stdout or "").strip().splitlines() or [f"rc={cp.returncode}"])[-1]
+    return [("impeccable-engine", "fetch", last.split(": ", 1)[-1])]
+
+
 # The import never revisits a session it wrote, so a live transcript would stay half-counted (and a
 # band row under another key would count it twice): hide transcripts written in the last 24 h.
 # shortcut: patches fs.readdirSync of ponytail-band-import.js (5.3.2), drop it once upstream skips live sessions.
@@ -327,7 +343,7 @@ def _ponytail_board(ctx: Ctx):
 # same run's settings step then renders the new tier's model keys
 STEPS = [("mcp", _mcp), ("plugins", _plugins), ("deps", _deps), ("plan-tier", _plan_tier), ("settings", _settings),
          ("oomguard", _oomguard), ("machines-split", _machines_split), ("vendor", _vendor),
-         ("workflows", _workflows), ("library", _library), ("mcp-inventory", _mcp_inventory),
+         ("impeccable-engine", _impeccable), ("workflows", _workflows), ("library", _library), ("mcp-inventory", _mcp_inventory),
          ("ponytail-board", _ponytail_board), ("learning-evolve", _learning_evolve)]
 
 

@@ -65,7 +65,7 @@ without it directives 20, 21 and 30 do nothing.
 | Packages | pinned semgrep, jcodemunch, jdocmunch, graphify (+ its serve venv), lean-ctx, tdd-guard, pyright, PyYAML |
 | Local AI | ollama (user space) + the `all-minilm` embedding and `qwen2.5-coder:3b` summary models; or another machine's ollama via `OLLAMA_HOST` in `settings.user.json` (nothing installed locally) |
 | Claude Code | 15 MCP servers at pinned versions, 7 marketplaces + 13 plugins (TokenEconomizer from a local clone), rendered `settings.json` (status line, mods env) |
-| Workbench | re-vendored skills, generated `/invoke` skills and agent blocks, skills index, validators, doctor |
+| Workbench | re-vendored skills (incl. the design trio Impeccable, UI UX Pro Max, Hallmark), the Impeccable engine (pinned, SHA-256 checked, `~/.impeccable`), generated `/invoke` skills and agent blocks, skills index, validators, doctor |
 | OS tools (apt) | `tmux` (session restore after an OOM kill), `ss`, `curl`, and on a desktop `canberra-gtk-play`, `notify-send`, `pw-play` for the UI deck: installed with root or passwordless sudo, otherwise one `sudo apt-get install` line is printed (plus a one-time zram line when swap is under half of RAM). Everything but restore works without them |
 | Per machine | `settings.user.json` (mode 600) gets `OLLAMA_HOST` from the install environment, a machine-wide `CLAUDE_CODE_TOOL_MEMORY_LIMIT` of half the RAM on a Linux box over 12 GB (one cgroup that every session's tool commands share), and on a bare box `permissions.defaultMode: acceptEdits` (set `AGENTIC_MERCY_PERMISSION_MODE=bypassPermissions` before installing to keep the template's bypass) |
 

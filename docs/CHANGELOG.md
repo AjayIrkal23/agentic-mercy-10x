@@ -1,5 +1,30 @@
 # Changelog
 
+## v5.3.1 2026-11-03 The design trio and the auto-run hooks in the installer
+
+Owner: "make sure you put it in install properly". A fresh clone already carried the vendored skills,
+the act pipelines and the hooks; the one gap was the Impeccable engine, which only arrived on the first
+design run, so `ui-quality-autorun` stayed silent on a new machine until then.
+
+- **Install post-step `impeccable-engine`** (`scripts/impeccable_engine.py`, network, optional): runs the
+  vendored launcher's `engine-probe` once; the launcher fetches the engine pinned in
+  `skills/impeccable/scripts/VERSION` from the GitHub release, checks it against the vendored
+  `engine-checksums.txt` and writes the `.verified` stamp. Offline it exits 3 (SKIP); `--ci` plans it.
+- **Daily self-heal step `impeccable-engine`** (after `vendor`): fetches the engine on machines that
+  installed before this release or were offline; quiet when it is cached.
+- **Doctor row `design-trio`**: FAIL when one of the three vendored skills is missing, WARN without node
+  (Hallmark's scripts) or without the verified engine, PASS otherwise; `--ci` checks the skills only.
+- One engine lookup (`hooks/lib/impeccable_engine.py`) shared by the hook, the script and the doctor.
+- **Fix (Santa review of v5.3.0): `pipeline-evidence-gate` judged every agent of an act's type.** The
+  review workflow starts several `santa-reviewer` helpers per run that are told "never write
+  SANTA-REVIEW.md yourself"; each would have been sent back to write it, and a later plain Agent call
+  would have been pointed at an old run's report. The gate now reads the stopping agent's first prompt
+  from `agent_transcript_path` and applies only when it names that run folder and the artifact without
+  forbidding it; an unreadable transcript fails open.
+- Existing machines converge on their next session after a pull: the daily `settings` step re-renders
+  the stale settings (SubagentStop), `vendor` re-vendors, `workflows` re-renders, `impeccable-engine`
+  fetches.
+
 ## v5.3.0 2026-11-03 Every act runs its tools by itself: act pipelines, a UI auto-check hook, an evidence gate
 
 Owner's brief: the workbench holds many third-party packages, skills and tools, but apart from the

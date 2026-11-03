@@ -95,6 +95,36 @@ def generated_status(results: list) -> tuple[str, str]:
 _WF_BAD = ("DRIFT", "MISSING", "EXTRA", "NOT-RENDERED")
 
 
+DESIGN_TRIO = ("impeccable", "ui-ux-pro-max", "hallmark")
+
+
+def design_trio_status(root: Path, ci: bool = False) -> tuple[str, str]:
+    """v5.2.0 design trio: the three vendored skills (FAIL when one is missing: the vendor-skills post step
+    restores it), node for Hallmark's scripts (WARN), the Impeccable engine cached and verified (WARN: the
+    impeccable-engine post step and the daily self-heal fetch it). --ci checks the skills only."""
+    root = Path(root)
+    missing = [s for s in DESIGN_TRIO if not (root / "skills" / s / "SKILL.md").is_file()]
+    if missing:
+        return "FAIL", f"vendored skills missing: {', '.join(missing)} (scripts/vendor_skill.py --all)"
+    if ci:
+        return "PASS", "skills vendored (node and the engine are not checked under --ci)"
+    try:
+        from lib import impeccable_engine  # noqa: PLC0415  (doctor.py puts hooks/ on sys.path)
+        from lib import platform as plat  # noqa: PLC0415
+        engine = impeccable_engine.cached_binary(root / "skills" / "impeccable")
+        version = impeccable_engine.version(root / "skills" / "impeccable")
+        node = plat.node_exe()
+    except Exception as exc:  # noqa: BLE001
+        return "WARN", f"cannot probe: {exc}"
+    warns = []
+    if not node:
+        warns.append("no node: Hallmark theme deal and sloplint steps skip")
+    if engine is None:
+        warns.append(f"Impeccable engine {version} not cached (scripts/impeccable_engine.py; "
+                     "the daily self-heal fetches it)")
+    return ("WARN", "; ".join(warns)) if warns else ("PASS", f"skills vendored, node, Impeccable engine {version} cached")
+
+
 def workflows_rendered_status(root: Path, ci: bool = False) -> tuple[str, str]:
     """I10: workflows/*.js + index.json are a per-machine render (untracked). Missing or drifted -> FAIL,
     which self-heal repairs with `scripts/build_workflows.py --quiet`. --ci: SKIP (CI renders and checks)."""

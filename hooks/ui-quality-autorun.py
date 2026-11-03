@@ -43,20 +43,12 @@ SLOP_RX = re.compile(r"^\s*(FAIL|REFLEX)\s+(\S+)\s+:(\d+)\s+(.*)$")
 
 
 def _impeccable_cmd() -> list[str] | None:
-    explicit = os.environ.get("IMPECCABLE_BIN")
-    if explicit:
-        return [explicit] if Path(explicit).is_file() else None
     try:
-        version = (SKILLS / "impeccable" / "scripts" / "VERSION").read_text(encoding="utf-8").strip()
-    except OSError:
+        from lib import impeccable_engine  # noqa: PLC0415
+        binary = impeccable_engine.cached_binary()
+    except Exception:  # noqa: BLE001
         return None
-    home = Path(os.environ.get("IMPECCABLE_HOME") or Path.home() / ".impeccable")
-    exe = ".exe" if os.name == "nt" else ""
-    binary = home / "bin" / version / f"impeccable{exe}"
-    # the launcher writes <binary>.verified only after the SHA-256 check against engine-checksums.txt
-    if binary.is_file() and Path(f"{binary}.verified").is_file():
-        return [str(binary)]
-    return None
+    return [str(binary)] if binary else None
 
 
 def _sloplint_cmd() -> list[str] | None:

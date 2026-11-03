@@ -20,6 +20,8 @@ Rows (PASS / WARN / FAIL / SKIP; non-zero exit on any FAIL):
   generated-in-sync    generators --check: rc != 0 FAIL, `drift:` lines WARN, PyYAML missing SKIP
   workflows-rendered   the per-machine workflows/*.js + index.json render exists and
                        build_workflows.py --check is OK (FAIL -> self-heal re-renders; SKIP --ci)
+  design-trio          impeccable / ui-ux-pro-max / hallmark vendored (FAIL); node and the verified
+                       Impeccable engine present (WARN; post step + daily self-heal fetch it)
   palette-skills       SKILL.md / agent counts from disk; FAIL when either is 0
   aliases · R9/R10-validator · locked-source-links · ollama-embeddings (WARN) ·
   model-routing · workflow-args · hook-fixtures
@@ -228,6 +230,7 @@ def run_doctor(*, ci: bool = False) -> list[tuple[str, str, str]]:
     _row(rows, "plugins-installed", *doctor_host.check_plugins_installed(m, ci))
     _check_generated(rows)
     _row(rows, "workflows-rendered", *doctor_checks.workflows_rendered_status(_ROOT, ci))
+    _row(rows, "design-trio", *doctor_checks.design_trio_status(_ROOT, ci))
     doctor_checks.check_palette(rows, _ROOT, _row, PASS, FAIL)
     _row(rows, "aliases", *doctor_checks.aliases_status(_ROOT))
     _check_validator(rows)

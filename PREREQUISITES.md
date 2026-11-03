@@ -91,8 +91,10 @@ telemetry, `shadow_mode=false`) runs first, before lean-ctx is installed or regi
 off), 7 marketplaces (autoUpdate as declared in the template's `extraKnownMarketplaces`; egm is
 updated by hand) and 13 plugins (TokenEconomizer from a local clone), the rendered `settings.json` (never
 contains the string `lean-ctx`; a re-render keeps the newest 3 dated `settings.json.bak-*`),
-re-vendored skills, generated `/invoke` skills and agent skill blocks, indexes, skill and mod
-validators, and a doctor run with 0 FAIL.
+re-vendored skills, the Impeccable engine of the design trio (fetched once by its vendored launcher,
+SHA-256 checked, into `~/.impeccable`; Hallmark needs the installed Node, UI UX Pro Max plain Python),
+generated `/invoke` skills and agent skill blocks, indexes, skill and mod validators, and a doctor run
+with 0 FAIL.
 
 `--ci` plans the network and everything outside the checkout (WOULD-*), but the local repo steps
 run for real (render, generators, validator), so it is not read-only. The read-only plan is
