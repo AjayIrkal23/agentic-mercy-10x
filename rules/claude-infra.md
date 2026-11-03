@@ -46,6 +46,7 @@ state `state/mem-pressure.json`; runbook `docs/OOM-GUARD.md`.
 | `hookify-gate` | repo `.claude/hookify.*.local.md` rules | — | gate on tools; advisory on prompt/stop |
 | `connector-ask-gate` | claude.ai connector, plugin and GitHub write tools | — | `ask` (subagents too; never an advisory, never an auto-deny) |
 | `hard-completion-gate` | Stop | `Gate 2 (docs)` … `Gate 5 (dead code)` | ≤1 block per turn |
+| `pipeline-evidence-gate` | SubagentStop of an act agent inside an /invoke run | `<agent>: <artifact> … ## Pipeline` | block once per (run.json, agent_id): run the pipeline table, then write `## Pipeline` |
 | `blocking-doc-enforcer` | `git commit` | `BLOCKED: Cannot commit without documentation updates.` | only when doc trees exist |
 | mercy mod guard | Bash / PowerShell dev server / watcher, subagent commit/push, live secret in a write | `mercy guard:` | deny; userConfig `guard` |
 | mercy mod verify gate | Stop after unverified code edits | `mercy verify gate:` | ≤1 block per turn; userConfig `verifyGate` |

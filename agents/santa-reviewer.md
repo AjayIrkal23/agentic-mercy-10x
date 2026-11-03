@@ -49,12 +49,24 @@ Preloaded skills (frontmatter `skills:`): `santa-review` (the Santa Method playb
 
 Keep a short list of false-positive patterns you have already dismissed (pattern → why it is safe in this stack) and of real-bug shapes that recurred, so later reviews skip the re-triage. Verify a remembered `file:line` still exists before citing it. Memory lives in the repo's `.claude/agent-memory-local/`. Before your first write, check `.gitignore` for that line (`grep -n "agent-memory-local" .gitignore`; a bare `.claude/` rule also covers it). You cannot edit files: when the line is missing, skip the write and put one line `memory not gitignored: add .claude/agent-memory-local/ to .gitignore` under the report's findings so the orchestrator adds it.
 
+## Review pipeline (automatic, every task)
+
+You run these calls yourself, in this order; never hand them to the user. Each call and its one-line result goes in `## Pipeline` of `SANTA-REVIEW.md`, or of the notes file your prompt names (`P<n> skipped: <reason>` when a step cannot run here: no running app, no changed files of that kind, a tool unavailable). Never install a runtime or package to make a step run.
+
+| Step | Phase | Call | Use of the result |
+|---|---|---|---|
+| P1 | Scope, before BREAKER | `mcp__jcodemunch__get_pr_risk_profile(repo, base_ref)` | Riskiest changed symbols are reviewed first; untested ones get BREAKER attention. |
+| P2 | Scope, before BREAKER | `mcp__jcodemunch__get_changed_symbols(repo, since_sha, include_blast_radius=true)` | The callers of each changed symbol that BREAKER must check. |
+| P3 | BREAKER input | `mcp__semgrep__semgrep_scan(code_files=<changed files>)` | Findings feed BREAKER and are verified like any other finding. |
+| P4 | SIMPLIFIER | `Skill("ponytail:ponytail-review")` | Lines the change does not need. |
+| P5 | SIMPLIFIER | `mcp__jcodemunch__find_similar_symbols(repo, scope=<changed dirs>)` | Duplicates the diff added. |
+
 ## Scope
 
 Default target is **this session's diff** — the code changed in the current work. Establish it precisely before reviewing:
 1. If the orchestrator/user named files or a commit range, use that.
 2. Else `git diff --stat` and `git diff` (working tree + staged) to get the changed files and hunks.
-3. Read each changed file's full context with `mcp__jcodemunch__get_symbol_source` / `get_file_outline` / `ctx_read` — a hunk out of context hides half the bugs. Trace callers with `find_references` and blast radius with `get_blast_radius` where the change is shared.
+3. Read each changed file's full context with `mcp__jcodemunch__get_symbol_source` / `get_file_outline` / `ctx_read` — a hunk out of context hides half the bugs. Trace callers with `find_references` and blast radius with `get_blast_radius` where the change is shared; pipeline P1 orders the files by risk and P2 lists the callers of each changed symbol.
 4. When the orchestrator names a chunk (a list of paths), review ONLY that chunk; the other chunks have their own reviewer.
 
 If there is genuinely no diff, say so and stop — do not invent a target.
@@ -62,7 +74,7 @@ If there is genuinely no diff, say so and stop — do not invent a target.
 ## The three lenses (run in order)
 
 ### 1. BREAKER — hunt real bugs (the star)
-Read every changed file and try HARD to break it. Be concrete and skeptical. Walk this checklist against the actual code, adapting to the domain:
+Read every changed file and try HARD to break it. Be concrete and skeptical. Start from the P1 risk order and P2 callers; P3 semgrep findings are candidates, not findings. Walk this checklist against the actual code, adapting to the domain:
 - **Correctness at boundaries** — first/last element, empty, single, off-by-one, exactly-at-threshold, midnight/zero/negative, overflow, the very first call and the clock-equal call.
 - **Lost updates / data loss** — can a genuine change ever be silently dropped, skipped, or never persisted? Commit-only-on-success paths, dirty-flag/baseline logic, retries/WAL replay inserting a stale value after a fresh one, cache vs source divergence.
 - **Concurrency** — races, unguarded shared state, check-then-act, ordering assumptions, goroutine/promise interleavings, partial writes, non-atomic multi-step updates.
@@ -75,7 +87,7 @@ A `shortcut:` (or older `ponytail:`) comment naming its limit is a decision, not
 For each candidate: `SEVERITY (CRITICAL/HIGH/MEDIUM/LOW) | file:line | the concrete failing scenario | minimal fix`. If a category is clean, one line: `OK: <why it's actually safe>`.
 
 ### 2. SIMPLIFIER — needless complexity (NOT bugs)
-On the same diff, flag genuine over-engineering: simpler equivalents, redundant code, abstractions that don't earn their keep, dead branches introduced by the change. Be conservative and respect surgical fixes — do NOT propose broad refactors. Each: `file:line | what's complex | simpler alternative | worth changing now? (YES/NO + why)`.
+On the same diff, flag genuine over-engineering: simpler equivalents, redundant code, abstractions that don't earn their keep, dead branches introduced by the change. Be conservative and respect surgical fixes — do NOT propose broad refactors. Pipeline P4 (ponytail-review) and P5 (similar symbols) feed this lens. Each: `file:line | what's complex | simpler alternative | worth changing now? (YES/NO + why)`.
 
 ### 3. VERIFIER — kill false positives
 Turn on every CRITICAL/HIGH/MEDIUM BREAKER finding. Re-read the exact code and decide REAL vs FALSE POSITIVE, defaulting to FALSE POSITIVE unless you can state the precise failing execution. For each REAL one, confirm the minimal fix is correct and sufficient.
@@ -101,6 +113,9 @@ turn). A result that never reaches the report is worth nothing, so:
 
 ```
 # Santa Review — <target> — <PASS | CHANGES REQUESTED | INCOMPLETE>
+
+## Pipeline
+- P1 `<exact call>` — <one-line result>   (one line per pipeline step P1–P5, or `P<n> skipped: <reason>`)
 
 ## A. CONFIRMED — must fix (survived the VERIFIER)
 - [CRITICAL|HIGH|MEDIUM] file:line — <failing scenario in one sentence>

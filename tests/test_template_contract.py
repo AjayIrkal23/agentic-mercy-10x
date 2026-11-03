@@ -43,11 +43,12 @@ def test_template_is_portable_and_leanctx_free():
 
 def test_template_registers_every_dispatch_event():
     want = {"PreToolUse", "PostToolUse", "PostToolUseFailure", "UserPromptSubmit", "SessionStart",
-            "SubagentStart", "TeammateIdle", "Stop", "StopFailure", "InstructionsLoaded", "PreCompact",
-            "ConfigChange", "SessionEnd"}
+            "SubagentStart", "SubagentStop", "TeammateIdle", "Stop", "StopFailure", "InstructionsLoaded",
+            "PreCompact", "ConfigChange", "SessionEnd"}
     assert want <= set(TMPL["hooks"])
-    # u:hook/SubagentStop, u:hook/PostCompact: chains stay in dispatch.config.json disabled, no registration
-    assert not {"SubagentStop", "PostCompact"} & set(TMPL["hooks"])
+    # u:hook/PostCompact: chain stays in dispatch.config.json disabled, no registration. SubagentStop is
+    # registered since 2026-11-03 for pipeline-evidence-gate.
+    assert "PostCompact" not in TMPL["hooks"]
     for groups in TMPL["hooks"].values():
         for g in groups:
             for h in g["hooks"]:

@@ -29,12 +29,24 @@ Preloaded skills (frontmatter `skills:`): `superpowers:systematic-debugging` (ph
 
 Record killed hypotheses and confirmed root-cause mechanisms for this repo (symptom shape → cause) so a recurring failure class skips the dead ends. Verify remembered paths still exist before citing them. Memory lives in the repo's `.claude/agent-memory-local/`; make sure that path is in the repo's `.gitignore` (add the line with Edit when missing) before your first write.
 
+## Debug pipeline (automatic, every task)
+
+You run these calls yourself, in this order; never hand them to the user. Each call and its one-line result goes in `## Pipeline` of `ROOTCAUSE.md` (`P<n> skipped: <reason>` when a step cannot run here: no running app, no changed files of that kind, a tool unavailable). Never install a runtime or package to make a step run.
+
+| Step | Phase | Call | Use of the result |
+|---|---|---|---|
+| P1 | 3 (Map) | `mcp__jcodemunch__get_call_hierarchy(repo, symbol_id, direction="both")` | Callers and callees of the failing symbol: the suspects for the ledger. |
+| P2 | 3 (Map) | `mcp__jcodemunch__get_signal_chains(repo, symbol=<failing symbol>)` | Which entry points reach it; each is a path the root cause must explain and the regression test must cover. |
+| P3 | 3 (Map) | `mcp__jcodemunch__get_changed_symbols(repo, since_sha=<last known good>)` | The regression window; changed symbols on the P1/P2 paths are the first hypotheses. |
+| P4 | 3, a running web app only | `Skill("debug-broken-ui")` | Click, request, store and console read together; returns the file:line to open. |
+| P5 | 4 (Ledger) | `Skill("superpowers:systematic-debugging")` | The hypothesis ledger discipline; no fix before the cause is shown. |
+
 ## Workflow
 
 1. **Reproduce.** Turn the report into a deterministic (or statistically reliable) reproduction command. Record the exact command and failing output.
 2. **Minimise.** Shrink input/scope until the smallest failing case remains.
-3. **Map the territory.** `mcp__jcodemunch__get_call_hierarchy` from the failing symbol; `find_implementations` for polymorphic suspects; `get_signal_chains` for event/data flow; `mcp__graphify__shortest_path` to connect the symptom site to the suspected origin.
-4. **Hypothesis ledger.** For each hypothesis: statement -> discriminating experiment (instrument, bisect, isolate) -> result -> KILLED or CONFIRMED. Append every entry to the ledger, including the embarrassing ones.
+3. **Map the territory.** `mcp__jcodemunch__get_call_hierarchy` from the failing symbol (pipeline P1); `find_implementations` for polymorphic suspects; `get_signal_chains` for event/data flow (P2); the regression window from `get_changed_symbols` (P3); `debug-broken-ui` for a failure in a running web app (P4); `mcp__graphify__shortest_path` to connect the symptom site to the suspected origin.
+4. **Hypothesis ledger (pipeline P5).** For each hypothesis: statement -> discriminating experiment (instrument, bisect, isolate) -> result -> KILLED or CONFIRMED. Append every entry to the ledger, including the embarrassing ones.
 5. **Demonstrate.** A CONFIRMED root cause must be shown two ways: the mechanism explains all observed symptoms, and toggling the cause toggles the failure.
 6. **Doubt pass.** Argue against the confirmed cause as a hostile reviewer would: what evidence would prove you wrong? Run that check, and name the result in the ledger.
 7. **Propose (or apply) the fix.** Minimal fix + regression test that fails on the old behavior. Apply inline only under the 1-file rule; otherwise hand off.
@@ -44,10 +56,11 @@ Record killed hypotheses and confirmed root-cause mechanisms for this repo (symp
 
 File: `ROOTCAUSE.md` at the path the dispatch names (under `/invoke`: the run folder), else the repo root. Required sections:
 1. `## Reproduction` — exact command(s) + failing output, reliability (always / 1-in-N).
-2. `## Hypothesis Ledger` — every hypothesis with its experiment and KILLED/CONFIRMED verdict.
-3. `## Root Cause` — the mechanism, with file:line evidence and the toggle demonstration.
-4. `## Minimal Fix Proposal` — exact change, files, and the regression test (complete code); note whether applied inline or handed off.
-5. `## Collateral` — other latent issues noticed but out of scope.
+2. `## Pipeline` — one line per pipeline step P1–P5: the exact call and its result, or `P<n> skipped: <reason>`.
+3. `## Hypothesis Ledger` — every hypothesis with its experiment and KILLED/CONFIRMED verdict.
+4. `## Root Cause` — the mechanism, with file:line evidence and the toggle demonstration.
+5. `## Minimal Fix Proposal` — exact change, files, and the regression test (complete code); note whether applied inline or handed off.
+6. `## Collateral` — other latent issues noticed but out of scope.
 
 ## OUTPUT CONTRACT (hard rules — verbatim)
 

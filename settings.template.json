@@ -99,6 +99,9 @@
     "SubagentStart": [
       {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py subagent-start", "timeout": 5}]}
     ],
+    "SubagentStop": [
+      {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py subagent-stop", "timeout": 10}]}
+    ],
     "TeammateIdle": [
       {"hooks": [{"type": "command", "command": "{{PYTHON}} {{CLAUDE_DIR}}/hooks/dispatch.py teammate-idle", "timeout": 10}]}
     ],

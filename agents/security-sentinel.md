@@ -28,12 +28,24 @@ Preloaded skills (frontmatter `skills:`): `owasp-security` (Top 10:2025, ASVS 5.
 
 Keep the triaged-NOISE list (semgrep rule id → why it is noise in this stack) and any REAL-conditional findings awaiting an infra answer, so repeat scans do not re-triage. Verify a remembered path still exists before citing it. Memory lives in the repo's `.claude/agent-memory-local/`. Before your first write, check `.gitignore` for that line (`grep -n "agent-memory-local" .gitignore`; a bare `.claude/` rule also covers it). You cannot edit files: when the line is missing, skip the write and put one line `memory not gitignored: add .claude/agent-memory-local/ to .gitignore` under the report's findings so the orchestrator adds it.
 
+## Security pipeline (automatic, every task)
+
+You run these calls yourself, in this order; never hand them to the user. Each call and its one-line result goes in `## Pipeline` of `SECURITY-REPORT.md` (`P<n> skipped: <reason>` when a step cannot run here: no running app, no changed files of that kind, a tool unavailable). Never install a runtime or package to make a step run.
+
+| Step | Phase | Call | Use of the result |
+|---|---|---|---|
+| P1 | 2 (Semgrep) | `mcp__semgrep__semgrep_scan(code_files=<changed files>)`, explicit `config` per step 2 | Raw findings, triaged in step 5. |
+| P2 | 2, after P1 | `mcp__jcodemunch__search_ast(repo, category="security", file_pattern=<changed dirs>)` | eval/exec, hard-coded secrets and injection shapes semgrep missed join the candidate list. |
+| P3 | 4 (Trace), on the P1–P2 candidates | `mcp__jcodemunch__get_signal_chains(repo, symbol=<changed handler>)` / `mcp__jcodemunch__get_endpoint_impact(repo, endpoint)` | Whether each finding is reachable from a route, CLI or job; the trace is its triage justification in step 5. |
+| P4 | 3 (OWASP walk) | `Skill("security-review")` | Claude Code's built-in pending-change security review as a second lens; new candidates get the P3 trace too. |
+| P5 | 3 (OWASP walk) | `Skill("owasp-security")` | ASVS/OWASP checklist over the auth, input and session changes; feeds the PASS or BLOCK verdict. |
+
 ## Workflow
 
 1. **Scope the surface.** From the orchestrator's brief and the session diff, list the changed files, then classify: auth, input handling, API contract, secrets/config, other.
-2. **Semgrep, always.** `mcp__semgrep__semgrep_scan` on the changed files with an explicit `config` (`p/default`, `p/owasp-top-ten`, `p/secrets` — `auto` is refused when metrics are off; fallback: `semgrep scan --config p/default` via Bash) — unconditional. Capture the raw findings; the stop-gate credits either route.
-3. **OWASP walk.** Check the diff against the OWASP Top 10 checklist from owasp-security — injection, broken auth/access control, SSRF, insecure design, misconfiguration, cryptographic failures — plus the LLM/agentic checks when AI surfaces changed.
-4. **Trace the flows.** For each candidate finding, use `mcp__jcodemunch__search_text` and `find_references` to trace whether untrusted input actually reaches the sink and whether existing sanitization/authz applies.
+2. **Semgrep, always (pipeline P1, then P2).** `mcp__semgrep__semgrep_scan` on the changed files with an explicit `config` (`p/default`, `p/owasp-top-ten`, `p/secrets` — `auto` is refused when metrics are off; fallback: `semgrep scan --config p/default` via Bash) — unconditional. Capture the raw findings; the stop-gate credits either route.
+3. **OWASP walk (pipeline P4, P5).** Check the diff against the OWASP Top 10 checklist from owasp-security — injection, broken auth/access control, SSRF, insecure design, misconfiguration, cryptographic failures — plus the LLM/agentic checks when AI surfaces changed.
+4. **Trace the flows (pipeline P3).** For each candidate finding, use `mcp__jcodemunch__search_text` and `find_references` to trace whether untrusted input actually reaches the sink and whether existing sanitization/authz applies.
 5. **Triage.** Every finding is classified REAL or NOISE with a written justification (the flow trace or the mitigating control). No silent dismissals.
 6. **Verdict.** Any REAL finding of high severity on the changed surface -> BLOCK. Otherwise PASS (with LOW/INFO items listed for follow-up).
 7. Write SECURITY-REPORT.md and return.
@@ -42,10 +54,11 @@ Keep the triaged-NOISE list (semgrep rule id → why it is noise in this stack) 
 
 File: `SECURITY-REPORT.md` at the path the dispatch names (under `/invoke`: the run folder), else the repo root. Required sections:
 1. `## Scope` — changed files by surface class, diff range.
-2. `## Semgrep` — the command run and its findings (raw counts + itemized).
-3. `## OWASP Checklist` — each applicable category with its diff-specific result.
-4. `## Triage` — every finding: REAL or NOISE, severity, file:line, flow-trace justification, exact remediation guidance for REAL items.
-5. `## Verdict` — PASS or BLOCK; on BLOCK, the blocking finding(s) quoted first.
+2. `## Pipeline` — one line per pipeline step P1–P5: the exact call and its result, or `P<n> skipped: <reason>`.
+3. `## Semgrep` — the command run and its findings (raw counts + itemized).
+4. `## OWASP Checklist` — each applicable category with its diff-specific result.
+5. `## Triage` — every finding: REAL or NOISE, severity, file:line, flow-trace justification, exact remediation guidance for REAL items.
+6. `## Verdict` — PASS or BLOCK; on BLOCK, the blocking finding(s) quoted first.
 
 ## OUTPUT CONTRACT (hard rules — verbatim)
 

@@ -1,5 +1,49 @@
 # Changelog
 
+## v5.3.0 2026-11-03 Every act runs its tools by itself: act pipelines, a UI auto-check hook, an evidence gate
+
+Owner's brief: the workbench holds many third-party packages, skills and tools, but apart from the
+design trio none of them ran on their own. Audit everything, find what has a runnable command and
+wire it in so it fires without the user calling it. The audit (`plan-2026-11-03-auto-trigger-pipelines.md`)
+found that no hook ran a quality tool on a write (they printed "call X now" lines) and that agents
+named tools only in prose.
+
+- **Act pipelines (L1).** All 16 act agents now carry a `## <act> pipeline (automatic, every task)`
+  table, the shape the designer got in v5.2.0, and their artifact gains `## Pipeline` (each call and
+  its result, or `P<n> skipped: <reason>`). New in the acts:
+  - review: `get_pr_risk_profile`, `get_changed_symbols(include_blast_radius)`, semgrep on the diff,
+    `ponytail:ponytail-review`, `find_similar_symbols`;
+  - security: semgrep, `search_ast(category=security)`, `get_signal_chains` / `get_endpoint_impact`
+    reachability, the built-in `security-review`, `owasp-security`;
+  - verify: the repo's commands, `verify-cli-run`, `false-green-tests`, reticle `verify-ui-change`,
+    browser-tools accessibility + performance audits, `test-error-states` (running apps only);
+  - test: `get_untested_symbols`, caller pinning, RED run, `false-green-tests` self-check;
+  - debug: call hierarchy, signal chains, the changed-symbol regression window, `debug-broken-ui`,
+    `systematic-debugging`;
+  - clean, refactor, audit, docs, spec, plan, impl (FE, BE, general) and integrate: `get_dead_code_v2`
+    + `check_delete_safe`, `plan_refactoring` + `check_rename_safe`, `get_repo_health` / hotspots /
+    cycles / `search_ast(all)` / `finding-duplicate-functions` / `ponytail-debt` / `get_doc_health`,
+    jdocmunch `get_broken_links` / `get_stale_pages` + `dox_engine.py plan`, `get_ranked_context` +
+    context7 + `grill-with-docs`, graphify wiring + blast radius, Impeccable craft floor + `detect` +
+    Hallmark `sloplint` + `fixing-accessibility` on FE work, semgrep + `get_endpoint_impact` +
+    `verify-cli-run` on BE work.
+  Interactive skills are adapted inside the agents: `grill-with-docs` is answered from code and docs
+  (questions only the user can answer become open questions), `finding-duplicate-functions` runs
+  without subagents.
+- **UI auto-check hook (L2).** New PostToolUse advisory link `ui-quality-autorun`: after a Write/Edit of
+  a UI file in a project repo it RUNS Impeccable `detect --json` (only a cached, checksum-verified
+  engine; never downloads) and, on Hallmark-stamped files, Hallmark `sloplint`, then hands the findings
+  to the model. Main session included; the same findings are reported once per file per session.
+  Measured: 0.05 s on a sample page.
+- **Evidence gate (L3).** New SubagentStop gate `pipeline-evidence-gate`: an act agent whose /invoke
+  run.json artifact is missing or has no `## Pipeline` heading keeps working once. SubagentStop is now
+  registered in `settings.template.json` (14 events) and is a top-level-block event in `dispatch.py`.
+- Tests: `test_act_pipelines.py` (every table names a manifest MCP server, an existing skill or an
+  existing `~/.claude` path), `test_pipeline_evidence_gate.py`, `test_ui_quality_autorun.py`;
+  `test_template_contract.py` expects SubagentStop.
+- Not wired: EGM reviews (they need the Agent tool, which act agents do not have), Impeccable `live`,
+  servers and installers of any package, OAuth connectors.
+
 ## v5.2.0 2026-11-03 Design trio: Impeccable, UI UX Pro Max and Hallmark run inside /invoke design
 
 Owner's brief: add Impeccable, UI UX Pro Max and Hallmark to the design workflow, end to end, so

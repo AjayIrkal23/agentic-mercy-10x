@@ -114,6 +114,18 @@ it comes from the SubagentStart block. The 250-line cap is a body rule: each exe
 OUTPUT CONTRACT (refactor-specialist: its hard constraints) states it; BE/FE implementors
 also get it from the preloaded `*-standards-always-follow` skills.
 
+## Act pipelines (automatic tool calls, 2026-11-03)
+
+Every act agent carries one `## <act> pipeline (automatic, every task)` table: ordered steps
+(`P1..Pn`; the designer's `T1..T7`), each an exact MCP call, `Skill("…")`, `Read ~/.claude/skills/…`
+or vendored script, run by the agent itself on every task. The artifact gets `## Pipeline`: each
+call and its result, or `P<n> skipped: <reason>` (no running app, no files of that kind, a runtime
+missing; nothing is installed to make a step run). Interactive skills are adapted where they sit:
+`grill-with-docs` is answered from code and docs, `finding-duplicate-functions` runs without
+subagents. `hooks/pipeline-evidence-gate.py` (SubagentStop) keeps an act agent working once when its
+run.json artifact lacks `## Pipeline`; `hooks/tests/test_act_pipelines.py` checks every table names
+tools that exist. Change a pipeline in the agent body; the test keeps the shape.
+
 ## Least privilege
 
 Read-only roles (`audit-specialist`, `spec-architect`, `planning-director`,

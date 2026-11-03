@@ -132,7 +132,7 @@ _EVENT_NAME = {
 }
 
 # events whose gates answer with a top-level {"decision":"block","reason":...}
-_TOP_LEVEL_BLOCK_EVENTS = ("stop", "config-change", "teammate-idle")
+_TOP_LEVEL_BLOCK_EVENTS = ("stop", "subagent-stop", "config-change", "teammate-idle")
 # events whose harness schema rejects hookSpecificOutput. PostCompact stdout only
 # reaches the user as a display message — post-compaction state is re-injected
 # from SessionStart(source=="compact") instead (session-lifecycle.py).
