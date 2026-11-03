@@ -61,7 +61,7 @@ const DO = {
   test: 'Write the failing tests that pin the required behaviour (TDD red) and report how to run them.',
   impl: 'Implement the plan test-first; touch only what the task needs; run the tests you touched.',
   refactor: 'Refactor without changing behaviour; the tests stay green before and after.',
-  design: 'Design and implement the UI change against the project design system; verify it renders.',
+  design: 'Design and implement the UI change against the project design system; run the design trio pipeline T1-T7 from your agent file (UI UX Pro Max, Hallmark, Impeccable) and list every call in DESIGN-REPORT.md ## Pipeline; verify it renders.',
   clean: 'Audit the diff of this run for dead code it orphaned (imports, exports, routes, state); remove only what this run introduced.',
   security: 'Security review of everything changed in this run; verdict PASS or BLOCK.',
   review: 'Santa Method review of everything changed in this run (BREAKER, SIMPLIFIER, VERIFIER); verdict APPROVE or CHANGES_REQUESTED.',

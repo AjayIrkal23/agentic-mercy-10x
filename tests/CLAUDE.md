@@ -75,7 +75,7 @@ post-tool-use-failure, post-compact, config-change).
 | `test_deps_sub.py`, `test_detect_fields.py` | `deps._sub` keeps a Python path with spaces as one argv element (`py -3` still splits); `detect.Env` has no pipx field |
 | `test_deps_npm_pkg.py` | a bin-less global npm dep (`npm_pkg`) is probed under `npm root -g`; a sandbox install gets `--prefix $HOME/.npm-global` |
 | `test_settings_tier_first.py` | a fresh install detects the plan tier before the first settings render |
-| `test_vendor_marker_stable.py` | re-vendoring an unchanged sha keeps `.vendored.json` `vendored_at` |
+| `test_vendor_marker_stable.py` | re-vendoring an unchanged sha keeps `.vendored.json` `vendored_at`; `license_files` copy repo-root licence texts into the skill dir |
 | `test_validate_skills.py`, `test_vendor_sources.py` | skill validation (incl. R13 WARN on inert lowercase intents); vendored skills match `skills-sources.json` + R10 |
 | `test_build_skills_index_plugins.py` | `build_skills_index` leaves out skills of plugins the template disables (`claude-session-driver`); enabled plugins stay indexed (NEW-08) |
 | `test_ci_portability.py`, `test_portability_gate.py` | CI-green regressions; portability grep-gates |

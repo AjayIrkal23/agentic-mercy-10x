@@ -53,6 +53,12 @@ _ALLOW = (
      "rules": ["users-path"], "why": "upstream author's macOS path in a comment of a locked skill"},
     {"path": "skills/higgsfield-websites/references/security.md", "rules": ["assignment"],
      "why": "bad-practice example (hard-coded API_KEY) in a security guide"},
+    {"path": "skills/hallmark/references/brand-truth.md", "rules": ["rfc1918"],
+     "why": "the fetch-safety rule lists the private ranges it refuses (SSRF guard), not an address in use"},
+    {"path": "skills/hallmark/scripts/sloplint.mjs", "rules": ["unicode-200d"],
+     "why": "emoji-as-icon detector: the regex has to match the zero-width joiner inside emoji sequences"},
+    {"path": "skills/ui-ux-pro-max/data/stacks/*.csv", "rules": ["windows-user-path", "users-path"],
+     "why": "UX rule rows quote hard-coded user paths as the anti-pattern to avoid"},
 )
 
 _U_RE = re.compile("[​-‏‪-‮⁠-⁤⁦-⁩﻿]|[\U000e0000-\U000e007f]")

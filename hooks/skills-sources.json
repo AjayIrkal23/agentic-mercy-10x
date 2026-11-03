@@ -2,7 +2,7 @@
   "_meta": {
     "purpose": "Single source of truth for every third-party (vendored-git) skill: repo, pinned ref, subpath, prune list, frontmatter overrides and body patches applied at vendor time.",
     "tool": "python3 ~/.claude/scripts/vendor_skill.py <name>|--all [--check]",
-    "schema": "flat: <skill-name> -> {repo, ref, subpath, prune?, frontmatter_overrides?, prepend_body?, patches?:[{file,find,replace}], notes?}. ref = tag or FULL commit sha. frontmatter_overrides: add/replace keys, null deletes, metadata deep-merged. patches are literal find/replace and must match.",
+    "schema": "flat: <skill-name> -> {repo, ref, subpath, prune?, license_files?, frontmatter_overrides?, prepend_body?, patches?:[{file,find,replace}], notes?}. license_files = repo-root paths copied into the skill dir (licence texts that sit outside subpath). ref = tag or FULL commit sha. frontmatter_overrides: add/replace keys, null deletes, metadata deep-merged. patches are literal find/replace and must match.",
     "provenance": "build_provenance.py reads this file + skills/<name>/.vendored.json; R10 hashes the patched result.",
     "rules": "Never run upstream install scripts that write settings; never start dev servers; the reticle MCP server is registered separately (installer manifest, pinned, RETICLE_TELEMETRY=0)."
   },
@@ -493,5 +493,55 @@
       }
     },
     "notes": "MIT, prose-only (SKILL.md + eval.md, no scripts). agents/openai.yaml is Codex-only (pruned). Always-on alongside caveman: caveman sets length, no-ai-slop bans the words/patterns."
+  },
+  "impeccable": {
+    "repo": "https://github.com/pbakaus/impeccable.git",
+    "ref": "9fadc41729c38fd47d7ae622b501558653f9d2e9",
+    "subpath": "plugin/skills/impeccable",
+    "license_files": ["LICENSE", "NOTICE.md"],
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** this skill lives at `~/.claude/skills/impeccable`. Read `${CLAUDE_SKILL_DIR}` and `<skill-base-dir>` as that directory: the launcher is `\"$HOME/.claude/skills/impeccable/scripts/impeccable\"` (from cmd.exe, `impeccable.cmd` beside it). On first use it downloads its engine into `~/.impeccable`, checked against the vendored `engine-checksums.txt`; when that fails, take the \"Launcher unavailable\" path below. Never run `hooks on`, `pin`, `update` or `doctor --fix` here: they write settings, hooks or skill files outside `~/.claude/hooks/dispatch.py`. `live` and `generate` start a helper server next to the user's own dev server, so run them only when the user names them and their app is already running. Raster, video, 3D and audio come from Higgsfield (`higgsfield-generate`). Where this file and the `frontend-uiux-designer` constitution disagree (OKLCH tokens, the ten bans, no servers, no commits), the constitution wins.\n\n",
+    "frontmatter_overrides": {
+      "description": "Impeccable design toolkit: project design context (PRODUCT.md, DESIGN.md), a craft floor read before every UI edit, 23 sub-commands (shape, critique, audit, polish, typeset, layout, colorize, animate, harden, ...) and a deterministic anti-slop detector.",
+      "when_to_use": "Runs automatically inside the design act (frontend-uiux-designer: context, craft floor, detect, critique, audit). Call it directly when the user names Impeccable or one of its sub-commands (`/impeccable polish`, `critique`, `audit`). Not for backend-only work.",
+      "metadata": {"category": "frontend", "surfaces": ["frontend"], "triggers": {"keywords": [
+        "impeccable", "design critique", "design audit", "polish the ui", "craft floor", "make it bolder",
+        "make it quieter", "typeset", "design detector", "product.md"], "intents": ["design"]}}
+    },
+    "notes": "Apache-2.0 (LICENSE + NOTICE.md copied from the repo root). Skill 4.8.0, engine 0.1.18 (scripts/VERSION): the launcher fetches a SHA-256-pinned binary from the GitHub release into ~/.impeccable, no Node. Not vendored: the plugin's hooks.json (SessionStart + PostToolUse detector hook) and agents/; the detector runs from the design act instead. 2026-11-03 owner request: wired into /invoke design."
+  },
+  "ui-ux-pro-max": {
+    "repo": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git",
+    "ref": "713eef51b04efc98d6fa565323b495f7c9c89fd4",
+    "subpath": ".claude/skills/ui-ux-pro-max",
+    "license_files": ["LICENSE"],
+    "prune": ["scripts/tests"],
+    "patches": [{"file": "SKILL.md", "find": "${CLAUDE_PLUGIN_ROOT}/.claude/skills/ui-ux-pro-max/scripts/search.py", "replace": "$HOME/.claude/skills/ui-ux-pro-max/scripts/search.py"}],
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** this skill lives at `~/.claude/skills/ui-ux-pro-max`; every command below calls `\"$HOME/.claude/skills/ui-ux-pro-max/scripts/search.py\"` (stdlib Python: `python3` on Linux and macOS, `python` or `py -3` on Windows; `$HOME` works in bash and PowerShell). Its palettes come back as hex: convert each colour to an OKLCH token before it reaches code. Leave out `--persist` unless the user asks for a `design-system/` folder, so the project's DESIGN.md stays its one design record. Where this file and the `frontend-uiux-designer` constitution disagree, the constitution wins.\n\n",
+    "frontmatter_overrides": {
+      "description": "UI UX Pro Max design intelligence: searchable local data (styles, product palettes, font pairings, UX guidelines, charts, 22 stacks) and a design-system generator (`search.py --design-system`).",
+      "when_to_use": "Runs automatically inside the design act (frontend-uiux-designer generates the design system and checks UX rules with it). Call it directly to pick a style, palette, font pairing or a stack-specific UI rule, or when the user names UI UX Pro Max. Not for backend work.",
+      "metadata": {"category": "frontend", "surfaces": ["frontend"], "triggers": {"keywords": [
+        "ui ux pro max", "ui-ux-pro-max", "design system generator", "font pairing", "color palette",
+        "ux guidelines", "style direction", "design intelligence"], "intents": ["design"]}}
+    },
+    "notes": "MIT (LICENSE copied from the repo root). Stdlib-only Python, offline CSV data. The repo's sibling ui-styling skill is not vendored (a local ui-styling exists). The upstream SKILL.md assumes a plugin root; the patch points it at ~/.claude/skills. 2026-11-03 owner request: wired into /invoke design."
+  },
+  "hallmark": {
+    "repo": "https://github.com/Nutlope/hallmark.git",
+    "ref": "52328cb3129135499e4e178d4864ee90029dea2b",
+    "subpath": "skills/hallmark",
+    "license_files": ["LICENSE"],
+    "prune": ["agents", "scripts/fixtures", "scripts/refcheck.mjs", "scripts/install.mjs", "scripts/install-hook.mjs",
+              "scripts/lint-hook.mjs", "scripts/capture.test.mjs", "scripts/theme.test.mjs",
+              "scripts/sloplint-render.test.mjs", "scripts/reroll-exhaustion.test.mjs"],
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** this skill lives at `~/.claude/skills/hallmark`; read `<skill-dir>` as that directory (`node ~/.claude/skills/hallmark/scripts/sloplint.mjs …`). Pictures come from Higgsfield (`higgsfield-generate`): never `theme.mjs photos`, the Wikimedia photo library, `imagegen.mjs` or a `TOGETHER_API_KEY` comp; a slot still waiting for a picture says what belongs there. Capture screenshots only from a URL or dev server the user already runs; never start the app, a dev server or a desktop app yourself. The edit-time hook and its installers are not vendored; never install one. `sloplint --render` needs puppeteer-core: without it, run the static tier and say the render tier did not run. Under `/invoke design` the owner has named Hallmark for every run: a new page or surface takes the full Flow, an existing one takes `audit <path>` unless the task is a redesign. Where this file and the `frontend-uiux-designer` constitution disagree, the constitution wins.\n\n",
+    "frontmatter_overrides": {
+      "description": "Hallmark anti-slop design skill: a non-waivable Floor, dealt themes so consecutive builds differ, a token scaffold and sloplint (65 gates) for new pages, plus `audit` and `redesign` verbs.",
+      "when_to_use": "Runs automatically inside the design act (frontend-uiux-designer deals the theme for a new surface and runs sloplint). Call it directly when the user names Hallmark (`/hallmark <prompt>`, `audit <path>`, `redesign <path>`). Not for small edits to an existing design.",
+      "metadata": {"category": "frontend", "surfaces": ["frontend"], "triggers": {"keywords": [
+        "hallmark", "sloplint", "anti slop design", "deal a theme", "looks generated", "design floor"],
+        "intents": ["design"]}}
+    },
+    "notes": "MIT (LICENSE copied from the repo root). Skill 2.0.0; Node stdlib scripts (theme, sloplint, capture, picture); render tier optional (puppeteer-core). Pruned: agents/openai.yaml (Codex-only), test files, fixtures, refcheck (maintainer tool), install.mjs / install-hook.mjs / lint-hook.mjs (they write agent hooks). Images go through Higgsfield instead of the bundled Wikimedia library or Together AI. 2026-11-03 owner request: wired into /invoke design."
   }
 }

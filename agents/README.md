@@ -98,7 +98,9 @@ sit one tier above them.
 Each agent's `skills:` list is preloaded in full at start (no manual `Read` of
 SKILL.md files; canonical names only, aliases collapsed, ≤13). It holds only what every
 spawn needs; stack- and task-specific skills load on demand with `Skill()`, and
-`hooks/tests/test_agents_wp5.py` caps the weight per spawn (20k tokens, uiux 30k). Bodies say
+`hooks/tests/test_agents_wp5.py` caps the weight per spawn (20k tokens, uiux 45k since it
+preloads the design trio `impeccable`, `ui-ux-pro-max`, `hallmark`, which its pipeline T1-T7 runs
+on every task, 2026-11-03). Bodies say
 "Preloaded skills (frontmatter `skills:`); use `Skill(...)` for anything else."
 Path-bound FE/BE standards also surface natively when matching files are read.
 A `paths:`-scoped skill in `skills:` is silently NOT preloaded (Claude Code lists it only

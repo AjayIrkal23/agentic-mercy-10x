@@ -1,5 +1,43 @@
 # Changelog
 
+## v5.2.0 2026-11-03 Design trio: Impeccable, UI UX Pro Max and Hallmark run inside /invoke design
+
+Owner's brief: add Impeccable, UI UX Pro Max and Hallmark to the design workflow, end to end, so
+that `/invoke design` (and `/invoke-design`) calls every tool, skill and command they need on its
+own, one after another, with nothing for the user to run.
+
+- **Vendored at pinned commits** through `hooks/skills-sources.json` + `scripts/vendor_skill.py`, R10
+  baselines in `hooks/skills-provenance.json`:
+  - `impeccable` (`pbakaus/impeccable@9fadc41`, Apache-2.0, skill 4.8.0): design context, the craft
+    floor, 23 sub-commands and the `detect` anti-slop detector. Its launcher fetches the engine (0.1.18)
+    once into `~/.impeccable`, checked against the vendored SHA-256 list; no Node needed. The plugin's
+    own hooks are not vendored.
+  - `ui-ux-pro-max` (`nextlevelbuilder/ui-ux-pro-max-skill@713eef5`, MIT): offline style, palette,
+    font-pairing, UX-rule and stack data plus the `search.py --design-system` generator (stdlib
+    Python). Its plugin-root paths are patched to `$HOME/.claude/skills/ui-ux-pro-max`.
+  - `hallmark` (`Nutlope/hallmark@52328cb`, MIT, skill 2.0.0): the Floor, dealt themes, the token
+    scaffold and `sloplint` (Node stdlib). Pruned: tests, fixtures, the maintainer refcheck, the
+    Codex manifest and the hook installers.
+  - Each SKILL.md starts with a local guard: absolute paths, pictures from Higgsfield only (never
+    Hallmark's Wikimedia library or Together AI comps), no hooks, pins, self-updates or helper
+    servers, hex palettes become OKLCH tokens, and the designer's constitution wins a conflict.
+- **`vendor_skill.py` `license_files`**: repo-root LICENSE / NOTICE files are copied into the skill
+  dir (Apache-2.0 4(a) and 4(d) for Impeccable's NOTICE.md); test in `test_vendor_marker_stable.py`.
+- **`frontend-uiux-designer` runs the trio itself.** The three skills are preloaded (`skills:`,
+  `gen-agent-skill-blocks.py`; preload cap for this agent 30k -> 45k tokens) and a new pipeline
+  table drives them through the operating loop: T1 Impeccable `context`, T2 UUPM `--design-system`
+  with the three dials passed through, T3 Hallmark `theme.mjs deal` (the three dealt themes are the
+  three Phase 3 variations), T4 the Impeccable craft floor before every UI edit, T5 `sloplint`
+  (FAIL = P0), T6 `impeccable detect --json`, T7 Impeccable `critique` + `audit` and UUPM `--domain ux`.
+  Existing surfaces take Hallmark `audit` instead of a deal; a missing runtime is recorded as a
+  skipped step, never installed. `DESIGN-REPORT.md` gains `## Pipeline` with every call and result.
+- **`/invoke`, `/invoke-design` and the `invoke` workflow** name the trio (`invoke_templates.DESIGN_TRIO`,
+  `workflows/src/invoke.js.tpl`); the rosters list them under `design` (router DESIGN category).
+- **Router:** naming a trio skill pushes it (`skill_rules`, boost 6.0); "the hallmark of …" in a
+  backend prompt does not (`unless_surfaces`). Corpus rows D1-D4.
+- `validate_imports.py` allowlist: Hallmark's SSRF range list and emoji-ZWJ regex, UUPM's
+  "hard-coded user path" anti-pattern rows.
+
 ## v5.1.1 2026-11-01 Every machine converges: lightpanda in the installer, Playwright scratchpads, PowerShell reads
 
 - **Lightpanda in the installer**: an eager, POSIX-only manifest MCP server (`which` registers it once the

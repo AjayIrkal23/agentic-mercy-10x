@@ -66,6 +66,8 @@ AGENT_SKILLS: dict[str, list[str]] = {
     ],
     "frontend-uiux-designer": [
         "design-taste-frontend", "frontend-design:frontend-design", "tailwind-design-system",
+        # the design trio runs on every spawn, so it is preloaded, not left to a Skill() call (2026-11-03)
+        "impeccable", "ui-ux-pro-max", "hallmark",
     ],
     "santa-reviewer": ["santa-review", "code-review-and-quality"],
     "security-sentinel": ["owasp-security", "verification-loop"],

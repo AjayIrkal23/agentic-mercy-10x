@@ -62,3 +62,7 @@
 {"id": "E10", "kind": "hard", "repo": "none", "listener": "none", "prompt": "add a created_at field to the user model", "must_not": ["/skills/egm"]}
 {"id": "E11", "kind": "hard", "repo": "none", "listener": "none", "prompt": "what is the elephant goldfish model?", "must_not": ["/skills/egm"]}
 {"id": "E12", "kind": "soft", "repo": "none", "listener": "none", "prompt": "plan the rollout of the new billing service across services", "must_not": ["/skills/egm"]}
+{"id": "D1", "kind": "hard", "repo": "none", "listener": "none", "prompt": "use impeccable to polish the settings page of my react app", "must": ["Skill(\"impeccable\")"]}
+{"id": "D2", "kind": "hard", "repo": "none", "listener": "none", "prompt": "hallmark a landing page for a coffee shop", "must": ["Skill(\"hallmark\")"]}
+{"id": "D3", "kind": "hard", "repo": "none", "listener": "none", "prompt": "run ui ux pro max to pick a palette for the landing page", "must": ["Skill(\"ui-ux-pro-max\")"]}
+{"id": "D4", "kind": "hard", "repo": "none", "listener": "none", "prompt": "the hallmark of this backend service is speed, refactor the queue worker", "must_not": ["Skill(\"hallmark\")"]}

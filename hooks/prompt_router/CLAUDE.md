@@ -89,6 +89,10 @@ telemetry records.
   start (after leading `<system-reminder>` tags), at a line start or right after a closing `>` in the
   first 400 chars. A human sentence that quotes the words mid-line is still routed. Keep
   `lib/turns.py _NOT_HUMAN_PREFIXES` and `mods/mercy/hooks/lib/nothuman.ts` in step.
+- **Design trio by name (2026-11-03).** `skill_rules` push `impeccable`, `ui-ux-pro-max` (`ui ux pro max`,
+  `uupm`) and `hallmark` (`hallmark`, `sloplint`) at boost 6.0 when the prompt names them; the
+  `hallmark` rule carries `unless_surfaces` backend/api/go because "the hallmark of" is plain English
+  (corpus rows D1-D4).
 - **Skill triggering fixes (audit 2026-10-31).** `keyword_ok` judges the tokenized form (`use()` is
   `use`, 3 chars: dropped; `build-trigger-floor.py` agrees). `tokens` is a vague UI word (0.4); a
   claude-infra prompt keeps `is_ui` only when it names the frontend. `front end` / `back end` are

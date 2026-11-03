@@ -1,7 +1,7 @@
 {
   "_meta": {
     "purpose": "R10 provenance + baseline registry for vendored-git skills",
-    "count": 27,
+    "count": 30,
     "source_of_truth": "hooks/skills-sources.json (+ skills/<name>/.vendored.json)",
     "note": "Vendored skills are never hand-edited: change skills-sources.json (frontmatter_overrides/patches) and re-run vendor_skill.py. R10 (validate_skills.py / doctor / CI) re-hashes and FAILS on any local edit."
   },
@@ -135,6 +135,19 @@
     "baselineHash": "895ddf5e4b9800e0652c4be98dd972b7672dd73f1fe756a485f7b8f37de023e6",
     "capturedAt": "2026-09-28"
   },
+  "hallmark": {
+    "family": "vendored-git",
+    "source": "https://github.com/Nutlope/hallmark.git",
+    "sourceType": "vendored-git",
+    "subpath": "skills/hallmark",
+    "pinnedRef": "52328cb3129135499e4e178d4864ee90029dea2b",
+    "ref": "52328cb3129135499e4e178d4864ee90029dea2b",
+    "sha": "52328cb3129135499e4e178d4864ee90029dea2b",
+    "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py hallmark",
+    "hashBasis": "content-hash",
+    "baselineHash": "cd43efb1c85176c87f42f37895bd2a6bd829683bb437c6741699cc78686d835a",
+    "capturedAt": "2026-11-03"
+  },
   "higgsfield-brandkit": {
     "family": "vendored-git",
     "source": "https://github.com/higgsfield-ai/skills.git",
@@ -252,6 +265,19 @@
     "baselineHash": "074448db110ff9010337525e6a85dc9560e0317e47408891fc11ad15d764f525",
     "capturedAt": "2026-09-28"
   },
+  "impeccable": {
+    "family": "vendored-git",
+    "source": "https://github.com/pbakaus/impeccable.git",
+    "sourceType": "vendored-git",
+    "subpath": "plugin/skills/impeccable",
+    "pinnedRef": "9fadc41729c38fd47d7ae622b501558653f9d2e9",
+    "ref": "9fadc41729c38fd47d7ae622b501558653f9d2e9",
+    "sha": "9fadc41729c38fd47d7ae622b501558653f9d2e9",
+    "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py impeccable",
+    "hashBasis": "content-hash",
+    "baselineHash": "1b4d161388b26ea97210c700621e4f6614e0c37d33301cacc8f99f79337d35c6",
+    "capturedAt": "2026-11-03"
+  },
   "improve-ui": {
     "family": "vendored-git",
     "source": "https://github.com/ibelick/ui-skills.git",
@@ -316,6 +342,19 @@
     "hashBasis": "content-hash",
     "baselineHash": "4abc856d14122cc263bf39e1e39f464505b6fd965d7fbb206da28bd57b524471",
     "capturedAt": "2026-09-28"
+  },
+  "ui-ux-pro-max": {
+    "family": "vendored-git",
+    "source": "https://github.com/nextlevelbuilder/ui-ux-pro-max-skill.git",
+    "sourceType": "vendored-git",
+    "subpath": ".claude/skills/ui-ux-pro-max",
+    "pinnedRef": "713eef51b04efc98d6fa565323b495f7c9c89fd4",
+    "ref": "713eef51b04efc98d6fa565323b495f7c9c89fd4",
+    "sha": "713eef51b04efc98d6fa565323b495f7c9c89fd4",
+    "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py ui-ux-pro-max",
+    "hashBasis": "content-hash",
+    "baselineHash": "542d81cfb6f1eae4464ea8752ca4305a182652bbe42c8b01376f1f4d20532b07",
+    "capturedAt": "2026-11-03"
   },
   "verify-cli-run": {
     "family": "vendored-git",

@@ -150,6 +150,8 @@ def vendor(name: str, entry: dict, ref: str | None = None) -> str:
         _remove(staged / rel)
     for gp in list(staged.rglob(".git*")):  # .gitignore/.gitattributes etc.
         _remove(gp)
+    for rel in entry.get("license_files", []) or []:  # repo-root LICENSE/NOTICE sit outside subpath
+        shutil.copy2(src_root / rel, staged / Path(rel).name)
     apply_patches(staged, entry.get("patches"))
     apply_overrides(staged / "SKILL.md", entry.get("frontmatter_overrides") or {},
                     entry.get("prepend_body") or "")

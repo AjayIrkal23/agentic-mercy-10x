@@ -156,6 +156,9 @@
       "architect-system-design": 0.8
     },
     "skill_rules": [
+      {"skill": "impeccable", "regex": "\\bimpeccable\\b", "boost": 6.0},
+      {"skill": "ui-ux-pro-max", "regex": "\\bui[- ]?ux[- ]?pro[- ]?max\\b|\\buupm\\b", "boost": 6.0},
+      {"skill": "hallmark", "regex": "\\bhallmark\\b|\\bsloplint\\b", "unless_surfaces": ["backend", "api", "go"], "boost": 6.0},
       {"skill": "source-driven-development", "regex": "\\b(official (docs|documentation)|check the (docs|documentation) (first|before)|per the (docs|documentation)|cite (the )?(docs|sources?)|outdated (api|pattern)s?)\\b", "boost": 6.0},
       {"skill": "nateherk-design:scroll-craft", "regex": "scroll[- ]?(animation|driven|telling|linked|scrubb\\w*)|scrollytelling|parallax|pinned section|apple[- ]style|landing page|hero section|make it an experience", "boost": 2.5},
       {"skill": "modern-web-guidance", "regex": "\\b(css|html|dialog|modal|popover|tooltip|anchor position\\w*|container quer\\w*|view transitions?|scroll[- ](driven|timeline)|backdrop[- ]filter|glassmorphism|content[- ]visibility|fetch ?priority|core web vitals|cwv|lcp|inp|baseline|browser support|polyfill)\\b", "boost": 2.0},

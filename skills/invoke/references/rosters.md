@@ -137,6 +137,9 @@ Read ONLY when the Agent tool is unavailable. Invoke each act's skills via the S
 - `threejs-r3f`
 - `img2threejs`
 - `modern-web-guidance`
+- `impeccable`
+- `ui-ux-pro-max`
+- `hallmark`
 
 ## `clean` — deadcode-reaper → `REAP-REPORT.md`
 

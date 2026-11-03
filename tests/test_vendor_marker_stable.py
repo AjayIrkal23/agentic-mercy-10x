@@ -97,6 +97,17 @@ def test_a_moved_tag_raises_and_leaves_the_tree(tmp_path, monkeypatch):
     assert json.loads((skills / "x" / vs.MARKER).read_text(encoding="utf-8"))["sha"] == SHA
 
 
+def test_license_files_come_from_the_repo_root(tmp_path, monkeypatch):
+    """An upstream LICENSE / NOTICE outside the subpath ships inside the vendored skill (Apache-2.0 4(a), 4(d))."""
+    skills = _box(tmp_path, monkeypatch)
+    sub = tmp_path / "src" / "pkg"
+    sub.mkdir()
+    (sub / "SKILL.md").write_text("---\nname: x\n---\nbody\n", encoding="utf-8")
+    (tmp_path / "src" / "NOTICE.md").write_text("notice\n", encoding="utf-8")
+    vs.vendor("x", {"repo": "r", "ref": SHA, "subpath": "pkg", "license_files": ["NOTICE.md"]})
+    assert (skills / "x" / "NOTICE.md").read_text(encoding="utf-8") == "notice\n"
+
+
 def test_same_tag_same_sha_is_unchanged(tmp_path, monkeypatch):
     skills = _box(tmp_path, monkeypatch)
     (skills / "x").mkdir()

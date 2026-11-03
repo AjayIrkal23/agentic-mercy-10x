@@ -2,10 +2,10 @@
   "_meta": {
     "purpose": "Ranked-routing catalog: every local skill (metadata-first, aliases resolved) plus installed plugin skills as plugin:skill.",
     "generator": "build_skills_index.py",
-    "skill_count": 132,
+    "skill_count": 135,
     "plugin_count": 0,
     "alias_count": 83,
-    "checksum": "bf4d00b7938ac69999d36f0cb514915269af87bd6ea91f51293d32e7f07b81e6",
+    "checksum": "1395c162c99691e6d44959149b8224c77fe2a470a7654c3395a1d3adbd3e81a1",
     "plugin_sidecar": "state/skills-index.plugins.json (gitignored, per machine)"
   },
   "aliases": {
@@ -2378,6 +2378,32 @@
       ],
       "when_to_use": "Use when the user wants a plan grilled against existing docs and the domain model before implementation."
     },
+    "hallmark": {
+      "name": "hallmark",
+      "description": "Hallmark anti-slop design skill: a non-waivable Floor, dealt themes so consecutive builds differ, a token scaffold and sloplint (65 gates) for new pages, plus `audit` and `redesign` verbs.",
+      "keywords": [
+        "anti slop design",
+        "deal a theme",
+        "design floor",
+        "hallmark",
+        "looks generated",
+        "sloplint"
+      ],
+      "surfaces": [
+        "frontend"
+      ],
+      "intents": [
+        "DESIGN"
+      ],
+      "path_rules": [],
+      "paths": [],
+      "weight": 1.0,
+      "source": "metadata",
+      "category": "frontend",
+      "when_to_use": "Runs automatically inside the design act (frontend-uiux-designer deals the theme for a new surface and runs sloplint). Call it directly when the user names Hallmark (`/hallmark <prompt>`, `audit <path>`, `redesign <path>`). Not for small edits to an existing design.",
+      "locked": true,
+      "provenance": "vendored-git"
+    },
     "higgsfield-brandkit": {
       "name": "higgsfield-brandkit",
       "description": "Complete visual brand systems through the Higgsfield CLI and local tooling: palettes, SVG logo marks, typography, mockups, packaging, signage and editable PPTX/PDF brandbooks.",
@@ -2689,6 +2715,36 @@
       "source": "metadata",
       "category": "frontend",
       "when_to_use": "Only when asked to rebuild a reference image as a procedural code-built Three.js model (image to 3D in code, sculpt spec, 'rebuild this object in three.js'). Not a GLB asset — that is Higgsfield generate_3d; consuming a GLB in React is threejs-r3f.",
+      "locked": true,
+      "provenance": "vendored-git"
+    },
+    "impeccable": {
+      "name": "impeccable",
+      "description": "Impeccable design toolkit: project design context (PRODUCT.md, DESIGN.md), a craft floor read before every UI edit, 23 sub-commands (shape, critique, audit, polish, typeset, layout, colorize, animate, harden, ...) and a deterministic anti-slop detector.",
+      "keywords": [
+        "craft floor",
+        "design audit",
+        "design critique",
+        "design detector",
+        "impeccable",
+        "make it bolder",
+        "make it quieter",
+        "polish the ui",
+        "product.md",
+        "typeset"
+      ],
+      "surfaces": [
+        "frontend"
+      ],
+      "intents": [
+        "DESIGN"
+      ],
+      "path_rules": [],
+      "paths": [],
+      "weight": 1.0,
+      "source": "metadata",
+      "category": "frontend",
+      "when_to_use": "Runs automatically inside the design act (frontend-uiux-designer: context, craft floor, detect, critique, audit). Call it directly when the user names Impeccable or one of its sub-commands (`/impeccable polish`, `critique`, `audit`). Not for backend-only work.",
       "locked": true,
       "provenance": "vendored-git"
     },
@@ -4685,6 +4741,34 @@
       "source": "metadata",
       "category": "frontend",
       "when_to_use": "Use when implementing dark mode, CSS-variable theming, or accessible Radix/shadcn component patterns in a Tailwind v4 project."
+    },
+    "ui-ux-pro-max": {
+      "name": "ui-ux-pro-max",
+      "description": "UI UX Pro Max design intelligence: searchable local data (styles, product palettes, font pairings, UX guidelines, charts, 22 stacks) and a design-system generator (`search.py --design-system`).",
+      "keywords": [
+        "color palette",
+        "design intelligence",
+        "design system generator",
+        "font pairing",
+        "style direction",
+        "ui ux pro max",
+        "ui-ux-pro-max",
+        "ux guidelines"
+      ],
+      "surfaces": [
+        "frontend"
+      ],
+      "intents": [
+        "DESIGN"
+      ],
+      "path_rules": [],
+      "paths": [],
+      "weight": 1.0,
+      "source": "metadata",
+      "category": "frontend",
+      "when_to_use": "Runs automatically inside the design act (frontend-uiux-designer generates the design system and checks UX rules with it). Call it directly to pick a style, palette, font pairing or a stack-specific UI rule, or when the user names UI UX Pro Max. Not for backend work.",
+      "locked": true,
+      "provenance": "vendored-git"
     },
     "update-docs": {
       "name": "update-docs",

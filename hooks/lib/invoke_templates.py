@@ -29,13 +29,19 @@ HIGGS_LOGIN = ("If Higgsfield needs its one-time login (the router says so once 
 
 NEW_RUN = 'RUN="$(git rev-parse --show-toplevel)/.claude/runs/$(date -u +%Y%m%dT%H%M)-$SLUG"'
 
+DESIGN_TRIO = ("The designer runs the vendored design trio itself, in order: UI UX Pro Max design system, "
+               "Hallmark theme deal (new surfaces), Impeccable context and craft floor during the build, then "
+               "Hallmark sloplint, `impeccable detect`, critique and audit before delivery. Each call and its "
+               "result goes in `DESIGN-REPORT.md` `## Pipeline`; never ask the user to run them.")
+
 ACT_NOTES = {
     "impl": ("This form always dispatches `implementation-engineer` (general/infra). For frontend- or "
              "backend-specific work prefer `/invoke impl -- <task>`, which surface-routes to the FE/BE "
              "specialists. A plan artifact in the run folder is the input; without one the implementor "
              "writes a mini-plan first."),
     "design": (f"Every raster/video/3D/audio asset comes from Higgsfield (`higgsfield-generate`). {HIGGS_LOGIN} "
-               "Placeholder boxes, stock URLs and emoji icons are never acceptable."),
+               "Placeholder boxes, stock URLs and emoji icons are never acceptable. "
+               f"{DESIGN_TRIO}"),
     "review": ("Review the target above, or this session's diff when it is empty: the agent reads the ACTUAL "
                "changed files, runs BREAKER + SIMPLIFIER + VERIFIER, returns only CONFIRMED findings "
                "(`file:line` + minimal fix) and a PASS / CHANGES REQUESTED verdict, and never edits code."),
@@ -127,7 +133,7 @@ For each act, in order:
 Act-specific rules:
 
 {impl}
-- **`design`** [{design_model}] — `frontend-uiux-designer`; every raster/video/3D/audio asset comes from Higgsfield (`higgsfield-generate`), never placeholders. {HIGGS_LOGIN}
+- **`design`** [{design_model}] — `frontend-uiux-designer`; every raster/video/3D/audio asset comes from Higgsfield (`higgsfield-generate`), never placeholders. {HIGGS_LOGIN} {DESIGN_TRIO}
 - **`refactor`** — `refactor-specialist` edits the main working tree (no worktree: nothing is committed, so nothing would merge back).
 - **`clean`** edits code — treat REAP edits as real changes; the closers review them.
 - **Checkpoints** (after {checkpoints}): interactive session → stop, show the artifact path + a 5-line summary, ask "continue with <remaining acts>?" and wait for the answer. Non-interactive (`-p`) → continue.

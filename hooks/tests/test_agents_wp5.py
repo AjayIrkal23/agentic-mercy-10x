@@ -127,7 +127,9 @@ def test_agents_write_to_the_dispatched_path_not_only_the_project_root():
 # --- E-07: preload weight per spawn --------------------------------------------------
 
 CAP = 20_000
-CAP_EXCEPTIONS = {"frontend-uiux-designer": 30_000}  # design-taste-frontend alone is ~21.8k
+# design-taste-frontend alone is ~21.8k; the design trio (impeccable, ui-ux-pro-max, hallmark) adds
+# ~11.7k since 2026-11-03: it runs on every design spawn, so it is preloaded on the owner's request.
+CAP_EXCEPTIONS = {"frontend-uiux-designer": 45_000}
 
 
 def _skill_file(name: str) -> Path | None:
@@ -155,6 +157,27 @@ def test_preload_weight_per_spawn_is_capped():
         if tokens > CAP_EXCEPTIONS.get(agent, CAP):
             heavy[agent] = tokens
     assert not heavy, heavy
+
+
+TRIO = ("impeccable", "ui-ux-pro-max", "hallmark")
+
+
+def test_designer_runs_the_design_trio_itself():
+    """2026-11-03: /invoke design runs Impeccable, UI UX Pro Max and Hallmark without the user calling them."""
+    assert all(s in blocks.AGENT_SKILLS["frontend-uiux-designer"] for s in TRIO)
+    body = _agent("frontend-uiux-designer")
+    for step in ("T1", "T2", "T3", "T4", "T5", "T6", "T7"):
+        assert f"| {step} |" in body, step
+    assert "## Pipeline" in body
+    # every script or reference the pipeline names ships in the vendored skill
+    for rel in re.findall(r"\.claude/skills/((?:impeccable|ui-ux-pro-max|hallmark)/[\w./-]+)", body):
+        assert (ROOT / "skills" / rel.rstrip(".")).exists(), rel
+
+
+def test_invoke_design_names_the_trio():
+    for f in ("invoke-design", "invoke"):
+        text = (ROOT / "skills" / f / "SKILL.md").read_text(encoding="utf-8")
+        assert "UI UX Pro Max" in text and "Hallmark" in text and "Impeccable" in text, f
 
 
 def test_doubt_driven_is_never_a_persona_preload():
