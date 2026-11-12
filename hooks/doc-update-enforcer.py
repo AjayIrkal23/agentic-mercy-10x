@@ -184,11 +184,16 @@ def main() -> int:
     ti = payload.get("tool_input") or {}
     fp = ti.get("file_path") or ""
 
-    if not fp or _should_skip(fp):
+    norm = fp.replace("\\", "/")
+    # lib/code_files.SKIP_DIRS lists server_docs/ and frontend_docs/ (they are not CODE),
+    # so the skip check alone would also drop the very doc writes this hook exists to
+    # record, and the commit gate could never pass. A write under a surface doc folder
+    # is always recorded.
+    in_surface_docs = any(seg in norm for seg in (*BE_DOC_SEGMENTS, *FE_DOC_SEGMENTS))
+    if not fp or (_should_skip(fp) and not in_surface_docs):
         print("{}")
         return 0
 
-    norm = fp.replace("\\", "/")
     is_code = _is_code_file(fp)
     is_doc = _is_doc_file(fp)
 
