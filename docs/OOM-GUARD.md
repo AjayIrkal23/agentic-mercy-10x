@@ -191,7 +191,8 @@ A "16 GB" laptop reports about 15.3 GiB (firmware and graphics keep the rest), s
   WARNs and stage 3 says `(not restorable: tmux missing)` instead of `(restored later)`; the kill
   still happens (it saves the machine). `sudo apt-get install -y tmux`.
 - **zram:** when swap is under half of RAM and no zram is active, the end-of-run checklist prints
-  a one-time `systemd-zram-generator` command (`zram-size = min(ram / 2, 8192)`, zstd). The
+  a one-time `systemd-zram-generator` command (`zram-fraction = 0.5`, `max-zram-size = 8192`, zstd:
+  zram-generator 0.3.x on Ubuntu 22.04 ignores `zram-size`, 1.x still accepts the pair). The
   installer never runs it.
 - **No desktop:** `notify-send`, `canberra-gtk-play` and `pw-play` are skipped on a server (no
   toasts there); the OOM guard reports through the journal and the SessionStart notice line.

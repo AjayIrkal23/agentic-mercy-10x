@@ -91,7 +91,7 @@ _WF_RUN_RE = re.compile(r"^(\s*(?:-\s+)?)run:(.*)$")
 _VENDORED_RE = re.compile(r"^<!-- ecc:[^\s@]+@[0-9a-f]{40} -->$", re.M)
 _VENDORED_SKIP = frozenset({"rfc1918", "npx-unpinned", "at-latest", "assignment"})
 _EXCLUDE_PARTS = {".git", "node_modules", "__pycache__", ".cache", ".pytest_cache", "attic", ".claude", ".state",
-                  "synced", ".telemetry"}
+                  "synced", ".telemetry", ".trash"}  # .trash: Claude Code's removed skills / plugins (runtime)
 RESPECT_GITIGNORE = True  # --no-gitignore turns it off (scan every file under a dir argument)
 _BINARY_SUFFIX = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".pdf", ".zip", ".gz", ".tgz", ".woff", ".woff2",
                   ".ttf", ".ico", ".mp4", ".mp3", ".pyc"}

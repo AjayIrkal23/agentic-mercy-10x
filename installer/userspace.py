@@ -93,11 +93,24 @@ def install_node(cfg: dict, *, fetch: Callable = fetch, download: Callable = dow
         return f"WARN({type(exc).__name__}: {str(exc)[:80]})"
 
 
+def _can_write(d: Path) -> bool:
+    """``d`` is writable, or npm could create it (its nearest existing ancestor is writable)."""
+    while not d.exists() and d.parent != d:
+        d = d.parent
+    return os.access(d, os.W_OK)
+
+
 def fix_npm_prefix(run: Callable = plat.run) -> str:
-    """A system node (apt) has a root-owned -g prefix: point npm at ~/.local (user .npmrc)."""
+    """A system node (apt) has a root-owned -g prefix: point npm at ~/.local (user .npmrc).
+    Judged on where `npm -g` writes (`npm root -g` and `<prefix>/bin`), not the prefix itself: a
+    chmod-777 /usr over a root-755 /usr/lib/node_modules passed the old check and every -g install hit EACCES."""
     cp = run(["npm", "config", "get", "prefix"], timeout=30, stdin_devnull=True)
     prefix = (cp.stdout or "").strip()
-    if cp.returncode != 0 or not prefix or os.access(prefix, os.W_OK):
+    if cp.returncode != 0 or not prefix:
+        return ""
+    nm = run(["npm", "root", "-g"], timeout=30, stdin_devnull=True)
+    root = (nm.stdout or "").strip() if nm.returncode == 0 else ""
+    if all(_can_write(Path(d)) for d in (root or Path(prefix) / "lib" / "node_modules", Path(prefix) / "bin")):
         return ""
     run(["npm", "config", "set", "prefix", str(Path.home() / ".local")], timeout=30, stdin_devnull=True)
     return " (npm -g prefix -> ~/.local)"

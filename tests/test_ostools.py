@@ -174,7 +174,10 @@ def _mem(tmp, total_kb, swap_kb, swaps=""):
 def test_zram_line_on_a_small_swap_box(tmp_path):
     mi, sw = _mem(tmp_path, 16281600, 3 * 1048576)
     line = ostools.zram_line(mi, sw, which=_which({"apt-get"}))
-    assert line and "systemd-zram-generator" in line and "zram-size = min(ram / 2, 8192)" in line
+    assert line and "systemd-zram-generator" in line
+    # zram-generator 0.3.2 (Ubuntu 22.04) ignores `zram-size` (4 GiB default); the zram-fraction /
+    # max-zram-size pair works there and is still accepted (deprecated, overrides zram-size) by 1.x.
+    assert "\\nzram-fraction = 0.5\\nmax-zram-size = 8192\\n" in line and "\\nzram-size" not in line
 
 
 def test_zram_line_none_when_swap_is_enough_or_zram_active_or_no_apt(tmp_path):

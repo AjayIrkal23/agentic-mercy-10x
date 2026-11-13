@@ -119,6 +119,16 @@ def test_binary_and_excluded_dirs_are_skipped(tmp_path):
     assert VI.scan([tmp_path]) == []
 
 
+def test_claude_code_trash_of_removed_skills_and_plugins_is_skipped(tmp_path):
+    """Claude Code moves removed skills / plugins to `skills/.trash/` / `plugins/.trash/` (runtime, untracked):
+    the go-live scan flagged BOMs in a trashed docx/xlsx skill's schemas on every machine that has one."""
+    for rel in ("skills/.trash/1793812866996-x/docx/a.xsd", "plugins/.trash/1-y/p/b.md"):
+        p = tmp_path / rel
+        p.parent.mkdir(parents=True)
+        p.write_text("﻿<xsd/>‮\n", encoding="utf-8")
+    assert VI.scan([tmp_path / "skills", tmp_path / "plugins"]) == []
+
+
 def test_personal_path_placeholders_allowed(tmp_path):
     home, users = "/" + "home/", "/" + "Users/"
     text = "\n".join([home + "user/x", home + "username/x", home + "<user>/x", home + ".../x",

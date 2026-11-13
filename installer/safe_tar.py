@@ -43,7 +43,13 @@ def _vet(m: tarfile.TarInfo, rel: Path, strip: int, dest: Path) -> bool:
         return True
     c = copy.copy(m)
     c.name = rel.as_posix()
-    if m.islnk():
+    if m.issym():
+        # CPython gh-107845 (3.10.12 / 3.11.4 backports) joins a relative symlink target to the dest root, not
+        # to the member's dir, and refused npm's `bin/npm -> ../lib/...`. A top-level copy whose target is
+        # already dest-relative gets the same verdict from both filters; the name is vetted by the caller.
+        c.name = rel.name
+        c.linkname = os.path.normpath(os.path.join(str(rel.parent), m.linkname))
+    elif m.islnk():
         c.linkname = Path(*Path(m.linkname).parts[strip:]).as_posix() if Path(m.linkname).parts[strip:] else ""
     try:
         flt(c, str(dest))

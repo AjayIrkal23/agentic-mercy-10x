@@ -139,6 +139,43 @@ def test_claude_installer_failure_falls_back_to_npm(home):
     assert status.startswith("INSTALLED")
 
 
+def _npm(prefix: Path):
+    calls = []
+
+    def run(argv, **kw):
+        calls.append([str(a) for a in argv])
+        out = {"config get prefix": f"{prefix}\n",
+               "root -g": f"{prefix / 'lib' / 'node_modules'}\n"}.get(" ".join(argv[1:]), "")
+        return subprocess.CompletedProcess(argv, 0, out, "")
+    return run, calls
+
+
+@pytest.mark.skipif(os.name != "posix" or os.geteuid() == 0, reason="POSIX modes; root writes anywhere")
+@pytest.mark.parametrize("readonly", ["node_modules", "bin", "lib-with-no-node_modules"])
+def test_npm_prefix_moves_when_npm_g_cannot_write_although_the_prefix_can(home, tmp_path, readonly):
+    """Manashree's PC: /usr was 777 but /usr/lib/node_modules and /usr/bin were root 755 -> every npm -g EACCES."""
+    prefix = tmp_path / "usr"
+    (prefix / "lib" / "node_modules").mkdir(parents=True)
+    (prefix / "bin").mkdir()
+    if readonly == "lib-with-no-node_modules":
+        (prefix / "lib" / "node_modules").rmdir()
+        (prefix / "lib").chmod(0o555)
+    else:
+        (prefix / ("lib/node_modules" if readonly == "node_modules" else "bin")).chmod(0o555)
+    run, calls = _npm(prefix)
+    assert userspace.fix_npm_prefix(run) == " (npm -g prefix -> ~/.local)"
+    assert calls[-1] == ["npm", "config", "set", "prefix", str(home / ".local")]
+
+
+@pytest.mark.skipif(os.name != "posix", reason="POSIX npm prefix layout")
+def test_npm_prefix_kept_when_node_modules_and_bin_are_writable(home, tmp_path):
+    prefix = tmp_path / "usr"
+    (prefix / "lib" / "node_modules").mkdir(parents=True)  # bin missing, its parent writable: fine
+    run, calls = _npm(prefix)
+    assert userspace.fix_npm_prefix(run) == ""
+    assert not [c for c in calls if c[2] == "set"]
+
+
 def test_ensure_userspace_ci_only_plans(home, monkeypatch):
     monkeypatch.setattr(userspace.shutil, "which", lambda n: None)
     monkeypatch.setattr(userspace, "_node_ok", lambda min_major: False)
@@ -153,7 +190,10 @@ def test_ensure_userspace_ci_only_plans(home, monkeypatch):
 def test_ensure_userspace_skips_present_tools(home, monkeypatch):
     monkeypatch.setattr(userspace.shutil, "which", lambda n: f"/usr/bin/{n}")
     monkeypatch.setattr(userspace, "_node_ok", lambda min_major: True)
-    rows = dict(userspace.ensure_userspace(SimpleNamespace(os_name="posix"), MANIFEST, ci=False, dry_run=False))
+    (home / "npm" / "lib" / "node_modules").mkdir(parents=True)
+    run, _ = _npm(home / "npm")  # injected: the host's real npm prefix (a root /usr on 22.04) must not decide
+    rows = dict(userspace.ensure_userspace(SimpleNamespace(os_name="posix"), MANIFEST, ci=False, dry_run=False,
+                                           run=run))
     assert set(rows.values()) == {"PRESENT"}
 
 

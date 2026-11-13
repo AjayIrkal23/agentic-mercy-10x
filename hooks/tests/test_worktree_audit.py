@@ -92,7 +92,10 @@ def test_one_line_names_dirty_stale_and_conflict(wa, repo, tmp_path, monkeypatch
     before = _snapshot(tmp_path, repo)
     line = wa.one_line(str(repo), budget_ms=20000)
     assert "\n" not in line and len(line) <= 200
-    for key in ("worktrees: 4", "1 dirty", "1 stale", "1 predicted conflict", "feat-conflict"):
+    # merge-tree --write-tree is git 2.38+; older git (2.34 on Ubuntu 22.04) gets the note instead
+    conflict = ("1 predicted conflict", "feat-conflict") if wa._git_version() >= (2, 38) else \
+        ("conflict check needs git 2.38+",)
+    for key in ("worktrees: 4", "1 dirty", "1 stale", *conflict):
         assert key in line, (key, line)
     assert _snapshot(tmp_path, repo) == before
 

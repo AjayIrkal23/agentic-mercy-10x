@@ -84,6 +84,23 @@ def _registered_mcps() -> tuple[set, str]:
     return set(), ("claude mcp list" if ok else "")
 
 
+def router_live(root: Path, ups_cmds: str) -> bool:
+    """UserPromptSubmit reaches prompt_router/router.py: registered directly, or as an enabled link of
+    dispatch.py's user-prompt-submit chain (the router became a dispatcher link; settings.json then names
+    only dispatch.py, so a substring check on settings alone was a false MISS everywhere)."""
+    if "prompt_router/router.py" in ups_cmds:
+        return True
+    if "dispatch.py" not in ups_cmds or "user-prompt-submit" not in ups_cmds:
+        return False
+    try:
+        chain = json.loads((root / "hooks" / "dispatch.config.json").read_text(encoding="utf-8"))
+        links = chain["chains"]["user-prompt-submit"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return False
+    return any(isinstance(ln, dict) and ln.get("enabled", True)
+               and "prompt_router/router.py" in " ".join(map(str, ln.get("cmd", []))) for ln in links)
+
+
 def _row(rows, mark, name, detail="", fix=""):
     rows.append({"mark": mark, "name": name, "detail": detail, "fix": fix})
 
@@ -205,9 +222,10 @@ def collect(env, target: Path | None = None) -> tuple[list, int]:
         sj = {}
     def _cmds(ev):
         return " ".join(h.get("command", "") for g in sj.get(ev, []) for h in g.get("hooks", []))
-    _row(rows, OK if "prompt_router/router.py" in _cmds("UserPromptSubmit") else MISS, "router LIVE",
-         "UserPromptSubmit -> prompt_router/router.py",
-         "" if "prompt_router/router.py" in _cmds("UserPromptSubmit") else "python3 installer/render.py  (re-renders settings.json)")
+    live = router_live(root, _cmds("UserPromptSubmit"))
+    _row(rows, OK if live else MISS, "router LIVE",
+         "UserPromptSubmit -> prompt_router/router.py (dispatch link \"router\")",
+         "" if live else "python3 installer/render.py  (re-renders settings.json)")
     n_disp = sum(1 for ev in ("SessionStart", "PreToolUse", "PostToolUse", "Stop",
                               "SubagentStop", "PreCompact", "SessionEnd") if "dispatch.py" in _cmds(ev))
     _row(rows, OK if n_disp >= 7 else MISS, "dispatch chains", f"{n_disp}/7 events -> dispatch.py")

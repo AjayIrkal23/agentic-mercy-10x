@@ -142,7 +142,14 @@ if [ -z "$mh" ]; then
   if [ "$total_mb" -le 0 ]; then mh=12G; else mh="${cap_mb}M"; fi
 fi
 
+# OOMPolicy= on a scope needs systemd >= 253: 249 (Ubuntu 22.04) refuses the whole systemd-run with
+# "Unknown assignment: OOMPolicy=continue", so an older manager gets the scope without it (bin/claude-tmux repeats it)
+oom=(-p OOMPolicy=continue)
+sdv=$(systemctl --version 2>/dev/null) || sdv=
+sdv=${sdv#systemd }; sdv=${sdv%%[!0-9]*}
+[ "${sdv:-0}" -ge 253 ] || oom=()
+
 export CLAUDE_WORKBENCH_SCOPE=1
 # --scope runs the command in this environment, so the exported caps reach the real binary.
 exec systemd-run --user --scope --quiet --collect --unit "claude-$$" \
-  -p OOMPolicy=continue -p ManagedOOMPreference=avoid -p "MemoryHigh=$mh" -- "$@"
+  "${oom[@]}" -p ManagedOOMPreference=avoid -p "MemoryHigh=$mh" -- "$@"

@@ -1,7 +1,7 @@
 # ~/.claude — operating rules (always on)
 
 Always on: this file, the machines file, `rules/0*.md` (~4.3k tokens) and the 9 core
-skill bodies (~24k, chars/4); domain rules load by path (`rules/frontend.md`).
+skill bodies (~16k, chars/4); domain rules load by path (`rules/frontend.md`).
 
 @CLAUDE.skills.md
 The 32 standing directives and what enforces each: `docs/DIRECTIVES.md`.

@@ -5,6 +5,7 @@ from __future__ import annotations
 import functools
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -25,7 +26,27 @@ from test_oomguard_setup import FakeRun  # noqa: E402
 from test_platform_mem import fake_proc  # noqa: E402
 
 MEMWATCH = ROOT / "hooks" / "tools" / "memwatch.py"
-SCOPE_PROPS = ["-p", "OOMPolicy=continue", "-p", "ManagedOOMPreference=avoid", "-p", "MemoryHigh=12G"]
+
+
+def _scope_props(systemctl_version: str) -> list[str]:
+    """bin/claude's scope properties: OOMPolicy= only from systemd 253 (249 refuses the whole systemd-run)."""
+    m = re.match(r"systemd (\d+)", systemctl_version)
+    oom = ["-p", "OOMPolicy=continue"] if m and int(m.group(1)) >= 253 else []
+    return [*oom, "-p", "ManagedOOMPreference=avoid", "-p", "MemoryHigh=12G"]
+
+
+def _systemctl_version() -> str:
+    try:
+        return subprocess.run(["systemctl", "--version"], capture_output=True, text=True, timeout=10).stdout
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def test_scope_props_follow_the_launchers_systemd_253_gate():
+    assert "OOMPolicy=continue" not in _scope_props("systemd 249 (249.11-0ubuntu3.12)\n+PAM +AUDIT")
+    assert _scope_props("systemd 253 (253.5-1)")[:2] == ["-p", "OOMPolicy=continue"]
+    assert "OOMPolicy=continue" not in _scope_props("")
+    assert "oom=()" in (ROOT / "bin" / "claude").read_text(encoding="utf-8")  # the rule this mirrors
 
 
 @functools.lru_cache(maxsize=1)
@@ -94,7 +115,8 @@ def test_doctor_oom_policy_matches_the_manager():
 
 @live
 def test_launcher_scope_properties_are_accepted():
-    p = subprocess.run(["systemd-run", "--user", "--scope", "--quiet", *SCOPE_PROPS, "--", "true"], capture_output=True,
+    props = _scope_props(_systemctl_version())
+    p = subprocess.run(["systemd-run", "--user", "--scope", "--quiet", *props, "--", "true"], capture_output=True,
                        text=True, timeout=20)
     assert p.returncode == 0, p.stderr
 

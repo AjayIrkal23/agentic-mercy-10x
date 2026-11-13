@@ -33,7 +33,7 @@ nothing here is registered in `dispatch.config.json`.
 | `add-db-mcp.py` | add read-only Supabase/MongoDB MCP to a repo's `.mcp.json` from `templates/mcp/` |
 | `mcp_inventory.py` | print the live MCP inventory (user + project scope + plugins) |
 | `grep_gates.py` | portability grep-gates G1–G7 over hooks, installer, scripts and `mods/`; G5 = no bare `read_text()`; G6 = no `/home/<user>/` or `/Users/<user>/` in any git-tracked `*.md` (the repo is public: write `~`); G7 = `validate_imports.py` over `library/` and `agents/`. Wrapped by `tests/test_portability_gate.py` |
-| `validate_imports.py` | import hygiene (grep gate G7): classes U P V W S M (+ E); `--json`; vendored-upstream headers skip the prose-level rules |
+| `validate_imports.py` | import hygiene (grep gate G7): classes U P V W S M (+ E); `--json`; vendored-upstream headers skip the prose-level rules; `.trash` dirs (Claude Code's removed skills / plugins) are excluded like `node_modules` |
 | `vendor_library.py` (+ `catalogue.json`) | vendor the ECC library (`--source --sha --out`; `VENDOR.json`; sanitizer; self-validates) |
 | `build_library_index.py` | `library/INDEX.json` from `library/ecc` (`--check`, `--ecc`) |
 | `secrets_scan.py` | layer 2 of the go-live secrets scan: known values from the env files, never prints a value |

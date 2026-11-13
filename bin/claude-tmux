@@ -32,5 +32,10 @@ if [ -z "$mh" ]; then
   [ "$cap_mb" -lt $(( total_mb / 2 )) ] && cap_mb=$(( total_mb / 2 ))
   if [ "$total_mb" -le 0 ]; then mh=12G; else mh="${cap_mb}M"; fi
 fi
+# OOMPolicy= on a scope needs systemd >= 253 (249 on Ubuntu 22.04 refuses the whole systemd-run): bin/claude's rule
+oom=(-p OOMPolicy=continue)
+sdv=$(systemctl --version 2>/dev/null) || sdv=
+sdv=${sdv#systemd }; sdv=${sdv%%[!0-9]*}
+[ "${sdv:-0}" -ge 253 ] || oom=()
 exec systemd-run --user --scope --quiet --collect --unit "tmux-claude-$$" \
-  -p OOMPolicy=continue -p ManagedOOMPreference=omit -p "MemoryHigh=$mh" -- tmux "$@"
+  "${oom[@]}" -p ManagedOOMPreference=omit -p "MemoryHigh=$mh" -- tmux "$@"

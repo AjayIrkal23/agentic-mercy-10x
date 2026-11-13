@@ -92,8 +92,10 @@ def path_hint(environ=None) -> str:
     return 'Open a new terminal (or `export PATH="$HOME/.local/bin:$PATH"`) so `claude` is on PATH.'
 
 
+# zram-fraction / max-zram-size, not `zram-size`: zram-generator 0.3.x (Ubuntu 22.04) ignores zram-size and
+# falls back to 4 GiB; 1.x still accepts the pair (deprecated, it overrides zram-size), so one line fits both.
 _ZRAM_CMD = ("sudo apt-get install -y systemd-zram-generator && "
-             "printf '[zram0]\\nzram-size = min(ram / 2, 8192)\\ncompression-algorithm = zstd\\n' "
+             "printf '[zram0]\\nzram-fraction = 0.5\\nmax-zram-size = 8192\\ncompression-algorithm = zstd\\n' "
              "| sudo tee /etc/systemd/zram-generator.conf >/dev/null && "
              "sudo systemctl daemon-reload && sudo systemctl start systemd-zram-setup@zram0")
 

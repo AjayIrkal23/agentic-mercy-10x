@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import os
 import sys
 import tarfile
 from pathlib import Path
@@ -15,6 +16,7 @@ for _p in (str(_ROOT / "installer"), str(_ROOT / "hooks")):
     if _p not in sys.path:
         sys.path.insert(0, _p)
 
+import safe_tar  # noqa: E402
 import userspace  # noqa: E402
 from lib import platform as plat  # noqa: E402
 
@@ -82,6 +84,41 @@ def test_symlinks_that_stay_inside_still_work_and_can_be_traversed(box):
         ("node-v1/lib/shortcut/extra.txt", "file", b"x")]), dest)
     assert (dest / "bin" / "npm").is_symlink() and (dest / "bin" / "npm").read_bytes() == b"js"
     assert (dest / "lib" / "node_modules" / "extra.txt").read_bytes() == b"x" and n >= 3
+
+
+def _gh107845_filter(member, dest_path):
+    """Python 3.10.12 / 3.11.4's early data_filter (CPython gh-107845): a relative symlink target is
+    joined to the destination root, not to the member's own directory."""
+    if member.issym():
+        if os.path.isabs(member.linkname):
+            raise tarfile.AbsoluteLinkError(member)
+        root = os.path.realpath(dest_path)
+        target = os.path.realpath(os.path.join(root, member.linkname))
+        if os.path.commonpath([root, target]) != root:
+            raise tarfile.LinkOutsideDestinationError(member, target)
+    return member
+
+
+@pytest.mark.skipif(not hasattr(tarfile, "data_filter"), reason="this Python has no tarfile.data_filter")
+@pytest.mark.parametrize("flt", ["host", "gh107845"])
+def test_symlink_vet_gives_the_same_verdict_on_buggy_and_fixed_data_filters(box, monkeypatch, flt):
+    """npm's `bin/npm -> ../lib/...` passes and escaping links fail under the host filter AND a gh-107845 one."""
+    if flt == "gh107845":
+        monkeypatch.setattr(tarfile, "data_filter", _gh107845_filter)
+    dest, _ = box
+
+    def sym(name, link):
+        ti = tarfile.TarInfo(name)
+        ti.type, ti.linkname = tarfile.SYMTYPE, link
+        return safe_tar._vet(ti, Path(*Path(name).parts[1:]), 1, dest)
+    assert sym("node-v1/bin/npm", "../lib/node_modules/npm/bin/npm-cli.js")
+    assert sym("node-v1/lib/shortcut", "node_modules")
+    assert not sym("node-v1/bin/evil", "../../etc/passwd")
+    assert not sym("node-v1/bin/deep/evil", "../../../outside/victim")
+    assert not sym("node-v1/bin/abs", "/etc/passwd")
+    n = userspace.extract_prefix(_tar([("node-v1/lib/node_modules/npm/bin/npm-cli.js", "file", b"js"),
+                                       ("node-v1/bin/npm", "sym", "../lib/node_modules/npm/bin/npm-cli.js")]), dest)
+    assert n == 2 and (dest / "bin" / "npm").read_bytes() == b"js"
 
 
 def test_an_inside_hardlink_is_materialised(box):

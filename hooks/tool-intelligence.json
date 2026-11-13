@@ -25,7 +25,7 @@
       "server": ["sequential-thinking"],
       "when": {"intents": ["PLAN", "SPEC", "AUDIT", "DEBUG", "DESIGN", "REFACTOR", "SECURITY"], "regex": "\\b(should (?:i|we)|which (?:approach|option|one|is better)|trade-?offs?|pros and cons|compare|decide|best way to|how should|architect\\w*)\\b"},
       "tools": ["sequentialthinking"],
-      "text": "Non-trivial reasoning → call mcp__sequential-thinking__sequentialthinking now, one thought per step."
+      "text": "Non-trivial reasoning → call mcp__sequential-thinking__sequentialthinking now, one short thought per call (≤60 words, the decision only, never a whole plan)."
     },
     {
       "id": "semgrep",

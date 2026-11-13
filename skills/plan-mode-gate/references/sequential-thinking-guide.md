@@ -34,6 +34,16 @@
 }
 ```
 
+## Thought size (safeguard-safe)
+
+Each `thought` is one short step: at most ~60 words, one claim or decision. Write the
+conclusion, not the deliberation. Never put a whole plan, a "Facts / Rules / Design" block,
+a transcript or quoted earlier reasoning into one thought: a long written-out plan in a
+tool argument trips the model's `reasoning_extraction` safeguard and kills the turn.
+More small thoughts beat one big one. Rule: `~/.claude/rules/03-thinking.md`.
+The full plan is still written in full detail: in the reply or the plan file, after the
+thoughts. Only the `thought` arguments stay short.
+
 ## Minimum Requirements
 
 - **Minimum thoughts:** 5

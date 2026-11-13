@@ -81,6 +81,9 @@ plugins/plugin-catalog-cache.json
 plugins/store/
 # Claude Code rewrites this timestamp at runtime (kept every tree dirty on both machines)
 /plugins/.last_inuse_sweep
+# Claude Code keeps removed skills / plugins here (~1024 entries): runtime, never committed
+/skills/.trash/
+/plugins/.trash/
 skills/node_modules/
 skills/package-lock.json
 ast-grep-mcp/

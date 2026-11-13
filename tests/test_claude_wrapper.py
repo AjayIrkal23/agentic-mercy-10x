@@ -24,6 +24,9 @@ FAKE_CLAUDE = ("#!/usr/bin/env bash\nprintf '%s\\n' \"REAL $*\"\n"
 FAKE_RUN = ("#!/usr/bin/env bash\nprintf 'SYSTEMD-RUN %s\\n' \"$*\"\n"
             "while [ $# -gt 0 ] && [ \"$1\" != -- ]; do shift; done\nshift\nexec \"$@\"\n")
 FAKE_TMUX = "#!/usr/bin/env bash\nprintf 'TMUX %s\\n' \"$*\"\n"
+# `systemctl --version` first line; FAKE_SYSTEMD_VERSION picks the manager (default 255 = Ubuntu 24.04)
+FAKE_SYSTEMCTL = ("#!/usr/bin/env bash\nv=${FAKE_SYSTEMD_VERSION:-255}\n"
+                  "printf 'systemd %s (%s.11-0ubuntu3)\\n+PAM +AUDIT\\n' \"$v\" \"$v\"\n")
 
 
 def _exe(path: Path, body: str) -> Path:
@@ -39,6 +42,7 @@ def box(tmp_path):
     _exe(fb / "claude", FAKE_CLAUDE)
     _exe(fb / "systemd-run", FAKE_RUN)
     _exe(fb / "tmux", FAKE_TMUX)
+    _exe(fb / "systemctl", FAKE_SYSTEMCTL)
     (tmp_path / "run").mkdir()
     (tmp_path / "run" / "bus").write_text("", encoding="utf-8")
     meminfo = _meminfo(tmp_path / "meminfo", 31405920, 20971520)  # a 30 GB box, 20 GiB free
@@ -324,6 +328,21 @@ def test_claude_tmux(box):
     for extra in ({"CLAUDE_WORKBENCH_SCOPE": "1"}, {"XDG_RUNTIME_DIR": str(tmp / "nobus")}):
         out = _run(env, "ls", exe=TMUXW, **extra).stdout
         assert out == "TMUX ls\n"
+
+
+@pytest.mark.parametrize("version,has_policy", [("249", False), ("252", False), ("253", True), ("258", True),
+                                                ("unknown", False)])
+@pytest.mark.parametrize("exe,argv", [(WRAPPER, ("--resume", "x")), (TMUXW, ("new", "-s", "w"))])
+def test_scope_oom_policy_only_where_systemd_supports_it(box, exe, argv, version, has_policy):
+    """Scope units accept OOMPolicy= from systemd 253; Ubuntu 22.04's 249 refuses the whole systemd-run
+    ("Unknown assignment: OOMPolicy=continue", Manashree's PC 2026-11-06), so the session never started.
+    The memory cap and ManagedOOMPreference still apply there."""
+    _, env = box
+    p = _run(env, *argv, exe=exe, FAKE_SYSTEMD_VERSION=version)
+    line = next(ln for ln in p.stdout.splitlines() if ln.startswith("SYSTEMD-RUN"))
+    assert ("-p OOMPolicy=continue" in line) is has_policy, line
+    assert re.search(r"-p ManagedOOMPreference=\w+ -p MemoryHigh=\d+M -- ", line), line
+    assert ("REAL " in p.stdout) if exe == WRAPPER else ("TMUX new -s w" in p.stdout), p.stdout
 
 
 @pytest.mark.parametrize("total_kb,want", [(16026368, "11554M"), (31405920, "26573M"), (6291456, "3072M")])
