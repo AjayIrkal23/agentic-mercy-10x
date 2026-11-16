@@ -93,7 +93,9 @@ updated by hand) and 13 plugins (TokenEconomizer from a local clone), the render
 contains the string `lean-ctx`; a re-render keeps the newest 3 dated `settings.json.bak-*`),
 re-vendored skills, the Impeccable engine of the design trio (fetched once by its vendored launcher,
 SHA-256 checked, into `~/.impeccable`; Hallmark needs the installed Node, UI UX Pro Max plain Python),
-generated `/invoke` skills and agent skill blocks, indexes, skill and mod validators, and a doctor run
+the video skills (ffmpeg-skill and ghost-editor need FFmpeg 6.1+ on PATH; the pinned OpenMontage checkout
+in `~/.local/share/openmontage` needs git, make, npm and Python 3.10+, about 1 GB after its `make setup`,
+and is skipped on Windows outside WSL), generated `/invoke` skills and agent skill blocks, indexes, skill and mod validators, and a doctor run
 with 0 FAIL.
 
 `--ci` plans the network and everything outside the checkout (WOULD-*), but the local repo steps

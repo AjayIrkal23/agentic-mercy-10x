@@ -1,0 +1,6 @@
+{
+ "version": 1,
+ "about": "Your corrections across reels, recorded with scripts/taste.py add (from: user, quoted as 'you said') next to rules the skill learned (from: skill). A prior, not evidence: reel.json always wins.",
+ "rules": [],
+ "reels": []
+}

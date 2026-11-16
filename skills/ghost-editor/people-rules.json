@@ -1,0 +1,9 @@
+{
+ "about": "B-roll people rules, read by broll_vision.py (Gemini checks every B-roll shot, stock image and backdrop), insert_prep.py (refuses a shot that breaks one), own_footage.py find (never offers a clip whose description matches description_words) and broll_qa.py check `people` (fails the render). Empty by default: add the rules your channel needs (see people-rules.example.json). A rule: id (the JSON key the model answers true/false), label (shown when it breaks), ask (what counts, for the model), where (what the model says about it), optional person (an attribute asked of every visible person or body part; a value outside pass breaks the rule, so 'can't tell' breaks it too) and optional description_words (a regex on own-footage descriptions). BROLL_PEOPLE_RULES=<file> points at another file.",
+ "title": "B-roll people rules",
+ "summary": "no people rules set",
+ "fix": "Replace the shot with one that keeps the rules: a place, an object, or your own footage.",
+ "context": "a short talking-head video",
+ "language": "",
+ "rules": []
+}

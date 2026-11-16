@@ -1,0 +1,32 @@
+{
+ "about": "Example B-roll people rules. Copy the rules you want into people-rules.json (same format). Each rule is a plain question for the vision model; keep it concrete, say what a partial view counts as, and say what to answer when the model can't tell.",
+ "title": "B-roll people rules",
+ "summary": "no women in B-roll (not even partly); no religious, political or national symbols",
+ "fix": "Replace the shot: a place, an object, or your own footage.",
+ "context": "a short talking-head video",
+ "language": "English",
+ "rules": [
+  {
+   "id": "women",
+   "label": "WOMAN OR NOT CLEARLY MALE",
+   "ask": "true if ANY frame shows a woman or a girl, or ANY part of one: hands, arms, legs, a back, hair, a silhouette, a reflection, a small figure in the distance or in a crowd, a photo, poster or screen showing one. If a person or body part is visible and you cannot tell, answer true.",
+   "where": "which frames and what (empty string if none).",
+   "person": {"key": "sex", "values": "\"male\", \"female\" or \"unclear\"", "pass": ["male"], "note": "not clearly male"},
+   "description_words": "woman|women|girls?|lady|ladies|female"
+  },
+  {
+   "id": "symbols",
+   "label": "SYMBOL",
+   "ask": "true if any frame shows a religious, political or national symbol: a flag, a banner, a pin or sticker, a religious sign, a party logo or a slogan.",
+   "where": "what (empty string if none).",
+   "description_words": "flag|banner|protest|rally"
+  },
+  {
+   "id": "children",
+   "label": "CHILD",
+   "ask": "true if any frame shows a child or a baby, even from behind or far away.",
+   "where": "which frames and what (empty string if none).",
+   "description_words": "child|children|kids?|baby|babies"
+  }
+ ]
+}

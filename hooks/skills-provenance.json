@@ -1,7 +1,7 @@
 {
   "_meta": {
     "purpose": "R10 provenance + baseline registry for vendored-git skills",
-    "count": 30,
+    "count": 32,
     "source_of_truth": "hooks/skills-sources.json (+ skills/<name>/.vendored.json)",
     "note": "Vendored skills are never hand-edited: change skills-sources.json (frontmatter_overrides/patches) and re-run vendor_skill.py. R10 (validate_skills.py / doctor / CI) re-hashes and FAILS on any local edit."
   },
@@ -83,6 +83,19 @@
     "baselineHash": "92704ff9d5620b2531e03ad4faa915e99c18be9ba14ac9ae85fd5e234c74f931",
     "capturedAt": "2026-10-29"
   },
+  "ffmpeg-skill": {
+    "family": "vendored-git",
+    "source": "https://github.com/kajisho5/ffmpeg-skill.git",
+    "sourceType": "vendored-git",
+    "subpath": ".",
+    "pinnedRef": "f1c97cbffeac71b8fdfca2f790ceb00db3bcce65",
+    "ref": "f1c97cbffeac71b8fdfca2f790ceb00db3bcce65",
+    "sha": "f1c97cbffeac71b8fdfca2f790ceb00db3bcce65",
+    "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py ffmpeg-skill",
+    "hashBasis": "content-hash",
+    "baselineHash": "8d6bf2465835c61faf93d7778fc926b1beff9aede6995262f7e4fce106e7849f",
+    "capturedAt": "2026-11-16"
+  },
   "find-skills": {
     "family": "vendored-git",
     "source": "https://github.com/vercel-labs/skills.git",
@@ -134,6 +147,19 @@
     "hashBasis": "content-hash",
     "baselineHash": "895ddf5e4b9800e0652c4be98dd972b7672dd73f1fe756a485f7b8f37de023e6",
     "capturedAt": "2026-09-28"
+  },
+  "ghost-editor": {
+    "family": "vendored-git",
+    "source": "https://github.com/kurbaitaev/ghost-editor.git",
+    "sourceType": "vendored-git",
+    "subpath": ".",
+    "pinnedRef": "ce172726c36293722b08eb57b5b307d4f06389e8",
+    "ref": "ce172726c36293722b08eb57b5b307d4f06389e8",
+    "sha": "ce172726c36293722b08eb57b5b307d4f06389e8",
+    "updateCommand": "python3 ~/.claude/scripts/vendor_skill.py ghost-editor",
+    "hashBasis": "content-hash",
+    "baselineHash": "4a147845462efd33133b403c8963fb2bc0200ccd3da7abf6c5a7f49bba31e10a",
+    "capturedAt": "2026-11-16"
   },
   "hallmark": {
     "family": "vendored-git",

@@ -1,0 +1,65 @@
+{
+ "about": "Seoul list house look (fixed: one house look per style, small variation per reel). Only the content of each line changes per reel.",
+ "type": {
+  "mood_place": "Playfair Display Italic",
+  "fact": "Inter Tight 800 (CAPS for the contrast word)",
+  "subline_px": 54,
+  "on_footage": "white, tight dark halo + soft shadow",
+  "on_light_clothing": "Inter Tight 800 (the serif is too thin there)"
+ },
+ "pages": {
+  "flash": "white page, black heavy connector word"
+ },
+ "insert_frame": [
+  "shrinking card",
+  "photo card",
+  "outro cards"
+ ],
+ "accent_palette": {
+  "glitch_red": "#FF3B30",
+  "imessage_blue": "#0B84FE"
+ },
+ "vary_per_reel": [
+  "the components (new every reel: components.py)",
+  "the words and sublines",
+  "the footage (the user's own first when they hand it over; stock or AI may be full screen)"
+ ],
+ "tolerance": {
+  "L": 8.0,
+  "wb_b": 5.0,
+  "wb_a": 4.0,
+  "sat": [
+   0.7,
+   1.4
+  ],
+  "contrast": [
+   0.75,
+   1.3
+  ]
+ },
+ "grade_frames": "footage",
+ "grade": {
+  "L": 45.1,
+  "Lstd": 24.37,
+  "C": 10.03,
+  "a": -0.16,
+  "b": 2.06,
+  "wb_a": 0.0,
+  "wb_b": -1.0,
+  "nC": 3.61
+ },
+ "tolerance_note": "measured on footage frames (beach vs city differ by content): saturation and contrast bands are wider than for face-measured styles",
+ "footage_rule": "a format, not a footage source: the user's own footage first when provided, then own_footage.py, then stock/AI full screen; one graded world, no posed stock models, reference pace, 1080p+",
+ "grade_rule": "reference data only, never applied to the speaker's face: the footage stays as shot and the inserts are conformed to it; broll_qa.py as_shot fails a regraded plate",
+ "components_rule": "the house look is the type, captions, accents, insert framing and the speaker's face as shot; phone-UI scenes, paper props, polaroid / card / collage treatments, transitions, hook and outro devices are NEW every reel (scripts/components.py plan / check / record, catalog.json)",
+ "example_components": {
+  "stickers": [
+   "IG comment card (the speaker's avatar)",
+   "iOS notification banner",
+   "blue highlight words",
+   "macOS frosted window"
+  ],
+  "outro": "iMessage bubble with the closing word + tapback; 1-4 frames from the reel float off",
+  "hook": "shrinking card + red glitch word + 1-3 Fluent stickers"
+ }
+}

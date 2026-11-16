@@ -93,6 +93,15 @@ telemetry records.
   `uupm`) and `hallmark` (`hallmark`, `sloplint`) at boost 6.0 when the prompt names them; the
   `hallmark` rule carries `unless_surfaces` backend/api/go because "the hallmark of" is plain English
   (corpus rows D1-D4).
+- **Video skills (v5.4.0).** `ffmpeg-skill` (`ffmpeg`, `ffprobe`), `ghost-editor` and `openmontage` by
+  name at 6.0; video rules at 3.5 (above `min_skill_score` 3.0 on their own) on media words only:
+  video, footage, film, reel, mp4/mov/mkv/webm/m4a, LUFS, A/V sync, lip sync, `take 3` (never "takes 3
+  minutes"), seedance → `ffmpeg-skill`; montage, remotion, title cards, lower thirds, music bed,
+  "assemble / render the film" (never "the edit form") → `openmontage`; talking head, "pick the best
+  takes", retakes, pause trimming, Instagram reels, YouTube Shorts → `ghost-editor`. Bare "clips",
+  "captions", "loudness", "tiktok" and "sound effects" fire nothing (Santa review: they hit non-video
+  code). All three carry `unless_surfaces` frontend/backend/api/go/mobile so "a background video on the
+  hero" stays a UI task (corpus rows V1-V13).
 - **Skill triggering fixes (audit 2026-10-31).** `keyword_ok` judges the tokenized form (`use()` is
   `use`, 3 chars: dropped; `build-trigger-floor.py` agrees). `tokens` is a vague UI word (0.4); a
   claude-infra prompt keeps `is_ui` only when it names the frontend. `front end` / `back end` are

@@ -1,0 +1,38 @@
+{
+ "about": "stan style house look (fixed: one house look per style, small variation per reel). No grade is stored yet: the first reel the user approves sets it (house_look.py measure).",
+ "type": {
+  "captions": "chest: small white lowercase phrases at 68 %, cut on their first word",
+  "hook": "icon rows + black-on-white strip title",
+  "labels": "[Step n] / title / icons under the chin"
+ },
+ "diagram": "one white diagram, drawn-on lines, entered by a zoom-blur",
+ "insert_frame": [
+  "the top band (real screen recordings only)"
+ ],
+ "accent_palette": {
+  "strip": "#000000/#FFFFFF"
+ },
+ "vary_per_reel": [
+  "the components (new every reel: components.py)",
+  "hook title",
+  "diagram content",
+  "panels (recorded fresh)",
+  "steps",
+  "CTA keyword"
+ ],
+ "tolerance": {
+  "L": 8.0,
+  "wb_b": 5.0,
+  "wb_a": 4.0,
+  "sat": [
+   0.85,
+   1.15
+  ],
+  "contrast": [
+   0.85,
+   1.15
+  ]
+ },
+ "grade_rule": "none: the speaker's footage stays as shot; inserts are conformed to it",
+ "components_rule": "the house look is the type, captions, accents, insert framing and the speaker's face as shot; phone-UI scenes, paper props, polaroid / card / collage treatments, transitions, hook and outro devices are NEW every reel (scripts/components.py plan / check / record, catalog.json)"
+}

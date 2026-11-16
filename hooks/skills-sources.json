@@ -2,7 +2,7 @@
   "_meta": {
     "purpose": "Single source of truth for every third-party (vendored-git) skill: repo, pinned ref, subpath, prune list, frontmatter overrides and body patches applied at vendor time.",
     "tool": "python3 ~/.claude/scripts/vendor_skill.py <name>|--all [--check]",
-    "schema": "flat: <skill-name> -> {repo, ref, subpath, prune?, license_files?, frontmatter_overrides?, prepend_body?, patches?:[{file,find,replace}], notes?}. license_files = repo-root paths copied into the skill dir (licence texts that sit outside subpath). ref = tag or FULL commit sha. frontmatter_overrides: add/replace keys, null deletes, metadata deep-merged. patches are literal find/replace and must match.",
+    "schema": "flat: <skill-name> -> {repo, ref, subpath, prune?, license_files?, frontmatter_overrides?, prepend_body?, patches?:[{file,find,replace}], runtime_paths?, notes?}. runtime_paths = fnmatch globs (POSIX rel paths, last match wins, ! re-includes) of files the skill writes into its own dir when it runs: R10 skips them and a re-vendor keeps them. license_files = repo-root paths copied into the skill dir (licence texts that sit outside subpath). ref = tag or FULL commit sha. frontmatter_overrides: add/replace keys, null deletes, metadata deep-merged. patches are literal find/replace and must match.",
     "provenance": "build_provenance.py reads this file + skills/<name>/.vendored.json; R10 hashes the patched result.",
     "rules": "Never run upstream install scripts that write settings; never start dev servers; the reticle MCP server is registered separately (installer manifest, pinned, RETICLE_TELEMETRY=0)."
   },
@@ -543,5 +543,47 @@
         "intents": ["design"]}}
     },
     "notes": "MIT (LICENSE copied from the repo root). Skill 2.0.0; Node stdlib scripts (theme, sloplint, capture, picture); render tier optional (puppeteer-core). Pruned: agents/openai.yaml (Codex-only), test files, fixtures, refcheck (maintainer tool), install.mjs / install-hook.mjs / lint-hook.mjs (they write agent hooks). Images go through Higgsfield instead of the bundled Wikimedia library or Together AI. 2026-11-03 owner request: wired into /invoke design."
+  },
+  "ffmpeg-skill": {
+    "repo": "https://github.com/kajisho5/ffmpeg-skill.git",
+    "ref": "f1c97cbffeac71b8fdfca2f790ceb00db3bcce65",
+    "subpath": ".",
+    "prune": [".claude", ".claude-plugin", ".clusterfuzzlite", ".cursor-plugin", ".github", ".npmignore", ".snyk",
+              "AGENTS.md", "CHANGELOG.md", "CODE_OF_CONDUCT.md", "CONTRIBUTING.md", "PRIVACY.md", "SECURITY.md",
+              "README.md", "assets", "bin", "brand", "demos", "docs", "evals", "examples", "fuzz",
+              "gemini-extension.json", "glama.json", "mcp", "server.json", "site", "skills", "tests"],
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** this skill lives at `~/.claude/skills/ffmpeg-skill`; read `<skill-dir>` as that directory (`python3 ~/.claude/skills/ffmpeg-skill/scripts/<name>.py …`; `python` or `py -3` on Windows). The vendored copy keeps SKILL.md, scripts/, templates/, references/ and package.json; its MCP server, `bin/install.js` and `docs/` are left out, so read the contract with `--help` or `scripts/_contract.py --json` and never register or start an MCP server for it. Write edit lists, concat lists and project files with the Write tool, never with shell redirection. Transcription uses whatever Whisper is installed and never needs an API key. In every video project this is the default tool for probing, cutting, joining, captions, loudness, audio/video sync and delivery checks; the project's own rules (its CLAUDE.md: frame size, logo bug, loudness, delivery) win over this skill's defaults.\n\n",
+    "frontmatter_overrides": {
+      "description": "Local FFmpeg video and audio editing (42 stdlib-Python tools): probe, cut, join, reframe, speed, captions, overlays, silence removal, A/V sync, loudness, HDR to SDR, platform exports and delivery checks.",
+      "when_to_use": "Use whenever a task touches a video or audio file (mp4, mov, mkv, webm, wav, m4a), footage, takes, captions or subtitles, a reel or film edit, LUFS or ffmpeg, even when the user does not say edit. Not for generating new footage (OpenArt / Higgsfield).",
+      "metadata": {"category": "media", "triggers": {"keywords": [
+        "ffmpeg", "ffprobe", "video edit", "cut the video", "join clips", "captions", "subtitles", "loudness",
+        "lufs", "audio sync", "reframe", "transcode", "mp4"]}}
+    },
+    "notes": "MIT, v3.10.1. Stdlib Python 3.10+ and FFmpeg 6.1+; no network, no telemetry, writes only to output paths and temp dirs (audit 2026-11-16). Pruned: maintainer tooling (.claude dev skills + trailofbits marketplace settings, CI, fuzz, evals, tests, site, demos), the npm installer (bin/), the optional stdio MCP server (mcp/, not registered: one surface per capability) and docs/ (15 MB; contract.md is only named in hint text). 2026-11-16 owner request: default video tool in every video project."
+  },
+  "ghost-editor": {
+    "repo": "https://github.com/kurbaitaev/ghost-editor.git",
+    "ref": "ce172726c36293722b08eb57b5b307d4f06389e8",
+    "subpath": ".",
+    "prune": ["docs/media", "tests", "tools"],
+    "patches": [{"file": "SKILL.md", "find": "file moves and commits.", "replace": "file moves and, only when the user asks, commits."}],
+    "runtime_paths": [".env", ".venv-df/*", "library/audition.html", "library/sfx/*.wav", "!library/sfx/cc0-*.wav",
+                      "library/memes/*/clip.webm", "library/memes/*/image.png", "library/memes/*/preview.png",
+                      "library/music/*.mp3", "library/models/*.onnx", "library/emoji/*", "!library/emoji/set.json",
+                      "library/luts/*", "!library/luts/looks.json", "library/me/*", "library/vision-cache/*",
+                      "library/toolchain/*", "library/style-previews/*", "recipes/*/catalog.json", "taste.json",
+                      "people-rules.json", "styles/*.json", "examples/gallery/*.reel.json", "references/styles.md",
+                      "recipes/*/house.json", "library/music/manifest.json", "library/sfx/manifest.json",
+                      "library/memes/*/meta.json"],
+    "prepend_body": "> **Local guard (vendor patch, ~/.claude):** this skill lives at `~/.claude/skills/ghost-editor` (`$S`). It is built for vertical talking-head reels; in other video work use the parts that fit (best-take picking, pause trimming, word-timed captions, SFX levels against the voice, all-frames QA) and leave cutting, sync and delivery to ffmpeg-skill or OpenMontage. Never ask the user for an API key in chat and never write one with `echo >>` (docs/INSTALL.md steps 5-6): `GEMINI_API_KEY` and `ELEVENLABS_API_KEY` come from the environment; when one is missing, skip that step and say which. Pictures and B-roll come from the project's own footage or the generator its CLAUDE.md names (Higgsfield / OpenArt), never stock: skip `broll_fetch.py`, `google_images.py`, `trends.py`, `meme_add.py` and the meme and music parts of `library_restore.py` unless the user asks. Renders are one-shot commands (`hyperframes render` through the pinned `scripts/hf.sh`); never run `hyperframes preview`, a studio or a server, never pass `--open`, and send the user file paths instead. Omit `model` on Agent calls (the model router picks it). Optional `setup_*.sh` venvs go under `~/.venvs`; run one only when a step needs it. On Linux the caption OCR in broll_qa is macOS-only and reports \"OCR unavailable\"; that is expected. Files this skill writes into its own folder (library downloads and manifests, saved styles in `styles/`, `examples/gallery/` and `references/styles.md`, `recipes/*/catalog.json` and `house.json`, `taste.json`, `people-rules.json`, `.env`) are runtime state (`runtime_paths` in hooks/skills-sources.json): R10 ignores them and a re-vendor keeps them. They hold the user's own taste and rules and `~/.claude` is a public repo: never stage or commit them. `save_style.py` always gets `--verify-dir <project>/style-verify`, never its default under `~/.claude/skills`. The project's own rules (its CLAUDE.md) win over this skill's defaults.\n\n",
+    "frontmatter_overrides": {
+      "description": "AI video editor for talking-head reels: best take per sentence, pause trimming, word-timed captions that never cover the face, motion scenes on the spoken word, SFX mixed against the voice, checked B-roll and all-frames QA; 19 named styles and 7 presets.",
+      "when_to_use": "Use when the user hands over a talking-head or phone recording and wants a reel, Short or TikTok cut, the best takes picked, pauses removed, captions or sound effects added, a re-cut, or names a ghost-editor style; in other video work, for take picking, captions and SFX levels. Not for landscape screen recordings.",
+      "metadata": {"category": "media", "triggers": {"keywords": [
+        "ghost editor", "talking head", "reel", "best takes", "remove the pauses", "retakes", "word timed captions",
+        "sound effects", "instagram reel", "tiktok", "shorts"]}}
+    },
+    "notes": "MIT. Node 18+, ffmpeg (libvpx, libass), Python (numpy, opencv-python, pillow, openai-whisper, google-genai, requests); renders through a pinned `npx hyperframes` (scripts/HF_VERSION). Mac-first: Linux caption OCR unavailable. Network only when a step runs (Gemini, ElevenLabs, model and media downloads); no telemetry (audit 2026-11-16). Pruned: docs/media (16 MB of demo GIFs), tests, tools/paper (rebuild source of the vendored Paper Shaders bundle). runtime_paths: what library_restore / face_track / components / taste write into the skill dir, so R10 and the daily vendor step neither flag nor wipe it. 2026-11-16 owner request: video skill in every video project."
   }
 }

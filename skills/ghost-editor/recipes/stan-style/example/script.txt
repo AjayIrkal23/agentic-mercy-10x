@@ -1,0 +1,14 @@
+# stan style worked example: "3 settings that make a notes app faster".
+# The lines reel.json assumes, with their source seconds in a ~66 s seated recording (one take, to camera).
+# For reading and copying: the recording is yours to supply. The gaps between the windows are retakes and pauses;
+# the takes in reel.json cut them. Re-time everything from your own transcript.
+0.00-2.60    Three settings that make your notes app faster.
+2.72-5.30    Phone, laptop, ideas: one inbox, total chaos.
+5.30-9.40    This is what mine looked like a month ago.
+15.60-18.45  Before that, I kept my notes on receipts.
+36.72-41.85  Setting one: quick capture. A new note opens right from the lock screen,
+41.85-44.55  no unlocking, no hunting for the icon.
+44.70-47.98  Setting two: pin your main folders to the top bar.
+51.72-54.18  Setting three: search titles only.
+57.36-61.20  Do all three and the app feels brand new again.
+61.30-64.53  Comment faster and I'll send you the full setup.

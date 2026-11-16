@@ -12,7 +12,10 @@ Pure stdlib + PyYAML. No network, no external state.
 """
 from __future__ import annotations
 
+import fnmatch
+import functools
 import hashlib
+import json
 import os
 import re
 from pathlib import Path
@@ -157,9 +160,38 @@ _HASH_EXCLUDE_DIRS = {".git", ".git-upstream", "__pycache__", ".pytest_cache",
 _HASH_EXCLUDE_SUFFIX = {".pyc", ".pyo"}
 
 
-def dir_content_hash(root: Path, follow_symlinks: bool = True) -> str:
-    """Stable sha256 over (relpath, filehash) of all non-volatile files."""
+@functools.lru_cache(maxsize=4)
+def _runtime_table(sources: str) -> dict[str, tuple[str, ...]]:
+    try:
+        data = json.loads(Path(sources).read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return {k: tuple(v["runtime_paths"]) for k, v in data.items()
+            if not k.startswith("_") and isinstance(v, dict) and v.get("runtime_paths")}
+
+
+def runtime_paths(name: str) -> tuple[str, ...]:
+    """``runtime_paths`` of a vendored skill in hooks/skills-sources.json (2026-11-16): files the skill
+    writes into its own directory when it runs (downloads, caches, the user's own state). R10 skips them
+    and vendor_skill.py carries them across a re-vendor."""
+    return _runtime_table(str(HOOKS_DIR / "skills-sources.json")).get(name, ())
+
+
+def is_runtime(rel: str, patterns) -> bool:
+    """fnmatch globs on a POSIX rel path (``*`` crosses ``/``); the last match wins, ``!`` re-includes."""
+    hit = False
+    for p in patterns:
+        neg = p.startswith("!")
+        if fnmatch.fnmatchcase(rel, p[1:] if neg else p):
+            hit = not neg
+    return hit
+
+
+def dir_content_hash(root: Path, follow_symlinks: bool = True, ignore=None) -> str:
+    """Stable sha256 over (relpath, filehash) of all non-volatile files. ``ignore`` = runtime_paths
+    globs; None looks them up by the directory's name (a vendored skill's runtime files)."""
     root = Path(root)
+    pats = runtime_paths(root.name) if ignore is None else tuple(ignore)
     entries: list[tuple[str, str]] = []
     for dirpath, dirnames, filenames in os.walk(root, followlinks=follow_symlinks):
         dirnames[:] = [d for d in dirnames if d not in _HASH_EXCLUDE_DIRS]
@@ -172,6 +204,8 @@ def dir_content_hash(root: Path, follow_symlinks: bool = True) -> str:
             # which would drift every multi-dir locked skill's hash and false-FAIL
             # R10 on the windows-latest CI leg. as_posix() is byte-identical on Linux.
             rel = fp.relative_to(root).as_posix()
+            if pats and is_runtime(rel, pats):
+                continue
             try:
                 data = fp.read_bytes()
             except OSError:

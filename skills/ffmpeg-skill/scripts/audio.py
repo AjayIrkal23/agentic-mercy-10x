@@ -1,0 +1,741 @@
+#!/usr/bin/env python3
+"""Audio post: denoise, voice clean-up, typed dynamics (compressor, limiter,
+gate), background music with auto-ducking, fades and stereo/mono handling.
+Video is stream-copied; an audio output extension (.wav/.flac/.mp3/.m4a/...)
+drops the picture, so `audio.py talk.mp4 -o talk.wav` is an extraction.
+
+Examples:
+  python3 audio.py interview.mp4 --denoise                      # FFT noise reduction
+  python3 audio.py interview.mp4 --voice                        # highpass + de-esser + compressor + denoise
+  python3 audio.py interview.mp4 --voice light                  # highpass + gentle compression only (light|medium|strong)
+  python3 audio.py talk.mp4 --music bed.mp3 --duck              # music under speech, auto-ducked
+  python3 audio.py talk.mp4 --music bed.mp3 --music-volume -18 --music-fade-out 3   # bed fades, voice does not
+  python3 audio.py clip.mp4 --fade-in 0.5 --fade-out 1 --stereo
+  python3 audio.py talk.mp4 --music bed.mp3 --duck --duck-threshold -30 --duck-release 250   # ducks earlier and recovers faster
+  python3 audio.py band.wav --stereo-widen 0.5 -o wide.wav      # wider stereo image (a real stereo source; mono is refused)
+  python3 audio.py surround.mov --downmix                       # 5.1 -> stereo, ITU-R BS.775 weights, scaled not to clip
+  python3 audio.py clip.mp4 --replace narration.wav             # swap the audio track entirely
+  python3 audio.py interview.mp4 -o interview.wav               # extract the audio (no video in the output)
+  python3 audio.py multi.mkv --audio-stream 1 --voice -o lav.m4a # pick the second audio track, clean it, write M4A
+  python3 audio.py talk.wav --compress --comp-threshold -20 --comp-ratio 4 --limit --limit-ceiling -1 -o talk_dyn.wav
+  python3 audio.py line.wav --tempo 1.25 --length-samples 96000 -o line_fit.wav   # faster, same pitch, exactly 2 s at 48 kHz
+  python3 audio.py room.wav --channel 2 --sample-rate 48000 -o mic3.wav   # the third microphone alone, resampled to 48 kHz
+"""
+import argparse
+import os
+import sys
+from pathlib import Path
+from typing import Any, Dict, List
+
+from _common.probe import SILENT_PEAK_DBFS
+from _common import STATE, add_common, dry_run_input_pending, require_tool, apply_common, audio_codec_for, db_to_linear, default_output, die, emit, ffmpeg_base, info, is_audio_output, measured_level_dbfs, probe, run, run_keeping_subtitles, fmt_secs
+from _common.emit import file_origin, stream_end, warn
+from _common.decision import LOSSLESS_AUDIO_EXT, PAD_SOUND_FROM_ZERO, atempo_chain_with_lead, conform_filter, conform_to_length, late_sound_lead
+
+# --downmix: ITU-R BS.775 fold-down, renormalised by pan's '<' (see main()).
+DOWNMIX_PAN = "pan=stereo|FL<FL+0.707*FC+0.707*BL+0.707*SL|FR<FR+0.707*FC+0.707*BR+0.707*SR"
+VOICE_DENOISE = "afftdn=nf=-25:tn=1"  # the denoise stage of the medium and strong chains
+VOICE_CHAIN = f"highpass=f=80,deesser=i=0.4,{VOICE_DENOISE},acompressor=threshold=-18dB:ratio=3:attack=5:release=80:makeup=2"
+
+# --voice [light|medium|strong] (1.13). "medium" is the chain --voice has always produced, so a
+# bare --voice (and every existing call and MCP request) is byte-identical to before. "light"
+# leaves the noise floor and the sibilance alone -- it only removes rumble and evens the level,
+# which is what a good room recording needs; "strong" is for phone/laptop audio: a harder
+# de-esser, a second compression stage and a soft limiter at -1 dBFS so the peaks stop there
+# instead of at whatever the make-up gain produced.
+VOICE_LIMITER = "alimiter=limit=0.891251:level=disabled:latency=1"  # --voice strong's -1 dBFS ceiling
+VOICE_LEVELS = {
+    "light": "highpass=f=80,acompressor=threshold=-18dB:ratio=2:attack=5:release=80:makeup=1",
+    "medium": VOICE_CHAIN,
+    "strong": VOICE_CHAIN + ",deesser=i=0.6,acompressor=threshold=-24dB:ratio=4:attack=5:release=120:makeup=3," + VOICE_LIMITER,
+}
+
+
+
+def voice_chain(level: str, denoise_strength: "float | None") -> str:
+    """The --voice chain, with --denoise in it when asked (A136). `light` has no denoise of its
+    own, so --voice light --denoise used to drop the denoise without a word: it goes after the
+    highpass, where the other levels have theirs. `medium` and `strong` already denoise at
+    nf=-25; with --denoise that stage runs at --denoise-strength (25 by default, so the chain
+    --voice medium --denoise has always produced is unchanged)."""
+    chain = VOICE_LEVELS[level]
+    if denoise_strength is None:
+        return chain
+    stage = f"afftdn=nf=-{denoise_strength:g}:tn=1"
+    if VOICE_DENOISE in chain:
+        return chain.replace(VOICE_DENOISE, stage)
+    return chain.replace("highpass=f=80,", f"highpass=f=80,{stage},", 1)
+
+
+# The sidechain threshold the music bed has used since 1.4 is the linear 0.05 the filter takes;
+# -26.0206 dBFS is that same number in the unit the flag speaks.
+DUCK_THRESHOLD_DB = -26.0206
+
+# the knee the filters take is a linear 1..8 (default 2.82843): in the dB the flag speaks that is
+# 0..18.06 dB, default 9.03 dB. The flag used to accept 1..8 *dB* (linear 1.12..2.51), so no knee
+# from 2.51 up to ffmpeg's own default could be asked for, and the help gave the default as 2.83 dB
+KNEE_MAX_DB = 18.06  # 20*log10(8) = 18.0618, rounded down so the linear value stays inside 1..8
+
+# --duck (A134): the bed is lowered by exactly --duck-amount dB while the speech is above the
+# threshold. A sidechain gate keyed by the speech passes the bed where there is speech and nothing
+# elsewhere; that part, scaled by -(1 - 10^(-amount/20)), is added back to the bed, which leaves
+# 10^(-amount/20) of it under speech and all of it in the pauses. The sidechain compressor used
+# through 3.8.8 took the amount as ratio = max(2, amount/3), and a compressor's depth is how far
+# the speech rises over its threshold: on the test's speech 0 and 3 ducked the same 9.7 dB, 60 ducked 18.
+# The key gets a DC offset far below any threshold (-120 dBFS) because agate's detector leaves the
+# gate open on a key that is exact zeros from its first sample. The knee is hard (knee=1): agate's
+# default soft knee (2.82843) opened the gate only about 2 dB over the threshold, so a key just
+# over it left the bed at its level (measured: a sine 1.5 dB over -7.5 dBFS ducked 0 dB of 12).
+DUCK_GATE_RATIO = 9000.0  # agate's largest: closed below the threshold
+DUCK_KEY_DC = "dcshift=shift=0.000001"
+
+
+def duck_graph(threshold_db: float, amount_db: float, attack: float, release: float) -> List[str]:
+    """The filter-graph lines that turn `[music]` and the speech key `[sc]` into `[ducked]`."""
+    cut = 1.0 - 10 ** (-amount_db / 20.0)
+    return ["[music]asplit=2[mdry][mwet]",
+            f"[sc]{DUCK_KEY_DC}[key]",
+            f"[mwet][key]sidechaingate=threshold={db_to_linear(threshold_db):.6g}:ratio={DUCK_GATE_RATIO:g}:range=0:knee=1"
+            f":attack={attack:g}:release={release:g}[mspeech]",
+            f"[mspeech]volume={-cut:.6g}[mcut]",
+            "[mdry][mcut]amix=inputs=2:normalize=0[ducked]"]
+
+
+# Typed dynamics: every flag maps to one real option of one ffmpeg filter, validated against the
+# range that filter documents (ffmpeg -h filter=acompressor / alimiter / agate). dB flags are
+# converted to the linear value the filter takes, so no string reaches the graph unchecked.
+DYNAMICS = {
+    "acompressor": {
+        "comp_threshold": ("threshold", "dB", -60.0, 0.0),        # 0.000976563..1 linear
+        "comp_ratio": ("ratio", "x", 1.0, 20.0),
+        "comp_attack": ("attack", "ms", 0.01, 2000.0),
+        "comp_release": ("release", "ms", 0.01, 9000.0),
+        "comp_makeup": ("makeup", "dB", 0.0, 36.0),               # 1..64 linear
+        "comp_knee": ("knee", "dB", 0.0, KNEE_MAX_DB),         # 1..8 linear (A135: was 1..8 dB, linear 1.12..2.51)
+    },
+    "alimiter": {
+        "limit_ceiling": ("limit", "dB", -24.0, 0.0),             # 0.0625..1 linear
+        "limit_attack": ("attack", "ms", 0.1, 80.0),
+        "limit_release": ("release", "ms", 1.0, 8000.0),
+    },
+    "agate": {
+        "gate_threshold": ("threshold", "dB", -60.0, 0.0),        # 0..1 linear
+        "gate_ratio": ("ratio", "x", 1.0, 9000.0),
+        "gate_attack": ("attack", "ms", 0.01, 9000.0),
+        "gate_release": ("release", "ms", 0.01, 9000.0),
+        "gate_range": ("range", "dB", -90.0, 0.0),                # 0..1 linear: how far the gate closes
+        "gate_knee": ("knee", "dB", 0.0, KNEE_MAX_DB),         # 1..8 linear
+    },
+}
+
+
+def dynamics_filter(name: str, args: argparse.Namespace) -> str:
+    """One validated `acompressor=...` / `alimiter=...` / `agate=...` filter string from typed flags."""
+    opts = []
+    for flag, (opt, unit, lo, hi) in DYNAMICS[name].items():
+        value = getattr(args, flag)
+        if value is None:
+            continue
+        if not (lo <= value <= hi):
+            die(f"--{flag.replace('_', '-')} {value:g} is outside {lo:g}..{hi:g} {unit if unit != 'x' else ''}".rstrip()
+                + f" (the range ffmpeg's {name} accepts)")
+        if unit == "dB":
+            # the filters take linear amplitude (agate range: -90 dB -> 0.00003 closed, 0 dB -> 1 open)
+            opts.append(f"{opt}={db_to_linear(value):.6g}")
+        else:
+            opts.append(f"{opt}={value:g}")
+    if name == "alimiter":
+        opts.append("level=disabled")  # keep the level: a limiter must not normalise the whole track upwards
+        # latency compensation: without it the output is the input delayed by the look-ahead
+        # (--limit-attack, 5 ms by default: 240 samples at 48 kHz) and drifts off the picture (#476)
+        opts.append("latency=1")
+    return name + ("=" + ":".join(opts) if opts else "")
+
+
+def preflight_beds(args: argparse.Namespace) -> List[Dict[str, Any]]:
+    """Every problem with every --replace / --music / --effects file, found before anything runs:
+    missing, a directory, empty, unreadable, or readable but with no audio stream (a picture-only
+    clip given as a bed used to reach ffmpeg's `[1:a:0]` and fail there, as kind ffmpeg, one file
+    at a time). Under --dry-run a file that does not exist yet is an earlier stage's output and is
+    left to the plan, as join.py's preflight does; a real file is checked under --dry-run too."""
+    problems: List[Dict[str, Any]] = []
+    beds = [(f, v) for f, v in (("--replace", args.replace), ("--music", args.music),
+                                ("--effects", args.effects)) if v]
+    if not beds:
+        return problems
+    ffprobe = require_tool("ffprobe")
+    for flag, path in beds:
+        if dry_run_input_pending(path):
+            continue
+        reason = None
+        if not os.path.exists(path):
+            reason = "missing"
+        elif os.path.isdir(path):
+            reason = "a directory, not a file"
+        elif os.path.getsize(path) == 0:
+            reason = "empty (0 bytes)"
+        else:
+            proc = run([ffprobe, "-v", "error", "-show_entries", "stream=codec_type", "-of", "csv=p=0", path],
+                       quiet=True, check=False)
+            kinds = {line.strip() for line in (proc.stdout or "").splitlines() if line.strip()}
+            if proc.returncode != 0 or not kinds:
+                reason = "unreadable: " + ((proc.stderr or "").strip().splitlines() or ["no streams"])[-1]
+            elif "audio" not in kinds:
+                reason = "no audio stream"
+        if reason:
+            problems.append({"flag": flag, "path": path, "reason": reason})
+    return problems
+
+
+def find_silent_tracks(args: argparse.Namespace, problems: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Every extra file (and, under --duck, the voice track that keys the ducking) whose whole-file
+    peak is at or below --silence-threshold dBFS: a silent --music / --replace / --effects bed
+    used to be mixed and reported as verified, and a silent voice leaves --duck with nothing to
+    duck on. Files already named in `problems`, and files an earlier stage has not written yet
+    (--dry-run), are not measured; a real file is measured under --dry-run too, like the preflight."""
+    bad = {p["path"] for p in problems}
+    tracks = [(f, v, None) for f, v in (("--replace", args.replace), ("--music", args.music),
+                                         ("--effects", args.effects)) if v and v not in bad]
+    if args.duck and not args.replace:
+        tracks.append(("input", args.input, args.audio_stream))
+    silent: List[Dict[str, Any]] = []
+    if STATE.dry_run:
+        # a writing tool's dry run runs no ffmpeg (docs/contract.md); the real run measures
+        return silent
+    for flag, path, stream in tracks:
+        if dry_run_input_pending(path) or not os.path.isfile(path):
+            continue
+        level = measured_level_dbfs(path, seconds=None, audio_stream=stream)
+        if level is not None and level["peak_dbfs"] <= args.silence_threshold:
+            silent.append({"flag": flag, "path": path, "peak_db": level["peak_dbfs"]})
+    return silent
+
+
+def main_track_channels(args: argparse.Namespace, meta: Dict[str, Any]) -> int:
+    """Channel count of the track audio.py processes: --replace's first audio track, else the
+    input's --audio-stream track; 0 when it is not known (a dry run's pending input)."""
+    if args.replace:
+        if dry_run_input_pending(args.replace) or not os.path.isfile(args.replace):
+            return 0
+        proc = run([require_tool("ffprobe"), "-v", "error", "-select_streams", "a:0", "-show_entries",
+                    "stream=channels", "-of", "csv=p=0", args.replace], quiet=True, check=False)
+        first = (proc.stdout or "").strip().splitlines()[:1]
+        return int(first[0]) if first and first[0].strip().isdigit() else 0
+    streams = meta.get("audio_streams") or []
+    if 0 <= args.audio_stream < len(streams):
+        return streams[args.audio_stream].get("channels") or 0
+    return (meta.get("audio") or {}).get("channels") or 0
+
+
+def main_track_lead(args: argparse.Namespace, meta: Dict[str, Any]) -> float:
+    """late_sound_lead() of the track audio.py processes: --replace's file, or the input's
+    --audio-stream N. probe() describes the first audio stream, so for another track its own start
+    is read (a second track that starts late beside a first that does not lost its lead, and the
+    other way round a pad was written that did nothing; #554 review). 0.0 when it cannot be read."""
+    if args.replace:
+        return 0.0 if dry_run_input_pending(args.replace) else late_sound_lead(probe(args.replace))
+    if not args.audio_stream or meta.get("dry_run"):
+        return late_sound_lead(meta)
+    proc = run([require_tool("ffprobe"), "-v", "error", "-select_streams", f"a:{args.audio_stream}", "-show_entries",
+                "stream=start_time", "-of", "csv=p=0", args.input], quiet=True, check=False)
+    first = (proc.stdout or "").strip().splitlines()[:1]
+    try:
+        lead = float(first[0].strip().strip(",")) - file_origin(meta)
+    except (IndexError, ValueError):
+        return 0.0
+    return lead if lead > 0.0005 else 0.0
+
+
+def main_track_rate(args: argparse.Namespace, meta: Dict[str, Any]) -> int:
+    """Sample rate of the track audio.py processes (as main_track_channels() picks it); 0 when it
+    is not known (a dry run's pending input)."""
+    if args.replace:
+        if dry_run_input_pending(args.replace) or not os.path.isfile(args.replace):
+            return 0
+        proc = run([require_tool("ffprobe"), "-v", "error", "-select_streams", "a:0", "-show_entries",
+                    "stream=sample_rate", "-of", "csv=p=0", args.replace], quiet=True, check=False)
+        first = (proc.stdout or "").strip().splitlines()[:1]
+        return int(first[0]) if first and first[0].strip().isdigit() else 0
+    streams = meta.get("audio_streams") or []
+    track = streams[args.audio_stream] if 0 <= args.audio_stream < len(streams) else (meta.get("audio") or {})
+    try:
+        return int(track.get("sample_rate") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+# --tempo: atempo keeps the pitch; one stage is kept within 0.5..2.0 (above 2 it drops whole
+# blocks of samples), so a factor outside that range is a chain of stages whose product is it (#486)
+TEMPO_RANGE = (0.1, 10.0)
+LOSSLESS_AUDIO = ("pcm_", "flac", "alac", "wavpack", "tta")
+# samples per frame of the lossy encoders audio_codec_for() picks: a decoded length can differ from
+# the samples written by the encoder's own padding, by at most one frame
+CODEC_FRAME_SAMPLES = {"aac": 1024, "mp3": 1152, "opus": 960, "vorbis": 2048, "ac3": 1536, "eac3": 1536}
+
+
+def atempo_steps(factor: float) -> List[float]:
+    """atempo stages, each in 0.5..2.0, whose product is `factor`."""
+    steps: List[float] = []
+    while factor > 2.0:
+        steps.append(2.0)
+        factor /= 2.0
+    while factor < 0.5:
+        steps.append(0.5)
+        factor /= 0.5
+    return steps + [factor]
+
+
+def decoded_samples(path: str) -> "int | None":
+    """Samples per channel of the first audio track, counted by decoding it (astats); None when
+    the count could not be read."""
+    proc = run([require_tool("ffmpeg"), "-hide_banner", "-nostats", "-i", path, "-map", "0:a:0", "-af",
+                "astats=measure_perchannel=none:measure_overall=Number_of_samples", "-f", "null", "-"],
+               quiet=True, check=False)
+    found = [line.rsplit(":", 1)[-1].strip() for line in (proc.stderr or "").splitlines() if "Number of samples:" in line]
+    return int(found[-1]) if proc.returncode == 0 and found and found[-1].isdigit() else None
+
+
+def length_step(path: str, codec: str, expected: int) -> Dict[str, Any]:
+    """The `length_samples` verification step: the written track's decoded length against
+    --length-samples, exact for a lossless codec, within one codec frame for a lossy one."""
+    measured = decoded_samples(path)
+    lossless = codec.startswith(LOSSLESS_AUDIO)
+    tolerance = 0 if lossless else CODEC_FRAME_SAMPLES.get(codec, 2048)
+    step: Dict[str, Any] = {"step": "length_samples", "expected": expected, "measured": measured,
+                            "tolerance_samples": tolerance, "codec": codec}
+    if measured is None:
+        return dict(step, ok=False, reason="not_measured")
+    return dict(step, ok=abs(measured - expected) <= tolerance)
+
+
+SAMPLE_RATE_RANGE = (1000, 768000)
+OPUS_DECODED_RATE = 48000  # what an Opus stream decodes at, whatever rate was encoded (measured: 16 kHz in, 48 kHz out)
+
+
+def property_step(name: str, expected: int, measured: Any) -> Dict[str, Any]:
+    """A verification step comparing one probed property of the written track with the request
+    (#487: `sample_rate`, `channels`); `reason: not_measured` when probe could not read it."""
+    try:
+        value = int(measured)
+    except (TypeError, ValueError):
+        return {"step": name, "expected": expected, "measured": None, "ok": False, "reason": "not_measured"}
+    return {"step": name, "expected": expected, "measured": value, "ok": value == expected}
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("input")
+    ap.add_argument("-o", "--output", help="output file (default: <name>_audio.<ext>)")
+    clean = ap.add_argument_group("clean-up")
+    clean.add_argument("--denoise", action="store_true", help="FFT noise reduction (afftdn, adaptive)")
+    clean.add_argument("--denoise-strength", type=float, default=25.0, help="afftdn noise floor in dB below full scale, 20..60 (default 25; ffmpeg accepts nf -80..-20, and tn=1 then tracks the floor from this starting point)")
+    clean.add_argument("--voice", nargs="?", const="medium", choices=["light", "medium", "strong"], default=None,
+                       help="speech preset (default medium when the flag is given bare): light = highpass 80 Hz + gentle compression; "
+                            "medium = highpass, de-esser, denoise, gentle compression; strong = medium plus a harder de-esser, a second "
+                            "compressor and a soft limiter at -1 dBFS. MCP/JSON callers may still send the 1.12 boolean true, "
+                            "which is the bare flag and so means medium")
+    clean.add_argument("--gain", type=float, help="gain in dB applied to the main track")
+    music = ap.add_argument_group("music")
+    music.add_argument("--music", help="music file to mix underneath")
+    music.add_argument("--music-volume", type=float, default=-14.0, help="music level in dB relative to full scale (default -14)")
+    music.add_argument("--duck", action="store_true", help="auto-duck the music by --duck-amount dB while the main track has speech (a sidechain gate keyed by it)")
+    music.add_argument("--duck-amount", type=float, default=12.0, help="how many dB the music is lowered under speech, 0..60 (default 12)")
+    music.add_argument("--duck-threshold", type=float, default=DUCK_THRESHOLD_DB,
+                       help="sidechain threshold in dBFS: the main track is heard as speech above this (default -26.02, the 0.05 linear used since 1.4)")
+    music.add_argument("--duck-attack", type=float, default=20.0, help="ms the bed takes to duck once speech starts (default 20)")
+    music.add_argument("--duck-release", type=float, default=400.0, help="ms the bed takes to come back up after speech (default 400)")
+    music.add_argument("--effects", help="a third track (sound effects/atmos) mixed in at --effects-volume; never ducked")
+    music.add_argument("--effects-volume", type=float, default=-14.0, help="effects level in dB relative to full scale (default -14)")
+    music.add_argument("--music-loop", action="store_true", help="loop the music if shorter than the video")
+    fades = ap.add_argument_group("fades / layout")
+    fades.add_argument("--fade-in", type=float, default=0.0, help="seconds")
+    fades.add_argument("--fade-out", type=float, default=0.0, help="seconds; fades the whole final mix (voice included)")
+    music.add_argument("--music-fade-out", type=float, default=0.0, help="seconds; fades only the music bed at the end, voice untouched")
+    channels = fades.add_mutually_exclusive_group()
+    channels.add_argument("--stereo", action="store_true", help="force 2-channel output (mono is duplicated to both sides)")
+    channels.add_argument("--mono", action="store_true", help="force 1-channel output")
+    fades.add_argument("--stereo-widen", type=float, default=None, metavar="AMOUNT",
+                       help="widen the stereo image, 0..1 (0 = untouched, 1 = maximum); needs a real stereo source: a mono input is "
+                            "refused (duplicating it leaves both channels identical, so there is nothing to widen) and more than two "
+                            "channels are refused unless --downmix folds them to stereo first")
+    fades.add_argument("--channel", type=int, default=None, metavar="N",
+                       help="keep only channel N of the track (0-based, in the track's own order), as a 1-channel output "
+                            "(--stereo duplicates it to both sides); checked on the output by probe")
+    fades.add_argument("--sample-rate", type=int, default=None, metavar="HZ",
+                       help="resample the output to HZ (aresample); checked on the output by probe. Default: the track's own rate")
+    fades.add_argument("--downmix", action="store_true", help="downmix 5.1/7.1 to stereo with the ITU-R BS.775 weights (centre and surrounds -3 dB, LFE dropped), scaled so the fold-down cannot clip")
+    fades.add_argument("--replace", help="replace the audio with this file (trimmed/padded to the video)")
+    timing = ap.add_argument_group("timing (an audio output, or --replace beside a kept picture)")
+    timing.add_argument("--tempo", type=float, default=None, metavar="FACTOR",
+                        help="change the tempo of the main track keeping its pitch (atempo; 2 = twice as fast, half as long), "
+                             f"{TEMPO_RANGE[0]:g}..{TEMPO_RANGE[1]:g}; outside 0.5..2.0 it is a chain of atempo stages. "
+                             "Refused on the input's own sound while its picture is stream-copied (use fit.py --method speed)")
+    timing.add_argument("--length-samples", type=int, default=None, metavar="N",
+                        help="pad with silence or trim the output to exactly N samples per channel at the output rate "
+                             "(an audio output only: beside a picture the sound is conformed to the picture)")
+    dyn = ap.add_argument_group("dynamics (typed; each flag is one option of ffmpeg's acompressor / alimiter / agate)")
+    dyn.add_argument("--compress", action="store_true", help="compressor (acompressor); order: gate -> compressor -> limiter")
+    dyn.add_argument("--comp-threshold", type=float, help="dBFS above which gain is reduced, -60..0 (ffmpeg default -18.06, its linear 0.125)")
+    dyn.add_argument("--comp-ratio", type=float, help="ratio 1..20 (default 2)")
+    dyn.add_argument("--comp-attack", type=float, help="ms 0.01..2000 (default 20)")
+    dyn.add_argument("--comp-release", type=float, help="ms 0.01..9000 (default 250)")
+    dyn.add_argument("--comp-makeup", type=float, help="make-up gain dB 0..36 (default 0)")
+    dyn.add_argument("--comp-knee", type=float, help="knee width dB 0..18.06 (ffmpeg's linear 1..8; default 9.03, its 2.82843)")
+    dyn.add_argument("--limit", action="store_true", help="look-ahead limiter (alimiter), level left as is")
+    dyn.add_argument("--limit-ceiling", type=float, help="ceiling dBFS -24..0 (default 0)")
+    dyn.add_argument("--limit-attack", type=float, help="ms 0.1..80 (default 5)")
+    dyn.add_argument("--limit-release", type=float, help="ms 1..8000 (default 50)")
+    dyn.add_argument("--gate", action="store_true", help="noise gate (agate)")
+    dyn.add_argument("--gate-threshold", type=float, help="dBFS below which the gate closes, -60..0 (default -18.06, ffmpeg's linear 0.125)")
+    dyn.add_argument("--gate-ratio", type=float, help="ratio 1..9000 (default 2)")
+    dyn.add_argument("--gate-attack", type=float, help="ms 0.01..9000 (default 20)")
+    dyn.add_argument("--gate-release", type=float, help="ms 0.01..9000 (default 250)")
+    dyn.add_argument("--gate-range", type=float, help="attenuation when closed, dB -90..0 (default -24.26, ffmpeg's linear 0.06125)")
+    dyn.add_argument("--gate-knee", type=float, help="knee width dB 0..18.06 (ffmpeg's linear 1..8; default 9.03, its 2.82843)")
+    ap.add_argument("--audio-stream", type=int, default=0, help="which audio stream of the input to process, 0-based in file order (probe lists them under audio_streams)")
+    ap.add_argument("--bitrate", default=None,
+                    help="audio bitrate: AAC's beside a picture (default 192k), and the codec's of a lossy audio output "
+                         "(.m4a/.aac default 256k, .mp3 -q:a 0, .ogg -q:a 6, .opus 128k); refused for .wav/.flac/.aif/.aiff/.caf")
+    ap.add_argument("--on-silent", choices=["warn", "fail"], default="warn",
+                    help="a --music/--replace/--effects file (or, under --duck, the voice) whose peak is at or below "
+                         "--silence-threshold: warn (default: mix it, report it under `silent`) or fail (refuse before ffmpeg runs)")
+    ap.add_argument("--silence-threshold", type=float, default=SILENT_PEAK_DBFS, metavar="DBFS",
+                    help="peak level in dBFS at or below which a track counts as silent (default -50)")
+    add_common(ap)
+    args = ap.parse_args()
+    apply_common(args)
+    for flag_group, switch in (("acompressor", "compress"), ("alimiter", "limit"), ("agate", "gate")):
+        if not getattr(args, switch) and any(getattr(args, f) is not None for f in DYNAMICS[flag_group]):
+            die(f"--{switch} is off but one of its parameters was given; add --{switch}")
+
+    # Same rule as the typed dynamics above, for the ducking knobs: a parameter for a switch that
+    # is off does nothing, and a caller who says --duck-release 250 and gets the default 400 ms has
+    # no way to notice. --duck itself needs a bed to duck.
+    duck_params = [f"--duck-{name}" for name in ("threshold", "attack", "release")
+                   if getattr(args, f"duck_{name}") != ap.get_default(f"duck_{name}")] + \
+                  (["--duck-amount"] if args.duck_amount != ap.get_default("duck_amount") else [])
+    if not args.duck and duck_params:
+        die(f"--duck is off but {duck_params[0]} was given; add --duck")
+    if args.duck and not args.music:
+        die("--duck ducks the music bed under the main track, but no --music was given; add --music FILE")
+    # A141: the same rule for the other parameters of a switch that is off. Each was accepted and
+    # did nothing: --music-fade-out 2 without --music faded nothing, --denoise-strength 40 without
+    # --denoise (also under --voice, whose own denoise stayed at 25) removed nothing more
+    bed_params = [flag for flag, name in (("--music-volume", "music_volume"), ("--music-fade-out", "music_fade_out"))
+                  if getattr(args, name) != ap.get_default(name)] + (["--music-loop"] if args.music_loop else [])
+    if not args.music and bed_params:
+        die(f"--music is off but {bed_params[0]} was given; add --music FILE")
+    if not args.effects and args.effects_volume != ap.get_default("effects_volume"):
+        die("--effects is off but --effects-volume was given; add --effects FILE")
+    if not args.denoise and args.denoise_strength != ap.get_default("denoise_strength"):
+        die("--denoise is off but --denoise-strength was given; add --denoise"
+            + (f" (--voice {args.voice} then denoises at that strength)" if args.voice else ""))
+    # afftdn's nf accepts -80..-20 only; 10..19.99 used to pass here and then fail inside ffmpeg.
+    if args.denoise and not 20 <= args.denoise_strength <= 60:
+        die(f"--denoise-strength must be 20..60 (afftdn noise floor in dB below full scale), got {args.denoise_strength:g}")
+    for flag, value in (("--fade-in", args.fade_in), ("--fade-out", args.fade_out), ("--music-fade-out", args.music_fade_out)):
+        if value < 0:  # a negative length reached afade, which refused it (kind ffmpeg)
+            die(f"{flag} must be 0 or more seconds, got {value:g}")
+
+    for flag, value, lo, hi in (("--duck-amount", args.duck_amount, 0.0, 60.0),
+                                ("--duck-threshold", args.duck_threshold, -60.0, 0.0),
+                                ("--duck-attack", args.duck_attack, 0.01, 2000.0),
+                                ("--duck-release", args.duck_release, 0.01, 9000.0)):
+        if not (lo <= value <= hi):
+            die(f"{flag} {value:g} is outside {lo:g}..{hi:g}")
+    if args.stereo_widen is not None and not (0.0 <= args.stereo_widen <= 1.0):
+        die(f"--stereo-widen must be 0..1 (0 = untouched, 1 = maximum), got {args.stereo_widen:g}")
+
+    problems = preflight_beds(args)
+    silent = find_silent_tracks(args, problems)
+    if args.on_silent == "fail":
+        problems += [{"flag": t["flag"], "path": t["path"], "reason": f"silent (peak {t['peak_db']:g} dBFS)"} for t in silent]
+        silent = []
+    if problems:
+        die(f"{len(problems)} of the extra audio files cannot be mixed: "
+            + "; ".join(f"{p['flag']} {p['path']}: {p['reason']}" for p in problems),
+            kind="input", problems=problems,
+            hint="each --music / --effects / --replace file must be a readable file with an audio stream"
+                 + (f" and a peak above {args.silence_threshold:g} dBFS (--on-silent warn mixes a silent one anyway)"
+                    if args.on_silent == "fail" else ""))
+    notes: List[str] = []
+    if silent:
+        notes.append("silent track(s) mixed anyway: " + "; ".join(
+            f"{t['flag']} {t['path']} peaks at {t['peak_db']:g} dBFS" for t in silent)
+            + f" (at or below --silence-threshold {args.silence_threshold:g}); pass --on-silent fail to refuse instead")
+        warn(notes[-1], "silent_track_mixed", tracks=[t["path"] for t in silent])
+
+    meta = probe(args.input)
+    dur = meta.get("duration") or 0.0
+    has_video = bool(meta.get("video"))
+    if not meta.get("audio") and not args.replace:
+        die("input has no audio stream (use --replace to add one)")
+    output = args.output or default_output(args.input, "audio")
+    audio_out = is_audio_output(output)
+    if args.bitrate is not None and Path(output).suffix.lower() in LOSSLESS_AUDIO_EXT:
+        # A143: the rate used to be dropped without a word for every audio extension
+        die(f"--bitrate has no effect on a lossless {Path(output).suffix.lower()} output; drop it, or write a lossy one (.m4a, .mp3, ...)")
+    streams = meta.get("audio_streams") or []
+    if streams and not (0 <= args.audio_stream < len(streams)) and not STATE.dry_run:
+        die(f"--audio-stream {args.audio_stream}: input has {len(streams)} audio stream(s), 0..{len(streams) - 1}")
+    if args.audio_stream and not streams and not STATE.dry_run:
+        die("--audio-stream needs an input with audio streams")
+    # the channels of the track the graph processes (main_src below): the --audio-stream track,
+    # or --replace's first track. meta["audio"] is the input's first track, so a mono a:0 left a
+    # stereo --audio-stream 1 unfolded by --mono, and a stereo a:0 halved a mono one (A128)
+    in_channels = main_track_channels(args, meta)
+    keep_video = has_video and not audio_out
+    if args.tempo is not None:
+        if not (TEMPO_RANGE[0] <= args.tempo <= TEMPO_RANGE[1]):
+            die(f"--tempo must be {TEMPO_RANGE[0]:g}..{TEMPO_RANGE[1]:g}, got {args.tempo:g}")
+        if keep_video and not args.replace:
+            die("--tempo changes the length of the input's own sound, and its picture is stream-copied, so the two "
+                "would drift apart; write an audio output (-o NAME.wav), or retime both with fit.py --method speed",
+                kind="input")
+    if args.length_samples is not None:
+        if args.length_samples < 1:
+            die(f"--length-samples must be a positive number of samples, got {args.length_samples}")
+        if keep_video:
+            die("--length-samples needs an audio output: beside a stream-copied picture the sound is conformed to "
+                "the picture's length; write -o NAME.wav (or .flac, .m4a, ...)", kind="input")
+    if args.sample_rate is not None and not (SAMPLE_RATE_RANGE[0] <= args.sample_rate <= SAMPLE_RATE_RANGE[1]):
+        die(f"--sample-rate must be {SAMPLE_RATE_RANGE[0]}..{SAMPLE_RATE_RANGE[1]} Hz, got {args.sample_rate}")
+    if args.channel is not None:
+        if args.channel < 0:
+            die(f"--channel is a 0-based channel index, got {args.channel}")
+        if args.downmix:
+            die("--channel and --downmix contradict each other: --channel keeps one channel, --downmix folds them all to stereo")
+        if in_channels and args.channel >= in_channels:
+            die(f"--channel {args.channel}: the track has {in_channels} channel(s), 0..{in_channels - 1}",
+                kind="input", channels=in_channels)
+        in_channels = 1  # what every later stage sees: the one channel kept
+    if args.stereo_widen is not None:
+        if args.mono:
+            die("--stereo-widen and --mono contradict each other: there is no stereo image in a 1-channel output")
+        # Widening scales the side signal (L-R). Duplicating a mono track to two channels leaves
+        # L == R, so the side signal is exactly zero and scaling it changes nothing: --stereo is
+        # not a way in, it is a way to a file that measures mono no matter the amount asked for.
+        if in_channels == 1:
+            die("--stereo-widen needs a real stereo source: mono has no stereo image to widen; keep it mono or "
+                "use --stereo to duplicate it, but widening needs a real stereo source")
+        if in_channels > 2 and not args.downmix:
+            die(f"--stereo-widen needs a stereo track; this input has {in_channels} channels. Add --downmix to fold it "
+                "to stereo first (the widening then happens after the downmix), or leave the channels alone.")
+
+    inputs: List[str] = ["-i", args.input]
+    main_src = f"0:a:{args.audio_stream}"
+    idx = 1
+    if args.replace:
+        inputs += ["-i", args.replace]
+        main_src = f"{idx}:a:0"
+        idx += 1
+
+    fx: List[str] = []
+    if not keep_video:
+        # A sound-only output of a track that starts after its file's origin (late against its
+        # picture): the lead is written as silence, first, so every stage after it works on the
+        # file's clock from 0 (--tempo retimes the lead with the sound). .wav and .flac have no
+        # start time and lost it, .m4a kept it as an edit a decoder does not pad, so the
+        # extraction played that much early (#539). Beside a copied picture the container holds
+        # the start, and nothing is padded.
+        if main_track_lead(args, meta):
+            fx.append(PAD_SOUND_FROM_ZERO)
+    if args.channel is not None:
+        # #487: one channel by index, first, so every later stage works on it alone
+        fx.append(f"pan=mono|c0=c{args.channel}")
+    if args.downmix:
+        # ITU-R BS.775: centre and surrounds at -3 dB (0.707), LFE dropped. pan's '<' scales each
+        # output so its gains sum to 1 over the channels the input has (1/2.414 on 5.1, 1/3.121 on
+        # 7.1), so in-phase channels at full scale cannot clip; '=' summed 2.7x and clipped a loud
+        # 5.1 while the run said verified.
+        fx.append(DOWNMIX_PAN)
+    # A129: a limiter is the ceiling of what is delivered, so with a bed mixed in it runs after the
+    # mix: on the voice alone, the music and effects added on top of it peaked over the ceiling
+    # (--limit-ceiling -6 delivered 0 dBFS, --voice strong's -1 dBFS -0.2)
+    limit_after_mix = bool(args.music or args.effects)
+    post_limit: List[str] = []
+    if args.voice:
+        chain = voice_chain(args.voice, args.denoise_strength if args.denoise else None)
+        if limit_after_mix and chain.endswith("," + VOICE_LIMITER):
+            chain = chain[: -len("," + VOICE_LIMITER)]
+            post_limit.append(VOICE_LIMITER)
+        fx.append(chain)
+    elif args.denoise:
+        fx.append(f"afftdn=nf=-{args.denoise_strength:g}:tn=1")
+    if args.gain:
+        fx.append(f"volume={args.gain:g}dB")
+    if args.gate:
+        fx.append(dynamics_filter("agate", args))
+    if args.compress:
+        fx.append(dynamics_filter("acompressor", args))
+    if args.limit:
+        (post_limit if limit_after_mix else fx).append(dynamics_filter("alimiter", args))
+    if args.mono:
+        # after --downmix the track is the stereo fold-down, whatever the source had
+        in_ch = 2 if args.downmix else (in_channels or 2)
+        if in_ch == 2:
+            fx.append("pan=mono|c0=0.5*c0+0.5*c1")
+        elif in_ch > 2:
+            fx.append("aformat=channel_layouts=mono")  # swresample's standard downmix (centre/LFE weighted)
+        # 1 channel: already mono; the stereo pan used to halve it (-6 dB) because c1 was silence
+    elif args.stereo:
+        fx.append("aformat=channel_layouts=stereo")
+    if args.stereo_widen is not None:
+        # extrastereo widens by scaling the side (L-R) signal: m=1 is the input, m=3 is as wide
+        # as it goes before the centre collapses. It runs after the channel layout is settled, so
+        # a --downmix 5.1 source is widened on the stereo fold-down rather than on six channels.
+        fx.append(f"extrastereo=m={1 + 2 * args.stereo_widen:g}")
+    tempo_steps = atempo_steps(args.tempo) if args.tempo is not None and args.tempo != 1.0 else []
+    if tempo_steps:
+        # led by the samples atempo leaves out, at the rate the track has there (the source's:
+        # --sample-rate resamples after the chain), or it opened 21 ms in (#523)
+        fx.append(atempo_chain_with_lead([f"{f:.10g}" for f in tempo_steps], main_track_rate(args, meta)))
+    # the main track's length in the output: the source's, or the source's / --tempo on an audio
+    # output of the input's own sound (beside a picture, or for --replace, it is the picture's)
+    main_dur = dur / args.tempo if dur and tempo_steps and not (keep_video or args.replace) else dur
+    rate = args.sample_rate or main_track_rate(args, meta)
+    # where the output ends, which is where a fade-out has to end: --length-samples when it is
+    # given (a fade timed on the source's length sat past the trim and was never heard)
+    end_dur = args.length_samples / rate if args.length_samples is not None and rate else main_dur
+    if args.length_samples is not None and rate and rate != OPUS_DECODED_RATE and "libopus" in audio_codec_for(output, args.bitrate):
+        # An Opus stream decodes at 48 kHz whatever rate went in (a 16 kHz track too), so the
+        # decoded track has N * 48000 / rate samples and the count asked for is not the file's
+        die(f"--length-samples counts at {rate} Hz, and an Opus output decodes at {OPUS_DECODED_RATE} Hz: "
+            f"the file would not hold {args.length_samples} samples",
+            kind="input", hint="add --sample-rate 48000 and give the length in 48 kHz samples, or write .wav/.flac")
+
+    graph: List[str] = []
+    graph.append(f"[{main_src}]{','.join(fx) if fx else 'anull'}[main]")
+    last = "main"
+
+    if args.music:
+        if args.music_loop:
+            inputs += ["-stream_loop", "-1", "-i", args.music]
+        else:
+            inputs += ["-i", args.music]
+        m = f"{idx}:a:0"
+        idx += 1
+        mfx = [f"volume={args.music_volume:g}dB", f"atrim=0:{main_dur:.6f}" if main_dur else "anull"]
+        # A142: a bed shorter than the output (and not looped) stops at its own end, so its fade
+        # ends there: timed on the output's end it started after the bed had stopped at full level
+        # ... and at the main track's end when the output runs past it (--length-samples): the
+        # atrim above has cut the bed there. All three are timestamps, which is what afade reads:
+        # a bed whose sound starts late in its file (2 to 5 s) keeps those, so its fade ends at 5,
+        # not at its 3 s length (that fade ran over the bed's first second)
+        ends = [t for t in (end_dur, main_dur) if t]
+        if args.music_fade_out and not args.music_loop and not dry_run_input_pending(args.music):
+            bed_meta = probe(args.music)
+            bed_stop = stream_end(bed_meta, "audio")
+            if bed_stop is not None and bed_stop - file_origin(bed_meta) > 0:
+                ends.append(bed_stop - file_origin(bed_meta))
+        bed_end = min(ends) if ends else None
+        if args.music_fade_out and bed_end:
+            # a fade longer than the bed is cut to it, so the bed still ends silent (a 5 s fade on
+            # a 2 s bed started at 0 and stopped at 60% gain)
+            m_fade = min(args.music_fade_out, bed_end)
+            mfx.append(f"afade=t=out:st={bed_end - m_fade:.3f}:d={m_fade:g}")
+        graph.append(f"[{m}]{','.join(mfx)}[music]")
+        if args.duck:
+            graph.append("[main]asplit=2[mainA][sc]")
+            graph += duck_graph(args.duck_threshold, args.duck_amount, args.duck_attack, args.duck_release)
+            graph.append("[mainA][ducked]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[mix]")
+        else:
+            graph.append("[main][music]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[mix]")
+        last = "mix"
+
+    if args.effects:
+        # A third bed, mixed in at its own level and deliberately never ducked: effects are cut
+        # to the picture, so dipping them under speech would move them off their own frames.
+        inputs += ["-i", args.effects]
+        e = f"{idx}:a:0"
+        idx += 1
+        efx = [f"volume={args.effects_volume:g}dB", f"atrim=0:{main_dur:.6f}" if main_dur else "anull"]
+        graph.append(f"[{e}]{','.join(efx)}[effects]")
+        graph.append(f"[{last}][effects]amix=inputs=2:duration=first:dropout_transition=2:normalize=0[mixfx]")
+        last = "mixfx"
+
+    post: List[str] = list(post_limit)
+    if args.fade_in:
+        post.append(f"afade=t=in:st=0:d={args.fade_in:g}")
+    if args.fade_out and end_dur:
+        fade_out = min(args.fade_out, end_dur)  # cut to the output, so it still ends silent
+        post.append(f"afade=t=out:st={end_dur - fade_out:.3f}:d={fade_out:g}")
+    # The audio track is conformed to the source duration whenever it is known: padded with
+    # silence if the graph came out short, trimmed if long. A mixed track can come out a few
+    # hundredths short (amix's dropout_transition, a looped bed's atrim boundary), and with
+    # -shortest below that used to shorten the *video* to match: 12.00 s in, 11.925 s out, four
+    # frames of a stream-copied picture gone (#164). Padding the audio, not cutting the picture,
+    # is the only correct answer for a tool whose contract says the video is never touched.
+    if args.sample_rate:
+        # #487: resampled after the mix and the fades, ahead of the sample count, which is in this rate
+        post.append(f"aresample={args.sample_rate}")
+    conform_samples = None
+    if args.length_samples is not None:
+        # #486: an exact length asked for, counted at the track's rate (unknown only for a dry
+        # run's pending input, whose real run pins it)
+        conform_samples = args.length_samples
+        post.append(conform_filter(conform_samples, rate))
+    elif main_dur and (args.replace or args.music or keep_video):
+        if rate:
+            conform_samples = round(main_dur * rate)
+            # counted in samples and ended on the timestamp, so sound that starts after the picture
+            # still ends with it (conform_to_length, shared with grid, broll and multicam since #493)
+            post.append(conform_to_length(main_dur, rate))
+        else:
+            # a dry run's pending input: no rate to count in yet; the real run counts samples
+            post.append(f"apad,atrim=0:{main_dur:.6f}")
+    if post:
+        graph.append(f"[{last}]{','.join(post)}[out]")
+        last = "out"
+
+    cmd = ffmpeg_base() + inputs + ["-filter_complex", ";".join(graph), "-map", f"[{last}]"]
+    if keep_video:
+        cmd += ["-map", "0:v:0", "-c:v", "copy"]
+        if Path(output).suffix.lower() in (".mp4", ".mov", ".m4v"):
+            cmd += ["-movflags", "+faststart"]
+    elif has_video:
+        cmd += ["-vn"]  # audio extension: the picture is dropped, not copied into a container that cannot hold it
+    cmd += audio_codec_for(output, args.bitrate)
+    if not keep_video:
+        # audio-only outputs: a looped music bed is infinite, -shortest ends the run with the main track
+        cmd.append("-shortest")
+    if keep_video:
+        dropped_streams = run_keeping_subtitles(cmd, output)
+    else:
+        dropped_streams = bool(has_video and (meta.get("subtitle_streams") or meta.get("data_streams")))
+        run(cmd + [output])
+    r = probe(output, role="output")
+    a = r["audio"]
+    if r.get("video") and audio_out and not STATE.dry_run:
+        die(f"{output} unexpectedly contains a video stream")
+    info(f"wrote {output} ({fmt_secs(r['duration'])}, audio {a['codec']} {a['channels']}ch {a['sample_rate']}Hz"
+         + (", video stream-copied" if has_video and not audio_out else ", video dropped" if has_video else "") + ")")
+    audio_block: Dict[str, Any] = {"voice": args.voice, "stereo_widen": args.stereo_widen,
+                                   "effects": bool(args.effects), "effects_volume": args.effects_volume if args.effects else None}
+    if args.music:
+        audio_block["music_volume"] = args.music_volume
+        audio_block["duck"] = ({"amount_db": args.duck_amount, "threshold_db": round(args.duck_threshold, 4),
+                                "threshold_linear": float(f"{db_to_linear(args.duck_threshold):.6g}"),
+                                "ratio": DUCK_GATE_RATIO,
+                                "attack_ms": args.duck_attack, "release_ms": args.duck_release}
+                               if args.duck else None)
+    verification: List[Dict[str, Any]] = []
+    if args.length_samples is not None and not STATE.dry_run:
+        verification.append(length_step(output, str(a.get("codec") or ""), args.length_samples))
+    if args.sample_rate is not None and not STATE.dry_run:
+        verification.append(property_step("sample_rate", args.sample_rate, a.get("sample_rate")))
+    if args.channel is not None and not STATE.dry_run:
+        verification.append(property_step("channels", 2 if args.stereo else 1, a.get("channels")))
+    audio_block["channel"] = args.channel
+    audio_block["sample_rate"] = args.sample_rate
+    timing_block = {"tempo": args.tempo, "atempo": tempo_steps, "length_samples": args.length_samples,
+                    "sample_rate": rate or None}
+    emit(output, audio=audio_block, timing=timing_block, **({"verification": verification} if verification else {}), video=bool(has_video and not audio_out), audio_stream=args.audio_stream,
+         dynamics=[f for f in (args.gate and "agate", args.compress and "acompressor", args.limit and "alimiter") if f],
+         dropped_non_av_streams=dropped_streams,
+         **({"silent": silent, "notes": notes} if silent else {}))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

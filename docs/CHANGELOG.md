@@ -1,5 +1,53 @@
 # Changelog
 
+## v5.4.0 2026-11-16 Video skills: ffmpeg-skill, ghost-editor and OpenMontage, used on their own in video work
+
+Owner: install kurbaitaev/ghost-editor, kajisho5/ffmpeg-skill and OpenMontageInc/OpenMontage, and make
+them fire during video generation and editing without being named. Each repo had a read-only
+supply-chain review first (no telemetry or malware found; the conflicts with the workbench rules are
+fenced off below).
+
+- **ffmpeg-skill** (kajisho5/ffmpeg-skill@f1c97cb = v3.10.1, MIT) vendored: 42 stdlib-Python FFmpeg tools
+  (probe, cut, join, captions, loudness, A/V sync, delivery checks). Pruned to SKILL.md, scripts/,
+  templates/, references/ and package.json; its optional stdio MCP server is not registered (one surface
+  per capability). Needs FFmpeg 6.1+.
+- **ghost-editor** (kurbaitaev/ghost-editor@ce17272, MIT) vendored: talking-head reel editor (best takes,
+  pause trimming, word-timed captions, SFX against the voice, all-frames QA). The local guard keeps API
+  keys out of chat (its INSTALL.md asks for them and writes them with `echo >>`), sends pictures and
+  B-roll to the project's generator instead of Pexels / Mixkit / YouTube rips, and bans previews,
+  studios and `--open`. Pruned: docs/media (16 MB of GIFs), tests, tools/paper.
+- **`runtime_paths`** (new `skills-sources.json` key): fnmatch globs of the files a vendored skill writes
+  into its own dir when it runs. `skills_lib.dir_content_hash` skips them (R10, doctor, the daily
+  `vendor` step) and `vendor_skill.py` moves them into the new tree on a re-vendor, the user's copy
+  winning; symlinks (a venv's `bin/python`) move as links, and a failed swap (a file held open on
+  Windows) puts the old tree and every carried file back. `tree_digest` skips `__pycache__` / `*.pyc`
+  like R10, so a skill whose scripts ran is not swapped on every install. ghost-editor lists its library
+  downloads and manifests, model cache, face embeddings, saved styles (`styles/`, `examples/gallery/`,
+  `references/styles.md`), house looks and state files; the downloads are gitignored, and its guard
+  says never to commit the state files (the user's own taste and rules, public repo). Without this,
+  its first run would have read as an edited locked skill and the daily vendor step would have wiped
+  the downloads and any saved style.
+- **OpenMontage** (OpenMontageInc/OpenMontage@fecb9a1, AGPL-3.0) stays out of this repo: a pinned shallow
+  checkout at `~/.local/share/openmontage` plus its own `make setup` (`scripts/openmontage_engine.py`;
+  never resets a checkout with local edits; restores the tracked files setup itself rewrote, such as
+  npm's `package-lock.json`, so the next pin bump is not mistaken for local edits). New install
+  post-step `openmontage` (manifest `timeout: 2200`; `deps.py` now honours a post step's `timeout`,
+  default 300 s) and daily self-heal step `openmontage` (last in the run, capped at what is left of the
+  budget); SKIP without git, make or npm (Windows: use WSL; the doctor does not WARN there).
+- **Local skill `openmontage`**: where the checkout is, how to work inside it, and the overrides of its
+  AGENT_GUIDE.md: no Backlot server, studio, preview or browser; Remotion by default; no API keys in chat;
+  footage from OpenArt / Higgsfield, never stock; files through Write / Edit; project rules win.
+- **Router**: by-name rules (boost 6) for all three, and video rules (boost 3.5, off on frontend, backend,
+  API, Go and mobile surfaces) on media words only (video, footage, film, reel, mp4, `take 3`, A/V sync,
+  montage, title cards, talking head, retakes, pause trimming), so "captions for product images",
+  "loudness unit test" or "the edit form" stay out. Corpus rows V1-V13.
+- Santa review (1 HIGH, 4 MEDIUM, all fixed before release): the missing saved-style paths, symlink
+  carry, swap rollback, the lock file left dirty by `make setup`, and the loose router word lists.
+- **Doctor row `video-skills`**: FAIL when a skill is missing; WARN without ffmpeg, node or a set-up
+  OpenMontage checkout; `--ci` checks the skills only.
+- Existing machines converge after a pull: the pull brings the two vendored skills and the wrapper skill,
+  the daily `openmontage` step installs the checkout.
+
 ## v5.3.1 2026-11-03 The design trio and the auto-run hooks in the installer
 
 Owner: "make sure you put it in install properly". A fresh clone already carried the vendored skills,

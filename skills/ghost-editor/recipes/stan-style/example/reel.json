@@ -1,0 +1,57 @@
+{
+  "title": "stan style worked example: 3 settings that make a notes app faster (English)",
+  "notes": "For reading and copying. The recording is yours to supply: a ~66 s seated talking head (prep.sh -> assets/talk.mp4) and three screen recordings rec/rec1.mp4 (the messy inbox, then the tidy one from 6 s), rec/rec2.mp4 (the quick-capture setting), rec/rec3.mp4 (a note opening from the lock screen). Every time is a source second of that recording (script.txt): re-time takes, captions and beats from your own transcript (transcribe.py --lang en).",
+  "source": "assets/talk.mp4",
+  "words": "build/words.whisper.json",
+  "fps": 30,
+  "outro": 0,
+  "takes": [
+    { "a": 0.0, "b": 9.4, "note": "hook + diagram + the messy inbox (panel)" },
+    { "a": 15.6, "b": 18.45, "note": "notes on receipts (aside)" },
+    { "a": 36.72, "b": 47.98, "note": "settings one and two (step + back-to-back panels, step)" },
+    { "a": 51.72, "b": 54.18, "note": "setting three (step)" },
+    { "a": 57.36, "b": 64.53, "note": "top words, punch-in close-up + panel + CTA" }
+  ],
+  "zoom": { "origin": "52% 47%", "snaps": [[61.34, 1.22]] },
+  "captions": {
+    "style": "chest",
+    "single": [[0.0, 2.6]],
+    "top": [[57.4, 59.15]],
+    "emphasis": ["again"],
+    "strobe": ["hunting"]
+  },
+  "music": { "id": "lo-fi-02", "db": -22 },
+  "beats": [
+    { "type": "hook", "at": 0.0, "to": 2.6,
+      "title": ["3 settings that make", "your notes app faster"],
+      "icons": [[{ "emoji": "phone" }, { "emoji": "laptop", "label": "notes" }],
+                [{ "emoji": "high-voltage" }, { "emoji": "hourglass" }, { "emoji": "rocket", "bg": "#111" }]] },
+
+    { "type": "diagram", "at": 2.72, "to": 5.3,
+      "nodes": [
+        { "id": "phone", "emoji": "phone", "x": 330, "y": 1000, "at": 2.9 },
+        { "id": "laptop", "emoji": "laptop", "x": 470, "y": 1000, "at": 3.2, "size": 100 },
+        { "id": "idea", "emoji": "light-bulb", "x": 600, "y": 1000, "at": 3.5, "size": 100 },
+        { "id": "inbox", "emoji": "spiral-eyes", "label": "one inbox", "x": 690, "y": 690, "at": 4.1 },
+        { "id": "top", "text": "chaos", "x": 540, "y": 360, "at": 4.74 }
+      ],
+      "links": [
+        { "from": "idea", "to": "inbox", "at": 3.7, "dur": 0.36 },
+        { "from": "inbox", "to": "top", "at": 4.22, "dur": 0.5, "dot": true }
+      ] },
+
+    { "type": "panel", "at": 5.3, "to": 9.4, "src": "rec/rec1.mp4", "in": 0.4 },
+
+    { "type": "aside", "at": 17.4, "to": 18.42, "text": "notes on receipts" },
+
+    { "type": "panel", "at": 36.84, "to": 39.94, "src": "rec/rec2.mp4", "in": 0.6, "h": 860 },
+    { "type": "panel", "at": 39.94, "to": 43.5, "src": "rec/rec3.mp4", "in": 0.8, "h": 860 },
+    { "type": "step", "at": 36.84, "to": 41.85, "n": 1, "title": "Turn on quick capture", "icons": [{ "emoji": "high-voltage" }] },
+
+    { "type": "step", "at": 44.78, "to": 47.9, "n": 2, "title": "Pin your main folders", "icons": [{ "emoji": "phone" }, { "emoji": "check" }] },
+    { "type": "step", "at": 51.84, "to": 54.15, "n": 3, "title": "Search titles only", "icons": [{ "emoji": "monocle" }, { "emoji": "rocket" }] },
+
+    { "type": "panel", "at": 61.34, "to": 64.53, "src": "rec/rec1.mp4", "in": 6.0 },
+    { "type": "cta", "at": 61.34, "to": 64.53, "word": "faster", "logo": { "emoji": "rocket" } }
+  ]
+}

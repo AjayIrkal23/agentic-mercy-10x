@@ -160,15 +160,28 @@ def vendor(name: str, entry: dict, ref: str | None = None) -> str:
     (staged / MARKER).write_text(json.dumps({
         "repo": entry["repo"], "ref": ref, "sha": sha, "vendored_at": stamp,
     }, indent=2) + "\n", encoding="utf-8", newline="\n")
-    if dst.is_dir() and not dst.is_symlink() and tree_digest(staged) == tree_digest(dst):
+    runtime = entry.get("runtime_paths") or []
+    if dst.is_dir() and not dst.is_symlink() and tree_digest(staged, runtime) == tree_digest(dst, runtime):
         _remove(staged)
         return sha
     _remove(prev)
-    if dst.is_symlink() or dst.is_file():
-        dst.unlink()
-    elif dst.exists():
-        os.replace(dst, prev)
-    os.replace(staged, dst)
+    carried: list[str] = []
+    try:
+        if runtime and dst.is_dir() and not dst.is_symlink():
+            _carry_runtime(dst, staged, runtime, carried)
+        if dst.is_symlink() or dst.is_file():
+            dst.unlink()
+        elif dst.exists():
+            os.replace(dst, prev)
+        os.replace(staged, dst)
+    except OSError:  # e.g. a file held open on Windows: put the old tree and its runtime files back
+        if prev.exists() and not dst.exists():
+            os.replace(prev, dst)
+        for rel in reversed(carried):
+            if (staged / rel).exists() or (staged / rel).is_symlink():
+                (dst / rel).parent.mkdir(parents=True, exist_ok=True)
+                os.replace(staged / rel, dst / rel)
+        raise
     _remove(prev)
     return sha
 
@@ -180,16 +193,35 @@ def _remove(p: Path) -> None:
         p.unlink()
 
 
-def tree_digest(root: Path) -> str:
-    """sha256 over sorted (relpath, exec bit, sha256 of bytes) of every file and every dir name."""
+def _carry_runtime(old: Path, new: Path, patterns, carried: list[str]) -> None:
+    """Move the old tree's runtime files (skills-sources ``runtime_paths``: downloads, caches, the user's
+    own state; symlinks such as a venv's bin/python as links) into the new tree before the swap; the
+    user's copy wins over the upstream one. ``carried`` collects the rel paths for a rollback."""
+    for p in sorted(old.rglob("*")):
+        rel = p.relative_to(old).as_posix()
+        if (p.is_file() or p.is_symlink()) and sl.is_runtime(rel, patterns):
+            (new / rel).parent.mkdir(parents=True, exist_ok=True)
+            os.replace(p, new / rel)
+            carried.append(rel)
+
+
+def tree_digest(root: Path, ignore=()) -> str:
+    """sha256 over sorted (relpath, exec bit, sha256 of bytes) of every file and every dir name.
+    ``ignore`` = runtime_paths globs: those files drop out; so do the R10 volatiles (__pycache__, *.pyc),
+    which a skill's own scripts create when they run."""
     h = hashlib.sha256()
     for p in sorted(root.rglob("*")):
-        rel = p.relative_to(root).as_posix().encode("utf-8")
+        rel_s = p.relative_to(root).as_posix()
+        if ignore and sl.is_runtime(rel_s, ignore):
+            continue
+        if p.suffix in sl._HASH_EXCLUDE_SUFFIX or sl._HASH_EXCLUDE_DIRS.intersection(p.relative_to(root).parts):
+            continue
+        rel = rel_s.encode("utf-8")
         if p.is_file():
             h.update(b"F" + rel + b"\0" + bytes([bool(p.stat().st_mode & 0o111)]) +
                      hashlib.sha256(p.read_bytes()).digest())
-        elif p.is_dir():
-            h.update(b"D" + rel + b"\0")
+        elif p.is_dir() and not ignore:  # shortcut: runtime dirs (library/me/) would differ, so a skill with
+            h.update(b"D" + rel + b"\0")  # runtime_paths skips dir names; empty upstream dirs go unseen.
     return h.hexdigest()
 
 

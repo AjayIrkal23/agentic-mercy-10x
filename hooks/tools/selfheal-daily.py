@@ -11,7 +11,8 @@ template/manifest is newer, a pinned interpreter path is gone or the tier's mode
 ``vendor`` (``vendor_skill.py --all`` only on DRIFT),
 ``workflows`` (render on drift), ``library`` (rebuild library/INDEX.json on drift), ``mcp-inventory``
 (regenerate the inventory reference when registrations changed; POSIX only), ``ponytail-board`` (the ponytail band
-import of past sessions), ``learning-evolve`` (``instincts.py evolve``, last: it may use 660 s). Summary {"at","changed","errors",
+import of past sessions), ``learning-evolve`` (``instincts.py evolve``, it may use 660 s), ``openmontage``
+(``openmontage_engine.py``, last: a cold ``make setup`` takes minutes, capped at what is left of the budget). Summary {"at","changed","errors",
 "reported"} for the aggregator; names / specs / return codes to ``state/selfheal-daily.log``:
 no env, no tokens. ``--dry-run`` prints the plan and writes nothing. No-op for
 CLAUDE_HOOK_DOCTOR, link-doctor's probe payload and pytest (``PYTEST_CURRENT_TEST`` unless
@@ -42,6 +43,7 @@ VENDOR = _ROOT / "scripts" / "vendor_skill.py"
 WORKFLOWS = _ROOT / "scripts" / "build_workflows.py"
 LIB_INDEX = _ROOT / "scripts" / "build_library_index.py"
 IMPECCABLE = _ROOT / "scripts" / "impeccable_engine.py"
+OPENMONTAGE = _ROOT / "scripts" / "openmontage_engine.py"
 SPLIT = _ROOT / "scripts" / "split_machines_file.py"
 PLAN_TIER = _ROOT / "hooks" / "plan-tier-detect.py"
 INSTINCTS = Path(__file__).resolve().parent / "instincts.py"
@@ -310,6 +312,22 @@ def _impeccable(ctx: Ctx):
     return [("impeccable-engine", "fetch", last.split(": ", 1)[-1])]
 
 
+def _openmontage(ctx: Ctx):
+    """The openmontage skill's pinned checkout + `make setup` (v5.4.0): install it once when missing or
+    off the pin; offline or without make/npm it stays SKIP and the next day retries. Runs last: a cold
+    setup (pip + Remotion npm install) can take minutes."""
+    if not OPENMONTAGE.is_file():
+        return []
+    cmd = [plat.python_exe(), str(OPENMONTAGE)]
+    if plat.run([*cmd, "--check"], timeout=30).returncode == 0:
+        return []
+    if ctx.dry:
+        return [("openmontage", "install", "WOULD-INSTALL")]
+    cp = plat.run(cmd, timeout=max(60.0, min(1700.0, ctx.deadline - time.time())))  # stay inside the run's budget
+    last = ((cp.stdout or "").strip().splitlines() or [f"rc={cp.returncode}"])[-1]
+    return [("openmontage", "install", last.split(": ", 1)[-1])]
+
+
 # The import never revisits a session it wrote, so a live transcript would stay half-counted (and a
 # band row under another key would count it twice): hide transcripts written in the last 24 h.
 # shortcut: patches fs.readdirSync of ponytail-band-import.js (5.3.2), drop it once upstream skips live sessions.
@@ -344,7 +362,7 @@ def _ponytail_board(ctx: Ctx):
 STEPS = [("mcp", _mcp), ("plugins", _plugins), ("deps", _deps), ("plan-tier", _plan_tier), ("settings", _settings),
          ("oomguard", _oomguard), ("machines-split", _machines_split), ("vendor", _vendor),
          ("impeccable-engine", _impeccable), ("workflows", _workflows), ("library", _library), ("mcp-inventory", _mcp_inventory),
-         ("ponytail-board", _ponytail_board), ("learning-evolve", _learning_evolve)]
+         ("ponytail-board", _ponytail_board), ("learning-evolve", _learning_evolve), ("openmontage", _openmontage)]
 
 
 # --- plumbing ---------------------------------------------------------------- #

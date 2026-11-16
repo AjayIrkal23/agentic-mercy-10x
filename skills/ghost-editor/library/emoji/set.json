@@ -1,0 +1,389 @@
+{
+ "_note": "Curated reel reactions. kind=animated: microsoft/fluentui-emoji-animated (MIT, APNG 256px). kind=static: microsoft/fluentui-emoji 3D PNG (MIT, 256px) for symbols that have no animated version; the pop block animates them. Folder = the repo's assets/<Folder> name.",
+ "emoji": [
+  {
+   "slug": "fire",
+   "folder": "Fire",
+   "kind": "animated",
+   "use": "hot take, great idea"
+  },
+  {
+   "slug": "mind-blown",
+   "folder": "Exploding head",
+   "kind": "animated",
+   "use": "surprising fact"
+  },
+  {
+   "slug": "eyes",
+   "folder": "Eyes",
+   "kind": "animated",
+   "use": "look at this, suspicious"
+  },
+  {
+   "slug": "hundred",
+   "folder": "Hundred points",
+   "kind": "animated",
+   "use": "agree, exactly"
+  },
+  {
+   "slug": "skull",
+   "folder": "Skull",
+   "kind": "animated",
+   "use": "dead (funny), brutal"
+  },
+  {
+   "slug": "clown",
+   "folder": "Clown face",
+   "kind": "animated",
+   "use": "foolish move"
+  },
+  {
+   "slug": "rocket",
+   "folder": "Rocket",
+   "kind": "animated",
+   "use": "growth, launch"
+  },
+  {
+   "slug": "thinking",
+   "folder": "Thinking face",
+   "kind": "animated",
+   "use": "hmm, question"
+  },
+  {
+   "slug": "facepalm",
+   "folder": "Man facepalming",
+   "kind": "animated",
+   "use": "obvious mistake"
+  },
+  {
+   "slug": "party",
+   "folder": "Party popper",
+   "kind": "animated",
+   "use": "win, celebration"
+  },
+  {
+   "slug": "partying",
+   "folder": "Partying face",
+   "kind": "animated",
+   "use": "celebration"
+  },
+  {
+   "slug": "money-mouth",
+   "folder": "Money-mouth face",
+   "kind": "animated",
+   "use": "money, profit"
+  },
+  {
+   "slug": "alarm",
+   "folder": "Alarm clock",
+   "kind": "animated",
+   "use": "time, wake up"
+  },
+  {
+   "slug": "hourglass",
+   "folder": "Hourglass not done",
+   "kind": "animated",
+   "use": "waiting, time running"
+  },
+  {
+   "slug": "brain",
+   "folder": "Brain",
+   "kind": "animated",
+   "use": "attention, thinking"
+  },
+  {
+   "slug": "sleeping",
+   "folder": "Sleeping face",
+   "kind": "animated",
+   "use": "boring, sleep"
+  },
+  {
+   "slug": "joy",
+   "folder": "Face with tears of joy",
+   "kind": "animated",
+   "use": "crying-laughing"
+  },
+  {
+   "slug": "rofl",
+   "folder": "Rolling on the floor laughing",
+   "kind": "animated",
+   "use": "very funny"
+  },
+  {
+   "slug": "sob",
+   "folder": "Loudly crying face",
+   "kind": "animated",
+   "use": "sad, pain"
+  },
+  {
+   "slug": "scream",
+   "folder": "Face screaming in fear",
+   "kind": "animated",
+   "use": "shock, horror"
+  },
+  {
+   "slug": "cool",
+   "folder": "Smiling face with sunglasses",
+   "kind": "animated",
+   "use": "cool, confident"
+  },
+  {
+   "slug": "eye-roll",
+   "folder": "Face with rolling eyes",
+   "kind": "animated",
+   "use": "annoyed"
+  },
+  {
+   "slug": "grimace",
+   "folder": "Grimacing face",
+   "kind": "animated",
+   "use": "awkward, oops"
+  },
+  {
+   "slug": "monocle",
+   "folder": "Face with monocle",
+   "kind": "animated",
+   "use": "inspect, analyse"
+  },
+  {
+   "slug": "raised-eyebrow",
+   "folder": "Face with raised eyebrow",
+   "kind": "animated",
+   "use": "doubt, really?"
+  },
+  {
+   "slug": "melting",
+   "folder": "Melting face",
+   "kind": "animated",
+   "use": "overwhelmed, embarrassed"
+  },
+  {
+   "slug": "spiral-eyes",
+   "folder": "Face with spiral eyes",
+   "kind": "animated",
+   "use": "dizzy, confused"
+  },
+  {
+   "slug": "steam",
+   "folder": "Face with steam from nose",
+   "kind": "animated",
+   "use": "angry, determined"
+  },
+  {
+   "slug": "see-no-evil",
+   "folder": "See-no-evil monkey",
+   "kind": "animated",
+   "use": "can't watch, shame"
+  },
+  {
+   "slug": "star-struck",
+   "folder": "Star-struck",
+   "kind": "animated",
+   "use": "amazed"
+  },
+  {
+   "slug": "thumbs-up",
+   "folder": "Thumbs up",
+   "kind": "animated",
+   "use": "yes, approve"
+  },
+  {
+   "slug": "thumbs-down",
+   "folder": "Thumbs down",
+   "kind": "animated",
+   "use": "no, disapprove"
+  },
+  {
+   "slug": "clap",
+   "folder": "Clapping hands",
+   "kind": "animated",
+   "use": "applause"
+  },
+  {
+   "slug": "muscle",
+   "folder": "Flexed biceps",
+   "kind": "animated",
+   "use": "strength, discipline"
+  },
+  {
+   "slug": "heart",
+   "folder": "Red heart",
+   "kind": "animated",
+   "use": "love"
+  },
+  {
+   "slug": "broken-heart",
+   "folder": "Broken heart",
+   "kind": "animated",
+   "use": "loss, sad"
+  },
+  {
+   "slug": "high-voltage",
+   "folder": "High voltage",
+   "kind": "animated",
+   "use": "energy, fast"
+  },
+  {
+   "slug": "phone-call",
+   "folder": "Telephone receiver",
+   "kind": "animated",
+   "use": "call, zvonok"
+  },
+  {
+   "slug": "walking",
+   "folder": "Man walking",
+   "kind": "animated",
+   "use": "walk, go outside"
+  },
+  {
+   "slug": "ghost",
+   "folder": "Ghost",
+   "kind": "animated",
+   "use": "ghosting, gone"
+  },
+  {
+   "slug": "check",
+   "folder": "Check mark button",
+   "kind": "static",
+   "use": "do this, correct"
+  },
+  {
+   "slug": "cross",
+   "folder": "Cross mark",
+   "kind": "static",
+   "use": "don't, wrong"
+  },
+  {
+   "slug": "chart-up",
+   "folder": "Chart increasing",
+   "kind": "static",
+   "use": "growth"
+  },
+  {
+   "slug": "chart-down",
+   "folder": "Chart decreasing",
+   "kind": "static",
+   "use": "decline, loss"
+  },
+  {
+   "slug": "phone",
+   "folder": "Mobile phone",
+   "kind": "static",
+   "use": "phone, scrolling"
+  },
+  {
+   "slug": "money-bag",
+   "folder": "Money bag",
+   "kind": "static",
+   "use": "money"
+  },
+  {
+   "slug": "light-bulb",
+   "folder": "Light bulb",
+   "kind": "static",
+   "use": "idea"
+  },
+  {
+   "slug": "sparkles",
+   "folder": "Sparkles",
+   "kind": "static",
+   "use": "new, magic, clean"
+  },
+  {
+   "slug": "warning",
+   "folder": "Warning",
+   "kind": "static",
+   "use": "careful"
+  },
+  {
+   "slug": "bell-off",
+   "folder": "Bell with slash",
+   "kind": "static",
+   "use": "mute notifications"
+  },
+  {
+   "slug": "waving-hand",
+   "folder": "Waving hand",
+   "kind": "animated",
+   "use": "hello, look here; Seoul-list collage stickers (instead of cartoon gloves)"
+  },
+  {
+   "slug": "hand-splayed",
+   "folder": "Hand with fingers splayed",
+   "kind": "animated",
+   "use": "stop, wow, high five; Seoul-list collage stickers"
+  },
+  {
+   "slug": "point-right",
+   "folder": "Backhand index pointing right",
+   "kind": "animated",
+   "use": "this one, pointing at a card or word"
+  },
+  {
+   "slug": "running",
+   "folder": "Person running",
+   "kind": "animated",
+   "use": "run, sport, hurry; blue highlight words"
+  },
+  {
+   "slug": "yum",
+   "folder": "Face savoring food",
+   "kind": "animated",
+   "use": "food, tasty; comment cards"
+  },
+  {
+   "slug": "laptop",
+   "folder": "Laptop",
+   "kind": "static",
+   "use": "computer work, developer, coding"
+  },
+  {
+   "slug": "briefcase",
+   "folder": "Briefcase",
+   "kind": "static",
+   "use": "business, job, career"
+  },
+  {
+   "slug": "handshake",
+   "folder": "Handshake",
+   "kind": "animated",
+   "use": "deal, client, sales"
+  },
+  {
+   "slug": "technologist",
+   "folder": "Technologist",
+   "kind": "static",
+   "use": "developer, engineer"
+  },
+  {
+   "slug": "shuffle",
+   "folder": "Shuffle tracks button",
+   "kind": "static",
+   "use": "non-linear path, mixed skills"
+  },
+  {
+   "slug": "robot",
+   "folder": "Robot",
+   "kind": "animated",
+   "use": "AI, automation"
+  },
+  {
+   "slug": "megaphone",
+   "folder": "Megaphone",
+   "kind": "static",
+   "use": "marketing, announcement"
+  },
+  {
+   "slug": "gear",
+   "folder": "Gear",
+   "kind": "static",
+   "use": "operations, settings, process"
+  },
+  {
+   "slug": "juggling",
+   "folder": "Person juggling",
+   "kind": "animated",
+   "use": "multitasking, many jobs at once"
+  }
+ ]
+}

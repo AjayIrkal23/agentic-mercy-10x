@@ -1,0 +1,13 @@
+# scripts/setup_matte.sh installs these into ~/.venvs/ghost-matte (matte.py, cutout_fx.py; pillow draws cutout_fx's type). Tested 2026-10-10 on an M3 MacBook Air (macOS 27), python 3.11
+torch==2.14.1
+torchvision==0.29.1
+transformers==5.19.0
+timm==1.0.30
+kornia==0.8.3
+einops==0.8.2
+safetensors==0.8.0
+rembg==2.0.85
+onnxruntime==1.31.0
+opencv-python-headless==5.0.0.93
+numpy==2.4.6
+pillow==12.3.0

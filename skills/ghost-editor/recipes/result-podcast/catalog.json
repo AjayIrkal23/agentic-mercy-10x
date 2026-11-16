@@ -1,0 +1,1301 @@
+{
+ "_about": "Registry of this style's components (SYSTEM.md): what each one is, its kind and the regexes (sig) that find it in a built index.html. scripts/components.py plan / check / add / record read and write it: history lists your reels in order, projects maps a reel id to its project folder, and each element's reels say where it was used. Empty history = nothing used yet.",
+ "reels": {},
+ "history": [],
+ "projects": {},
+ "_about_components": "kind = hook / scene / prop / frame / transition / outro (new every reel) or emphasis / signature / house (may stay); sig = regexes on the built index.html; history = reels in order; projects = where each reel's index.html is. scripts/components.py reads and writes this file.",
+ "elements": [
+  {
+   "id": "polaroid",
+   "sig": [
+    "class=\"scene navy\"><div id=\"\\w+\" class=\"pol\""
+   ],
+   "kind": "frame",
+   "desc": "full-screen polaroid on a navy card: a cream frame slides up/drops in with rotation and settles, Caveat label written in the margin",
+   "slot": "artifact",
+   "reels": []
+  },
+  {
+   "id": "paper-stack-swap",
+   "sig": [
+    "id=\"s5s\" class=\"paper\""
+   ],
+   "kind": "scene",
+   "desc": "paper stack whose pictures swap stop-motion",
+   "slot": "artifact",
+   "reels": []
+  },
+  {
+   "id": "navy-text-card",
+   "sig": [
+    "class=\"scene navy\"><div class=\"(?!qwrap)"
+   ],
+   "kind": "scene",
+   "desc": "full-screen navy card: a small headline, then the key words handwritten in big Caveat one by one on the spoken words",
+   "slot": "surface",
+   "reels": []
+  },
+  {
+   "id": "rec-frame",
+   "sig": [
+    "class=\"rec\"><div class=\"corner tl\">"
+   ],
+   "kind": "prop",
+   "desc": "phone-camera REC frame with corners, blinking dot and grid",
+   "slot": "comic",
+   "reels": []
+  },
+  {
+   "id": "incoming-call-decline",
+   "sig": [
+    "class=\"call\"><div class=\"cwho\">"
+   ],
+   "kind": "prop",
+   "desc": "incoming-call card, a finger taps decline",
+   "slot": "comic",
+   "reels": []
+  },
+  {
+   "id": "cursor-dialog",
+   "sig": [
+    "class=\"cursor\""
+   ],
+   "kind": "prop",
+   "desc": "update dialog, a cursor clicks «…»",
+   "slot": "comic",
+   "reels": []
+  },
+  {
+   "id": "chat-bubble-card",
+   "sig": [
+    "id=\"chat\" class=\"chat\""
+   ],
+   "kind": "prop",
+   "desc": "chat card with message bubbles",
+   "slot": "comic",
+   "reels": []
+  },
+  {
+   "id": "yellow-wash-photo",
+   "sig": [
+    "class=\"ywash\""
+   ],
+   "kind": "frame",
+   "desc": "polaroid on a yellow card under a multiply yellow wash",
+   "slot": "artifact",
+   "reels": []
+  },
+  {
+   "id": "notebook-todo",
+   "sig": [
+    "class=\"hi\""
+   ],
+   "kind": "prop",
+   "desc": "a lined to-do note «…» over the head with empty boxes; the items are written in as the speaker lists them",
+   "slot": "artifact",
+   "reels": []
+  },
+  {
+   "id": "cork-sticky-notes-fall",
+   "sig": [
+    "class=\"scene cork\""
+   ],
+   "kind": "scene",
+   "desc": "full-screen cork board: pinned sticky notes pop on one after another",
+   "slot": "artifact",
+   "reels": []
+  },
+  {
+   "id": "boarding-pass-stamp",
+   "sig": [
+    "class=\"bpass\""
+   ],
+   "kind": "scene",
+   "desc": "boarding pass DXB -> SFO stamped …",
+   "slot": "artifact",
+   "reels": []
+  },
+  {
+   "id": "thermal-receipt-print",
+   "sig": [
+    "class=\"roll\"><div id=\"rl0\" class=\"rl"
+   ],
+   "kind": "prop",
+   "desc": "till receipt beside the face printing line by line in PT Mono (…), stamped …",
+   "slot": "artifact",
+   "reels": []
+  },
+  {
+   "id": "envelopes-postmark",
+   "sig": [
+    "class=\"paper envl\""
+   ],
+   "kind": "prop",
+   "desc": "a paper envelope on the chest «…», «…» struck through to «…», red stamp …",
+   "slot": "artifact",
+   "reels": []
+  },
+  {
+   "id": "business-card",
+   "sig": [
+    "class=\"ov bcard\""
+   ],
+   "kind": "prop",
+   "desc": "two business cards beside the head (…), the extra skill handwritten in red on each on its word",
+   "slot": "artifact",
+   "reels": []
+  },
+  {
+   "id": "newspaper-clipping-circled",
+   "sig": [
+    "<div class=\"mast\">"
+   ],
+   "kind": "scene",
+   "desc": "newspaper clipping circled in red marker",
+   "slot": "artifact",
+   "reels": []
+  },
+  {
+   "id": "tear-off-calendar",
+   "sig": [
+    "class=\"calbind\""
+   ],
+   "kind": "prop",
+   "desc": "a tear-off day calendar beside the face: pages flip off one per beat (rotationX), the owner label swaps «…» -> «…»",
+   "slot": "artifact",
+   "reels": []
+  },
+  {
+   "id": "translation-sheets-lak-russian",
+   "sig": [
+    "id=\"shl\" class=\"paper sheet\""
+   ],
+   "kind": "scene",
+   "desc": "two paper sheets slide in from both sides on kraft, a red arrow draws between them, the right sheet's lines type in",
+   "slot": "artifact",
+   "note": "a reel is recorded by hand (its markup differs from the sig, which targets the trial version)",
+   "reels": []
+  },
+  {
+   "id": "kraft-map-route-stamp",
+   "sig": [
+    "class=\"paper krmap\""
+   ],
+   "kind": "prop",
+   "desc": "kraft map beside the face: two town dots pop, a dashed red route draws between them, «…» written, stamp …",
+   "slot": "artifact",
+   "note": "a reel is recorded by hand (its markup differs from the sig, which targets the trial version)",
+   "reels": []
+  },
+  {
+   "id": "typewriter-quote-cards-navy",
+   "sig": [
+    "class=\"qcard\""
+   ],
+   "kind": "scene",
+   "desc": "navy quote cards typed out character by character",
+   "slot": "surface",
+   "reels": []
+  },
+  {
+   "id": "hire-ledger-total-zero-stamp",
+   "sig": [
+    "class=\"paper ledg\""
+   ],
+   "kind": "prop",
+   "desc": "a ruled ledger on the chest: «…», «…», …«…», stamp …",
+   "slot": "artifact",
+   "note": "a reel is recorded by hand (its markup differs from the sig, which targets the trial version)",
+   "reels": []
+  },
+  {
+   "id": "merchant-notebook-deal-lines",
+   "sig": [
+    "class=\"paper lined trm\""
+   ],
+   "kind": "prop",
+   "desc": "a lined notebook on the chest «…», three term lines each written as left -> right on the spoken words",
+   "slot": "artifact",
+   "note": "a reel is recorded by hand (its markup differs from the sig, which targets the trial version)",
+   "reels": []
+  },
+  {
+   "id": "kraft-map-routes-out",
+   "sig": [
+    "class=\"paper krmap2\""
+   ],
+   "kind": "scene",
+   "desc": "full-screen kraft map: dashed red routes draw out from one town to four cities, dots and city names pop on each word",
+   "slot": "artifact",
+   "note": "a reel is recorded by hand (its markup differs from the sig, which targets the trial version)",
+   "reels": []
+  },
+  {
+   "id": "checklist-four-ticks",
+   "sig": [
+    "class=\"paper lined gv\"|class=\"tick\">✓"
+   ],
+   "kind": "prop",
+   "desc": "a handwritten four-item checklist on the chest (header «…» / «…»), each item written then ticked in red on its word",
+   "slot": "artifact",
+   "reels": []
+  },
+  {
+   "id": "notice-pinned-postmarks",
+   "sig": [
+    "class=\"paper ntc\""
+   ],
+   "kind": "prop",
+   "desc": "a pinned paper notice on the chest «…», name and surname written in, postmarks …",
+   "slot": "artifact",
+   "note": "a reel is recorded by hand (its markup differs from the sig, which targets the trial version)",
+   "reels": []
+  },
+  {
+   "id": "polaroids-on-wood",
+   "sig": [
+    "class=\"scene wood\"><div class=\"pol\""
+   ],
+   "kind": "frame",
+   "desc": "full-screen polaroids with B-roll on a wood table",
+   "slot": "artifact",
+   "reels": []
+  },
+  {
+   "id": "name-tag-beside-head",
+   "sig": [
+    "class=\"ltag\"|class=\"ov ntag\""
+   ],
+   "kind": "prop",
+   "desc": "a name tag beside the head naming the person the speaker talks about (kraft luggage tag with a hole / white name card), the name handwritten in",
+   "slot": "artifact",
+   "note": "a reel is recorded by hand (its markup differs from the sig, which targets the trial version)",
+   "reels": []
+  },
+  {
+   "id": "house-face-plate-as-shot",
+   "kind": "house",
+   "desc": "the face plate as shot (no grade / no sepia), a slow 4 % drift zoom over the whole reel; the frame-1 opener of every reel",
+   "sig": [
+    "<div id=\"zoom\"><div id=\"drift\"><video id=\"vw\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "house-type-inter-tight-caveat",
+   "kind": "house",
+   "desc": "type system: Inter Tight captions, Caveat for handwriting and key words, Oswald for stamps/headers, PT Mono for typed paper",
+   "sig": [
+    "font-family: Caveat",
+    "font-family: \"Inter Tight\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "house-captions-two-tier",
+   "kind": "house",
+   "desc": "one-to-three-word captions at ~y 1230: plain line, or a small line over one big bold word, or over a Caveat script word",
+   "sig": [
+    "class=\"csm\"",
+    "class=\"cbig\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "house-caption-navy-pill",
+   "kind": "house",
+   "desc": "caption variant A: the two-tier caption sits on a rounded navy pill (rgba(18,29,50,.86)) so it reads on the light hoodie",
+   "sig": [
+    "class=\"cap\"><div class=\"cd\">"
+   ],
+   "reels": []
+  },
+  {
+   "id": "house-caption-outlined",
+   "kind": "house",
+   "desc": "caption variant B: bigger two-tier caption (62 px / 132 px, Caveat 150 px), white with a dark 8-way outline, no box",
+   "sig": [
+    "class=\"cap\" style=\"top:\\d+px\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "house-navy-surface",
+   "kind": "house",
+   "slot": "surface",
+   "desc": "the navy card surface (radial #1E3052 -> #14213A) behind full-screen text cards and polaroids",
+   "sig": [
+    "class=\"scene navy\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "house-kraft-surface",
+   "kind": "house",
+   "slot": "surface",
+   "desc": "kraft paper surface: full-screen kraft card and kraft-coloured props (maps, cards, hang tags)",
+   "sig": [
+    "class=\"scene kraft\"|class=\"ov (?:kcard|ktag|kmap)\"|class=\"paper krmap"
+   ],
+   "reels": []
+  },
+  {
+   "id": "house-film-grain",
+   "kind": "house",
+   "desc": "film grain PNG overlay, its offset re-seeded every frame",
+   "sig": [
+    "<div id=\"grain\"></div>"
+   ],
+   "reels": []
+  },
+  {
+   "id": "house-dust-canvas",
+   "kind": "house",
+   "desc": "per-frame-seeded dust specks and hair scratches painted on a canvas (deterministic in render)",
+   "sig": [
+    "<canvas id=\"dust\" width=\"1080\" height=\"1920\">"
+   ],
+   "reels": []
+  },
+  {
+   "id": "house-vignette",
+   "kind": "house",
+   "desc": "light full-frame vignette over the face (lib reels); the kit reels drop it and vignette only the full-screen cards (.scene::after)",
+   "sig": [
+    "<div id=\"vig\"></div>"
+   ],
+   "reels": []
+  },
+  {
+   "id": "polaroid-beside-face",
+   "kind": "frame",
+   "slot": "artifact",
+   "desc": "a polaroid in the side slot beside the face (the speaker stays on screen), slides in from the edge, Caveat label written on the word",
+   "sig": [
+    "class=\"prop (?:left|right) [^\"]*\"[^>]*><div id=\"pol_\\w+\" class=\"pol\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "polaroid-over-head",
+   "kind": "frame",
+   "slot": "artifact",
+   "desc": "a polaroid dropped into the band over the head (kitchen cabinet zone), swings from rotation to level, label written",
+   "sig": [
+    "<div id=\"\\w+\" class=\"ov\" style=\"[^\"]*\"><div id=\"p[A-Z]\\w*\" class=\"pol\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "polaroid-trio-per-word",
+   "kind": "frame",
+   "slot": "artifact",
+   "desc": "collage: three polaroids land side by side over the head, one per listed word (swim / bike / ball), and stay together",
+   "sig": [
+    "id=\"opS3\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "polaroid-live-video",
+   "kind": "frame",
+   "slot": "artifact",
+   "desc": "a polaroid whose photo window plays a stock video clip (bonfire) instead of a still",
+   "sig": [
+    "class=\"clip phvid\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "photo-ken-burns",
+   "kind": "frame",
+   "desc": "slow 1.08-1.1 -> 1.0 push-out on the still inside a polaroid while it is held",
+   "sig": [
+    "\\{\"scale\": 1\\.\\d+\\}, \\{\"scale\": 1\\.0, \"duration\": [\\d.]+, \"ease\": \"none\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "navy-quote-card-word-land",
+   "kind": "scene",
+   "slot": "surface",
+   "desc": "full-screen navy quote card: gold quote mark, big two-tier quote, each word lands as said, last word big Caveat, PT Mono source",
+   "sig": [
+    "class=\"qwrap\"><div class=\"qmark\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "hand-drawn-path-diagram",
+   "kind": "scene",
+   "slot": "artifact",
+   "desc": "full-screen kraft sheet: ink village doodle, a dashed red path draws out of it to a gold sun, «…» written",
+   "sig": [
+    "class=\"fsv\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "printed-post-headline-highlight",
+   "kind": "scene",
+   "slot": "artifact",
+   "desc": "full-screen printout of a viral post on kraft: Oswald headline highlighted word by word as said, the number circled, «…»",
+   "sig": [
+    "class=\"ph1\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "lined-index-card-columns",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "lined index card on the chest with a red margin: left column fills with the need, an arrow fades in, right column with the behaviour",
+   "sig": [
+    "class=\"paper lined ncard\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "lined-notebook-slip",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a lined notebook slip beside the face: «…» then the ancestor's name handwritten big on the word",
+   "sig": [
+    "class=\"paper lined slip\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "highlighted-details-strip",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a paper strip «…» beside the face, three details written in with a yellow highlighter band under each",
+   "sig": [
+    "class=\"paper detl\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "navy-number-card-side",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a small navy card beside the face: «…» / a big gold Playfair numeral that pops in on the number / «…»",
+   "sig": [
+    "class=\"sev\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "aged-letter-quote-words",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "an aged cream letter on the chest; a spoken quote appears word by word in Caveat as the speaker says it, signed «…»",
+   "sig": [
+    "class=\"paper aged lett\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "term-index-card",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "an index card on the chest naming a psychology term: mono category header, the term typed in big, then a doodle / ticks for its parts",
+   "sig": [
+    "class=\"paper idx\"|id=\"tm0\" class=\"tm\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "sticky-note-slap",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a yellow sticky note pops (scale overshoot) onto another prop with a short handwritten line or a doodle",
+   "sig": [
+    "id=\"(?:sticky|stk)\" class=\"sticky"
+   ],
+   "reels": []
+  },
+  {
+   "id": "book-cover-side",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "the cited book's navy cover beside the head (italic Playfair title, author in Caveat); a sticky with a bell lands on it",
+   "sig": [
+    "class=\"bk\"><div class=\"bkt\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "torn-notification-slips",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "phone-UI as paper: three notification slips (app, badge 12 / 48 / 99+) stack over the head, each torn in half and falling on its word",
+   "sig": [
+    "class=\"half l\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "day-timeline-strip",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a paper «…» strip over the head, all grey …; the segments peel off and …",
+   "sig": [
+    "id=\"tlab\" class=\"tlab\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "zigzag-career-card",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a kraft card over the head: a straight dotted line, then a red zigzag draws over it on «…», stamped (…)",
+   "sig": [
+    "class=\"ov kcard\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "numbered-list-scribbles",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a notepad list over the head: «…» written, items 2-4 pencil scribbles, three task boxes with red arrows hopping between",
+   "sig": [
+    "<i class=\"tb\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "folder-tabs-drop",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "three manila folder tabs drop over the head one per word (…) with a wood knock",
+   "sig": [
+    "class=\"ftab\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "kraft-hang-tag",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a kraft hang tag (punched hole) beside the head: a price «$$$$» struck to «$», or a word stamped …«…»",
+   "sig": [
+    "class=\"ov ktag\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "study-stat-card-counter",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a study card over the head «…»: the number counts up to 38 000, then «…» «…» written",
+   "sig": [
+    "id=\"num\" class=\"num\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "kraft-city-map-pin",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a kraft street map over the head: a red pin drops, «…» written, a dashed red route draws in from the past at the edge",
+   "sig": [
+    "class=\"ov kmap\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "paper-speech-bubble",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a paper speech bubble over the head, the line handwritten in, then stamped …",
+   "sig": [
+    "class=\"ov bubble\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "film-burn-leak",
+   "kind": "transition",
+   "slot": "transition",
+   "desc": "film-burn light leak at a section turn: screen-blended orange/gold radial gradients sweep in from a side (alternating) and fade",
+   "sig": [
+    "tl\\.fromTo\\(\"#leak\", \\{\"?autoAlpha\"?: 0, \"?x\"?: -?300"
+   ],
+   "reels": []
+  },
+  {
+   "id": "paper-slide-in-side",
+   "kind": "transition",
+   "slot": "transition",
+   "desc": "a side prop slides in from the frame edge with extra rotation and settles (back.out); out: slides back to the edge or fades",
+   "sig": [
+    "(?:tl|gsap)\\.set\\(\"#\\w+\", \\{\"autoAlpha\": 0, \"x\": -?[234]\\d0, \"rotation\"",
+    "data-in=\"side\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "paper-drop-from-top",
+   "kind": "transition",
+   "slot": "transition",
+   "desc": "a prop drops in from above with a swing of rotation and settles (into the band over the head, or onto a full-screen card); out: a 0.22 s fade",
+   "sig": [
+    "(?:tl|gsap)\\.set\\(\"#\\w+\", \\{\"autoAlpha\": 0, \"y\": -\\d{3}, \"rotation\"",
+    "data-in=\"drop\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "paper-rise-from-chest",
+   "kind": "transition",
+   "slot": "transition",
+   "desc": "a sheet rises from below the frame into the chest band (captions step aside), settles tilted; out: sinks / fades",
+   "sig": [
+    "(?:tl|gsap)\\.set\\(\"#\\w+\", \\{\"autoAlpha\": 0, \"y\": 5\\d0, \"rotation\"",
+    "data-in=\"rise\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "fullscreen-card-cut",
+   "kind": "house",
+   "slot": "transition",
+   "desc": "a 0.14-0.16 s fade to a full-screen navy / kraft / cork card (<= 2.5 s, whoosh), its paper slides or drops in, then a fade back to the face",
+   "sig": [
+    "class=\"scene (?:navy|kraft|cork)\""
+   ],
+   "note": "navy / kraft / cork surfaces are house; a hard cut to them is not a device",
+   "reels": []
+  },
+  {
+   "id": "rush-to-lens-blur",
+   "kind": "transition",
+   "slot": "transition",
+   "desc": "out-transition: a paper card («…») rushes at the lens, scaling 3.6x into a 16 px blur, too close to read",
+   "sig": [
+    "filter: \"blur\\(16px\\)\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "hook-caption-frame-1",
+   "kind": "hook",
+   "slot": "hook",
+   "desc": "the hook line's first caption is already on screen on frame 1 (no fade-in), over the face",
+   "sig": [
+    "(?:tl|gsap)\\.set\\(\"#c0\", \\{\"autoAlpha\": 1\\}, 0\\.000\\)",
+    "gsap\\.set\\(\"#c0\", \\{\"autoAlpha\": 1\\}\\);"
+   ],
+   "reels": []
+  },
+  {
+   "id": "hook-prop-within-3s",
+   "kind": "hook",
+   "slot": "hook",
+   "desc": "a paper prop or polaroid joins the face inside the first 3 s (beside or over the head), illustrating the hook line",
+   "sig": [
+    "\"ease\": \"back\\.out\\(1\\.[34]\\)\", \"immediateRender\": false\\}, [0-2]\\.\\d{3}\\);"
+   ],
+   "reels": []
+  },
+  {
+   "id": "hook-fullscreen-cutaway",
+   "kind": "hook",
+   "slot": "hook",
+   "desc": "the hook cuts away inside 3 s to a full-screen polaroid card on the hook word (also hides a blink)",
+   "sig": [
+    "\\{\"autoAlpha\": 1, \"duration\": 0\\.1[46], \"immediateRender\": false\\}, [0-2]\\.\\d{3}\\);"
+   ],
+   "reels": []
+  },
+  {
+   "id": "hook-punch-in",
+   "kind": "hook",
+   "slot": "hook",
+   "desc": "a snap punch-in on the hook's key word inside the first 3 s",
+   "sig": [
+    "\\{\"scale\": 1\\.1\\d*, \"duration\": 0\\.12, \"ease\": \"power3\\.out\", \"immediateRender\": false\\}, [0-2]\\.\\d{3}\\);"
+   ],
+   "reels": []
+  },
+  {
+   "id": "hook-face-only",
+   "kind": "house",
+   "slot": "hook",
+   "desc": "the first 3 s are only the face and the captions (the appeal itself is the hook); the first prop lands after 5 s",
+   "note": "opening on the face alone is the default; its old sig was negative (absence of an early prop) and matched any reel",
+   "reels": []
+  },
+  {
+   "id": "outro-closing-stamp",
+   "kind": "outro",
+   "slot": "outro",
+   "desc": "the last prop stays to the final frame and a red stamp lands on the closing line (…)",
+   "sig": [
+    "id=\"(?:r_ok|e_st|st9|st2)\" class=\"stamp"
+   ],
+   "reels": []
+  },
+  {
+   "id": "outro-hook-callback",
+   "kind": "outro",
+   "slot": "outro",
+   "desc": "the hook's object returns at the end with its state changed (zigzag card stamped, the «…» note crossed out, the map's route drawn out of the past)",
+   "sig": [
+    "id=\"(?:car2|n3|map2)\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "outro-face-punch-in",
+   "kind": "outro",
+   "slot": "outro",
+   "desc": "the close stays on the face: a snap punch-in on the final key word in the last ~1.2 s",
+   "sig": [
+    "\"ease\": \"power3\\.out\", \"immediateRender\": false\\}, (?:134\\.930|30\\.810)\\);"
+   ],
+   "reels": []
+  },
+  {
+   "id": "outro-fly-off",
+   "kind": "outro",
+   "slot": "outro",
+   "desc": "the closing note is crossed out in red and flies off screen to the right with a spin",
+   "sig": [
+    "\"autoAlpha\": 0, \"x\": 900, \"rotation\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "outro-freeze-tail",
+   "kind": "outro",
+   "slot": "outro",
+   "desc": "the plate's last frame is held 0.45 s as a freeze under the music fade-out",
+   "sig": [
+    "src=\"media/plate_alt_hold\\.mp4\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "recurring-motif-prop",
+   "kind": "signature",
+   "desc": "one prop is the reel's motif and returns 2-3 times, changed each time (luggage tag; zigzag card; «…» note: written, shaking, crossed; city map)",
+   "sig": [
+    "id=\"(?:tag2|car2|n2|map2)\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "handwriting-wipe",
+   "kind": "emphasis",
+   "slot": "emphasis",
+   "desc": "Caveat handwriting (and typed mono lines) drawn in left to right with a padded clip-path wipe on the spoken word, pencil sound",
+   "sig": [
+    "\"clipPath\": \"inset\\(-[23]0% 100% -[23]0%"
+   ],
+   "reels": []
+  },
+  {
+   "id": "rubber-stamp-slam",
+   "kind": "emphasis",
+   "slot": "emphasis",
+   "desc": "a red Oswald rubber stamp slams down from 2.3x with rotation, multiply-blended onto the paper, impact sound",
+   "sig": [
+    "class=\"stamp[\" ]"
+   ],
+   "reels": []
+  },
+  {
+   "id": "snap-punch-in",
+   "kind": "emphasis",
+   "slot": "emphasis",
+   "desc": "snap punch-in on the face (1.1-1.12 in 0.12 s, hold 0.6-0.9 s, ease back), at most three per reel",
+   "sig": [
+    "tl\\.fromTo\\(\"#zoom\", \\{\"scale\": 1\\.0\\}, \\{\"scale\": 1\\.1"
+   ],
+   "reels": []
+  },
+  {
+   "id": "marker-circle-draw",
+   "kind": "emphasis",
+   "slot": "emphasis",
+   "desc": "a red marker ellipse draws around a number (…) with stroke-dashoffset",
+   "sig": [
+    "<ellipse id=\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "highlighter-swipe",
+   "kind": "emphasis",
+   "slot": "emphasis",
+   "desc": "a yellow highlighter band under words, swiped in word by word as they are said",
+   "sig": [
+    "class=\"hand dt\"><i></i>|class=\"hw\"><i></i>"
+   ],
+   "reels": []
+  },
+  {
+   "id": "marker-strike-through",
+   "kind": "emphasis",
+   "slot": "emphasis",
+   "desc": "a red marker line strikes through a word, icon, price or the whole note on the word that negates it",
+   "sig": [
+    "id=\"(?:e_x|bellx|prx|n3x)\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "hand-drawn-arrow",
+   "kind": "emphasis",
+   "slot": "emphasis",
+   "desc": "a red hand-drawn arrow draws on (Lak -> Russian sheets; arrows hopping between task boxes)",
+   "sig": [
+    "id=\"sharr\"|id=\"ar0\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "ink-doodle-icon",
+   "kind": "emphasis",
+   "slot": "emphasis",
+   "desc": "a small ink doodle on the paper (a gold crown, a sun and village, a bell), drawn on or pre-inked",
+   "sig": [
+    "class=\"crown\"|id=\"fsun\"|d=\"M60 18 C38 18"
+   ],
+   "reels": []
+  },
+  {
+   "id": "quote-word-by-word",
+   "kind": "emphasis",
+   "slot": "emphasis",
+   "desc": "a spoken quote revealed word by word in sync with the voice (at >= reading speed)",
+   "sig": [
+    "class=\"qw\"|id=\"qw\\d\\d\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "dashed-route-draw",
+   "kind": "emphasis",
+   "slot": "emphasis",
+   "desc": "a dashed red route line draws across a map between places on the spoken names",
+   "sig": [
+    "#m1r, \\.route \\{|id=\"map\\dr\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "pop-in-accent",
+   "kind": "emphasis",
+   "slot": "emphasis",
+   "desc": "a numeral, pin, sticky, count or «?» pops in with a back.out(2) overshoot on its word",
+   "sig": [
+    "\"ease\": \"back\\.out\\(2\\)\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "marker-underline-swipe",
+   "kind": "emphasis",
+   "slot": "emphasis",
+   "desc": "a red underline bar swipes under a typed term once it is complete",
+   "sig": [
+    "id=\"tmu\" class=\"tmu\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "number-count-up",
+   "kind": "emphasis",
+   "slot": "emphasis",
+   "desc": "a big Oswald number counts up in steps (0 -> 38 000) on the spoken figure",
+   "sig": [
+    "\"textContent\":"
+   ],
+   "reels": []
+  },
+  {
+   "id": "prop-shake",
+   "kind": "emphasis",
+   "slot": "emphasis",
+   "desc": "the returning note shakes (rotation yoyo x7) on «…»: the tension is still there",
+   "sig": [
+    "\"yoyo\": true, \"repeat\": 7"
+   ],
+   "reels": []
+  },
+  {
+   "id": "hook-postcard-flip",
+   "kind": "hook",
+   "slot": "hook",
+   "desc": "a postcard of the place the speaker puts you in sits over the head from frame 1 (no entrance) and flips on the hook word to its back, where the line's items are written in («…»)",
+   "sig": [
+    "class=\"prop fr-postcard\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "sticky-battery-drain",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a yellow sticky note with a drawn battery beside the face: bars go out on the words, the last one turns red and blinks («…»)",
+   "sig": [
+    "class=\"prop fr-battery\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "dictionary-clipping",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a torn dictionary clipping on the chest: the term in Playfair, «…» pops in red italic, the definition revealed word by word as the speaker says it",
+   "sig": [
+    "class=\"prop fr-dict\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "ticket-stub-study",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a perforated ticket stub over the head: «…» on the left, the findings ticked in Caveat on the right on their words",
+   "sig": [
+    "class=\"prop fr-stub\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "gauge-needle-red",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a kraft card with a pressure gauge beside the face: the needle climbs into the red on «…» and trembles on «…»",
+   "sig": [
+    "class=\"prop fr-gauge\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "gauge-fullscreen",
+   "kind": "scene",
+   "slot": "artifact",
+   "desc": "the same gauge full screen on kraft, the needle shaking in the red, captions kept (hides a look-away)",
+   "sig": [
+    "class=\"scene [^\"]*fr-gaugebig"
+   ],
+   "reels": []
+  },
+  {
+   "id": "punch-card-list",
+   "kind": "scene",
+   "slot": "artifact",
+   "desc": "a spoken list as a gym membership card full screen: each item written in Caveat and a hole punched beside it on its word",
+   "sig": [
+    "class=\"scene [^\"]*fr-punchcard"
+   ],
+   "reels": []
+  },
+  {
+   "id": "paper-light-switch",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a paper light-switch plate with a drawn bulb beside the face: the toggle flips on «…», the bulb lights on «…»",
+   "sig": [
+    "class=\"prop fr-switch\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "door-hanger-swing",
+   "kind": "outro",
+   "slot": "outro",
+   "desc": "a red «…» door hanger swings in beside the face for the last line and stays to the end; the closing words written on it in yellow",
+   "sig": [
+    "class=\"prop fr-hanger\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "enter-toss",
+   "kind": "transition",
+   "slot": "in",
+   "desc": "a prop is tossed in from the upper corner (x 340, y -260, rotation 38, scale .7) and lands with power3.out",
+   "sig": [
+    "data-in=\"toss\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "enter-slap",
+   "kind": "transition",
+   "slot": "in",
+   "desc": "a prop slaps down onto the frame (scale 1.28 -> 1 in 0.14 s, power4.in), like a sticky note pressed on",
+   "sig": [
+    "data-in=\"slap\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "enter-unfold",
+   "kind": "transition",
+   "slot": "in",
+   "desc": "a prop unfolds from a top hinge (rotationX -88 -> 0)",
+   "sig": [
+    "data-in=\"unfold\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "enter-swing",
+   "kind": "transition",
+   "slot": "in",
+   "desc": "a hanging prop swings in on its hook (rotation 34 -> 0, elastic) and settles",
+   "sig": [
+    "data-in=\"swing\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "scene-iris-open",
+   "kind": "transition",
+   "slot": "in",
+   "desc": "a full-screen card opens as an iris (clip-path circle 0 -> 75 %) and closes the same way",
+   "sig": [
+    "data-in=\"iris\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "scene-sheet-push",
+   "kind": "transition",
+   "slot": "in",
+   "desc": "a full-screen card is pushed up over the lens from below and leaves upward",
+   "sig": [
+    "class=\"scene[^\"]*\" data-in=\"push\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "scene-wipe",
+   "kind": "transition",
+   "slot": "in",
+   "desc": "a full-screen card wipes in left to right and out to the right (not used yet)",
+   "sig": [
+    "data-in=\"wipe\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "hook-book-spine-bookmark",
+   "kind": "hook",
+   "slot": "hook",
+   "desc": "frame 1: a cloth book spine across the top band (gold foil author + title) with a cream bookmark slip carrying the hook text; the key word underlined in red pencil on its word",
+   "sig": [
+    "class=\"bk-spine"
+   ],
+   "reels": []
+  },
+  {
+   "id": "breaker-panel-tape-labels",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a grey fuse box in the chest band; masking-tape labels written as said, each breaker clacks OFF on its word (one per named app category)",
+   "sig": [
+    "class=\"brk-panel"
+   ],
+   "reels": []
+  },
+  {
+   "id": "open-at-clock-sign",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a hanging shop sign …; hands spin and stop on the landing word, the answer handwritten under it",
+   "sig": [
+    "class=\"openat"
+   ],
+   "reels": []
+  },
+  {
+   "id": "rx-pad-basics",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a doctor prescription pad in a side column: Rx + title, each prescribed item handwritten on its word",
+   "sig": [
+    "class=\"rx-pad"
+   ],
+   "reels": []
+  },
+  {
+   "id": "outro-appointment-card-fill",
+   "kind": "outro",
+   "slot": "outro",
+   "desc": "outro: an appointment card in the chest band, blank fields filled in by hand on the last words, a red heart drawn round the answer; holds to the end",
+   "sig": [
+    "class=\"appt-card"
+   ],
+   "reels": []
+  },
+  {
+   "id": "enter-popup",
+   "kind": "transition",
+   "slot": "in",
+   "desc": "prop stands up from the table like a pop-up book page (rotationX 90 -> 0 from its bottom edge)",
+   "sig": [
+    "data-in=\"popup\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "enter-twirl",
+   "kind": "transition",
+   "slot": "in",
+   "desc": "a hanging prop twirls on its string (rotationY 540 -> 0) and settles",
+   "sig": [
+    "data-in=\"twirl\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "enter-flip",
+   "kind": "transition",
+   "slot": "in",
+   "desc": "a card flips over onto its face (rotationY -180 -> 0, back hidden)",
+   "sig": [
+    "data-in=\"flip\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "enter-deal",
+   "kind": "transition",
+   "slot": "in",
+   "desc": "a card is dealt across the table from the lower left (x -700, rotation -24 -> 0, expo.out)",
+   "sig": [
+    "data-in=\"deal\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "phone-jar-empties",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "a glass jar crammed with phones (red notification dots) beside the face; the lid pops and the phones fly up out of it on the word, a kraft label slaps on with the freed thing written by hand",
+   "sig": [
+    "class=\"pj-jar"
+   ],
+   "reels": []
+  },
+  {
+   "id": "outro-comfort-zone-grows",
+   "kind": "outro",
+   "slot": "outro",
+   "desc": "outro: graph-paper card in the chest band; a blue comfort-zone circle, the scary thing written in red outside it; on the last word a big ring draws round both (the zone grows) and holds to the end",
+   "sig": [
+    "class=\"cz-card"
+   ],
+   "reels": []
+  },
+  {
+   "id": "enter-roll",
+   "kind": "transition",
+   "slot": "in",
+   "desc": "prop rolls in from the frame edge like a jar on a table and stands up (x 520 + rotation 320 -> 0)",
+   "sig": [
+    "data-in=\"roll\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "enter-bungee",
+   "kind": "transition",
+   "slot": "in",
+   "desc": "prop drops in small from above on an elastic cord (y -260, scale 0.45 -> 1, elastic.out)",
+   "sig": [
+    "data-in=\"bungee\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "hook-luggage-tag",
+   "kind": "hook",
+   "slot": "hook",
+   "desc": "kraft luggage tag on a red string in the top band, on screen from frame 0, the hook question printed on it; captions off under it",
+   "sig": [
+    "class=\"[^\"]*lugtag"
+   ],
+   "reels": []
+  },
+  {
+   "id": "telegram-tape-strips",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "telegram form in the chest band; the spoken term pasted in as printed tape strips word by word, a red marker ring on the key strip",
+   "sig": [
+    "class=\"[^\"]*telegram"
+   ],
+   "reels": []
+  },
+  {
+   "id": "time-card-clock-punch",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "factory clock card in a side column: the number punched by the time clock, then the results written in rows",
+   "sig": [
+    "class=\"[^\"]*timecard"
+   ],
+   "reels": []
+  },
+  {
+   "id": "chalk-slate-versus",
+   "kind": "prop",
+   "slot": "artifact",
+   "desc": "small school chalk slate in a side column, chalk words written as said, the loser struck through",
+   "sig": [
+    "class=\"[^\"]*slate"
+   ],
+   "reels": []
+  },
+  {
+   "id": "film-strip-four-frames",
+   "kind": "frame",
+   "slot": "artifact",
+   "desc": "35 mm negative strip with sprocket holes in the chest band; one object photo lands in each frame on its word, labels under",
+   "sig": [
+    "class=\"[^\"]*filmstrip"
+   ],
+   "reels": []
+  },
+  {
+   "id": "outro-hourglass-flip",
+   "kind": "outro",
+   "slot": "outro",
+   "desc": "kraft card with a drawn hourglass beside the face; the last words written on it, the hourglass turns over on the last word; ends flat",
+   "sig": [
+    "class=\"[^\"]*hourglass"
+   ],
+   "reels": []
+  },
+  {
+   "id": "enter-hinge",
+   "kind": "transition",
+   "slot": "in",
+   "desc": "prop swings open on a side hinge (rotationY from 95 deg), like a cover opening",
+   "sig": [
+    "data-in=\"hinge\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "enter-feed",
+   "kind": "transition",
+   "slot": "in",
+   "desc": "prop feeds in sideways like film through a gate (x from off screen, steady ease)",
+   "sig": [
+    "data-in=\"feed\""
+   ],
+   "reels": []
+  }
+ ]
+}

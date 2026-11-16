@@ -371,8 +371,9 @@ def test_step_ids_and_order(sd):
     ids = [n for n, _ in sd.STEPS]
     assert ids == ["mcp", "plugins", "deps", "plan-tier", "settings", "oomguard", "machines-split", "vendor",
                    "impeccable-engine", "workflows", "library", "mcp-inventory", "ponytail-board",
-                   "learning-evolve"]
+                   "learning-evolve", "openmontage"]
     assert ids.index("plan-tier") < ids.index("settings")  # a new tier lands in the same run's render
+    assert ids[-1] == "openmontage"  # a cold `make setup` takes minutes: it must not starve the other steps
 
 
 def test_learning_evolve_rows(sd, monkeypatch, tmp_path):

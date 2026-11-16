@@ -1,0 +1,256 @@
+{
+ "portra400": {
+  "title": "Kodak Portra 400 (scan)",
+  "what": "Warm, soft, pink-leaning skin; the modern scanned-negative Portra look.",
+  "negative": "Kodak Portra 400",
+  "print": "Inversion (ACES like)",
+  "params": {
+   "input_colorspace": "ITU-R BT.709",
+   "output_gamut": "Rec. 709",
+   "gamma_func": "Gamma 2.4",
+   "projector_kelvin": 6500,
+   "exp_comp": 0.0,
+   "white_clip": false,
+   "white_balance": 0,
+   "exp_kelvin": 6500,
+   "red_light": 0.0,
+   "green_light": 0.0,
+   "blue_light": 0.0,
+   "shadow_comp": -0.5,
+   "color_masking": 1.0,
+   "tint": 0.0,
+   "sat_adjust": 1.0,
+   "push_pull": 0.0,
+   "inversion_gamma": 3.0,
+   "idealized_curve": false,
+   "apd_intermediate": true,
+   "upsampling_method": "SFL upsampling"
+  },
+  "adx_scaling": 2.0,
+  "size": 33,
+  "rms": 3.7,
+  "bw": false,
+  "film_look": {
+   "grain": 1.0
+  },
+  "files": {
+   "full": "portra400.cube",
+   "neg": "split/portra400.neg.cube",
+   "print": "split/portra400.print.cube",
+   "grain": "split/portra400.grain.cube"
+  },
+  "generator": "spectral_film_lut 0.18.12"
+ },
+ "vision3_500t": {
+  "title": "Kodak Vision3 500T 5219 + 2383 print",
+  "what": "The night cinema look: tungsten negative printed on Vision 2383, rich warm skin, dense blacks.",
+  "negative": "Kodak Vision3 500T 5219",
+  "print": "Kodak Vision 2383",
+  "params": {
+   "input_colorspace": "ITU-R BT.709",
+   "output_gamut": "Rec. 709",
+   "gamma_func": "Gamma 2.4",
+   "projector_kelvin": 6500,
+   "exp_comp": 0.0,
+   "white_clip": false,
+   "white_balance": 0,
+   "exp_kelvin": 6500,
+   "red_light": 0.0,
+   "green_light": 0.0,
+   "blue_light": 0.0,
+   "shadow_comp": -0.5,
+   "color_masking": 1.0,
+   "tint": 0.0,
+   "sat_adjust": 1.0,
+   "push_pull": 0.0,
+   "inversion_gamma": 3.0,
+   "idealized_curve": false,
+   "apd_intermediate": true,
+   "upsampling_method": "SFL upsampling"
+  },
+  "adx_scaling": 2.0,
+  "size": 33,
+  "rms": 4.4,
+  "bw": false,
+  "film_look": {
+   "grain": 1.0,
+   "halation": 0.2
+  },
+  "files": {
+   "full": "vision3_500t.cube",
+   "neg": "split/vision3_500t.neg.cube",
+   "print": "split/vision3_500t.print.cube",
+   "grain": "split/vision3_500t.grain.cube"
+  },
+  "generator": "spectral_film_lut 0.18.12"
+ },
+ "eterna500": {
+  "title": "Fuji Eterna 500 + Eterna-CP 3513DI",
+  "what": "Muted, low-saturation Fuji motion-picture look with soft contrast.",
+  "negative": "Fuji Eterna 500",
+  "print": "Fuji Eterna-CP Type 3513DI",
+  "params": {
+   "input_colorspace": "ITU-R BT.709",
+   "output_gamut": "Rec. 709",
+   "gamma_func": "Gamma 2.4",
+   "projector_kelvin": 6500,
+   "exp_comp": 0.0,
+   "white_clip": false,
+   "white_balance": 0,
+   "exp_kelvin": 6500,
+   "red_light": 0.0,
+   "green_light": 0.0,
+   "blue_light": 0.0,
+   "shadow_comp": -0.5,
+   "color_masking": 1.0,
+   "tint": 0.0,
+   "sat_adjust": 1.0,
+   "push_pull": 0.0,
+   "inversion_gamma": 3.0,
+   "idealized_curve": false,
+   "apd_intermediate": true,
+   "upsampling_method": "SFL upsampling"
+  },
+  "adx_scaling": 2.0,
+  "size": 33,
+  "rms": 3.5,
+  "bw": false,
+  "film_look": {
+   "grain": 1.0
+  },
+  "files": {
+   "full": "eterna500.cube",
+   "neg": "split/eterna500.neg.cube",
+   "print": "split/eterna500.print.cube",
+   "grain": "split/eterna500.grain.cube"
+  },
+  "generator": "spectral_film_lut 0.18.12"
+ },
+ "ektachrome100d": {
+  "title": "Kodak Ektachrome 100D (slide)",
+  "what": "Reversal film: crisp, contrasty, cool shadows against warm skin.",
+  "negative": "Kodak Ektachrome 100D",
+  "print": null,
+  "params": {
+   "input_colorspace": "ITU-R BT.709",
+   "output_gamut": "Rec. 709",
+   "gamma_func": "Gamma 2.4",
+   "projector_kelvin": 6500,
+   "exp_comp": 0.3,
+   "white_clip": false,
+   "white_balance": 0,
+   "exp_kelvin": 6500,
+   "red_light": 0.0,
+   "green_light": 0.0,
+   "blue_light": 0.0,
+   "shadow_comp": -0.3,
+   "color_masking": 1.0,
+   "tint": 0.0,
+   "sat_adjust": 1.0,
+   "push_pull": 0.0,
+   "inversion_gamma": 3.0,
+   "idealized_curve": false,
+   "apd_intermediate": true,
+   "upsampling_method": "SFL upsampling"
+  },
+  "adx_scaling": 2.0,
+  "size": 33,
+  "rms": 8.5,
+  "bw": false,
+  "film_look": {
+   "grain": 1.0
+  },
+  "files": {
+   "full": "ektachrome100d.cube",
+   "neg": "split/ektachrome100d.neg.cube",
+   "print": "split/ektachrome100d.print.cube",
+   "grain": "split/ektachrome100d.grain.cube"
+  },
+  "generator": "spectral_film_lut 0.18.12"
+ },
+ "trix400": {
+  "title": "Kodak Tri-X 400 pushed (Dev 11) on Polymax grade 3",
+  "what": "Black and white, pushed Tri-X: hard contrast, deep blacks, strong grain.",
+  "negative": "Kodak Trix-X 400 Dev 11",
+  "print": "Kodak Polymax Fine-Art Paper Grade 3",
+  "params": {
+   "input_colorspace": "ITU-R BT.709",
+   "output_gamut": "Rec. 709",
+   "gamma_func": "Gamma 2.4",
+   "projector_kelvin": 6500,
+   "exp_comp": 0.0,
+   "white_clip": false,
+   "white_balance": 0,
+   "exp_kelvin": 6500,
+   "red_light": 0.0,
+   "green_light": 0.0,
+   "blue_light": 0.0,
+   "shadow_comp": -1.0,
+   "color_masking": 1.0,
+   "tint": 0.0,
+   "sat_adjust": 1.0,
+   "push_pull": 0.0,
+   "inversion_gamma": 3.0,
+   "idealized_curve": false,
+   "apd_intermediate": true,
+   "upsampling_method": "SFL upsampling"
+  },
+  "adx_scaling": 2.0,
+  "size": 33,
+  "rms": 17.0,
+  "bw": true,
+  "film_look": {
+   "grain": 1.0
+  },
+  "files": {
+   "full": "trix400.cube",
+   "neg": "split/trix400.neg.cube",
+   "print": "split/trix400.print.cube",
+   "grain": "split/trix400.grain.cube"
+  },
+  "generator": "spectral_film_lut 0.18.12"
+ },
+ "cinestill800t": {
+  "title": "Cinestill-like 800T (5219 pushed, cool WB) + halation",
+  "what": "Cinestill-style night stock: Vision3 500T rated at 800 (2/3 stop push) with a cooler white balance.",
+  "negative": "Kodak Vision3 500T 5219",
+  "print": "Kodak Vision 2383",
+  "params": {
+   "input_colorspace": "ITU-R BT.709",
+   "output_gamut": "Rec. 709",
+   "gamma_func": "Gamma 2.4",
+   "projector_kelvin": 6500,
+   "exp_comp": 0.0,
+   "white_clip": false,
+   "white_balance": 0,
+   "exp_kelvin": 4300,
+   "red_light": 0.0,
+   "green_light": 0.0,
+   "blue_light": 0.0,
+   "shadow_comp": -0.5,
+   "color_masking": 1.0,
+   "tint": 0.0,
+   "sat_adjust": 1.0,
+   "push_pull": 0.67,
+   "inversion_gamma": 3.0,
+   "idealized_curve": false,
+   "apd_intermediate": true,
+   "upsampling_method": "SFL upsampling"
+  },
+  "adx_scaling": 2.0,
+  "size": 33,
+  "rms": 4.4,
+  "bw": false,
+  "film_look": {
+   "halation": 0.55,
+   "grain": 1.6
+  },
+  "files": {
+   "full": "cinestill800t.cube",
+   "neg": "split/cinestill800t.neg.cube",
+   "print": "split/cinestill800t.print.cube",
+   "grain": "split/cinestill800t.grain.cube"
+  },
+  "generator": "spectral_film_lut 0.18.12"
+ }
+}

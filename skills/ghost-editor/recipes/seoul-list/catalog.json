@@ -1,0 +1,878 @@
+{
+ "_about": "Registry of this style's components (SYSTEM.md): what each one is, its kind and the regexes (sig) that find it in a built index.html. scripts/components.py plan / check / add / record read and write it: history lists your reels in order, projects maps a reel id to its project folder, and each element's reels say where it was used. Empty history = nothing used yet.",
+ "reels": {},
+ "history": [],
+ "projects": {},
+ "_about_components": "kind = hook / scene / prop / frame / transition / outro (new every reel) or emphasis / signature / house (may stay); sig = regexes on the built index.html; history = reels in order; projects = where each reel's index.html is. scripts/components.py reads and writes this file.",
+ "elements": [
+  {
+   "id": "hook-shrink-card-glitch-word",
+   "slot": "S1",
+   "sig": [
+    "<div class=\"cardshot\" id=\"b\\d+-card\">"
+   ],
+   "kind": "hook",
+   "desc": "the current shot shrinks into a rounded card on white under a small line, then dissolves (blur) as the red glitch word lands and the line drops under it",
+   "reels": []
+  },
+  {
+   "id": "hook-photo-card-serif-word",
+   "slot": "S1",
+   "sig": [
+    "<div class=\"photo\" id=\"b\\d+-ph\""
+   ],
+   "kind": "house",
+   "desc": "photo-card insert frame: white page, a small heavy line above, a stock / drawn photo card flies in tilted and lands straight, the big serif (or grotesk) word lands under it, optional edge sticker",
+   "reels": []
+  },
+  {
+   "id": "stickers-gloves-eyes",
+   "slot": "S1",
+   "note": "cartoon gloves: not reproducible (Disney-style art)",
+   "kind": "hook",
+   "desc": "hook stickers: white cartoon-glove hands + eyes (the reference; Disney-style art, not reproducible, never built: no sig)",
+   "reels": []
+  },
+  {
+   "id": "stickers-fluent-hands-eyes",
+   "slot": "S1",
+   "sig": [
+    "assets/emoji/eyes\\.(?:webm|png)\"[^\\n]*assets/emoji/(?:waving-hand|hand-splayed)\\.(?:webm|png)\"",
+    "assets/emoji/(?:waving-hand|hand-splayed)\\.(?:webm|png)\"[^\\n]*assets/emoji/eyes\\.(?:webm|png)\""
+   ],
+   "kind": "hook",
+   "desc": "hook stickers: Fluent eyes + waving / splayed hands",
+   "reels": []
+  },
+  {
+   "id": "ig-comment-card",
+   "slot": "S4",
+   "sig": [
+    "<div id=\"b\\d+\" class=\"cmrow\""
+   ],
+   "kind": "scene",
+   "desc": "white rounded IG comment card pops in (avatar, text typed word by word on the voice, emoji pop, faint «…»); seoul3 also voices other people: footage-crop avatars for the father / merchant, the author's portrait + name in the reply slot for a quote",
+   "reels": []
+  },
+  {
+   "id": "macos-window-cutouts",
+   "slot": "S4",
+   "sig": [
+    "<div class=\"mw\" id=\"b\\d+-win\""
+   ],
+   "kind": "scene",
+   "desc": "dark frosted macOS window (blurred copy of the shot, traffic-light dots) over the dimmed shot; item + label top right swap on each spoken item",
+   "reels": []
+  },
+  {
+   "id": "blue-text-selection",
+   "slot": "S4",
+   "sig": [
+    "<div class=\"hlrow\""
+   ],
+   "kind": "scene",
+   "desc": "iMessage-blue selection blocks behind white heavy words, left-aligned and stacked, each wipes in on its word, optional emoji",
+   "note": "the blue highlight is an iOS text-selection sticker: rotates with the phone stickers",
+   "reels": []
+  },
+  {
+   "id": "imessage-bubble-tapback",
+   "slot": "invariant",
+   "sig": [
+    "<div class=\"obub word\""
+   ],
+   "kind": "outro",
+   "desc": "the last shot shrinks into a card on black and floats off in 3D, a blue typing bubble (•••), the blue bubble with the closing word on the spoken word, an emoji tapback on its corner",
+   "reels": []
+  },
+  {
+   "id": "triptych",
+   "slot": "S5",
+   "sig": [
+    "<div class=\"band\" id=\"b\\d+-k0\""
+   ],
+   "kind": "frame",
+   "desc": "three shots as equal 640 px bands on black, optionally staggered slide-ins",
+   "reels": []
+  },
+  {
+   "id": "outro-cards-1",
+   "slot": "S6",
+   "sig": [
+    "class=\"ocard small\" id=\"b\\d+-c1\"(?![\\s\\S]*class=\"ocard small\" id=\"b\\d+-c2\")"
+   ],
+   "kind": "outro",
+   "desc": "one tilted photo card from the reel pops in and drifts off with the last shot",
+   "reels": []
+  },
+  {
+   "id": "outro-cards-3",
+   "slot": "S6",
+   "sig": [
+    "class=\"ocard small\" id=\"b\\d+-c3\"(?![\\s\\S]*class=\"ocard small\" id=\"b\\d+-c4\")"
+   ],
+   "kind": "outro",
+   "desc": "three tilted photo cards from the reel pop in and drift off with the last shot",
+   "note": "a reel build has 2 outro cards (outro-cards-2)",
+   "reels": []
+  },
+  {
+   "id": "flash-kamery-ampersand",
+   "slot": "S3",
+   "sig": [],
+   "kind": "emphasis",
+   "desc": "the flash words «…» (an ampersand tucked under the connector)",
+   "reels": []
+  },
+  {
+   "id": "stickers-fluent-brain-laptop-alarm",
+   "slot": "S1",
+   "sig": [
+    "assets/emoji/brain\\.(?:webm|png)\"[^\\n]*assets/emoji/laptop\\.(?:webm|png)\"[^\\n]*assets/emoji/alarm\\.(?:webm|png)\""
+   ],
+   "kind": "hook",
+   "desc": "hook stickers: Fluent brain + laptop + alarm clock (head still at work)",
+   "reels": []
+  },
+  {
+   "id": "ios-notification-banner-typed",
+   "slot": "S4",
+   "note": "NEW primitive (notify beat)",
+   "sig": [
+    "<div id=\"b\\d+\" class=\"ntrow\""
+   ],
+   "kind": "scene",
+   "desc": "dark frosted iOS banner drops from the top (app tile emoji, app name + time), bold title blurs in, the body types word by word on the voice, then it slides back up",
+   "reels": []
+  },
+  {
+   "id": "flash-no-i-dazhe",
+   "slot": "S3",
+   "sig": [],
+   "kind": "emphasis",
+   "desc": "the flash words «…» + «…» (content instance of the white flash page)",
+   "reels": []
+  },
+  {
+   "id": "outro-cards-2",
+   "slot": "S6",
+   "sig": [
+    "class=\"ocard small\" id=\"b\\d+-c2\"(?![\\s\\S]*class=\"ocard small\" id=\"b\\d+-c3\")"
+   ],
+   "kind": "outro",
+   "desc": "two tilted photo cards from the reel pop in and drift off with the last shot",
+   "reels": []
+  },
+  {
+   "id": "face-shots-lip-synced",
+   "slot": "S5",
+   "note": "the speaker's own plate as 4 lip-synced shots (opener + 3 direct lines)",
+   "sig": [
+    "src=\"assets/clips/face\\.mp4\""
+   ],
+   "kind": "house",
+   "desc": "the approved plate as shot (never regraded), lip-synced (clip time = VO time); in seoul3 it is the base of the reel and carries every direct line, cut where the plate itself cuts",
+   "reels": []
+  },
+  {
+   "id": "type-voices-playfair-inter-tight",
+   "kind": "house",
+   "slot": "S2",
+   "desc": "the two type voices: Playfair Display Italic for mood/place words, Inter Tight 800 for facts (CAPS for the contrast word); Inter Tight 800 italic (sans-it) stands in for the serif over the light hoodie",
+   "sig": [
+    "<span id=\"b\\d+-(?:g-)?b0\" class=\"(?:serif|serif-up|sans|sans-it)\" style=\"font-size:"
+   ],
+   "reels": []
+  },
+  {
+   "id": "word-beat-subline",
+   "kind": "house",
+   "slot": "S2",
+   "desc": "word-family caption: one big word blurs in on its spoken word, a small subline tucked above-left / below-right; white with a tight dark halo on footage, on the chest (y 0.72-0.75) over the face; fades out on the next beat",
+   "sig": [
+    "<div id=\"b\\d+\" class=\"wb\" style=\"[^\"]*\"><div class=\"wb-fit\"[^\\n]*class=\"subpos\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "white-flash-page",
+   "kind": "house",
+   "slot": "S3",
+   "desc": "white flash page as the format of the connector words: one black heavy word on white, hard in / hard out, 0.4-0.9 s",
+   "sig": [
+    "class=\"page white\" style=\"[^\"]*\"><div class=\"wb\" style=\"top:\\d+px\"><div class=\"wb-fit\" data-max=\"\\d+\"><div class=\"wb-in on-paper\" data-fit=\"\\d+\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "accent-red-blue",
+   "kind": "house",
+   "desc": "the accent pair: glitch red #FF3B30 and iMessage blue #0B84FE (selections, bubbles, the ranked #1, chart lines)",
+   "sig": [
+    "background:#0B84FE"
+   ],
+   "reels": []
+  },
+  {
+   "id": "footage-conformed-to-plate",
+   "kind": "house",
+   "desc": "every stock clip / still conformed to the plate as shot through insert_prep.py (people + line check, one graded world)",
+   "sig": [
+    "<img id=\"st\\d+\" src=\"assets/stills/",
+    "// seoul3 custom scenes"
+   ],
+   "reels": []
+  },
+  {
+   "id": "hard-cuts-no-transition",
+   "kind": "house",
+   "desc": "transitions: hard cuts only between shots (no zoom-blur whip or any transitions.py window); every in / out move lives inside its component (card fly-in, banner drop, shrink, float-off)",
+   "sig": [
+    "^(?![\\s\\S]*src=\"assets/tx/)"
+   ],
+   "reels": []
+  },
+  {
+   "id": "hook-face-opener-chest-word",
+   "kind": "house",
+   "slot": "S1",
+   "desc": "opens on the face as shot with the first key word on the chest at 0-1 s (selfie opener), before any collage",
+   "sig": [
+    "<video id=\"s0\" src=\"assets/clips/face\\.mp4\""
+   ],
+   "note": "opening on the face is footage, not a hook device; the device around it rotates",
+   "reels": []
+  },
+  {
+   "id": "hook-broll-notify-banner",
+   "kind": "hook",
+   "slot": "S1",
+   "desc": "no hook collage: at ~1 s a full-screen B-roll insert (a man with a laptop on a beach) gets a work-mail iOS banner dropping in from the top while a red caps word lands on the footage",
+   "sig": [
+    "<div id=\"(b\\d+)\" class=\"ntrow\"[\\s\\S]*tl\\.set\\(\"#\\1\", \\{\"visibility\":\"visible\"\\}, [0-2]\\.\\d+\\)"
+   ],
+   "reels": []
+  },
+  {
+   "id": "stickers-fluent-fire-eyes",
+   "kind": "hook",
+   "slot": "S1",
+   "desc": "hook stickers: Fluent fire + eyes pop at the card's corners after the glitch word",
+   "sig": [
+    "assets/emoji/fire\\.(?:webm|png)\"[^\\n]*assets/emoji/eyes\\.(?:webm|png)\"",
+    "assets/emoji/eyes\\.(?:webm|png)\"[^\\n]*assets/emoji/fire\\.(?:webm|png)\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "stickers-fluent-eyes-monocle",
+   "kind": "hook",
+   "slot": "S1",
+   "desc": "hook stickers: Fluent eyes + face-with-monocle (searching for descendants)",
+   "sig": [
+    "assets/emoji/eyes\\.(?:webm|png)\"[^\\n]*assets/emoji/monocle\\.(?:webm|png)\"",
+    "assets/emoji/monocle\\.(?:webm|png)\"[^\\n]*assets/emoji/eyes\\.(?:webm|png)\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "stickers-fluent-ghost-melting",
+   "kind": "hook",
+   "slot": "S1",
+   "desc": "hook stickers: Fluent ghost + melting face (wisdom disappears)",
+   "sig": [
+    "assets/emoji/ghost\\.(?:webm|png)\"[^\\n]*assets/emoji/melting\\.(?:webm|png)\"",
+    "assets/emoji/melting\\.(?:webm|png)\"[^\\n]*assets/emoji/ghost\\.(?:webm|png)\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "stickers-fluent-phone-broken-heart",
+   "kind": "hook",
+   "slot": "S1",
+   "desc": "hook stickers: Fluent phone + broken heart (your relationship with the phone)",
+   "sig": [
+    "assets/emoji/phone\\.(?:webm|png)\"[^\\n]*assets/emoji/broken-heart\\.(?:webm|png)\"",
+    "assets/emoji/broken-heart\\.(?:webm|png)\"[^\\n]*assets/emoji/phone\\.(?:webm|png)\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "stickers-fluent-see-no-evil-eyes",
+   "kind": "hook",
+   "slot": "S1",
+   "desc": "hook stickers: Fluent see-no-evil monkey + eyes (nobody knows who you were)",
+   "sig": [
+    "assets/emoji/see-no-evil\\.(?:webm|png)\"[^\\n]*assets/emoji/eyes\\.(?:webm|png)\"",
+    "assets/emoji/eyes\\.(?:webm|png)\"[^\\n]*assets/emoji/see-no-evil\\.(?:webm|png)\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "lockscreen-notification-stack",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "full lock screen (9:41, date): one banner per spoken app stacks in (…), all swipe off left on a word, a bell-off emoji and «…» appear",
+   "sig": [
+    "class=\"x3page x3lock\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "todo-list-phone-flick",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "a phone with a Reminders-style column slides up on white; it flicks to …(red due pills) / …(grey chat bubbles) on each spoken word, the big word under the phone swaps with it",
+   "sig": [
+    "class=\"x3phone\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "viral-post-card-counter",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "a white social-post card rises on the chest: the title types on the voice, likes / reposts count up, one word (the number) lights up iMessage blue",
+   "sig": [
+    "class=\"x3post\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "count-up-number-page",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "white page: a huge tabular number counts up between two spoken words (38 000, 1 -> 5) with a serif subline; optional outline chips pop in one by one while it counts",
+   "sig": [
+    "class=\"x3num\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "ranked-list-top-fill",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "white page: a ranked list 1-4 slides in with grey placeholder bars, #1 fills with a blue selection word on its spoken word",
+   "sig": [
+    "id=\"x\\d+-top\" class=\"x3sans\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "line-chart-two-lines",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "white page: a red line draws down (cost) and a blue line draws up (startups) on their words, labels and a serif result word blur in",
+   "sig": [
+    "<path id=\"x\\d+-u\" d=\"M"
+   ],
+   "reels": []
+  },
+  {
+   "id": "dots-crowd-one-alone",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "white page: ~130 black dots drift as a crowd, one red dot alone in the middle pulses on «…», serif word below",
+   "sig": [
+    "<i id=\"x\\d+-me\" class=\"x3abs\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "photo-bands-3-on-white",
+   "kind": "frame",
+   "slot": "S5",
+   "desc": "three inset rounded photo bands (1000x580) on white, each slides in from alternating sides on its spoken item with a white label on the photo",
+   "sig": [
+    "class=\"x3sans x3foot\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "grid4-tilted-cards",
+   "kind": "frame",
+   "slot": "S5",
+   "desc": "2x2 grid of slightly tilted photo cards on white, each pops in (scale + rotation) on its spoken item with a grotesk label under it",
+   "sig": [
+    "width:450px;height:560px;transform:rotate\\("
+   ],
+   "reels": []
+  },
+  {
+   "id": "versus-2up-check-cross",
+   "kind": "frame",
+   "slot": "S5",
+   "desc": "2-up on white: a photo card (✓) against a grey type card (✗) fly in from opposite sides, «…» between them, a red strike-through draws over the losing card",
+   "sig": [
+    "width:860px;height:560px"
+   ],
+   "reels": []
+  },
+  {
+   "id": "type-page-big-sticker",
+   "kind": "frame",
+   "slot": "S5",
+   "desc": "white collage page with no photo or shrink card: small line + big word and one large Fluent sticker that pops in (sparkles, melting face, handshake)",
+   "sig": [
+    "class=\"page white\" style=\"[^\"]*\"><div class=\"wb\" id=\"b\\d+-(?:line|big)\"(?:(?!class=\"photo\"|class=\"cardshot\")[^\\n])*class=\"ep\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "still-slow-push",
+   "kind": "frame",
+   "desc": "a full-screen shot (here stock stills made into clips: a match, open palms, the runner) slowly pushes in (scale 1 -> 1.05-1.07)",
+   "sig": [
+    "ft\\(\"#s\\d+w\", \\{\"scale\":"
+   ],
+   "reels": []
+  },
+  {
+   "id": "kraft-paper-map-card",
+   "kind": "prop",
+   "slot": "S5",
+   "desc": "a drawn kraft-paper map card (contour lines, mountains, a red dashed route …> …) used as the photo card",
+   "sig": [
+    "src=\"assets/stills/(?:route|pin)[\\w-]*\\.jpg\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "imessage-second-bubble-typed",
+   "kind": "outro",
+   "slot": "S6",
+   "desc": "a second blue iMessage bubble under the verdict, its words typed in on the voice («…»)",
+   "sig": [
+    "border-radius:46px;background:#0B84FE"
+   ],
+   "reels": []
+  },
+  {
+   "id": "outro-cards-0",
+   "kind": "outro",
+   "slot": "S6",
+   "desc": "no extra photo cards: only the last shot (the face, or the stock runner) floats off",
+   "sig": [
+    "class=\"ocard big\"(?![\\s\\S]*class=\"ocard small\")"
+   ],
+   "reels": []
+  },
+  {
+   "id": "zoom-blur-whip-into-outro",
+   "kind": "transition",
+   "desc": "one zoom-blur whip (transitions.py window clip over the cut) into the last shot before the outro",
+   "sig": [
+    "src=\"assets/tx/tx-\\d+\\.mp4\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "red-glitch-word",
+   "kind": "emphasis",
+   "slot": "S1",
+   "desc": "the big serif word in red with a glow, two red ghost copies snap in offset and step back into it (steps(6))",
+   "sig": [
+    "<div class=\"wb glow\" id=\"b\\d+-big\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "red-word-on-footage",
+   "kind": "emphasis",
+   "desc": "a word beat coloured glitch red (no glitch) on footage: the contrast word «…» over the beach shot",
+   "sig": [
+    "<div id=\"b\\d+\" class=\"wb\" style=\"[^\"]*\"><div class=\"wb-fit\" data-max=\"\\d+\"><div class=\"wb-in on-foot\"[^>]*><span id=\"b\\d+-b0\" class=\"[\\w-]+\" style=\"font-size:\\d+px;color:#FF3B30\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "stacked-word-list",
+   "kind": "emphasis",
+   "slot": "S2",
+   "desc": "heavy words stacked on footage («…», «…»), each blurs in on its word",
+   "sig": [
+    "<div id=\"b\\d+\" class=\"layer\" style=\"[^\"]*\"><div class=\"wb\" style=\"top:"
+   ],
+   "reels": []
+  },
+  {
+   "id": "flash-with-subword",
+   "kind": "emphasis",
+   "slot": "S3",
+   "desc": "white flash page with a small qualifier word tucked above-left of the connector («…», «…», «…», «…»)",
+   "sig": [
+    "class=\"page white\" style=\"[^\"]*\"><div class=\"wb\" style=\"top:\\d+px\"><div class=\"wb-fit\" data-max=\"\\d+\"><div class=\"wb-in on-paper\" data-fit=\"\\d+\"[^\\n]*class=\"subpos\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "flash-oversized-word",
+   "kind": "emphasis",
+   "slot": "S3",
+   "desc": "a flash word too big for the page (300 px, maxWidth 4000), bleeding edge to edge: «…» for «…»",
+   "sig": [
+    "class=\"wb-fit\" data-max=\"[1-9]\\d{3,}\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "squiggle-zigzag-on-chest",
+   "kind": "emphasis",
+   "desc": "a white zig-zag draws itself on the chest under «…» / «…», a red dot pops at its end",
+   "sig": [
+    "<circle id=\"x\\d+-c\" cx="
+   ],
+   "reels": []
+  },
+  {
+   "id": "ig-story-question-sticker",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "Instagram story question box, the question typed on the spoken word, badge counts up",
+   "sig": [
+    "ask me anything"
+   ],
+   "reels": []
+  },
+  {
+   "id": "join-button-sticker",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "community card, Join button tapped on subscribe -> Joined",
+   "sig": [
+    "Fighter From Kashmir</div>"
+   ],
+   "reels": []
+  },
+  {
+   "id": "stickers-fluent-muscle-voltage",
+   "kind": "hook",
+   "slot": "S1",
+   "desc": "hook stickers: muscle + high-voltage",
+   "sig": [
+    "muscle\\.png|high-voltage\\.png"
+   ],
+   "reels": []
+  },
+  {
+   "id": "hook-question-stack-over-broll",
+   "kind": "hook",
+   "slot": "S1",
+   "desc": "frame 0 = stock B-roll of the line under a big three-tier text question (Inter Tight + Playfair italic)",
+   "sig": [
+    "id=\"x-hook\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "findmy-radar-searching",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "Find My card on the hoodie: radar rings searching for «…», no location",
+   "sig": [
+    "class=\"x-fm\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "index-card-typewriter-term",
+   "kind": "prop",
+   "slot": "S5",
+   "desc": "a ruled paper index card flies in tilted, the term typed on it on the voice",
+   "sig": [
+    "class=\"x-card\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "word-letters-fall-away",
+   "kind": "scene",
+   "slot": "S3",
+   "desc": "a big word whose letters drop away one by one on «…»",
+   "sig": [
+    "class=\"x-wis\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "face-punch-close-pullback",
+   "kind": "transition",
+   "slot": "S7",
+   "desc": "the face punched in close on «…», pulled back on «…»",
+   "sig": [
+    "transformOrigin: \"50% 37%\""
+   ],
+   "reels": []
+  },
+  {
+   "id": "outro-flat-face-final-words",
+   "kind": "outro",
+   "slot": "S6",
+   "desc": "no iMessage: ends flat on the face with the last words held as a serif word beat",
+   "sig": [
+    "Seoul list \\(wave 2\\)"
+   ],
+   "reels": []
+  },
+  {
+   "id": "hook-crossword-blank-cells-pop",
+   "kind": "hook",
+   "slot": "S1",
+   "desc": "frame 1: the face + the number hook over the background, four empty numbered crossword cells under it that pop one by one on the spoken list promise",
+   "sig": [
+    "class=\"xw-teaser"
+   ],
+   "reels": []
+  },
+  {
+   "id": "tile-flip-into-page",
+   "kind": "transition",
+   "slot": "S7",
+   "desc": "the frame turns into a grid of white crossword cells flipping in row by row, which become the white page",
+   "sig": [
+    "class=\"tileflip"
+   ],
+   "reels": []
+  },
+  {
+   "id": "crossword-fills-on-spoken-words",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "white page crossword: each spoken item fills its row/column letter by letter, the active word tinted blue, the phrase as the clue line",
+   "sig": [
+    "class=\"page white xword"
+   ],
+   "reels": []
+  },
+  {
+   "id": "book-cover-bookmark-tip",
+   "kind": "prop",
+   "slot": "S5",
+   "desc": "the real cover of the named book flies in; a cream paper bookmark rises out of it and the tip lands on it word by word",
+   "sig": [
+    "class=\"bmark"
+   ],
+   "reels": []
+  },
+  {
+   "id": "chatlist-counters-go-grey-muted",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "dark messenger chat list over the chest; on each spoken app type its unread counter goes grey and a muted speaker pops in",
+   "sig": [
+    "class=\"chatlist"
+   ],
+   "reels": []
+  },
+  {
+   "id": "crossword-answer-strips-callback",
+   "kind": "frame",
+   "slot": "S6",
+   "desc": "the crossword answers return as tilted cell strips over the chest on the callback words, then drop away",
+   "sig": [
+    "class=\"xcall"
+   ],
+   "reels": []
+  },
+  {
+   "id": "outro-phone-bezel-falls-away",
+   "kind": "outro",
+   "slot": "S6",
+   "desc": "a phone bezel closes in around the frame on the word phone and falls off the bottom on stops, leaving the face full screen",
+   "sig": [
+    "class=\"bezel"
+   ],
+   "reels": []
+  },
+  {
+   "id": "hook-battery-sofa-card",
+   "kind": "hook",
+   "slot": "S1",
+   "desc": "hook text on a dark widget card on the hoodie with a battery pill at 12 % red that charges (bolt) on the body line and is full green on the rest word",
+   "sig": [
+    "class=\"bat-card"
+   ],
+   "reels": []
+  },
+  {
+   "id": "cc-work-toggle-off",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "Control Center Focus tile «…» whose blue switch flips OFF on the spoken disconnect word",
+   "sig": [
+    "class=\"cc-tile"
+   ],
+   "reels": []
+  },
+  {
+   "id": "receipt-print-stat",
+   "kind": "prop",
+   "slot": "S5",
+   "desc": "a paper till receipt prints up from the bottom edge, one stat row per spoken phrase (number big)",
+   "sig": [
+    "class=\"rcpt"
+   ],
+   "reels": []
+  },
+  {
+   "id": "tension-gauge-stuck-red",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "dark Health-style card with a level bar that rises and stays pinned in red while the speaker says nothing changes",
+   "sig": [
+    "class=\"tg-card"
+   ],
+   "reels": []
+  },
+  {
+   "id": "divan-strike-callback",
+   "kind": "frame",
+   "slot": "S2",
+   "desc": "a spoken word struck through by a red hand-drawn stroke on the word, called back from the hook word",
+   "sig": [
+    "class=\"strike-ln"
+   ],
+   "reels": []
+  },
+  {
+   "id": "list-chips-stack-numbered",
+   "kind": "frame",
+   "slot": "S5",
+   "desc": "numbered dark pill chips stack in the lower third, each new item pushes the last up and dims it",
+   "sig": [
+    "class=\"chip-stack"
+   ],
+   "reels": []
+  },
+  {
+   "id": "outro-switch-back-on",
+   "kind": "outro",
+   "slot": "S6",
+   "desc": "the switch that went OFF earlier comes back on the last list chip and flips ON on the final word; end flat on the face",
+   "sig": [
+    "id=\"obsw"
+   ],
+   "reels": []
+  },
+  {
+   "id": "hook-static-two-voice-blue-sweep",
+   "kind": "hook",
+   "slot": "S1",
+   "desc": "frame-1 hook text static from frame 0 in the top band over the face plate: grotesk line over a serif line, a blue bar sweeps under the last word",
+   "sig": [
+    "class=\"hk-sweep"
+   ],
+   "reels": []
+  },
+  {
+   "id": "archive-card-on-white-line-big",
+   "kind": "frame",
+   "slot": "S5",
+   "desc": "an archive photo card lands on a white page, spoken line above, serif big word below (no stickers)",
+   "sig": [
+    "archive-card"
+   ],
+   "reels": []
+  },
+  {
+   "id": "ig-caption-dark-thanks-heart",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "dark-mode Instagram caption card on the chest: the avatar, handle, the spoken thanks typed word by word, a heart pops",
+   "sig": [
+    "cm-dark"
+   ],
+   "reels": []
+  },
+  {
+   "id": "outro-serif-word-blue-sweep-hold",
+   "kind": "outro",
+   "slot": "S6",
+   "desc": "the last spoken words as a serif big word with a blue sweep under it, holding over the face to the end",
+   "sig": [
+    "class=\"ot-sweep"
+   ],
+   "reels": []
+  },
+  {
+   "id": "hook-ringing-clock-headline",
+   "kind": "hook",
+   "slot": "S1",
+   "desc": "frame-0 hook as a two-line heavy headline in the free band above the head, a Fluent alarm clock ringing (shake) beside it",
+   "sig": [
+    "fj-hook"
+   ],
+   "reels": []
+  },
+  {
+   "id": "tried-list-strikethrough",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "paper list of the methods the speaker tried, low on the shirt; each item struck in red as spoken, a heavy NOTHING lands under it",
+   "sig": [
+    "fj-tried"
+   ],
+   "reels": []
+  },
+  {
+   "id": "polaroid-on-black-caption",
+   "kind": "frame",
+   "slot": "S5",
+   "desc": "one photo as a polaroid dropping onto a black page, a serif caption of the spoken place under it",
+   "sig": [
+    "fj-pol"
+   ],
+   "reels": []
+  },
+  {
+   "id": "alarm-stop-locked",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "ringing alarm card; its Stop button greys out and a lock snaps on as the speaker says it does not stop",
+   "sig": [
+    "fj-alarm"
+   ],
+   "reels": []
+  },
+  {
+   "id": "dm-stack-want-to-try",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "story replies stacking up in a DM thread, faceless initials avatars, one line each",
+   "sig": [
+    "fj-dm"
+   ],
+   "reels": []
+  },
+  {
+   "id": "appstore-row-count-200",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "App Store row with a GET button; a downloads counter runs up to the spoken number",
+   "sig": [
+    "fj-store"
+   ],
+   "reels": []
+  },
+  {
+   "id": "ios-delete-app-sheet",
+   "kind": "scene",
+   "slot": "S4",
+   "desc": "iOS long-press sheet of an app icon; the red Remove App row presses on the spoken word",
+   "sig": [
+    "fj-del"
+   ],
+   "reels": []
+  },
+  {
+   "id": "outro-delete-row-locks",
+   "kind": "outro",
+   "slot": "S6",
+   "desc": "callback outro: the delete sheet returns and its red row turns grey with a lock; the last serif words hold",
+   "sig": [
+    "fj-lock"
+   ],
+   "reels": []
+  }
+ ]
+}

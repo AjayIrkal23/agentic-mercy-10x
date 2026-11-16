@@ -156,6 +156,12 @@
       "architect-system-design": 0.8
     },
     "skill_rules": [
+      {"skill": "openmontage", "regex": "\\bopen ?montage\\b", "boost": 6.0},
+      {"skill": "ghost-editor", "regex": "\\bghost[- ]?editor\\b", "boost": 6.0},
+      {"skill": "ffmpeg-skill", "regex": "\\b(ffmpeg|ffprobe)\\b", "boost": 6.0},
+      {"skill": "ffmpeg-skill", "regex": "\\b(videos?|footage|films?|reels?|mp4|mov|mkv|webm|m4a|lufs|lip[- ]?sync|audio (sync|drift)|frame rate|transcod\\w*|re-?encod\\w*|seedance|take \\d+)\\b", "unless_surfaces": ["frontend", "backend", "api", "go", "mobile"], "boost": 3.5},
+      {"skill": "openmontage", "regex": "\\b(montage|remotion|hyperframes|explainer video|video pipeline|title cards?|lower thirds?|music bed|(edit|assemble|compose|build|cut|make|render|finish) (the|this|a|my|our|each|every) (videos?|films?|reels?|montage|explainer))\\b", "unless_surfaces": ["frontend", "backend", "api", "go", "mobile"], "boost": 3.5},
+      {"skill": "ghost-editor", "regex": "\\b(talking[- ]head|(pick|choose|select) the best takes?|retakes|remove (the )?pauses|trim (the )?pauses|instagram reels?|youtube shorts|word[- ]timed captions)\\b", "unless_surfaces": ["frontend", "backend", "api", "go", "mobile"], "boost": 3.5},
       {"skill": "impeccable", "regex": "\\bimpeccable\\b", "boost": 6.0},
       {"skill": "ui-ux-pro-max", "regex": "\\bui[- ]?ux[- ]?pro[- ]?max\\b|\\buupm\\b", "boost": 6.0},
       {"skill": "hallmark", "regex": "\\bhallmark\\b|\\bsloplint\\b", "unless_surfaces": ["backend", "api", "go"], "boost": 6.0},

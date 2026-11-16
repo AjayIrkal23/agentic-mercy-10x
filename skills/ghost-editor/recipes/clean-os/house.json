@@ -1,0 +1,68 @@
+{
+ "about": "Clean OS house look (fixed: one house look per style, small variation per reel). The build uses these; only content changes per reel.",
+ "type": {
+  "family": "Inter",
+  "case": "lowercase",
+  "tracking_em": [
+   -0.06,
+   -0.03
+  ],
+  "emphasis": "italic",
+  "card_y": 1250,
+  "caption_px_min": 64
+ },
+ "cards": {
+  "base": "blur-resolve on the chest",
+  "variant": "QuickType suggestion tapped into the card (on choice words only)"
+ },
+ "emphasis_device": "red Figma selection box with a cursor (focus / reject)",
+ "signature_word": "Markup pen (Marck Script) with nib and tool palette",
+ "accent_palette": {
+  "orange": "#FF9F0A",
+  "blue": "#0A84FF",
+  "green": "#30D158"
+ },
+ "accent_rule": "one per reel from the palette, by topic (craft/warmth orange, digital blue, health/done green)",
+ "insert_frame": [
+  "PiP window on the chest",
+  "Photos-style card on a blurred page",
+  "camera viewfinder"
+ ],
+ "sound": "one small native UI sound per graphic entrance, nothing on bare cuts, ambient bed ~-12 dB",
+ "vary_per_reel": [
+  "the components (new every reel: components.py)",
+  "the accent (from the palette)",
+  "the data moment's widget"
+ ],
+ "tolerance": {
+  "L": 8.0,
+  "wb_b": 5.0,
+  "wb_a": 4.0,
+  "sat": [
+   0.85,
+   1.15
+  ],
+  "contrast": [
+   0.85,
+   1.15
+  ]
+ },
+ "grade": {
+  "L": 9.41,
+  "Lstd": 20.49,
+  "C": 13.34,
+  "a": 7.89,
+  "b": 8.45,
+  "wb_a": 4.0,
+  "wb_b": 5.0,
+  "nC": 6.71
+ },
+ "grade_rule": "reference data only, never applied to the speaker's face: the footage stays as shot and the inserts are conformed to it; broll_qa.py as_shot fails a regraded plate",
+ "components_rule": "the house look is the type, captions, accents, insert framing and the speaker's face as shot; phone-UI scenes, paper props, polaroid / card / collage treatments, transitions, hook and outro devices are NEW every reel (scripts/components.py plan / check / record, catalog.json)",
+ "example_components": {
+  "scene_transition": {
+   "in": "app opens from its icon BELOW the chin (power2.in, <= 0.25 s, content from frame one)",
+   "out": "swipe up (0.16 s)"
+  }
+ }
+}

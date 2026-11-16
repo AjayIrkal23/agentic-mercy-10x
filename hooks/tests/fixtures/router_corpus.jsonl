@@ -66,3 +66,16 @@
 {"id": "D2", "kind": "hard", "repo": "none", "listener": "none", "prompt": "hallmark a landing page for a coffee shop", "must": ["Skill(\"hallmark\")"]}
 {"id": "D3", "kind": "hard", "repo": "none", "listener": "none", "prompt": "run ui ux pro max to pick a palette for the landing page", "must": ["Skill(\"ui-ux-pro-max\")"]}
 {"id": "D4", "kind": "hard", "repo": "none", "listener": "none", "prompt": "the hallmark of this backend service is speed, refactor the queue worker", "must_not": ["Skill(\"hallmark\")"]}
+{"id": "V1", "kind": "hard", "repo": "none", "listener": "none", "prompt": "cut take 2 at 4.5 seconds and join it with take 3", "must": ["Skill(\"ffmpeg-skill\")"]}
+{"id": "V2", "kind": "hard", "repo": "none", "listener": "none", "prompt": "use openmontage to put the safety film together from these takes", "must": ["Skill(\"openmontage\")"]}
+{"id": "V3", "kind": "hard", "repo": "none", "listener": "none", "prompt": "here is my talking head recording, pick the best takes and remove the pauses", "must": ["Skill(\"ghost-editor\")"]}
+{"id": "V4", "kind": "hard", "repo": "none", "listener": "none", "prompt": "make the captions on film 3 shorter and fix the audio sync", "must": ["Skill(\"ffmpeg-skill\")"]}
+{"id": "V5", "kind": "hard", "repo": "none", "listener": "none", "prompt": "assemble the film with title cards and a music bed", "must": ["Skill(\"openmontage\")"]}
+{"id": "V6", "kind": "hard", "repo": "fe3", "listener": "none", "prompt": "add a background video to the hero section of the react landing page", "must_not": ["Skill(\"ffmpeg-skill\")", "Skill(\"openmontage\")"]}
+{"id": "V7", "kind": "hard", "repo": "fe3", "listener": "none", "prompt": "the build takes 3 minutes, make the vite config faster", "must_not": ["Skill(\"ffmpeg-skill\")"]}
+{"id": "V8", "kind": "hard", "repo": "none", "listener": "none", "prompt": "the test suite takes 3 minutes, speed it up", "must_not": ["Skill(\"ffmpeg-skill\")"]}
+{"id": "V9", "kind": "hard", "repo": "py", "listener": "none", "prompt": "generate captions for the product images with the BLIP model", "must_not": ["Skill(\"ffmpeg-skill\")"]}
+{"id": "V10", "kind": "hard", "repo": "py", "listener": "none", "prompt": "fix the loudness normalisation unit test in the audio dsp module", "must_not": ["Skill(\"ffmpeg-skill\")"]}
+{"id": "V11", "kind": "hard", "repo": "none", "listener": "none", "prompt": "the hook clips long prompts to 4000 chars", "must_not": ["Skill(\"ffmpeg-skill\")"]}
+{"id": "V12", "kind": "hard", "repo": "none", "listener": "none", "prompt": "build the edit form for the user profile settings", "must_not": ["Skill(\"openmontage\")"]}
+{"id": "V13", "kind": "hard", "repo": "py", "listener": "none", "prompt": "scrape tiktok trends into a csv", "must_not": ["Skill(\"ghost-editor\")"]}

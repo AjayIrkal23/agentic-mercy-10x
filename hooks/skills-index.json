@@ -2,10 +2,10 @@
   "_meta": {
     "purpose": "Ranked-routing catalog: every local skill (metadata-first, aliases resolved) plus installed plugin skills as plugin:skill.",
     "generator": "build_skills_index.py",
-    "skill_count": 135,
+    "skill_count": 138,
     "plugin_count": 0,
     "alias_count": 83,
-    "checksum": "1395c162c99691e6d44959149b8224c77fe2a470a7654c3395a1d3adbd3e81a1",
+    "checksum": "5706ad8eff9b7d2a7031ca1251dd37f90d6fbe8e1a0f7060f2d1f870d61b038a",
     "plugin_sidecar": "state/skills-index.plugins.json (gitignored, per machine)"
   },
   "aliases": {
@@ -1639,6 +1639,35 @@
       ],
       "when_to_use": "Use when adding or changing Fastify routes, route schemas, plugins, hooks, preHandlers, the error handler or rate limits."
     },
+    "ffmpeg-skill": {
+      "name": "ffmpeg-skill",
+      "description": "Local FFmpeg video and audio editing (42 stdlib-Python tools): probe, cut, join, reframe, speed, captions, overlays, silence removal, A/V sync, loudness, HDR to SDR, platform exports and delivery checks.",
+      "keywords": [
+        "audio sync",
+        "captions",
+        "cut the video",
+        "ffmpeg",
+        "ffprobe",
+        "join clips",
+        "loudness",
+        "lufs",
+        "mp4",
+        "reframe",
+        "subtitles",
+        "transcode",
+        "video edit"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "paths": [],
+      "weight": 1.0,
+      "source": "metadata",
+      "category": "media",
+      "when_to_use": "Use whenever a task touches a video or audio file (mp4, mov, mkv, webm, wav, m4a), footage, takes, captions or subtitles, a reel or film edit, LUFS or ffmpeg, even when the user does not say edit. Not for generating new footage (OpenArt / Higgsfield).",
+      "locked": true,
+      "provenance": "vendored-git"
+    },
     "find-skills": {
       "name": "find-skills",
       "description": "Helps users discover and install agent skills when they ask questions like \"how do I do X\", \"find a skill for X\", \"is there a skill that can...\", or express interest in extending capabilities. This skill should be used when the user is looking for functionality that might exist as an installable skill.",
@@ -2191,6 +2220,33 @@
         "windows"
       ],
       "when_to_use": "Use when building or modifying user-facing components, pages, or layouts, or when the output must look production-grade rather than generated."
+    },
+    "ghost-editor": {
+      "name": "ghost-editor",
+      "description": "AI video editor for talking-head reels: best take per sentence, pause trimming, word-timed captions that never cover the face, motion scenes on the spoken word, SFX mixed against the voice, checked B-roll and all-frames QA; 19 named styles and 7 presets.",
+      "keywords": [
+        "best takes",
+        "ghost editor",
+        "instagram reel",
+        "reel",
+        "remove the pauses",
+        "retakes",
+        "shorts",
+        "sound effects",
+        "talking head",
+        "tiktok",
+        "word timed captions"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "paths": [],
+      "weight": 1.0,
+      "source": "metadata",
+      "category": "media",
+      "when_to_use": "Use when the user hands over a talking-head or phone recording and wants a reel, Short or TikTok cut, the best takes picked, pauses removed, captions or sound effects added, a re-cut, or names a ghost-editor style; in other video work, for take picking, captions and SFX levels. Not for landscape screen recordings.",
+      "locked": true,
+      "provenance": "vendored-git"
     },
     "git-workflow-and-versioning": {
       "name": "git-workflow-and-versioning",
@@ -3571,6 +3627,34 @@
       "when_to_use": "Always on (named in core-skill-set.json; load the body with the Skill tool before writing prose) for every piece of prose written to the user or into files: chat, docs, commit messages, PR bodies. Explicit edit/detect when the user pastes a draft.",
       "locked": true,
       "provenance": "vendored-git"
+    },
+    "openmontage": {
+      "name": "openmontage",
+      "description": "OpenMontage agentic video production system (pinned local checkout): pipeline-driven edit, compose and review of finished videos from your own clips, with Remotion and ffmpeg renders, captions, titles, music beds and QA.",
+      "keywords": [
+        "assemble the film",
+        "compose the video",
+        "explainer video",
+        "lower third",
+        "montage",
+        "open montage",
+        "openmontage",
+        "remotion",
+        "title card",
+        "video pipeline"
+      ],
+      "surfaces": [],
+      "intents": [],
+      "path_rules": [],
+      "paths": [],
+      "weight": 1.0,
+      "source": "metadata",
+      "category": "media",
+      "platforms": [
+        "linux",
+        "darwin"
+      ],
+      "when_to_use": "Use when a video has to be assembled, composed, edited or reviewed end to end (a film, explainer, montage, reel or ad built from generated takes), when the user names OpenMontage, Remotion or a montage pipeline, or when ffmpeg alone would mean hand-writing a whole edit. Footage itself still comes from OpenArt or Higgsfield."
     },
     "owasp-security": {
       "name": "owasp-security",

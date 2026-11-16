@@ -1,0 +1,99 @@
+{
+ "_about": "Registry of this style's components (SYSTEM.md): what each one is, its kind and the regexes (sig) that find it in a built index.html. scripts/components.py plan / check / add / record read and write it: history lists your reels in order, projects maps a reel id to its project folder, and each element's reels say where it was used. Empty history = nothing used yet.",
+ "reels": {},
+ "history": [],
+ "projects": {},
+ "_about_components": "kind = hook / scene / prop / frame / transition / outro (new every reel) or emphasis / signature / house (may stay); sig = regexes on the built index.html; history = reels in order; projects = where each reel's index.html is. scripts/components.py reads and writes this file.",
+ "elements": [
+  {
+   "id": "hook-two-rows-strip-title",
+   "slot": "S1",
+   "kind": "hook",
+   "reels": []
+  },
+  {
+   "id": "diagram-sources-tool-word-bottom-up",
+   "slot": "S2",
+   "kind": "scene",
+   "reels": []
+  },
+  {
+   "id": "panel-app-page",
+   "slot": "S3",
+   "kind": "frame",
+   "reels": []
+  },
+  {
+   "id": "panel-modal-over-dimmed-ui",
+   "slot": "S3",
+   "kind": "frame",
+   "reels": []
+  },
+  {
+   "id": "panel-page-scroll",
+   "slot": "S3",
+   "kind": "frame",
+   "reels": []
+  },
+  {
+   "id": "panel-tab-clicks",
+   "slot": "S3",
+   "kind": "frame",
+   "reels": []
+  },
+  {
+   "id": "steps-3",
+   "slot": "S4",
+   "kind": "emphasis",
+   "reels": []
+  },
+  {
+   "id": "cta-comment-keyword-logo",
+   "slot": "S5",
+   "kind": "outro",
+   "reels": []
+  },
+  {
+   "id": "aside-asterisks",
+   "slot": "S6",
+   "kind": "emphasis",
+   "reels": []
+  },
+  {
+   "id": "hook-one-row-five-icons-strip-title",
+   "slot": "S1",
+   "kind": "hook",
+   "reels": []
+  },
+  {
+   "id": "diagram-fan-out-ai-to-four-numbers",
+   "slot": "S2",
+   "kind": "scene",
+   "reels": []
+  },
+  {
+   "id": "panel-designed-viral-post-ring",
+   "slot": "S3",
+   "kind": "frame",
+   "reels": []
+  },
+  {
+   "id": "panel-stock-broll-behind-head",
+   "slot": "S3",
+   "kind": "frame",
+   "reels": []
+  },
+  {
+   "id": "steps-roles-label-rol-plus-example",
+   "slot": "S4",
+   "kind": "emphasis",
+   "reels": []
+  },
+  {
+   "id": "cta-none-speaker-asks-nothing",
+   "slot": "S5",
+   "kind": "outro",
+   "reels": []
+  }
+ ]
+}

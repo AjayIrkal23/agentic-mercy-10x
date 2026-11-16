@@ -125,6 +125,36 @@ def design_trio_status(root: Path, ci: bool = False) -> tuple[str, str]:
     return ("WARN", "; ".join(warns)) if warns else ("PASS", f"skills vendored, node, Impeccable engine {version} cached")
 
 
+VIDEO_SKILLS = ("ffmpeg-skill", "ghost-editor", "openmontage")
+
+
+def video_skills_status(root: Path, ci: bool = False) -> tuple[str, str]:
+    """v5.4.0 video skills: ffmpeg-skill / ghost-editor vendored and the local openmontage skill (FAIL), ffmpeg
+    and node on PATH (WARN), the pinned OpenMontage checkout set up (WARN: the openmontage post step and the
+    daily self-heal install it). --ci checks the skills only."""
+    root = Path(root)
+    missing = [s for s in VIDEO_SKILLS if not (root / "skills" / s / "SKILL.md").is_file()]
+    if missing:
+        return "FAIL", f"video skills missing: {', '.join(missing)} (scripts/vendor_skill.py --all)"
+    if ci:
+        return "PASS", "skills present (ffmpeg, node and the OpenMontage checkout are not checked under --ci)"
+    import importlib.util  # noqa: PLC0415
+    import shutil  # noqa: PLC0415
+    try:
+        from lib import platform as plat  # noqa: PLC0415  (doctor.py puts hooks/ on sys.path)
+        spec = importlib.util.spec_from_file_location("openmontage_engine", root / "scripts" / "openmontage_engine.py")
+        om = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(om)  # type: ignore[union-attr]
+        ready, where = om.ready(), om.home()
+    except Exception as exc:  # noqa: BLE001
+        return "WARN", f"cannot probe: {exc}"
+    warns = [f"no {t} on PATH" for t in ("ffmpeg", "node") if not shutil.which(t)]
+    if not ready and not plat.IS_WINDOWS:  # no make on Windows: the engine SKIPs there by design (use WSL)
+        warns.append(f"OpenMontage not set up at {where} (scripts/openmontage_engine.py; the daily self-heal installs it)")
+    note = f"OpenMontage at {where}" if ready else "OpenMontage needs WSL on Windows"
+    return ("WARN", "; ".join(warns)) if warns else ("PASS", f"skills present, ffmpeg, node, {note}")
+
+
 def workflows_rendered_status(root: Path, ci: bool = False) -> tuple[str, str]:
     """I10: workflows/*.js + index.json are a per-machine render (untracked). Missing or drifted -> FAIL,
     which self-heal repairs with `scripts/build_workflows.py --quiet`. --ci: SKIP (CI renders and checks)."""

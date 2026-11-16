@@ -1,0 +1,56 @@
+{
+ "about": "RESULT house look (fixed: one house look per style, small variation per reel). Artifacts follow the story; the look does not change.",
+ "type": {
+  "captions": "one or two words, Inter Tight, two-tier (small line 62 px + one big bold word 132 px, or a Caveat key word 150 px) on a navy card (rgba(18,29,50,.86)) under the chin",
+  "hand": "Caveat for key words"
+ },
+ "surfaces": [
+  "navy card",
+  "kraft paper"
+ ],
+ "artifacts_rule": "an object from the story's world per beat; reuse is fine when the story calls for it",
+ "film": "the speaker's face as shot (no sepia / warm grade unless the user asks: look.asked); grain + seeded dust, vignette",
+ "insert_frame": [
+  "polaroid on navy",
+  "paper sheet",
+  "framed print"
+ ],
+ "vary_per_reel": [
+  "the components (new every reel: components.py)",
+  "the artifacts",
+  "music bed (warm: lo-fi, piano)"
+ ],
+ "tolerance": {
+  "L": 8.0,
+  "wb_b": 5.0,
+  "wb_a": 4.0,
+  "sat": [
+   0.85,
+   1.15
+  ],
+  "contrast": [
+   0.85,
+   1.15
+  ]
+ },
+ "grade": {
+  "L": 7.84,
+  "Lstd": 19.08,
+  "C": 12.52,
+  "a": 7.41,
+  "b": 9.15,
+  "wb_a": 6.0,
+  "wb_b": 8.0,
+  "nC": 10.3
+ },
+ "grade_rule": "reference data only, never applied to the speaker's face: the footage stays as shot and the inserts are conformed to it; broll_qa.py as_shot fails a regraded plate",
+ "components_rule": "the house look is the type, captions, accents, insert framing and the speaker's face as shot; phone-UI scenes, paper props, polaroid / card / collage treatments, transitions, hook and outro devices are NEW every reel (scripts/components.py plan / check / record, catalog.json)",
+ "example_components": {
+  "transition": "film-burn leaks at section turns"
+ },
+ "face_result": {
+  "mode": "talking head (faceresult.py): props beside / above / below the face in zones from face.json, never on it; full-screen cards <= 2.5 s; face on screen >= 65 %",
+  "plate": "as shot, slow 4 % drift, <= 3 punch-ins pivoting on the mouth line, held 0.45 s tail",
+  "texture": "film grain + per-frame-seeded dust over everything; no vignette and no light leak on the face"
+ }
+}

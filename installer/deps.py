@@ -592,7 +592,7 @@ def run_post_steps(env, *, ci: bool = False, dry_run: bool = False) -> list[tupl
         if dry_run:
             results.append((sid, f"WOULD-RUN: {' '.join(cmd)}"))
             continue
-        cp = plat.run(cmd, timeout=300)
+        cp = plat.run(cmd, timeout=float(step.get("timeout", 300)))  # openmontage: a cold `make setup`
         if cp.returncode == 3:  # a step that cannot apply here (no user manager): SKIP, never FAIL (FI-6)
             last = next((ln.strip() for ln in reversed((cp.stdout or "").splitlines()) if ln.strip()), "")
             results.append((sid, f"SKIP({last or 'rc=3'})"))

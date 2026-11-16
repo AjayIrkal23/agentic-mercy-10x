@@ -174,6 +174,26 @@ tdd-guard/
 teams/
 skills/synced/
 plugins/synced/
+# ghost-editor writes downloads and caches into its own dir (runtime_paths in hooks/skills-sources.json;
+# R10 skips them). Its tracked state files (recipes/*/catalog.json, taste.json, people-rules.json) stay tracked.
+/skills/ghost-editor/.env
+/skills/ghost-editor/.venv-df/
+/skills/ghost-editor/library/audition.html
+/skills/ghost-editor/library/sfx/*.wav
+!/skills/ghost-editor/library/sfx/cc0-*.wav
+/skills/ghost-editor/library/memes/*/clip.webm
+/skills/ghost-editor/library/memes/*/image.png
+/skills/ghost-editor/library/memes/*/preview.png
+/skills/ghost-editor/library/music/*.mp3
+/skills/ghost-editor/library/models/*.onnx
+/skills/ghost-editor/library/emoji/*
+!/skills/ghost-editor/library/emoji/set.json
+/skills/ghost-editor/library/luts/*
+!/skills/ghost-editor/library/luts/looks.json
+/skills/ghost-editor/library/me/
+/skills/ghost-editor/library/vision-cache/
+/skills/ghost-editor/library/toolchain/
+/skills/ghost-editor/library/style-previews/
 /IMPL-REPORT*.md
 /TEST-REPORT.md
 /SESSION-*.md
